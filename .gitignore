@@ -1,0 +1,10 @@
+build/
+sdkconfig
+sdkconfig.old
+*.pyc
+__pycache__/
+.vscode/
+*.swp
+*.swo
+*.o
+*.d
