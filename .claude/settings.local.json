@@ -6,7 +6,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\fuzzz\\\\DuneOS\\\\components\\\\duneos_loader\\\\include\\\\duneos\")",
-      "Bash(Out-Null)"
+      "Bash(Out-Null)",
+      "Bash(git commit -m 'fix\\(sdkconfig\\): set flash size 8MB for both boards *)",
+      "Bash(Test-Path \"C:\\\\Users\\\\fuzzz\\\\DuneOS\\\\sdkconfig\")",
+      "Bash(Get-Content \"C:\\\\Users\\\\fuzzz\\\\DuneOS\\\\sdkconfig\")",
+      "Bash(Select-String \"FLASHSIZE\")"
     ]
   }
 }
