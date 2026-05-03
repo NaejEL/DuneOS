@@ -12,6 +12,8 @@
 #include <semaphore.h>
 
 #include "duneos/task.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 /*
  * Kernel export symbol table — the ABI contract between DuneOS and apps.
@@ -33,6 +35,7 @@
  */
 
 void duneos_exit(int code);
+int  duneos_nanosleep(const struct timespec *req, struct timespec *rem);
 
 static const duneos_symbol_t s_symbol_table[] = {
 
@@ -86,9 +89,11 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* ------------------------------------------------------------------ */
     /* POSIX — time                                                        */
     /* ------------------------------------------------------------------ */
-    { "clock_gettime",  clock_gettime  },
-    { "gettimeofday",   gettimeofday   },
-    { "nanosleep",      nanosleep      },
+    { "clock_gettime",  clock_gettime      },
+    { "gettimeofday",   gettimeofday       },
+    { "usleep",         usleep             },
+    { "sleep",          sleep              },
+    { "nanosleep",      duneos_nanosleep   },
 
     /* ------------------------------------------------------------------ */
     /* String & memory utilities (pure — no I/O, safe to call anywhere)   */
@@ -138,4 +143,14 @@ void duneos_exit(int code)
 {
     (void)code;
     vTaskSuspend(NULL);
+}
+
+/* nanosleep is not in ESP-IDF newlib — implement via FreeRTOS tick */
+int duneos_nanosleep(const struct timespec *req, struct timespec *rem)
+{
+    if (!req) return -1;
+    uint64_t us = (uint64_t)req->tv_sec * 1000000ULL + req->tv_nsec / 1000;
+    if (us > 0) usleep((useconds_t)us);
+    if (rem) { rem->tv_sec = 0; rem->tv_nsec = 0; }
+    return 0;
 }

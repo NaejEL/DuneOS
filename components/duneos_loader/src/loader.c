@@ -14,34 +14,34 @@ static const char *TAG = "duneos/loader";
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
+#define MAX_SECTIONS 64
+
 struct duneos_app {
     duneos_app_manifest_t manifest;
 
-    /* Runtime section pointers — all allocated from PSRAM */
-    void   *text;
-    void   *data;
-    void   *bss;        /* zero-initialised by loader, not present in file */
-    void   *rodata;
+    /* Runtime base address of each section, indexed by section header index.
+     * NULL for sections not loaded into memory (no SHF_ALLOC, size 0, etc.) */
+    void *section_bases[MAX_SECTIONS];
+    int   section_count;
 
-    size_t  text_size;
-    size_t  data_size;
-    size_t  bss_size;
-    size_t  rodata_size;
+    /* All PSRAM allocations — freed on unload */
+    void *allocs[MAX_SECTIONS];
+    int   alloc_count;
 
-    /* Per-section base addresses after loading (needed during relocation) */
-    void   *section_bases[64];  /* indexed by section header index */
-    int     section_count;
-
-    void  (*entry)(void);
+    void (*entry)(void);
 };
 
 /* -------------------------------------------------------------------------
  * Helpers
  * ---------------------------------------------------------------------- */
 
-static void *psram_alloc(size_t size)
+static void *psram_alloc(duneos_app_t *app, size_t size)
 {
-    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    void *p = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (p && app->alloc_count < MAX_SECTIONS) {
+        app->allocs[app->alloc_count++] = p;
+    }
+    return p;
 }
 
 static esp_err_t read_at(FILE *f, long offset, void *buf, size_t len)
@@ -49,6 +49,11 @@ static esp_err_t read_at(FILE *f, long offset, void *buf, size_t len)
     if (fseek(f, offset, SEEK_SET) != 0) return ESP_ERR_INVALID_ARG;
     if (fread(buf, 1, len, f) != len)    return ESP_ERR_INVALID_SIZE;
     return ESP_OK;
+}
+
+static const char *shdr_name(const char *shstrtab, const elf32_shdr_t *sh)
+{
+    return shstrtab + sh->sh_name;
 }
 
 /* -------------------------------------------------------------------------
@@ -70,31 +75,59 @@ static esp_err_t elf_validate(const elf32_hdr_t *hdr)
         return ESP_ERR_NOT_SUPPORTED;
     }
     if (hdr->e_type != ET_REL) {
-        ESP_LOGE(TAG, "ELF type %u not supported — only ET_REL (1)", hdr->e_type);
+        ESP_LOGE(TAG, "e_type=%u — only ET_REL (1) supported", hdr->e_type);
         return ESP_ERR_NOT_SUPPORTED;
     }
     if (hdr->e_machine != EM_XTENSA) {
-        ESP_LOGE(TAG, "ELF machine %u not supported — expected EM_XTENSA (94)",
-                 hdr->e_machine);
+        ESP_LOGE(TAG, "e_machine=%u — expected EM_XTENSA (94)", hdr->e_machine);
         return ESP_ERR_NOT_SUPPORTED;
     }
     if (hdr->e_shoff == 0 || hdr->e_shnum == 0) {
-        ESP_LOGE(TAG, "ELF has no section headers");
+        ESP_LOGE(TAG, "no section headers");
         return ESP_ERR_INVALID_ARG;
     }
     return ESP_OK;
 }
 
 /* -------------------------------------------------------------------------
+ * Section classification
+ *
+ * With -ffunction-sections the compiler emits .text.funcname, .literal.funcname
+ * etc. rather than a single .text.  We match by prefix.
+ * Literal pools (.literal.*) are executable data adjacent to code — we load
+ * them the same way as .text (both have SHF_ALLOC | SHF_EXECINSTR).
+ * ---------------------------------------------------------------------- */
+
+typedef enum {
+    SEC_IGNORE,
+    SEC_TEXT,       /* .text* and .literal* */
+    SEC_DATA,       /* .data* */
+    SEC_RODATA,     /* .rodata* */
+    SEC_BSS,        /* .bss* */
+} sec_kind_t;
+
+static sec_kind_t classify_section(const char *name, uint32_t flags)
+{
+    if (!(flags & SHF_ALLOC)) return SEC_IGNORE;
+
+    if (strncmp(name, ".text",    5) == 0) return SEC_TEXT;
+    if (strncmp(name, ".literal", 8) == 0) return SEC_TEXT;
+    if (strncmp(name, ".rodata",  7) == 0) return SEC_RODATA;
+    if (strncmp(name, ".data",    5) == 0) return SEC_DATA;
+    if (strncmp(name, ".bss",     4) == 0) return SEC_BSS;
+
+    /* Xtensa-specific tool sections — not needed at runtime */
+    if (strncmp(name, ".xt.",    4) == 0) return SEC_IGNORE;
+    if (strncmp(name, ".xtensa", 7) == 0) return SEC_IGNORE;
+
+    return SEC_IGNORE;
+}
+
+/* -------------------------------------------------------------------------
  * Section loading
  * ---------------------------------------------------------------------- */
 
-static const char *shdr_name(const char *shstrtab, const elf32_shdr_t *sh)
-{
-    return shstrtab + sh->sh_name;
-}
-
-static esp_err_t load_sections(FILE *f,
+static esp_err_t load_sections(FILE              *f,
                                 const elf32_hdr_t  *hdr,
                                 const elf32_shdr_t *shdrs,
                                 const char         *shstrtab,
@@ -103,56 +136,219 @@ static esp_err_t load_sections(FILE *f,
     app->section_count = hdr->e_shnum;
 
     for (int i = 0; i < hdr->e_shnum; i++) {
-        const elf32_shdr_t *sh = &shdrs[i];
-        app->section_bases[i] = NULL;
+        const elf32_shdr_t *sh   = &shdrs[i];
+        const char         *name = shdr_name(shstrtab, sh);
+        app->section_bases[i]    = NULL;
 
-        if (!(sh->sh_flags & SHF_ALLOC) || sh->sh_size == 0) {
-            continue;
-        }
+        if (sh->sh_size == 0) continue;
 
-        const char *name = shdr_name(shstrtab, sh);
-        void **dest_ptr  = NULL;
-        size_t *size_ptr = NULL;
+        sec_kind_t kind = classify_section(name, sh->sh_flags);
+        if (kind == SEC_IGNORE) continue;
 
-        if (strcmp(name, ".text") == 0) {
-            dest_ptr = &app->text;
-            size_ptr = &app->text_size;
-        } else if (strcmp(name, ".data") == 0) {
-            dest_ptr = &app->data;
-            size_ptr = &app->data_size;
-        } else if (strcmp(name, ".bss") == 0) {
-            dest_ptr = &app->bss;
-            size_ptr = &app->bss_size;
-        } else if (strncmp(name, ".rodata", 7) == 0) {
-            dest_ptr = &app->rodata;
-            size_ptr = &app->rodata_size;
-        } else {
-            ESP_LOGD(TAG, "  skip section '%s'", name);
-            continue;
-        }
-
-        *dest_ptr = psram_alloc(sh->sh_size);
-        if (!*dest_ptr) {
-            ESP_LOGE(TAG, "PSRAM alloc failed for '%s' (%lu B)",
+        void *mem = psram_alloc(app, sh->sh_size);
+        if (!mem) {
+            ESP_LOGE(TAG, "PSRAM alloc failed: '%s' (%lu B)",
                      name, (unsigned long)sh->sh_size);
             return ESP_ERR_NO_MEM;
         }
-        *size_ptr = sh->sh_size;
-        app->section_bases[i] = *dest_ptr;
+        app->section_bases[i] = mem;
 
         if (sh->sh_type == SHT_NOBITS) {
-            /* .bss: not stored in file — zero-init */
-            memset(*dest_ptr, 0, sh->sh_size);
-            ESP_LOGD(TAG, "  .bss  %lu B (zeroed)", (unsigned long)sh->sh_size);
+            /* .bss: zero-initialise — the data is NOT stored in the ELF */
+            memset(mem, 0, sh->sh_size);
         } else {
-            esp_err_t err = read_at(f, sh->sh_offset, *dest_ptr, sh->sh_size);
-            if (err != ESP_OK) {
-                ESP_LOGE(TAG, "read failed for section '%s'", name);
-                return err;
+            if (read_at(f, sh->sh_offset, mem, sh->sh_size) != ESP_OK) {
+                ESP_LOGE(TAG, "read failed: '%s'", name);
+                return ESP_ERR_INVALID_ARG;
             }
-            ESP_LOGD(TAG, "  %-10s %lu B @ %p", name,
-                     (unsigned long)sh->sh_size, *dest_ptr);
         }
+
+        ESP_LOGD(TAG, "  loaded %-28s %4lu B @ %p",
+                 name, (unsigned long)sh->sh_size, mem);
+    }
+    return ESP_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * Symbol resolution
+ * ---------------------------------------------------------------------- */
+
+static void * __attribute__((used)) resolve_symbol(const char *name)
+{
+    const duneos_symbol_t *t = duneos_symbol_table_get();
+    for (; t->name; t++) {
+        if (strcmp(t->name, name) == 0) return t->ptr;
+    }
+    return NULL;
+}
+
+/* Compute the runtime address of an ELF symbol. */
+static void *symbol_address(const elf32_sym_t  *sym,
+                             const char         *strtab,
+                             const duneos_app_t *app)
+{
+    if (sym->st_shndx == SHN_ABS) {
+        return (void *)(uintptr_t)sym->st_value;
+    }
+    if (sym->st_shndx == SHN_UNDEF) {
+        const char *name = strtab + sym->st_name;
+        void *ptr = resolve_symbol(name);
+        if (!ptr) {
+            ESP_LOGE(TAG, "unresolved symbol: '%s'", name);
+        }
+        return ptr;
+    }
+    if (sym->st_shndx < MAX_SECTIONS && app->section_bases[sym->st_shndx]) {
+        return (uint8_t *)app->section_bases[sym->st_shndx] + sym->st_value;
+    }
+    return NULL;
+}
+
+/* -------------------------------------------------------------------------
+ * Relocation application
+ *
+ * Xtensa uses RELA (relocation with explicit addend) exclusively.
+ *
+ * Types handled:
+ *   R_XTENSA_32        — 32-bit absolute: *ptr = S + A
+ *   R_XTENSA_SLOT0_OP  — patch instruction slot 0 (typically L32R)
+ *   R_XTENSA_ASM_EXPAND — assembler hint, no loader action needed
+ *
+ * The .rela.xt.* sections (Xtensa tool metadata) target sections without
+ * SHF_ALLOC and are skipped by the target-section check below.
+ * ---------------------------------------------------------------------- */
+
+/* Apply R_XTENSA_SLOT0_OP to a loaded instruction word.
+ *
+ * The only SLOT0_OP case we see for a simple call through a literal pool is
+ * L32R (opcode 0x1), which loads a 32-bit value from a PC-relative address.
+ *
+ * L32R encoding (24-bit, little-endian):
+ *   byte[0] = (dest_reg << 4) | 0x1
+ *   byte[1] = imm16[7:0]
+ *   byte[2] = imm16[15:8]
+ *
+ * The 16-bit signed offset encodes: target = ((PC+3) & ~3) + imm16 * 4
+ * So:  imm16 = (S + A - ((PC + 3) & ~3)) / 4
+ */
+static esp_err_t apply_slot0_op(uint8_t  *insn_ptr,
+                                 uint32_t  insn_pc,
+                                 uint32_t  target_addr)
+{
+    uint8_t opcode = insn_ptr[0] & 0x0F;
+
+    if (opcode == 0x1) {
+        /* L32R */
+        uint32_t aligned_pc = (insn_pc + 3) & ~3u;
+        int32_t  offset     = ((int32_t)target_addr - (int32_t)aligned_pc) / 4;
+
+        if ((offset * 4) != ((int32_t)target_addr - (int32_t)aligned_pc)) {
+            ESP_LOGE(TAG, "L32R offset not aligned: target=0x%08lx pc=0x%08lx",
+                     (unsigned long)target_addr, (unsigned long)insn_pc);
+            return ESP_ERR_INVALID_ARG;
+        }
+        if (offset < -32768 || offset > 32767) {
+            ESP_LOGE(TAG, "L32R offset out of 16-bit range: %ld", (long)offset);
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        insn_ptr[1] = (uint8_t)(offset & 0xFF);
+        insn_ptr[2] = (uint8_t)((offset >> 8) & 0xFF);
+        return ESP_OK;
+    }
+
+    ESP_LOGW(TAG, "SLOT0_OP: unhandled opcode 0x%x at %p — skipping",
+             opcode, insn_ptr);
+    return ESP_OK;
+}
+
+static esp_err_t apply_relocations(FILE               *f,
+                                    const elf32_hdr_t  *hdr,
+                                    const elf32_shdr_t *shdrs,
+                                    const char         *shstrtab,
+                                    const elf32_sym_t  *symtab,
+                                    int                 symcount,
+                                    const char         *strtab,
+                                    duneos_app_t       *app)
+{
+    (void)f;
+
+    for (int i = 0; i < hdr->e_shnum; i++) {
+        const elf32_shdr_t *rsh = &shdrs[i];
+        if (rsh->sh_type != SHT_RELA) continue;
+
+        /* Target section: sh_info for RELA */
+        uint32_t target_idx = rsh->sh_info;
+        if (target_idx >= (uint32_t)hdr->e_shnum) continue;
+
+        void *target_base = app->section_bases[target_idx];
+        if (!target_base) continue; /* section not loaded (e.g. .xt.*) */
+
+        int nentries = rsh->sh_size / sizeof(elf32_rela_t);
+        elf32_rela_t *relas = malloc(rsh->sh_size);
+        if (!relas) return ESP_ERR_NO_MEM;
+
+        if (read_at(f, rsh->sh_offset, relas, rsh->sh_size) != ESP_OK) {
+            free(relas);
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        ESP_LOGD(TAG, "  rela %-28s → %-20s (%d entries)",
+                 shdr_name(shstrtab, rsh),
+                 shdr_name(shstrtab, &shdrs[target_idx]),
+                 nentries);
+
+        for (int j = 0; j < nentries; j++) {
+            const elf32_rela_t *rel = &relas[j];
+            uint32_t sym_idx = ELF32_R_SYM(rel->r_info);
+            uint8_t  rel_type = ELF32_R_TYPE(rel->r_info);
+
+            if (sym_idx >= (uint32_t)symcount) {
+                ESP_LOGE(TAG, "relocation symbol index %lu out of range",
+                         (unsigned long)sym_idx);
+                free(relas);
+                return ESP_ERR_INVALID_ARG;
+            }
+
+            const elf32_sym_t *sym = &symtab[sym_idx];
+            void *S = symbol_address(sym, strtab, app);
+
+            uint8_t *patch_ptr = (uint8_t *)target_base + rel->r_offset;
+            uint32_t patch_pc  = (uint32_t)(uintptr_t)patch_ptr;
+            uint32_t target_addr = (uint32_t)(uintptr_t)S + rel->r_addend;
+
+            switch (rel_type) {
+            case R_XTENSA_32:
+                /* 32-bit absolute address */
+                if (!S) {
+                    free(relas);
+                    return ESP_ERR_INVALID_ARG;
+                }
+                *(uint32_t *)patch_ptr = target_addr;
+                break;
+
+            case R_XTENSA_SLOT0_OP: {
+                if (!S) {
+                    free(relas);
+                    return ESP_ERR_INVALID_ARG;
+                }
+                esp_err_t err = apply_slot0_op(patch_ptr, patch_pc, target_addr);
+                if (err != ESP_OK) { free(relas); return err; }
+                break;
+            }
+
+            case R_XTENSA_ASM_EXPAND:
+                /* Assembler relaxation hint — no loader action needed */
+                break;
+
+            default:
+                ESP_LOGW(TAG, "unhandled relocation type %u at offset 0x%lx — skipping",
+                         rel_type, (unsigned long)rel->r_offset);
+                break;
+            }
+        }
+
+        free(relas);
     }
     return ESP_OK;
 }
@@ -161,7 +357,7 @@ static esp_err_t load_sections(FILE *f,
  * Manifest extraction
  * ---------------------------------------------------------------------- */
 
-static esp_err_t extract_manifest(FILE *f,
+static esp_err_t extract_manifest(FILE               *f,
                                    const elf32_hdr_t  *hdr,
                                    const elf32_shdr_t *shdrs,
                                    const char         *shstrtab,
@@ -169,32 +365,22 @@ static esp_err_t extract_manifest(FILE *f,
 {
     for (int i = 0; i < hdr->e_shnum; i++) {
         if (strcmp(shdr_name(shstrtab, &shdrs[i]),
-                   DUNEOS_MANIFEST_SECTION) != 0) {
-            continue;
-        }
+                   DUNEOS_MANIFEST_SECTION) != 0) continue;
 
         const elf32_shdr_t *sh = &shdrs[i];
-        if (sh->sh_size < 2 || sh->sh_size > 4096) {
-            ESP_LOGE(TAG, "manifest section size suspicious: %lu",
-                     (unsigned long)sh->sh_size);
-            return ESP_ERR_INVALID_SIZE;
-        }
+        if (sh->sh_size < 2 || sh->sh_size > 4096) return ESP_ERR_INVALID_SIZE;
 
         char *json = malloc(sh->sh_size + 1);
         if (!json) return ESP_ERR_NO_MEM;
-
-        esp_err_t err = read_at(f, sh->sh_offset, json, sh->sh_size);
-        if (err != ESP_OK) { free(json); return err; }
+        if (read_at(f, sh->sh_offset, json, sh->sh_size) != ESP_OK) {
+            free(json);
+            return ESP_ERR_INVALID_ARG;
+        }
         json[sh->sh_size] = '\0';
 
-        /* Reuse the manifest parser via a thin inline parse */
-        /* For now, populate minimal fields from JSON by hand to avoid
-         * pulling in cJSON into the loader component.
-         * TODO: extract a shared json_parse_manifest() helper. */
         strlcpy(out->name, "unknown", sizeof(out->name));
         out->required_abi_version = 1;
 
-        /* Quick-and-dirty field extraction — good enough until we share cJSON */
         const char *p;
         if ((p = strstr(json, "\"name\"")) != NULL) {
             p = strchr(p + 6, '"');
@@ -211,64 +397,13 @@ static esp_err_t extract_manifest(FILE *f,
         }
 
         free(json);
-        ESP_LOGI(TAG, "manifest: name='%s' version='%s' abi>=%lu",
+        ESP_LOGI(TAG, "manifest: '%s' v%s (ABI>=%lu)",
                  out->name, out->version,
                  (unsigned long)out->required_abi_version);
         return ESP_OK;
     }
 
-    ESP_LOGW(TAG, "no " DUNEOS_MANIFEST_SECTION " section — using filename as name");
-    return ESP_OK;
-}
-
-/* -------------------------------------------------------------------------
- * Symbol resolution
- * ---------------------------------------------------------------------- */
-
-static void *resolve_symbol(const char *name)
-{
-    const duneos_symbol_t *table = duneos_symbol_table_get();
-    for (const duneos_symbol_t *s = table; s->name != NULL; s++) {
-        if (strcmp(s->name, name) == 0) {
-            return s->ptr;
-        }
-    }
-    return NULL;
-}
-
-/* -------------------------------------------------------------------------
- * Relocations (Phase 3 — stub for now)
- * ---------------------------------------------------------------------- */
-
-static esp_err_t apply_relocations(FILE *f,
-                                    const elf32_hdr_t  *hdr,
-                                    const elf32_shdr_t *shdrs,
-                                    const char         *shstrtab,
-                                    const elf32_sym_t  *symtab,
-                                    int                 symcount,
-                                    const char         *strtab,
-                                    duneos_app_t       *app)
-{
-    (void)f; (void)hdr; (void)shdrs; (void)shstrtab;
-    (void)symtab; (void)symcount; (void)strtab; (void)app;
-
-    /*
-     * TODO Phase 3: for each SHT_RELA / SHT_REL section:
-     *   1. Find the target section (sh_info) and its runtime base address
-     *   2. For each relocation entry:
-     *      a. Get the symbol (ELF32_R_SYM) — if SHN_UNDEF, resolve via
-     *         resolve_symbol() against the kernel export table
-     *      b. Compute S (symbol address) and A (addend)
-     *      c. Patch memory at (section_base + r_offset) according to type:
-     *         R_XTENSA_32:       *(uint32_t*)ptr = S + A
-     *         R_XTENSA_SLOT0_OP: decode Xtensa instruction, patch field,
-     *                            re-encode — see Xtensa ISA and Flipper Zero
-     *                            loader for the per-instruction encoding logic
-     *
-     * Reference: github.com/flipperdevices/flipperzero-firmware
-     *            lib/flipper_application/elf/elf_file.c
-     */
-    ESP_LOGW(TAG, "relocations not yet applied (Phase 3)");
+    ESP_LOGW(TAG, "no " DUNEOS_MANIFEST_SECTION " section");
     return ESP_OK;
 }
 
@@ -287,15 +422,16 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         return ESP_ERR_NOT_FOUND;
     }
 
-    esp_err_t err = ESP_FAIL;
+    esp_err_t    err     = ESP_FAIL;
     elf32_hdr_t  hdr;
-    elf32_shdr_t *shdrs   = NULL;
+    elf32_shdr_t *shdrs    = NULL;
     char         *shstrtab = NULL;
     elf32_sym_t  *symtab   = NULL;
     char         *strtab   = NULL;
+    int           symcount = 0;
     duneos_app_t *app      = NULL;
 
-    /* --- 1. Read and validate ELF header -------------------------------- */
+    /* 1. ELF header */
     if (read_at(f, 0, &hdr, sizeof(hdr)) != ESP_OK) {
         ESP_LOGE(TAG, "cannot read ELF header");
         err = ESP_ERR_INVALID_ARG;
@@ -304,124 +440,105 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     err = elf_validate(&hdr);
     if (err != ESP_OK) goto out;
 
-    ESP_LOGI(TAG, "loading '%s' — %u sections", path, hdr.e_shnum);
-
-    /* --- 2. Read section header table ----------------------------------- */
-    if (hdr.e_shnum > 64) {
-        ESP_LOGE(TAG, "too many sections: %u", hdr.e_shnum);
+    if (hdr.e_shnum > MAX_SECTIONS) {
+        ESP_LOGE(TAG, "too many sections: %u (max %d)", hdr.e_shnum, MAX_SECTIONS);
         err = ESP_ERR_NOT_SUPPORTED;
         goto out;
     }
+
+    ESP_LOGI(TAG, "loading '%s' (%u sections)", path, hdr.e_shnum);
+
+    /* 2. Section header table */
     shdrs = malloc(hdr.e_shnum * sizeof(elf32_shdr_t));
     if (!shdrs) { err = ESP_ERR_NO_MEM; goto out; }
-
-    if (read_at(f, hdr.e_shoff, shdrs,
-                hdr.e_shnum * sizeof(elf32_shdr_t)) != ESP_OK) {
-        ESP_LOGE(TAG, "cannot read section headers");
+    if (read_at(f, hdr.e_shoff, shdrs, hdr.e_shnum * sizeof(elf32_shdr_t)) != ESP_OK) {
         err = ESP_ERR_INVALID_ARG;
         goto out;
     }
 
-    /* --- 3. Read section name string table (.shstrtab) ------------------ */
-    const elf32_shdr_t *shstr_sh = &shdrs[hdr.e_shstrndx];
-    shstrtab = malloc(shstr_sh->sh_size + 1);
-    if (!shstrtab) { err = ESP_ERR_NO_MEM; goto out; }
-    if (read_at(f, shstr_sh->sh_offset, shstrtab, shstr_sh->sh_size) != ESP_OK) {
-        err = ESP_ERR_INVALID_ARG;
-        goto out;
-    }
-    shstrtab[shstr_sh->sh_size] = '\0';
-
-    /* --- 4. Find and read .symtab and .strtab --------------------------- */
-    for (int i = 0; i < hdr.e_shnum; i++) {
-        if (shdrs[i].sh_type == SHT_SYMTAB) {
-            symtab = malloc(shdrs[i].sh_size);
-            if (!symtab) { err = ESP_ERR_NO_MEM; goto out; }
-            if (read_at(f, shdrs[i].sh_offset, symtab, shdrs[i].sh_size) != ESP_OK) {
-                err = ESP_ERR_INVALID_ARG;
-                goto out;
-            }
-
-            /* .strtab is pointed to by sh_link */
-            const elf32_shdr_t *str_sh = &shdrs[shdrs[i].sh_link];
-            strtab = malloc(str_sh->sh_size + 1);
-            if (!strtab) { err = ESP_ERR_NO_MEM; goto out; }
-            if (read_at(f, str_sh->sh_offset, strtab, str_sh->sh_size) != ESP_OK) {
-                err = ESP_ERR_INVALID_ARG;
-                goto out;
-            }
-            strtab[str_sh->sh_size] = '\0';
-
-            int symcount = shdrs[i].sh_size / sizeof(elf32_sym_t);
-            ESP_LOGD(TAG, "symtab: %d symbols", symcount);
-            break;
+    /* 3. Section name string table */
+    {
+        const elf32_shdr_t *ss = &shdrs[hdr.e_shstrndx];
+        shstrtab = malloc(ss->sh_size + 1);
+        if (!shstrtab) { err = ESP_ERR_NO_MEM; goto out; }
+        if (read_at(f, ss->sh_offset, shstrtab, ss->sh_size) != ESP_OK) {
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
         }
+        shstrtab[ss->sh_size] = '\0';
     }
 
-    /* --- 5. Allocate app descriptor ------------------------------------- */
+    /* 4. Symbol table + string table */
+    for (int i = 0; i < hdr.e_shnum; i++) {
+        if (shdrs[i].sh_type != SHT_SYMTAB) continue;
+
+        symcount = shdrs[i].sh_size / sizeof(elf32_sym_t);
+        symtab   = malloc(shdrs[i].sh_size);
+        if (!symtab) { err = ESP_ERR_NO_MEM; goto out; }
+        if (read_at(f, shdrs[i].sh_offset, symtab, shdrs[i].sh_size) != ESP_OK) {
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
+        }
+
+        const elf32_shdr_t *str_sh = &shdrs[shdrs[i].sh_link];
+        strtab = malloc(str_sh->sh_size + 1);
+        if (!strtab) { err = ESP_ERR_NO_MEM; goto out; }
+        if (read_at(f, str_sh->sh_offset, strtab, str_sh->sh_size) != ESP_OK) {
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
+        }
+        strtab[str_sh->sh_size] = '\0';
+        break;
+    }
+
+    /* 5. Allocate app descriptor */
     app = calloc(1, sizeof(duneos_app_t));
     if (!app) { err = ESP_ERR_NO_MEM; goto out; }
 
-    /* --- 6. Extract embedded manifest ----------------------------------- */
+    /* 6. Manifest */
     err = extract_manifest(f, &hdr, shdrs, shstrtab, &app->manifest);
     if (err != ESP_OK) goto out;
 
-    /* ABI version check */
     if (app->manifest.required_abi_version > DUNEOS_ABI_VERSION) {
-        ESP_LOGE(TAG, "app requires ABI v%lu, kernel provides v%d",
+        ESP_LOGE(TAG, "app requires ABI v%lu, kernel is v%d",
                  (unsigned long)app->manifest.required_abi_version,
                  DUNEOS_ABI_VERSION);
         err = ESP_ERR_NOT_SUPPORTED;
         goto out;
     }
 
-    /* --- 7. Load sections into PSRAM ------------------------------------ */
+    /* 7. Load sections into PSRAM */
     err = load_sections(f, &hdr, shdrs, shstrtab, app);
     if (err != ESP_OK) goto out;
 
-    /* --- 8. Apply relocations (stub — Phase 3) -------------------------- */
-    int symcount = symtab ? (int)(shdrs[0].sh_size / sizeof(elf32_sym_t)) : 0;
-    /* Re-find symcount properly */
-    for (int i = 0; i < hdr.e_shnum; i++) {
-        if (shdrs[i].sh_type == SHT_SYMTAB) {
-            symcount = shdrs[i].sh_size / sizeof(elf32_sym_t);
-            break;
-        }
-    }
+    /* 8. Apply relocations */
     err = apply_relocations(f, &hdr, shdrs, shstrtab,
                              symtab, symcount, strtab, app);
     if (err != ESP_OK) goto out;
 
-    /* --- 9. Locate app_main --------------------------------------------- */
-    if (symtab && strtab) {
-        int total_syms = 0;
-        for (int i = 0; i < hdr.e_shnum; i++) {
-            if (shdrs[i].sh_type == SHT_SYMTAB) {
-                total_syms = shdrs[i].sh_size / sizeof(elf32_sym_t);
-                break;
-            }
+    /* 9. Locate app_main */
+    for (int i = 0; i < symcount; i++) {
+        const elf32_sym_t *sym = &symtab[i];
+        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr.e_shnum) continue;
+        if (strcmp(strtab + sym->st_name, "app_main") != 0) continue;
+
+        void *base = app->section_bases[sym->st_shndx];
+        if (!base) {
+            ESP_LOGE(TAG, "app_main is in an unloaded section");
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
         }
-        for (int i = 0; i < total_syms; i++) {
-            const elf32_sym_t *sym = &symtab[i];
-            if (strcmp(strtab + sym->st_name, "app_main") == 0 &&
-                sym->st_shndx != SHN_UNDEF) {
-                uint8_t *base = app->section_bases[sym->st_shndx];
-                if (base) {
-                    app->entry = (void (*)(void))(base + sym->st_value);
-                    ESP_LOGI(TAG, "app_main @ %p", (void *)app->entry);
-                }
-                break;
-            }
-        }
+        app->entry = (void (*)(void))((uint8_t *)base + sym->st_value);
+        ESP_LOGI(TAG, "app_main @ %p", (void *)app->entry);
+        break;
     }
 
     if (!app->entry) {
-        ESP_LOGE(TAG, "app_main not found — relocations not yet applied?");
-        /* Non-fatal for now: loader is not yet complete */
+        ESP_LOGE(TAG, "app_main not found in symbol table");
+        err = ESP_ERR_NOT_FOUND;
+        goto out;
     }
 
-    ESP_LOGI(TAG, "load complete: .text=%zuB .data=%zuB .bss=%zuB .rodata=%zuB",
-             app->text_size, app->data_size, app->bss_size, app->rodata_size);
     *out_app = app;
     app = NULL;
     err = ESP_OK;
@@ -443,13 +560,7 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app)
 
 esp_err_t duneos_loader_run(duneos_app_t *app)
 {
-    if (!app) return ESP_ERR_INVALID_ARG;
-
-    if (!app->entry) {
-        ESP_LOGE(TAG, "cannot run: app_main not resolved (Phase 3 incomplete)");
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-
+    if (!app || !app->entry) return ESP_ERR_INVALID_ARG;
     ESP_LOGI(TAG, "jumping to app_main @ %p", (void *)app->entry);
     app->entry();
     return ESP_OK;
@@ -458,9 +569,8 @@ esp_err_t duneos_loader_run(duneos_app_t *app)
 void duneos_loader_unload(duneos_app_t *app)
 {
     if (!app) return;
-    heap_caps_free(app->text);
-    heap_caps_free(app->data);
-    heap_caps_free(app->bss);
-    heap_caps_free(app->rodata);
+    for (int i = 0; i < app->alloc_count; i++) {
+        heap_caps_free(app->allocs[i]);
+    }
     free(app);
 }
