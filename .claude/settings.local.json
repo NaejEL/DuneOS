@@ -10,7 +10,10 @@
       "Bash(git commit -m 'fix\\(sdkconfig\\): set flash size 8MB for both boards *)",
       "Bash(Test-Path \"C:\\\\Users\\\\fuzzz\\\\DuneOS\\\\sdkconfig\")",
       "Bash(Get-Content \"C:\\\\Users\\\\fuzzz\\\\DuneOS\\\\sdkconfig\")",
-      "Bash(Select-String \"FLASHSIZE\")"
+      "Bash(Select-String \"FLASHSIZE\")",
+      "Bash(git commit -m 'fix\\(partitions\\): resize to fit 8MB flash *)",
+      "Bash(git commit -m 'fix\\(partitions\\): remove inline comments — ESP-IDF CSV parser treats them as flags *)",
+      "Bash(git commit -m 'fix\\(freertos\\): remove TASK_PRE_DELETION_HOOK — requires unimplemented vTaskPreDeletionHook\\(\\) *)"
     ]
   }
 }

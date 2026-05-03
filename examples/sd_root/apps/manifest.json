@@ -1,0 +1,19 @@
+{
+  "autoboot": "hello_world",
+  "apps": [
+    {
+      "name": "hello_world",
+      "path": "/sd/apps/hello_world.elf",
+      "version": "0.1.0",
+      "required_abi_version": 1,
+      "permissions": ["fs_read", "uart"]
+    },
+    {
+      "name": "blink",
+      "path": "/sd/apps/blink.elf",
+      "version": "0.1.0",
+      "required_abi_version": 1,
+      "permissions": ["gpio", "uart"]
+    }
+  ]
+}
