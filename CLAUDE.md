@@ -14,12 +14,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Test Commands
 
 ```bash
-# Select board (defaults to esp32s3-devkitc if unset)
-export DUNEOS_BOARD=esp32s3-devkitc
+# Build for M5Stack CardPuter (current dev board)
+idf.py -DDUNEOS_BOARD=m5stack-cardputer \
+        -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.m5stack-cardputer" \
+        build
+idf.py -p COM3 flash monitor   # adjust port as needed
 
-# Kernel firmware
-idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
+# Build for ESP32-S3-DevKitC (reference board / fallback default)
+idf.py -DDUNEOS_BOARD=esp32s3-devkitc \
+        -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.esp32s3-devkitc" \
+        build
+
+# Clean build dir when switching boards (sdkconfig is board-specific)
+idf.py fullclean
 
 # Host unit tests (CMock/Unity, hardware-independent parts only)
 cmake -B build-host -DTARGET=host && cmake --build build-host

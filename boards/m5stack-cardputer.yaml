@@ -1,0 +1,61 @@
+board:
+  name: "m5stack-cardputer"
+  cpu: esp32s3
+  # ESP32-S3FN8: 8MB Flash (octal), 8MB PSRAM (quad SPI)
+  flash_size_mb: 8
+  psram_size_mb: 8
+  psram_type: qspi   # Quad SPI PSRAM (not OPI — adjust sdkconfig accordingly)
+
+  uart:
+    - id: 0
+      tx_pin: 43
+      rx_pin: 44
+      default_baud: 115200
+
+  # SD card via SPI — verify against M5Stack CardPuter schematic
+  # https://github.com/m5stack/M5Cardputer/tree/main/hardware
+  spi:
+    - id: 2
+      mosi_pin: 14
+      miso_pin: 39
+      clk_pin: 40
+      cs_pin: 12
+      role: master
+      max_freq_hz: 20000000
+
+  sd_card:
+    interface: spi
+    spi_id: 2
+    cd_pin: -1
+
+  i2c:
+    - id: 0
+      sda_pin: 13
+      scl_pin: 15
+      freq_hz: 400000
+
+  display:
+    driver: st7789
+    width: 240
+    height: 135
+    cs_pin: 37
+    dc_pin: 35
+    rst_pin: 33
+    bl_pin: 38
+    # Display uses a dedicated SPI bus (SPI3/VSPI)
+    spi_host: SPI3_HOST
+    mosi_pin: 6
+    clk_pin: 5
+    freq_hz: 40000000
+
+  keyboard:
+    # I2C keyboard controller on the internal I2C bus
+    i2c_id: 0
+    i2c_addr: 0x55
+
+  leds:
+    - id: status
+      # Onboard WS2812 addressable LED
+      pin: 21
+      type: ws2812
+      active_high: true

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\fuzzz\\\\DuneOS\" -Force)",
+      "Bash(Select-Object Name)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\fuzzz\\\\DuneOS\\\\components\\\\duneos_loader\\\\include\\\\duneos\")",
+      "Bash(Out-Null)"
+    ]
+  }
+}
