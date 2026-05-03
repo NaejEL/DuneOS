@@ -3,7 +3,9 @@ if(NOT DEFINED DUNEOS_BOARD)
     message(STATUS "DUNEOS_BOARD not set, defaulting to ${DUNEOS_BOARD}")
 endif()
 
-set(DUNEOS_BOARD_CONFIG_DIR "${CMAKE_SOURCE_DIR}/boards/${DUNEOS_BOARD}")
+# CMAKE_SOURCE_DIR is unreliable during the requirements phase — it may point
+# to the build directory. Navigate from the component's own directory instead.
+set(DUNEOS_BOARD_CONFIG_DIR "${CMAKE_CURRENT_LIST_DIR}/../../boards/${DUNEOS_BOARD}")
 
 if(NOT EXISTS "${DUNEOS_BOARD_CONFIG_DIR}/board_config.h")
     message(FATAL_ERROR
@@ -28,6 +30,6 @@ idf_component_register(
         driver
         esp_driver_sdspi
         fatfs
-        esp_vfs
-        cjson
+        vfs
+        json
 )
