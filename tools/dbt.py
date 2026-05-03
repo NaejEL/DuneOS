@@ -46,6 +46,7 @@ MANIFEST_SECTION   = ".duneos_manifest"
 #   write() and malloc() must remain as relocatable references so the loader
 #   can resolve them against the kernel export table.
 CFLAGS = [
+    "-mcpu=esp32s3",        # target CPU — required with unified xtensa-esp-elf toolchain
     "-mlongcalls",          # Xtensa: enable long calls (required for PSRAM code)
     "-ffunction-sections",  # one ELF section per function → dead-code elimination
     "-fdata-sections",      # one ELF section per data object
@@ -74,46 +75,83 @@ def find_toolchain(target: str = "esp32s3") -> dict[str, Path]:
     """
     Locate the Xtensa cross-compiler for the given target.
 
-    Search order:
-      1. Compiler already in PATH (xtensa-esp32s3-elf-gcc)
-      2. IDF_PATH environment variable → tools directory
-      3. Common Espressif install locations
-    """
-    prefix = f"xtensa-{target}-elf-"
-    names  = {
-        "cc":      prefix + "gcc",
-        "ld":      prefix + "ld",
-        "objcopy": prefix + "objcopy",
-        "readelf": prefix + "readelf",
-        "nm":      prefix + "nm",
-    }
+    ESP-IDF v5 ships a unified toolchain (xtensa-esp-elf-*) where the target
+    CPU is selected via -mcpu=. ESP-IDF v4 used target-specific prefixes
+    (xtensa-esp32s3-elf-*). We try both, unified first.
 
-    # 1. Check PATH first
-    if shutil.which(names["cc"]):
-        return {k: Path(shutil.which(v)) for k, v in names.items()}
+    Search order:
+      1. Compiler already in PATH
+      2. IDF_PATH environment variable → tools directory
+      3. Common Espressif install locations (Windows: C:/Espressif)
+    """
+    is_win = platform.system() == "Windows"
+    exe    = ".exe" if is_win else ""
+
+    # Candidate prefixes: unified (v5) first, then target-specific (v4)
+    prefixes = ["xtensa-esp-elf-", f"xtensa-{target}-elf-"]
+    tools    = ["gcc", "ld", "objcopy", "readelf", "nm"]
+    keys     = ["cc", "ld", "objcopy", "readelf", "nm"]
+
+    def make_result(bin_dir: Path, prefix: str) -> dict[str, Path]:
+        return {k: bin_dir / (prefix + t + exe) for k, t in zip(keys, tools)}
+
+    def try_bin_dir(bin_dir: Path, prefix: str) -> dict[str, Path] | None:
+        cc = bin_dir / (prefix + "gcc" + exe)
+        if cc.exists():
+            return make_result(bin_dir, prefix)
+        return None
+
+    # 1. PATH
+    for prefix in prefixes:
+        found = shutil.which(prefix + "gcc")
+        if found:
+            return make_result(Path(found).parent, prefix)
 
     # 2. Derive from IDF_PATH
     idf_path = os.environ.get("IDF_PATH")
     if idf_path:
-        tools_dir = Path(idf_path).parent.parent.parent / "tools" / f"xtensa-esp-elf"
-        candidates = list(tools_dir.glob(f"*/xtensa-esp-elf/bin/{names['cc']}"))
-        if candidates:
-            bin_dir = candidates[-1].parent  # pick latest version
-            return {k: bin_dir / v for k, v in names.items()}
+        tools_root = Path(idf_path).parent.parent.parent / "tools" / "xtensa-esp-elf"
+        if not tools_root.exists():
+            # Alternative: IDF_PATH/../../tools (when IDF is in esp-idf subdir)
+            tools_root = Path(idf_path).parent / "tools" / "xtensa-esp-elf"
+        for version_dir in sorted(tools_root.glob("*"), reverse=True):
+            bin_dir = version_dir / "xtensa-esp-elf" / "bin"
+            for prefix in prefixes:
+                result = try_bin_dir(bin_dir, prefix)
+                if result:
+                    return result
 
-    # 3. Common Windows Espressif path
-    if platform.system() == "Windows":
-        base = Path("C:/Espressif/tools/xtensa-esp-elf")
-        if base.exists():
-            candidates = list(base.glob(f"*/xtensa-esp-elf/bin/{names['cc']}"))
-            if candidates:
-                bin_dir = sorted(candidates)[-1].parent
-                return {k: bin_dir / v for k, v in names.items()}
+    # 3. Common install locations
+    candidates = []
+    if is_win:
+        candidates = [
+            Path("C:/Espressif/tools/xtensa-esp-elf"),
+            Path(os.environ.get("USERPROFILE", "C:/Users")) / ".espressif" / "tools" / "xtensa-esp-elf",
+        ]
+    else:
+        candidates = [
+            Path.home() / ".espressif" / "tools" / "xtensa-esp-elf",
+            Path("/opt/espressif/tools/xtensa-esp-elf"),
+        ]
+
+    for base in candidates:
+        if not base.exists():
+            continue
+        for version_dir in sorted(base.glob("*"), reverse=True):
+            bin_dir = version_dir / "xtensa-esp-elf" / "bin"
+            for prefix in prefixes:
+                result = try_bin_dir(bin_dir, prefix)
+                if result:
+                    print(f"  [toolchain] {bin_dir} (prefix: {prefix})")
+                    return result
 
     sys.exit(
-        f"ERROR: {names['cc']} not found.\n"
-        "Set IDF_PATH, add the Xtensa toolchain bin directory to PATH,\n"
-        "or install the Espressif toolchain at C:/Espressif."
+        f"ERROR: Xtensa cross-compiler not found.\n"
+        f"Tried prefixes: {prefixes}\n"
+        "Options:\n"
+        "  1. Add the toolchain bin directory to PATH\n"
+        "  2. Set IDF_PATH to your ESP-IDF installation\n"
+        "  3. Install ESP-IDF (https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)"
     )
 
 
