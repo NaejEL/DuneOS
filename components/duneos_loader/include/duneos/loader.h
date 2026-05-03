@@ -14,7 +14,7 @@
  * The loaded app's sections live in PSRAM:
  *   .text   — executable code  (heap_caps_malloc MALLOC_CAP_SPIRAM | EXEC)
  *   .data   — initialised data (heap_caps_malloc MALLOC_CAP_SPIRAM)
- *   .bss    — zero-initialised (heap_caps_malloc + memset — NOT copied from ELF)
+ *   .bss    — zero-init region (heap_caps_malloc + memset — NOT copied from ELF)
  *   .rodata — read-only data   (heap_caps_malloc MALLOC_CAP_SPIRAM)
  */
 
