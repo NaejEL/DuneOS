@@ -111,10 +111,21 @@ C'est la partie la plus complexe. L'ESP32 n'a pas de MMU, donc pas d'isolation m
      - `R_XTENSA_SLOT0_OP` (et variantes SLOT1, SLOT2…) : modification de champs bitfield à l'intérieur d'instructions Xtensa encodées — consulter la spec Xtensa ISA et le code Flipper Zero pour chaque type
    - Résoudre les **symboles externes** via la table de pointeurs de fonctions du kernel
 3. Définir et versionner la **table des symboles exportés** par le kernel (API publique stable) :
-   - Fonctions VFS/POSIX
-   - API tâches
-   - Drivers bas niveau (GPIO, UART, SPI, I2C)
-   - Utilitaires (malloc/free depuis le heap apps, printf, etc.)
+
+   **Principe cardinal : exporter des primitives POSIX, jamais des détails d'implémentation.**
+
+   - **POSIX fichiers** : `open`, `read`, `write`, `close`, `lseek`, `fstat`, `stat`, `unlink`, `rename`
+   - **POSIX répertoires** : `opendir`, `readdir`, `closedir`
+   - **POSIX mémoire** : `malloc`, `free`, `realloc`, `calloc` (depuis le heap PSRAM apps)
+   - **POSIX threads** : `pthread_create/join/exit/self`, `pthread_mutex_*`, `sem_*`
+   - **POSIX time** : `clock_gettime`, `gettimeofday`, `nanosleep`
+   - **Utilitaires purs** (pas d'I/O) : `memcpy/set/cmp`, `str*`, `sprintf`, `snprintf`
+   - **DuneOS lifecycle** : `duneos_exit(int code)`
+
+   **Ce qui n'est PAS exporté et pourquoi :**
+   - `printf` : les apps l'appellent via newlib → `_write()` → `write(1,...)` → VFS. Le kernel contrôle ainsi où va le stdout de chaque app (terminal, pipe, buffer). Exporter `printf` directement bypasse le VFS et rend un shell série impossible.
+   - `vTaskDelay` et toute API FreeRTOS : les apps ne doivent pas savoir que le kernel tourne sur FreeRTOS. Elles utilisent `nanosleep()` ou `duneos_task_delay_ms()`.
+   - `esp_log_*` : idem, détail d'implémentation ESP-IDF.
 4. Gérer le **cycle de vie de l'app** :
    - Lancement (jump to `app_main`)
    - Retour propre (l'app appelle `duneos_exit()`)

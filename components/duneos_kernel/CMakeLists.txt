@@ -27,9 +27,11 @@ idf_component_register(
         "${DUNEOS_BOARD_CONFIG_DIR}"
     REQUIRES
         freertos
+        pthread
         driver
         esp_driver_sdspi
         fatfs
         vfs
+        newlib
         json
 )
