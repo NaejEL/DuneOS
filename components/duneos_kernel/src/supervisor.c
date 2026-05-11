@@ -38,11 +38,13 @@ void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops)
 /* ----- internal types ---------------------------------------------------- */
 
 typedef struct {
-    duneos_app_t  *app;
-    TaskHandle_t   task;
-    QueueHandle_t  mailbox;
-    bool           active;
-    char           name[DUNEOS_APP_NAME_MAX];
+    duneos_app_t           *app;
+    TaskHandle_t            task;
+    QueueHandle_t           mailbox;
+    bool                    active;
+    char                    name[DUNEOS_APP_NAME_MAX];
+    duneos_restart_policy_t restart_policy;
+    char                    restart_path[DUNEOS_PATH_MAX];
 } app_slot_t;
 
 typedef struct {
@@ -57,6 +59,8 @@ static QueueHandle_t     s_exit_queue;
 static SemaphoreHandle_t s_all_done;
 static SemaphoreHandle_t s_lock;
 static int               s_active_count = 0;
+/* Counts slots in the unload→relaunch window to prevent spurious all_done */
+static int               s_want_restart = 0;
 
 /* ----- slot helpers ------------------------------------------------------ */
 
@@ -97,6 +101,17 @@ static void app_task_entry(void *arg)
     vTaskDelete(NULL);
 }
 
+/* ----- helpers ----------------------------------------------------------- */
+
+static void maybe_signal_all_done(void)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    bool all_done = (s_active_count == 0 && s_want_restart == 0);
+    xSemaphoreGive(s_lock);
+    /* Binary semaphore: giving when already 1 is a safe no-op */
+    if (all_done) xSemaphoreGive(s_all_done);
+}
+
 /* ----- supervisor task --------------------------------------------------- */
 
 static void supervisor_task(void *arg)
@@ -121,23 +136,41 @@ static void supervisor_task(void *arg)
          * holding s_lock while taking a second mutex triggers SMP priority-
          * inheritance interactions that can corrupt the FreeRTOS queue
          * structs.  Do all work with no locks held. */
-        char           name[DUNEOS_APP_NAME_MAX];
-        strlcpy(name, slot->name, sizeof(name));
-        int            code    = msg.code;
-        duneos_app_t  *app     = slot->app;
-        QueueHandle_t  mailbox = slot->mailbox;
+        char                    name[DUNEOS_APP_NAME_MAX];
+        char                    rpath[DUNEOS_PATH_MAX];
+        strlcpy(name,  slot->name,         sizeof(name));
+        strlcpy(rpath, slot->restart_path, sizeof(rpath));
+        int                     code    = msg.code;
+        duneos_app_t           *app     = slot->app;
+        QueueHandle_t           mailbox = slot->mailbox;
+        duneos_restart_policy_t policy  = slot->restart_policy;
+
+        bool should_restart = (policy == DUNEOS_RESTART_ALWAYS) ||
+                              (policy == DUNEOS_RESTART_ON_FAILURE && code != 0);
+
         slot->app     = NULL;
         slot->mailbox = NULL;
         slot->active  = false;
         s_active_count--;
-        bool all_done = (s_active_count == 0);
+        if (should_restart) s_want_restart++;
 
         xSemaphoreGive(s_lock);
 
-        klog_i(TAG, "'%s' exited (code %d)", name, code);
+        klog_i(TAG, "'%s' exited (code %d)%s", name, code,
+               should_restart ? " — restarting" : "");
+
         s_loader_ops.unload(app);
         if (mailbox) vQueueDelete(mailbox);
-        if (all_done) xSemaphoreGive(s_all_done);
+
+        if (should_restart) {
+            /* Relaunch inherits same policy so restarts persist */
+            duneos_supervisor_launch_policy(rpath, policy);
+            xSemaphoreTake(s_lock, portMAX_DELAY);
+            s_want_restart--;
+            xSemaphoreGive(s_lock);
+        }
+
+        maybe_signal_all_done();
     }
 }
 
@@ -167,7 +200,8 @@ esp_err_t duneos_supervisor_init(void)
     return ESP_OK;
 }
 
-esp_err_t duneos_supervisor_launch(const char *path)
+esp_err_t duneos_supervisor_launch_policy(const char *path,
+                                            duneos_restart_policy_t policy)
 {
     if (!path) return ESP_ERR_INVALID_ARG;
 
@@ -191,6 +225,8 @@ esp_err_t duneos_supervisor_launch(const char *path)
 
     const duneos_app_manifest_t *m = s_loader_ops.get_manifest(app);
     strlcpy(slot->name, m->name, sizeof(slot->name));
+    strlcpy(slot->restart_path, path, sizeof(slot->restart_path));
+    slot->restart_policy = policy;
     slot->app = app;
 
     slot->mailbox = xQueueCreate(DUNEOS_MAILBOX_DEPTH, sizeof(duneos_msg_t));
@@ -220,8 +256,14 @@ esp_err_t duneos_supervisor_launch(const char *path)
         return ESP_ERR_NO_MEM;
     }
 
-    klog_d(TAG, "launched '%s' (stack %lu B)", slot->name, (unsigned long)stack);
+    klog_d(TAG, "launched '%s' (stack %lu B, restart=%d)",
+           slot->name, (unsigned long)stack, (int)policy);
     return ESP_OK;
+}
+
+esp_err_t duneos_supervisor_launch(const char *path)
+{
+    return duneos_supervisor_launch_policy(path, DUNEOS_RESTART_NO);
 }
 
 void duneos_supervisor_app_exited(int code)
@@ -237,10 +279,20 @@ void duneos_supervisor_app_exited(int code)
 void duneos_supervisor_wait_all(void)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    bool already_done = (s_active_count == 0);
+    bool already_done = (s_active_count == 0 && s_want_restart == 0);
     xSemaphoreGive(s_lock);
 
     if (!already_done) xSemaphoreTake(s_all_done, portMAX_DELAY);
+}
+
+void duneos_service_ready(void)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task(xTaskGetCurrentTaskHandle());
+    char name[DUNEOS_APP_NAME_MAX];
+    strlcpy(name, slot ? slot->name : "(unknown)", sizeof(name));
+    xSemaphoreGive(s_lock);
+    klog_i(TAG, "service '%s' ready", name);
 }
 
 int duneos_supervisor_running_count(void)

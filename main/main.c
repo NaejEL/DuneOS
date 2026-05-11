@@ -10,6 +10,7 @@
 #include "duneos/vfs.h"
 #include "duneos/loader.h"
 #include "duneos/supervisor.h"
+#include "duneos/init.h"
 
 static const char *TAG = "duneos";
 
@@ -34,6 +35,65 @@ static void console_init(void)
     fcntl(fileno(stdout), F_SETFL, 0);
 }
 
+/* Launch all services defined in /sd/init.json.
+ * Returns the number of services successfully started, or -1 on config error. */
+static int launch_from_init_json(void)
+{
+    duneos_init_config_t cfg;
+    esp_err_t err = duneos_init_load(&cfg);
+
+    if (err == ESP_ERR_NOT_FOUND) {
+        klog_i(TAG, "no init.json — using autoboot fallback");
+        return -1;
+    }
+    if (err != ESP_OK) {
+        klog_w(TAG, "init.json parse error — using autoboot fallback");
+        return -1;
+    }
+    if (cfg.count == 0) {
+        klog_w(TAG, "init.json has no services — using autoboot fallback");
+        return -1;
+    }
+
+    int launched = 0;
+    for (int i = 0; i < cfg.count; i++) {
+        klog_i(TAG, "starting service '%s' (restart=%d)",
+               cfg.services[i].path, (int)cfg.services[i].restart);
+        err = duneos_supervisor_launch_policy(cfg.services[i].path,
+                                               cfg.services[i].restart);
+        if (err != ESP_OK)
+            klog_e(TAG, "failed to start '%s': %s",
+                   cfg.services[i].path, esp_err_to_name(err));
+        else
+            launched++;
+    }
+    return launched;
+}
+
+/* Legacy single-app boot: scan /sd/apps/, honour /sd/autoboot if present. */
+static int launch_autoboot(void)
+{
+    static duneos_app_info_t apps[DUNEOS_MAX_APPS];
+    int count = 0;
+    duneos_loader_scan(apps, DUNEOS_MAX_APPS, &count);
+
+    if (count == 0) {
+        klog_w(TAG, "no apps found in %s", DUNEOS_APPS_DIR);
+        return 0;
+    }
+
+    const duneos_app_info_t *target = duneos_loader_select(apps, count);
+    klog_i(TAG, "autoboot: launching '%s' v%s",
+           target->meta.name, target->meta.version);
+
+    esp_err_t err = duneos_supervisor_launch(target->path);
+    if (err != ESP_OK) {
+        klog_e(TAG, "launch failed: %s", esp_err_to_name(err));
+        return 0;
+    }
+    return 1;
+}
+
 void app_main(void)
 {
     console_init();
@@ -53,32 +113,21 @@ void app_main(void)
         return;
     }
 
-    /* Scan /sd/apps/ for .elf / .dap files */
-    static duneos_app_info_t apps[DUNEOS_MAX_APPS];
-    int count = 0;
-    duneos_loader_scan(apps, DUNEOS_MAX_APPS, &count);
+    int launched = launch_from_init_json();
+    if (launched < 0) {
+        /* init.json absent or empty — fall back to legacy autoboot */
+        launched = launch_autoboot();
+    }
 
-    if (count == 0) {
-        klog_w(TAG, "no apps found in %s", DUNEOS_APPS_DIR);
+    if (launched == 0) {
+        klog_w(TAG, "nothing to run");
         kernel_idle();
         return;
     }
 
-    /* Select app — reads /sd/autoboot or defaults to first found */
-    const duneos_app_info_t *target = duneos_loader_select(apps, count);
-    klog_i(TAG, "launching '%s' v%s",
-           target->meta.name, target->meta.version);
-
-    esp_err_t err = duneos_supervisor_launch(target->path);
-    if (err != ESP_OK) {
-        klog_e(TAG, "launch failed: %s", esp_err_to_name(err));
-        kernel_idle();
-        return;
-    }
-
-    /* Block until the app (and any apps it spawned) finishes */
+    /* Block until all services (and anything they spawned) have exited */
     duneos_supervisor_wait_all();
-    klog_i(TAG, "all apps exited");
+    klog_i(TAG, "all services exited");
 
     kernel_idle();
 }

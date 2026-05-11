@@ -25,9 +25,25 @@
 #define DUNEOS_MAX_RUNNING_APPS  4
 #define DUNEOS_MAILBOX_DEPTH     8
 #define DUNEOS_MSG_DATA_MAX      64
+#define DUNEOS_PATH_MAX          128     /* max length for stored service paths */
 
 #define DUNEOS_APP_DEFAULT_STACK 8192   /* bytes — overridden by manifest stack_size */
 #define DUNEOS_APP_TASK_PRIORITY 2      /* tskIDLE_PRIORITY + 2 */
+
+/*
+ * Restart policy for services launched via duneos_supervisor_launch_policy().
+ * RESTART_NO    — service exits and is not relaunched (default).
+ * RESTART_ALWAYS — relaunched unconditionally on exit, regardless of exit code.
+ * RESTART_ON_FAILURE — relaunched only when exit code != 0.
+ *
+ * wait_all() never returns while any slot has a pending restart or a running
+ * service with a non-NO restart policy.
+ */
+typedef enum {
+    DUNEOS_RESTART_NO         = 0,
+    DUNEOS_RESTART_ALWAYS     = 1,
+    DUNEOS_RESTART_ON_FAILURE = 2,
+} duneos_restart_policy_t;
 
 typedef struct {
     char   data[DUNEOS_MSG_DATA_MAX];
@@ -61,14 +77,25 @@ esp_err_t duneos_supervisor_init(void);
 /* Load path and start it as a new FreeRTOS task. Non-blocking. */
 esp_err_t duneos_supervisor_launch(const char *path);
 
+/* Like duneos_supervisor_launch() but attaches a restart policy to the slot. */
+esp_err_t duneos_supervisor_launch_policy(const char *path,
+                                           duneos_restart_policy_t policy);
+
 /* Called by duneos_exit() from within an app task (and by the task wrapper) */
 void duneos_supervisor_app_exited(int code);
 
-/* Block until every launched app has exited */
+/* Block until every launched app has exited and no restart is pending */
 void duneos_supervisor_wait_all(void);
 
 /* Current number of live app tasks */
 int duneos_supervisor_running_count(void);
+
+/*
+ * Signal that this service has finished initialisation and is ready.
+ * Logs the event; future phases will use this to unblock dependent services.
+ * Safe to call from any app task after duneos_supervisor_init().
+ */
+void duneos_service_ready(void);
 
 /* Send a message to the named app's mailbox. 0=ok, -1=error/full/not found */
 int duneos_send(const char *dest, const void *data, size_t len);

@@ -27,7 +27,12 @@ echo m5stack-cardputer > .duneos_board
 # Clean when switching boards — sdkconfig is board-specific
 # Use VS Code: Ctrl+Shift+P → "ESP-IDF: Full Clean"
 
-# Build a DuneOS app (from the app directory)
+# Build the shell (system app, ships with DuneOS)
+cd system/shell
+python ../../tools/dbt.py build
+python ../../tools/dbt.py deploy E:\   # E: = SD card drive
+
+# Build a DuneOS example app
 cd examples/test_exit
 python ../../tools/dbt.py build
 python ../../tools/dbt.py deploy E:\   # E: = SD card drive
@@ -49,13 +54,15 @@ DuneOS/
 │   ├── duneos_kernel/
 │   │   ├── include/duneos/
 │   │   │   ├── abi.h               # ABI: DUNEOS_ABI_VERSION, duneos_symbol_t, duneos_app_manifest_t
+│   │   │   ├── init.h              # Init system: duneos_init_load(), duneos_service_desc_t
 │   │   │   ├── klog.h              # klog_i/w/e/d macros, ring buffer API
-│   │   │   ├── supervisor.h        # Multi-app supervisor: launch/send/recv/wait_all
+│   │   │   ├── supervisor.h        # Multi-app supervisor: launch/launch_policy/send/recv/wait_all
 │   │   │   ├── task.h              # FreeRTOS abstraction
 │   │   │   └── vfs.h               # VFS init/mount API
 │   │   └── src/
+│   │       ├── init.c              # Parse /sd/init.json (cJSON), return service list
 │   │       ├── klog.c              # 4 KB ring buffer, /dev/klog backend, ESP_LOGx forwarding
-│   │       ├── supervisor.c        # 4-slot app supervisor, FreeRTOS task per app, IPC queues
+│   │       ├── supervisor.c        # 4-slot app supervisor, restart policies, IPC queues
 │   │       ├── task.c
 │   │       ├── vfs.c               # SD (SPI+FatFS) mount, registers /tmp and /dev
 │   │       ├── vfs_tmp.c           # /tmp — heap-backed RAM filesystem, 16 inodes/fds
@@ -75,11 +82,14 @@ DuneOS/
 │   │   ├── board_config.h          # SD SPI pins: MOSI=14, MISO=39, CLK=40, CS=12
 │   │   └── sdkconfig.defaults      # 8 MB flash, no PSRAM (ESP32-S3FN8)
 │   └── lilygo-t7-s3.yaml           # Reference YAML for BSP generator
+├── system/
+│   └── shell/                      # DuneOS interactive shell (ships with the OS)
+│       ├── shell.c                 # ls/cat/cd/run/gpio/klog/... built-in commands
+│       └── manifest.json           # permissions=127, stack=16 KB
 ├── examples/
 │   ├── test_exit/                  # Minimal app: app_main calls duneos_exit(0)
 │   ├── hello_world/                # Writes "Hello World" to stdout then exits
-│   ├── uart_echo/                  # Echo loop on /dev/uart0, Ctrl-C to exit
-│   └── shell/                      # Interactive POSIX shell (.dap); ls/cat/cd/run/klog/...
+│   └── uart_echo/                  # Echo loop on /dev/uart0, Ctrl-C to exit
 ├── tools/
 │   ├── dbt.py                      # DuneBuild Tool: new/build/info/deploy/clean
 │   └── duneos-bspgen.py            # BSP generator: board YAML → board_config.h
@@ -168,11 +178,11 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 2 — VFS & POSIX completeness | **DONE** | `/tmp`, `/dev/null/zero/uart0`, ioctl, dprintf, stdout capture |
 | Phase 3 — Kernel logging overhaul | **DONE** | klog ring buffer, `/dev/klog`, `CONFIG_DUNEOS_KERNEL_SILENT`, ESP_LOGx removed |
 | Phase 4 — Loader hardening & multi-app | **DONE** | DIFF32 relocs, supervisor, 4-slot multi-app, IPC, permissions, `.dap` extension |
-| Phase 5 — Shell | **DONE** | `examples/shell/` — interactive POSIX shell app with history and line editing |
+| Phase 5 — Shell | **DONE** | `system/shell/` — interactive POSIX shell app with history and line editing |
 | Phase 6 — BSP generator | **DONE** | `tools/duneos-bspgen.py` — YAML → board_config.h; lilygo-t7-s3.yaml reference |
 | Phase 7 — App SDK & DX | **DONE** | `dbt.py info` footprint, `dbt.py deploy` → `.dap`, `hello_world`, `uart_echo` demos |
 | Phase 8 — GPIO | **DONE** (native) | `/dev/gpiochip0` via `esp_driver_gpio`; `gpio_ioctl.h` SDK header; shell `gpio` command; expander support pending |
-| Phase 9 — Init system | Not started | `/sd/init.json`, supervisor restart policies, `duneos_service_ready()` |
+| Phase 9 — Init system | **DONE** | `/sd/init.json` (cJSON), supervisor restart policies (`no`/`always`/`on-failure`), `duneos_service_ready()`; autoboot fallback retained |
 | Phase 10 — I2C + battery | Not started | `/dev/i2c-0`, `/dev/battery0` (ADC/I2C backend from BSP YAML) |
 | Phase 11 — SPI | Not started | `/dev/spi-1` (SPI3_HOST only — SPI2 taken by SD) |
 | Phase 12 — Input | Not started | `/dev/input/event0` ring buffer; keyboard daemon feeds it via IPC |
@@ -180,7 +190,7 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 14 — WiFi daemon | Not started | Userspace `wifi_daemon.dap`; lwIP sockets already exported |
 | Phase 15 — Multi-target portability | Not started | `libgfx` display-agnostic API; `board.info` written at boot; `dbt.py` backend selection |
 
-**Current state:** All seven phases implemented. The kernel boots, mounts SD, initialises supervisor, and launches apps as separate FreeRTOS tasks. The shell (`examples/shell/shell.dap`) provides an interactive POSIX interface over UART0. Stack canaries and per-app exception handlers remain as known technical debt.
+**Current state:** Phases 1–9 implemented. The kernel boots, mounts SD, reads `/sd/init.json` to launch services with restart policies (falling back to autoboot if absent). The shell (`system/shell/shell.dap`) provides an interactive POSIX interface over UART0 and is now in `system/` as a first-class OS component rather than an example. Stack canaries and per-app exception handlers remain as known technical debt.
 
 ## Key Technical Decisions
 
@@ -198,6 +208,8 @@ display-agnostic API with pluggable backends to restore source-level portability
 - **`dup`/`dup2`**: not inline in ESP-IDF v5.5.1 newlib, but cannot safely take their address — wrapped as `duneos_dup`/`duneos_dup2` calling `dup`/`dup2` directly.
 - **Hardware abstraction**: kernel owns buses (`/dev/i2c-N`, `/dev/spi-N`, `/dev/gpiochip0`). Per-chip drivers (SX1509, SSD1306, CC1101 …) live in userspace as `.c` files linked into the app — no kernel changes per chip. Same model as Linux `/dev/i2c-dev` + userspace `libi2c`.
 - **Circular dependency (duneos_kernel ↔ duneos_loader)**: broken via registered function pointers. `duneos_loader_init()` calls `duneos_supervisor_register_loader(&ops)` before the first `duneos_supervisor_launch()`. The kernel never includes `duneos/loader.h`.
+- **Init system**: `main.c` tries `/sd/init.json` first; falls back to scan+autoboot if absent. cJSON is already an ESP-IDF component (`json`). The `s_want_restart` counter in the supervisor prevents `wait_all()` from firing spuriously during the unload→relaunch window of a restarting service.
+- **System apps vs examples**: `system/` holds apps that ship with DuneOS (shell, future daemons). `examples/` holds developer demos. Both use `dbt.py` to build — the distinction is semantic, not toolchain.
 
 ## Hard-Won Lessons (do not repeat these mistakes)
 

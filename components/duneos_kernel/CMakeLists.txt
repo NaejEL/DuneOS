@@ -24,6 +24,7 @@ idf_component_register(
         "src/vfs_dev.c"
         "src/symbols.c"
         "src/supervisor.c"
+        "src/init.c"
     INCLUDE_DIRS
         "include"
         "${DUNEOS_BOARD_CONFIG_DIR}"
