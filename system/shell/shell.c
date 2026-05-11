@@ -39,6 +39,7 @@
 
 #include <duneos/gpio_ioctl.h>
 #include <duneos/battery_ioctl.h>
+#include <duneos/input_ioctl.h>
 
 /* strlcpy is a BSD extension not in freestanding newlib */
 static size_t sh_strlcpy(char *dst, const char *src, size_t n)
@@ -54,6 +55,7 @@ static size_t sh_strlcpy(char *dst, const char *src, size_t n)
 extern void duneos_exit(int code);
 extern int  esp_get_free_heap_size(void);
 extern void esp_restart(void);
+extern int  usleep(unsigned int useconds);
 
 /* Opaque loader handle — apps only hold a pointer */
 typedef void duneos_app_t;
@@ -507,6 +509,116 @@ static void cmd_battery(void)
                  info.voltage_mv, (unsigned)info.percent, status_str);
 }
 
+static void cmd_tail(int argc, char **argv)
+{
+    int follow = 0;
+    const char *path_arg = NULL;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-f") == 0) follow = 1;
+        else path_arg = argv[i];
+    }
+    if (!path_arg) { shell_puts("usage: tail [-f] <file>"); return; }
+
+    char path[CWD_MAX];
+    resolve_path(path_arg, path, sizeof(path));
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) { shell_printf("tail: %s: %s\r\n", path, strerror(errno)); return; }
+
+    if (!follow) {
+        /* Print last 512 bytes */
+        struct stat st;
+        if (fstat(fd, &st) == 0 && st.st_size > 512)
+            lseek(fd, st.st_size - 512, SEEK_SET);
+        char buf[128];
+        ssize_t n;
+        while ((n = read(fd, buf, sizeof(buf))) > 0)
+            write(STDOUT_FILENO, buf, n);
+        shell_write("\r\n");
+    } else {
+        /* Follow mode: seek to end then poll, checking stdin for Ctrl-C */
+        lseek(fd, 0, SEEK_END);
+
+        int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+        fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+
+        shell_puts("[following — Ctrl-C to stop]");
+        char buf[128];
+        while (1) {
+            ssize_t n = read(fd, buf, sizeof(buf));
+            if (n > 0)
+                write(STDOUT_FILENO, buf, (size_t)n);
+
+            char c;
+            if (read(STDIN_FILENO, &c, 1) > 0 && c == '\x03') {
+                shell_write("^C\r\n");
+                break;
+            }
+            if (n <= 0)
+                usleep(100000);
+        }
+
+        fcntl(STDIN_FILENO, F_SETFL, flags);
+    }
+    close(fd);
+}
+
+static const char *input_code_name(uint16_t code)
+{
+    switch (code) {
+    case KEY_BACKSPACE: return "BACKSPACE";
+    case KEY_TAB:       return "TAB";
+    case KEY_ENTER:     return "ENTER";
+    case KEY_ESC:       return "ESC";
+    case KEY_DELETE:    return "DELETE";
+    case KEY_CTRL:      return "CTRL";
+    case KEY_SHIFT:     return "SHIFT";
+    case KEY_ALT:       return "ALT";
+    case KEY_OPT:       return "OPT";
+    case KEY_FN:        return "FN";
+    case KEY_UP:        return "UP";
+    case KEY_DOWN:      return "DOWN";
+    case KEY_LEFT:      return "LEFT";
+    case KEY_RIGHT:     return "RIGHT";
+    default:            return NULL;
+    }
+}
+
+static void cmd_input(void)
+{
+    int fd = open("/dev/input/event0", O_RDONLY);
+    if (fd < 0) {
+        shell_puts("input: /dev/input/event0 not available");
+        return;
+    }
+
+    shell_puts("[reading events — press ESC to stop]");
+
+    input_event_t ev;
+    while (read(fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) {
+        if (ev.type == INPUT_EV_KEY) {
+            const char *name = input_code_name(ev.code);
+            const char *action = (ev.value == INPUT_VAL_PRESS)   ? "press"   :
+                                 (ev.value == INPUT_VAL_RELEASE)  ? "release" : "repeat";
+            if (name) {
+                shell_printf("KEY  %-8s  %s\r\n", name, action);
+            } else if (ev.code >= 0x20 && ev.code < 0x7f) {
+                shell_printf("KEY  '%c'      %s\r\n", (char)ev.code, action);
+            } else {
+                shell_printf("KEY  0x%02x     %s\r\n", ev.code, action);
+            }
+            if (ev.code == KEY_ESC && ev.value == INPUT_VAL_PRESS)
+                break;
+        } else if (ev.type == INPUT_EV_REL) {
+            shell_printf("REL  wheel    %+d\r\n", (int)ev.value);
+        }
+    }
+
+    close(fd);
+}
+
 static void cmd_help(void)
 {
     shell_puts("Commands:");
@@ -529,6 +641,8 @@ static void cmd_help(void)
     shell_puts("  battery                       show battery voltage and charge");
     shell_puts("  services                      list running service slots");
     shell_puts("  restart <name>                force restart a named service");
+    shell_puts("  tail [-f] <file>              print end of file; -f follows");
+    shell_puts("  input                         print /dev/input/event0 events (ESC to stop)");
     shell_puts("  reboot                        restart the device");
     shell_puts("  help                          this message");
 }
@@ -569,6 +683,8 @@ static void exec_line(char *line)
     else if (strcmp(cmd, "battery")  == 0) cmd_battery();
     else if (strcmp(cmd, "services") == 0) cmd_services();
     else if (strcmp(cmd, "restart")  == 0) cmd_restart(argc, argv);
+    else if (strcmp(cmd, "tail")     == 0) cmd_tail(argc, argv);
+    else if (strcmp(cmd, "input")    == 0) cmd_input();
     else if (strcmp(cmd, "reboot")   == 0) esp_restart();
     else if (strcmp(cmd, "exit")     == 0) duneos_exit(0);
     else if (strcmp(cmd, "help")     == 0) cmd_help();

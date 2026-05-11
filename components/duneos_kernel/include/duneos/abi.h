@@ -43,6 +43,7 @@ typedef struct {
 #define DUNEOS_PERM_FS_READ     (1u << 5)
 #define DUNEOS_PERM_FS_WRITE    (1u << 6)
 #define DUNEOS_PERM_BATTERY     (1u << 7)
+#define DUNEOS_PERM_INPUT       (1u << 8)
 
 /*
  * One entry in the kernel export symbol table.

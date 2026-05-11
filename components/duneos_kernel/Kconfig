@@ -66,4 +66,47 @@ config DUNEOS_DRV_SPI
         DUNEOS_SPI1_MISO_PIN, and DUNEOS_SPI1_CLK_PIN in board_config.h.
         Not available on boards where SPI3 is already used by the display.
 
+config DUNEOS_DRV_INPUT
+    bool "Input event device (/dev/input/event0)"
+    default n
+    help
+        Enable /dev/input/event0. read() blocks until at least one
+        input_event_t is available, then returns one or more events.
+        This option only provides the ring buffer and VFS device node.
+        At least one backend (DUNEOS_DRV_INPUT_IOMATRIX, …) must also
+        be enabled to produce events.
+
+config DUNEOS_DRV_INPUT_IOMATRIX
+    bool "Input backend — IOMatrix keyboard (M5Stack CardPuter)"
+    default n
+    depends on DUNEOS_DRV_INPUT
+    help
+        Enable the IOMatrix keyboard scanner for boards that wire a 74HC138
+        row decoder + GPIO column inputs directly to the ESP32.
+        Board must define DUNEOS_KB_ROW_A0/A1/A2_PIN, DUNEOS_KB_COL_PINS,
+        DUNEOS_KB_NUM_COLS, DUNEOS_KB_MATRIX_ROWS, DUNEOS_KB_MATRIX_COLS
+        in board_config.h.  Runs a FreeRTOS scan task at ~100 Hz.
+
+config DUNEOS_DRV_INPUT_BTNGPIO
+    bool "Input backend — simple GPIO buttons"
+    default n
+    depends on DUNEOS_DRV_INPUT
+    help
+        Enable polling for simple active-LOW GPIO buttons.
+        Board must define DUNEOS_HAVE_BTN_GPIO, DUNEOS_BTN_GPIO_COUNT,
+        DUNEOS_BTN_GPIO_PINS and DUNEOS_BTN_GPIO_CODES in board_config.h.
+        Each button emits INPUT_EV_KEY press/release events.
+        10 ms poll period provides contact debounce.
+
+config DUNEOS_DRV_INPUT_ENCODER
+    bool "Input backend — quadrature rotary encoder"
+    default n
+    depends on DUNEOS_DRV_INPUT
+    help
+        Enable quadrature decoding for a rotary encoder.
+        Board must define DUNEOS_HAVE_ENCODER, DUNEOS_ENCODER_A_PIN and
+        DUNEOS_ENCODER_B_PIN in board_config.h.
+        Emits INPUT_EV_REL / REL_WHEEL events: +1 CW, -1 CCW per detent.
+        Sampled at 500 Hz (2 ms task period).
+
 endmenu

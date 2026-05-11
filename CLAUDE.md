@@ -247,7 +247,7 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 9 — Init system | **DONE** | `/sd/init.json` (cJSON), supervisor restart policies (`no`/`always`/`on-failure`), `duneos_service_ready()`; autoboot fallback retained |
 | Phase 10 — I2C + battery | **DONE** | `/dev/i2c-0`, `/dev/battery0` (adc_simple for CardPuter, bq27220 for T-Embed CC1101) |
 | Phase 11 — SPI | **DONE** | `/dev/spi-1` (SPI3_HOST); per-fd `spi_bus_add_device`; `role: raw` in BSP YAML selects the raw bus; boards without a free SPI host omit the config flag |
-| Phase 12 — Input | Not started | `/dev/input/event0` ring buffer; keyboard daemon feeds it via IPC |
+| Phase 12 — Input | **DONE** | `/dev/input/event0`; IOMatrix scan (CardPuter), GPIO buttons + quadrature encoder (T-Embed); 3-layer keymap (normal/shift/fn); `DUNEOS_PERM_INPUT`; shell `input` + `tail` commands |
 | Phase 13 — Framebuffer + display SDK | Not started | `/dev/fb0` PSRAM-only; userspace `libst7789/gc9a01/ssd1306` for all boards |
 | Phase 14 — WiFi daemon | Not started | Userspace `wifi_daemon.dap`; lwIP sockets already exported |
 | Phase 15 — Multi-target portability | Not started | `libgfx` display-agnostic API; `board.info` written at boot; `dbt.py` backend selection |

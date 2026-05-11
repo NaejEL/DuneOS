@@ -82,6 +82,22 @@ if(CONFIG_DUNEOS_DRV_SPI)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/drv_spi.c")
 endif()
 
+if(CONFIG_DUNEOS_DRV_INPUT)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/input/drv_input.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_INPUT_IOMATRIX)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/input/kb_iomatrix.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_INPUT_BTNGPIO)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/input/btn_gpio.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_INPUT_ENCODER)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/input/enc_quadrature.c")
+endif()
+
 # ---------------------------------------------------------------------------
 
 idf_component_register(

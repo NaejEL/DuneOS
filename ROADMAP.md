@@ -411,38 +411,61 @@ re-add the device. No shared spi_bus module needed — unlike I2C, SPI device st
 
 ---
 
-## Phase 12 — Input (`/dev/input/event0`)
+## Phase 12 — Input (`/dev/input/event0`) ✅ DONE
 
-**Kernel space (interrupt / scan side) + userspace driver daemon for complex matrices.**
+**Kernel space (scan task) for GPIO matrix, GPIO buttons, and quadrature encoder; userspace daemon path reserved for future I2C keyboards.**
 
-**Kernel vs userspace boundary for input:**
+**CardPuter keyboard hardware:**
+The M5Stack CardPuter keyboard is a direct GPIO matrix — **no I2C keyboard controller**.
+A 74HC138 3-to-8 decoder drives 8 row lines; 7 column GPIO inputs with pull-ups detect presses.
+Physical layout: 4 rows × 14 columns (IOMatrix pattern from M5Stack CardPuter firmware).
 
-- **Simple GPIO buttons** → kernel ISR registers event directly into `/dev/input/event0` ring buffer.
-  Declared in BSP YAML as `buttons:` entries.
-- **Keyboard matrix via I2C** (CardPuter — keyboard controller behind I2C) → **userspace daemon**
-  `keyboard.dap`: opens `/dev/i2c-0`, polls/IRQ, pushes `input_event_t` to a kernel-provided
-  pipe or to a shared `/tmp/input_fifo`. The kernel `/dev/input/event0` reads from that pipe.
-  This avoids adding a per-board keyboard controller driver to the kernel.
-- **Keyboard matrix via raw GPIO scan** → kernel task (declared in BSP YAML as `keyboard_matrix:`).
+Row select: A0=GPIO8, A1=GPIO9, A2=GPIO11 → Y0..Y7 (active LOW).
+Columns: GPIO13, GPIO15, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7.
+Scan mapping: `output > 3` → even columns (0,2,4…), `output ≤ 3` → odd columns (1,3,5…);
+row = `(output > 3) ? (7 - output) : (3 - output)`.
+
+**Keymap layers:** `[0]` normal · `[1]` shifted · `[2]` Fn.
+Fn mappings: `` ` ``+Fn=ESC, Backspace+Fn=Delete, `;`+Fn=Up, `,`+Fn=Left, `.`+Fn=Down, `/`+Fn=Right.
+
+**Note:** The shell runs over USB Serial/JTAG (GPIO19/20), not over the CardPuter keyboard.
+`/dev/input/event0` is for apps that want direct keyboard input.
 
 **evdev-style API (blocking `read()` returns one or more `input_event_t`):**
 
 ```c
 typedef struct {
     uint32_t time_ms;
-    uint8_t  type;    /* INPUT_EV_KEY | INPUT_EV_BTN */
-    uint16_t code;    /* key code — ASCII for printable, special codes for arrows/enter */
-    int32_t  value;   /* 1=press, 0=release, 2=repeat */
+    uint8_t  type;    /* INPUT_EV_KEY or INPUT_EV_REL */
+    uint16_t code;    /* EV_KEY: ASCII / KEY_*;  EV_REL: REL_WHEEL */
+    int32_t  value;   /* EV_KEY: PRESS=1/RELEASE=0/REPEAT=2;  EV_REL: signed delta */
 } input_event_t;
+```
+
+**Backend architecture** (mirrors battery driver pattern — one file per backend, shared infra):
+
+```text
+src/drivers/input/
+  drv_input.c          CONFIG_DUNEOS_DRV_INPUT=y      — 64-event ring + blocking read() + /dev/input/event0
+  kb_iomatrix.c        CONFIG_DUNEOS_DRV_INPUT_IOMATRIX=y  — CardPuter 74HC138 matrix scan task
+  btn_gpio.c           CONFIG_DUNEOS_DRV_INPUT_BTNGPIO=y   — GPIO button polling (T-Embed KNOB_BTN/KEY_BTN)
+  enc_quadrature.c     CONFIG_DUNEOS_DRV_INPUT_ENCODER=y   — quadrature encoder → INPUT_EV_REL/REL_WHEEL
 ```
 
 **Roadmap items:**
 
-- [ ] `/dev/input/event0` — ring buffer + blocking `read()` (like Linux eventfd + read)
-- [ ] BSP YAML: `buttons:` section for simple GPIO buttons
-- [ ] Userspace keyboard daemon protocol: FIFO or IPC queue to feed `/dev/input/event0`
-- [ ] Shell integration: shell reads from `/dev/input/event0` instead of (or in addition to) `/dev/uart0`
-- [ ] `DUNEOS_PERM_INPUT` permission bit
+- [x] `/dev/input/event0` — 64-event ring buffer + blocking `read()`; binary semaphore for wake-up
+- [x] `DUNEOS_PERM_INPUT` permission bit (bit 8 in `abi.h`)
+- [x] `CONFIG_DUNEOS_DRV_INPUT=y` + `_IOMATRIX` + `_BTNGPIO` + `_ENCODER` in Kconfig + CMakeLists.txt + vfs_dev.c
+- [x] CardPuter BSP corrected: PSRAM=0 (ESP32-S3FN8 has no PSRAM), I2C section removed (GPIO13/15 are keyboard columns, not I2C), `keyboard_matrix:` section added to YAML
+- [x] `board_config.h` corrected: `DUNEOS_KB_ROW_A0/A1/A2_PIN`, `DUNEOS_KB_COL_PINS`, `DUNEOS_KB_NUM_COLS/MATRIX_ROWS/COLS`
+- [x] Scan task at ~100 Hz; Fn/Shift layer selection before posting event; 10 ms period debounces contact bounce
+- [x] Boards without `DUNEOS_HAVE_KEYBOARD_MATRIX` register device node but block forever on read
+- [x] BSP YAML: `buttons:` section — T-Embed KNOB_BTN (GPIO0) and KEY_BTN (GPIO6) mapped to KEY_ENTER/KEY_ESC
+- [x] T-Embed BSP: `encoder:` section — A=GPIO4, B=GPIO5; quadrature task emits `INPUT_EV_REL/REL_WHEEL ±1`
+- [x] Shell: `input` command — blocking read loop, pretty-prints events, stops on ESC
+- [x] Shell: `tail [-f] <file>` command — print last 512 bytes; `-f` polls for appended content
+- [ ] Shell integration: shell reads from `/dev/input/event0` as alternative stdin on non-USB boards
 
 ---
 

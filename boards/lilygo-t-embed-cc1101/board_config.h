@@ -74,8 +74,16 @@
 #define DUNEOS_SPI1_MAX_FREQ_HZ     40000000
 #define DUNEOS_SPI1_BUS_SHARED      1
 
-/* ---------- Rotary encoder + side key (input, Phase 12) ---------- */
-/* KNOB_A=4  KNOB_B=5  KNOB_BTN=0  KEY_BTN=6                              */
+/* ---------- GPIO buttons (KNOB_BTN + side KEY_BTN) ---------- */
+#define DUNEOS_HAVE_BTN_GPIO        1
+#define DUNEOS_BTN_GPIO_COUNT       2
+#define DUNEOS_BTN_GPIO_PINS        {0, 6}
+#define DUNEOS_BTN_GPIO_CODES       {0x0d, 0x1b}   /* KEY_ENTER, KEY_ESC */
+
+/* ---------- Rotary encoder (quadrature, KNOB_A/B) ---------- */
+#define DUNEOS_HAVE_ENCODER         1
+#define DUNEOS_ENCODER_A_PIN        4
+#define DUNEOS_ENCODER_B_PIN        5
 
 /* ---------- Onboard WS2812 LED ---------- */
 #define DUNEOS_LED_STATUS_PIN   48

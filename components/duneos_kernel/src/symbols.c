@@ -75,6 +75,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("rename",     rename,   DUNEOS_PERM_FS_WRITE),
     SYM("dup",          duneos_dup ),
     SYM("dup2",         duneos_dup2),
+    SYM("fcntl",        fcntl      ),
     SYM("dprintf",      dprintf   ),
     SYM("ioctl",        ioctl     ),
 

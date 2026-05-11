@@ -68,7 +68,18 @@ board:
 
   # Power switch (GPIO15): controls power rail for CC1101 and WS2812 LED.
   # CC1101 sub-GHz radio — userspace app via /dev/spi-1 (Phase 11).
-  # Shares SPI2 bus; CS pin TBD (verify from schematic). GDO0=2 GDO2=3
   # PN532 NFC — on I2C0: IRQ=17 RESET=45
-  # Rotary encoder — input device via /dev/input/event0 (Phase 12).
-  # Pins: A=4 B=5 BTN=6  Side key button: KEY=6  Knob press: KNOB_BTN=0
+
+  buttons:
+    - pin: 0
+      active_low: true
+      pull_up: true
+      code: KEY_ENTER    # Knob press (KNOB_BTN)
+    - pin: 6
+      active_low: true
+      pull_up: true
+      code: KEY_ESC      # Side key (KEY_BTN)
+
+  encoder:
+    a_pin: 4
+    b_pin: 5

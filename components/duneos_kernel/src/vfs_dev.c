@@ -231,6 +231,9 @@ extern void drv_battery_bq27220_register(void);
 #ifdef CONFIG_DUNEOS_DRV_SPI
 extern void drv_spi_register(void);
 #endif
+#ifdef CONFIG_DUNEOS_DRV_INPUT
+extern void drv_input_register(void);
+#endif
 
 /* ----- mount ------------------------------------------------------------- */
 
@@ -285,6 +288,9 @@ esp_err_t duneos_vfs_mount_dev(void)
 #endif
 #ifdef CONFIG_DUNEOS_DRV_SPI
     drv_spi_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_INPUT
+    drv_input_register();
 #endif
 
     klog_i(TAG, "/dev ready (%d devices)", s_driver_count);
