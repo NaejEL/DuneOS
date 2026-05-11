@@ -27,6 +27,14 @@
 #define DUNEOS_SD_FREQ_KHZ      20000   /* 20 MHz — safe default, raise if stable */
 #define DUNEOS_SD_CD_PIN        (-1)    /* card detect not wired */
 
+/* ---------- SPI3 raw bus (/dev/spi-1) ---------- */
+#define DUNEOS_HAVE_SPI         1
+#define DUNEOS_SPI1_HOST        SPI3_HOST
+#define DUNEOS_SPI1_MOSI_PIN    15
+#define DUNEOS_SPI1_MISO_PIN    16
+#define DUNEOS_SPI1_CLK_PIN     18
+#define DUNEOS_SPI1_MAX_FREQ_HZ 40000000
+
 /* ---------- I2C0 (general-purpose header pins) ---------- */
 #define DUNEOS_HAVE_I2C         1
 #define DUNEOS_I2C0_SDA_PIN     8

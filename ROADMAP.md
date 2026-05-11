@@ -371,7 +371,7 @@ battery:
 
 ---
 
-## Phase 11 — SPI (`/dev/spi-1`)
+## Phase 11 — SPI (`/dev/spi-1`) ✅ DONE
 
 **Kernel space.** SPI3_HOST (VSPI) only — SPI2_HOST is permanently taken by FatFS/SD card.
 
@@ -394,12 +394,20 @@ battery:
 `write()` on `/dev/spi-1` = transmit only (rx discarded). `ioctl(SPI_TRANSFER)` for simultaneous tx+rx.
 CS is asserted/deasserted around each `write()` or `ioctl(SPI_TRANSFER)` automatically.
 
+**BSP YAML:** mark a `spi` entry with `role: raw` to expose it as `/dev/spi-1`. Boards where both
+SPI2 and SPI3 are occupied (e.g. CardPuter — SPI2=SD, SPI3=display) simply omit the `raw` entry;
+`CONFIG_DUNEOS_DRV_SPI` is not set and the driver is not compiled in.
+
+**Driver architecture:** each `open()` calls `spi_bus_add_device()` with its own CS/mode/speed;
+`close()` calls `spi_bus_remove_device()`. Config changes (ioctl SET_CS/MODE/SPEED) remove and
+re-add the device. No shared spi_bus module needed — unlike I2C, SPI device state is per-fd.
+
 **Roadmap items:**
 
-- [ ] `/dev/spi-1` — SPI3_HOST; ioctl API above; CS pin stored per open fd
-- [ ] BSP YAML: `spi` bus section
-- [ ] `DUNEOS_PERM_SPI` permission bit
-- [ ] Guard against opening `/dev/spi-1` on boards where SPI3 pins conflict with another peripheral
+- [x] `/dev/spi-1` — SPI3_HOST; ioctl API above; CS pin stored per open fd
+- [x] BSP YAML: `role: raw` on a `spi` entry → `DUNEOS_HAVE_SPI` + `DUNEOS_SPI1_*` defines; `duneos-bspgen` emits `CONFIG_DUNEOS_DRV_SPI=y`
+- [x] `DUNEOS_PERM_SPI` permission bit (bit 2, already defined in `abi.h`)
+- [x] Guard against conflict boards — boards without a `role: raw` SPI entry simply don't set `CONFIG_DUNEOS_DRV_SPI=y`; driver not compiled in
 
 ---
 

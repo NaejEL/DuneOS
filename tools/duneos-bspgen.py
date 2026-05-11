@@ -211,6 +211,28 @@ def generate(board: dict) -> str:
                 "",
             ]
 
+    # ----- Raw SPI bus (/dev/spi-1) -----
+    # Any spi entry with role: raw is exposed as the user-accessible SPI bus.
+    raw_spi = next((s for s in board.get("spi", []) if s.get("role") == "raw"), None)
+    if raw_spi:
+        spi_id    = raw_spi["id"]
+        sd_spi_id = board.get("sd_card", {}).get("spi_id")
+        shared    = (spi_id == sd_spi_id)
+        host_name = SPI_HOST_NAMES.get(spi_id, f"SPI{spi_id}_HOST")
+        lines += [
+            "/* ---------- SPI raw bus (/dev/spi-1) ---------- */",
+            _define("DUNEOS_HAVE_SPI",          1),
+            _define("DUNEOS_SPI1_HOST",         host_name),
+            _define("DUNEOS_SPI1_MOSI_PIN",     raw_spi["mosi_pin"]),
+            _define("DUNEOS_SPI1_MISO_PIN",     raw_spi.get("miso_pin", -1)),
+            _define("DUNEOS_SPI1_CLK_PIN",      raw_spi["clk_pin"]),
+            _define("DUNEOS_SPI1_MAX_FREQ_HZ",  raw_spi.get("max_freq_hz", 10_000_000)),
+        ]
+        if shared:
+            # Bus already initialised by vfs.c SD mount — drv_spi skips spi_bus_initialize().
+            lines.append(_define("DUNEOS_SPI1_BUS_SHARED", 1))
+        lines.append("")
+
     # ----- I2C -----
     i2c_buses = board.get("i2c", [])
     if i2c_buses:
@@ -330,6 +352,10 @@ def generate_sdkconfig_board(board: dict) -> str:
 
     if board.get("i2c"):
         lines += ["CONFIG_DUNEOS_DRV_I2C=y", ""]
+
+    raw_spi = next((s for s in board.get("spi", []) if s.get("role") == "raw"), None)
+    if raw_spi:
+        lines += ["CONFIG_DUNEOS_DRV_SPI=y", ""]
 
     batt = board.get("battery")
     if batt:

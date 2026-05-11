@@ -13,14 +13,17 @@ board:
       default_baud: 115200
 
   # SPI2: shared bus for SD card, ST7789 display, and CC1101.
-  # cs_pin here is the SD card CS; display and CC1101 have their own CS.
+  # cs_pin here is the SD card CS; display and CC1101 have their own CS pins.
+  # role: raw exposes this bus as /dev/spi-1; bus is already initialised by
+  # the SD card mount so DUNEOS_SPI1_BUS_SHARED is emitted and drv_spi skips
+  # spi_bus_initialize().
   spi:
     - id: 2
       mosi_pin: 9
       miso_pin: 10
       clk_pin: 11
       cs_pin: 13
-      role: master
+      role: raw
       max_freq_hz: 40000000
 
   sd_card:

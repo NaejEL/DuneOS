@@ -43,6 +43,7 @@ set(DUNEOS_KERNEL_REQUIRES
     esp_driver_uart
     esp_driver_gpio
     esp_driver_i2c
+    esp_driver_spi
     esp_driver_sdspi
     esp_adc
     esp_system
@@ -75,6 +76,10 @@ endif()
 
 if(CONFIG_DUNEOS_DRV_BATTERY_BQ27220)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/battery/drv_battery_bq27220.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_SPI)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/drv_spi.c")
 endif()
 
 # ---------------------------------------------------------------------------

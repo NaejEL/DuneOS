@@ -246,7 +246,7 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 8 — GPIO | **DONE** (native) | `/dev/gpiochip0` via `esp_driver_gpio`; `gpio_ioctl.h` SDK header; shell `gpio` command; expander support pending |
 | Phase 9 — Init system | **DONE** | `/sd/init.json` (cJSON), supervisor restart policies (`no`/`always`/`on-failure`), `duneos_service_ready()`; autoboot fallback retained |
 | Phase 10 — I2C + battery | **DONE** | `/dev/i2c-0`, `/dev/battery0` (adc_simple for CardPuter, bq27220 for T-Embed CC1101) |
-| Phase 11 — SPI | Not started | `/dev/spi-1` (SPI3_HOST only — SPI2 taken by SD) |
+| Phase 11 — SPI | **DONE** | `/dev/spi-1` (SPI3_HOST); per-fd `spi_bus_add_device`; `role: raw` in BSP YAML selects the raw bus; boards without a free SPI host omit the config flag |
 | Phase 12 — Input | Not started | `/dev/input/event0` ring buffer; keyboard daemon feeds it via IPC |
 | Phase 13 — Framebuffer + display SDK | Not started | `/dev/fb0` PSRAM-only; userspace `libst7789/gc9a01/ssd1306` for all boards |
 | Phase 14 — WiFi daemon | Not started | Userspace `wifi_daemon.dap`; lwIP sockets already exported |
@@ -254,7 +254,7 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 16 — Shell refactor: built-ins vs PATH | Not started | Keep only true built-ins (`cd`, `pwd`, `exit`, `echo`, `help`) in the shell binary. Move `ls`, `cat`, `mkdir`, `rm`, `mv`, `free`, `klog`, `gpio`, `services`, `restart`, `reboot` to `system/bin/` as `.dap` files. Shell `exec_line` falls back to searching `/flash/bin/<cmd>.dap` then `/sd/bin/<cmd>.dap`. `dbt.py deploy --bin` copies to the right target. |
 | Phase 17 — Flash app storage (`/flash`) | Not started | LittleFS partition (`sysbin`, ~1 MB) mounted at `/flash`; loader search order: `/flash/bin/` → `/sd/apps/`. Essential system apps (`shell.dap`, `ls.dap`, `cat.dap` …) embedded as binary blobs in the firmware image via `cmake_embed_binary` or `esptool` custom partition image — board boots and is usable with no SD card. `dbt.py flashimg` produces a ready-to-flash LittleFS image. BSP YAML gains `has_sd: false` to skip SD mount and rely solely on `/flash`. |
 
-**Current state:** Phases 1–10 implemented. The kernel boots, mounts SD, reads `/sd/init.json` to launch services with restart policies (falling back to autoboot if absent). The shell provides `/dev/uart0` + GPIO + I2C + battery commands. The driver architecture is modular: each device has its own file in `src/drivers/`, compiled only when `CONFIG_DUNEOS_DRV_*=y` is set in the board's `sdkconfig.defaults`. Board selection is via `.duneos_board` (VS Code cmake arg must be empty). Stack canaries and per-app exception handlers remain as known technical debt.
+**Current state:** Phases 1–11 implemented. The kernel boots, mounts SD, reads `/sd/init.json` to launch services with restart policies (falling back to autoboot if absent). The shell provides `/dev/uart0` + GPIO + I2C + battery commands. `/dev/spi-1` is available on boards that declare a `role: raw` SPI bus in their YAML (currently: esp32s3-devkitc on SPI3). The driver architecture is modular: each device has its own file in `src/drivers/`, compiled only when `CONFIG_DUNEOS_DRV_*=y` is set in the board's `sdkconfig.defaults`. Board selection is via `.duneos_board` (VS Code cmake arg must be empty). Stack canaries and per-app exception handlers remain as known technical debt.
 
 ## Key Technical Decisions
 

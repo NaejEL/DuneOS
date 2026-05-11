@@ -63,8 +63,16 @@
 /* ---------- PN532 NFC (on I2C0) --------------------------------- */
 /* IRQ=17  RESET=45                                                        */
 
-/* ---------- CC1101 sub-GHz radio (userspace via /dev/spi-1, Phase 11) -- */
-/* Shares SPI2 bus (MOSI=9 MISO=10 SCK=11).  CS=[VERIFY]  GDO0=2  GDO2=3 */
+/* ---------- SPI raw bus (/dev/spi-1) — shared with SD on SPI2 ---------- */
+/* DUNEOS_SPI1_BUS_SHARED: bus already initialised by vfs.c SD mount.      */
+/* Apps set their own CS via ioctl(SPI_SET_CS). CC1101 CS=GPIO14 GDO0=2.  */
+#define DUNEOS_HAVE_SPI             1
+#define DUNEOS_SPI1_HOST            SPI2_HOST
+#define DUNEOS_SPI1_MOSI_PIN        9
+#define DUNEOS_SPI1_MISO_PIN        10
+#define DUNEOS_SPI1_CLK_PIN         11
+#define DUNEOS_SPI1_MAX_FREQ_HZ     40000000
+#define DUNEOS_SPI1_BUS_SHARED      1
 
 /* ---------- Rotary encoder + side key (input, Phase 12) ---------- */
 /* KNOB_A=4  KNOB_B=5  KNOB_BTN=0  KEY_BTN=6                              */

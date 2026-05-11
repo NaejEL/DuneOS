@@ -19,6 +19,13 @@ board:
       cs_pin: 10
       role: master
       max_freq_hz: 40000000
+    - id: 3
+      mosi_pin: 15
+      miso_pin: 16
+      clk_pin: 18
+      cs_pin: -1   # CS controlled per-transfer via ioctl(SPI_SET_CS, gpio)
+      role: raw
+      max_freq_hz: 40000000
 
   sd_card:
     interface: spi
