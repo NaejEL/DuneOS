@@ -13,7 +13,7 @@
  * The loader rejects apps whose required_abi_version > DUNEOS_ABI_VERSION.
  */
 #define DUNEOS_ABI_VERSION      1
-#define DUNEOS_VERSION_STRING   "0.1.0"
+#define DUNEOS_VERSION_STRING   "0.2.0"
 
 /* ELF section name where the app embeds its manifest JSON */
 #define DUNEOS_MANIFEST_SECTION ".duneos_manifest"
@@ -31,9 +31,10 @@ typedef struct {
     char     version[DUNEOS_APP_VERSION_MAX];
     uint32_t required_abi_version;
     uint32_t permissions;           /* bitmask — see DUNEOS_PERM_* below */
+    uint32_t stack_size;            /* app task stack in bytes; 0 → default */
 } duneos_app_manifest_t;
 
-/* Permission bits — enforced by the loader (capability model, no MMU) */
+/* Permission bits — enforced by the loader during symbol resolution */
 #define DUNEOS_PERM_GPIO        (1u << 0)
 #define DUNEOS_PERM_UART        (1u << 1)
 #define DUNEOS_PERM_SPI         (1u << 2)
@@ -44,8 +45,9 @@ typedef struct {
 
 /*
  * One entry in the kernel export symbol table.
- * The table is a NULL-terminated array stored at a fixed address so that
- * the loader can walk it without knowing its size at compile time.
+ *
+ * required_perm: if non-zero, the loader refuses to resolve this symbol
+ * unless the app's manifest permissions bitmask includes all required bits.
  *
  * This is NOT a CPU-level syscall table — there is no privilege separation
  * on Xtensa without an MMU. It is simply a table of function pointers.
@@ -53,7 +55,15 @@ typedef struct {
 typedef struct {
     const char *name;
     void       *ptr;
+    uint32_t    required_perm;  /* 0 = always allowed */
 } duneos_symbol_t;
 
 /* Retrieve the kernel export table (NULL-terminated array) */
 const duneos_symbol_t *duneos_symbol_table_get(void);
+
+/*
+ * Opaque handle to a loaded app.  Defined in duneos_loader; declared here so
+ * supervisor.h (in duneos_kernel) can reference it without depending on loader.
+ */
+struct duneos_app;
+typedef struct duneos_app duneos_app_t;

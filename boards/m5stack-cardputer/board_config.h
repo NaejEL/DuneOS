@@ -18,7 +18,7 @@
 #define DUNEOS_FLASH_SIZE_MB    8
 #define DUNEOS_PSRAM_SIZE_MB    8
 
-/* ---------- UART0 (USB-C console via CH9102) ---------- */
+/* ---------- UART0 (Not USB, use external UART) ---------- */
 #define DUNEOS_UART0_TX_PIN     43
 #define DUNEOS_UART0_RX_PIN     44
 #define DUNEOS_UART0_BAUD       115200

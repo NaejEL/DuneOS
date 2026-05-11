@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 /*
- * Minimal ELF types for ET_REL (relocatable object) files targeting Xtensa.
+ * Minimal ELF types for ET_REL (relocatable object) files.
  * Only the fields DuneOS actually uses are listed — not an exhaustive ELF spec.
  */
 
@@ -16,6 +16,7 @@
 
 /* e_machine */
 #define EM_XTENSA       94
+#define EM_RISCV        243
 
 /* e_ident indices */
 #define EI_CLASS        4
@@ -73,6 +74,9 @@
 #define R_XTENSA_SLOT14_OP      34
 #define R_XTENSA_ASM_EXPAND     11
 #define R_XTENSA_32_PCREL       14
+#define R_XTENSA_DIFF8          17  /* difference relocs — typically in unwind tables */
+#define R_XTENSA_DIFF16         18
+#define R_XTENSA_DIFF32         19
 
 #pragma pack(push, 1)
 

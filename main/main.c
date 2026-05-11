@@ -1,87 +1,84 @@
 #include <stdio.h>
-#include <string.h>
+#include <fcntl.h>
 
-#include "esp_log.h"
 #include "esp_err.h"
-
+#include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
+#include "duneos/klog.h"
 #include "duneos/abi.h"
 #include "duneos/task.h"
 #include "duneos/vfs.h"
-#include "duneos/manifest.h"
 #include "duneos/loader.h"
+#include "duneos/supervisor.h"
 
 static const char *TAG = "duneos";
 
-static void kernel_idle_loop(void)
+static void kernel_idle(void)
 {
-    ESP_LOGI(TAG, "kernel idle — no app running");
-    while (1) {
-        duneos_task_delay_ms(5000);
-        ESP_LOGI(TAG, "idle");
+    klog_i(TAG, "kernel idle");
+    while (1) duneos_task_delay_ms(5000);
+}
+
+static void console_init(void)
+{
+    usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+    esp_err_t err = usb_serial_jtag_driver_install(&cfg);
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        klog_e(TAG, "usb_serial_jtag_driver_install: %s", esp_err_to_name(err));
+        return;
     }
+    usb_serial_jtag_vfs_use_driver();
+    usb_serial_jtag_vfs_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
+    usb_serial_jtag_vfs_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
+    fcntl(fileno(stdin),  F_SETFL, 0);
+    fcntl(fileno(stdout), F_SETFL, 0);
 }
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "DuneOS " DUNEOS_VERSION_STRING
-                  " (ABI v%d) starting", DUNEOS_ABI_VERSION);
+    console_init();
+    klog_i(TAG, "DuneOS " DUNEOS_VERSION_STRING " (ABI v%d)", DUNEOS_ABI_VERSION);
 
-    /* VFS — SD failure is non-fatal during development */
-    esp_err_t err = duneos_vfs_init();
+    if (duneos_vfs_init() != ESP_OK) {
+        klog_w(TAG, "VFS init failed — no SD card?");
+        kernel_idle();
+        return;
+    }
+
+    duneos_loader_init();
+
+    if (duneos_supervisor_init() != ESP_OK) {
+        klog_e(TAG, "supervisor init failed");
+        kernel_idle();
+        return;
+    }
+
+    /* Scan /sd/apps/ for .elf / .dap files */
+    static duneos_app_info_t apps[DUNEOS_MAX_APPS];
+    int count = 0;
+    duneos_loader_scan(apps, DUNEOS_MAX_APPS, &count);
+
+    if (count == 0) {
+        klog_w(TAG, "no apps found in %s", DUNEOS_APPS_DIR);
+        kernel_idle();
+        return;
+    }
+
+    /* Select app — reads /sd/autoboot or defaults to first found */
+    const duneos_app_info_t *target = duneos_loader_select(apps, count);
+    klog_i(TAG, "launching '%s' v%s",
+           target->meta.name, target->meta.version);
+
+    esp_err_t err = duneos_supervisor_launch(target->path);
     if (err != ESP_OK) {
-        ESP_LOGW(TAG, "VFS init failed (%s) — no SD card?",
-                 esp_err_to_name(err));
-        kernel_idle_loop();
+        klog_e(TAG, "launch failed: %s", esp_err_to_name(err));
+        kernel_idle();
         return;
     }
 
-    /* Manifest */
-    duneos_manifest_t manifest;
-    err = duneos_manifest_read(&manifest);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "no manifest (%s) — drop to idle",
-                 esp_err_to_name(err));
-        kernel_idle_loop();
-        return;
-    }
+    /* Block until the app (and any apps it spawned) finishes */
+    duneos_supervisor_wait_all();
+    klog_i(TAG, "all apps exited");
 
-    if (manifest.app_count == 0) {
-        ESP_LOGW(TAG, "manifest lists no apps — idle");
-        kernel_idle_loop();
-        return;
-    }
-
-    /* Select app */
-    const duneos_manifest_entry_t *target = NULL;
-    if (manifest.autoboot[0] != '\0') {
-        target = duneos_manifest_find(&manifest, manifest.autoboot);
-        if (!target) {
-            ESP_LOGW(TAG, "autoboot '%s' not in manifest — using first app",
-                     manifest.autoboot);
-        }
-    }
-    if (!target) {
-        target = &manifest.apps[0];
-    }
-
-    ESP_LOGI(TAG, "launching: %s %s (ABI>=%lu)",
-             target->meta.name,
-             target->meta.version,
-             (unsigned long)target->meta.required_abi_version);
-
-    /* Load and run */
-    duneos_app_t *app = NULL;
-    err = duneos_loader_load(target->path, &app);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "load failed: %s", esp_err_to_name(err));
-        kernel_idle_loop();
-        return;
-    }
-
-    err = duneos_loader_run(app);
-    ESP_LOGI(TAG, "app '%s' finished: %s",
-             target->meta.name, esp_err_to_name(err));
-
-    duneos_loader_unload(app);
-    kernel_idle_loop();
+    kernel_idle();
 }

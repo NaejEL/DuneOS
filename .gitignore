@@ -1,4 +1,5 @@
 build/
+.duneos_board
 sdkconfig
 sdkconfig.old
 *.pyc

@@ -1,12 +1,23 @@
 #include "duneos/loader.h"
 #include "duneos/elf.h"
+#include "duneos/supervisor.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
 
-#include "esp_log.h"
+#include "duneos/klog.h"
 #include "esp_heap_caps.h"
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+#include "soc/soc.h"
+#endif
 
 static const char *TAG = "duneos/loader";
 
@@ -24,9 +35,15 @@ struct duneos_app {
     void *section_bases[MAX_SECTIONS];
     int   section_count;
 
-    /* All PSRAM allocations — freed on unload */
+    /* Heap allocations (data/rodata/bss) freed on unload.
+     * Exec sections on Xtensa come from the static pool — not tracked here. */
     void *allocs[MAX_SECTIONS];
     int   alloc_count;
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    size_t exec_pool_mark;  /* s_exec_pool_used before this app loaded */
+    size_t exec_pool_end;   /* s_exec_pool_used after section loading */
+#endif
 
     void (*entry)(void);
 };
@@ -35,13 +52,77 @@ struct duneos_app {
  * Helpers
  * ---------------------------------------------------------------------- */
 
-static void *psram_alloc(duneos_app_t *app, size_t size)
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+
+/* On Xtensa, the same physical SRAM is dual-mapped: D-bus (DRAM, r/w) and
+ * I-bus (IRAM, exec-only).  D-bus STORE instructions cannot target IRAM
+ * addresses — they trigger a cache error.
+ *
+ * Strategy: pool lives in DRAM BSS (writable via D-bus, predictable address).
+ * section_alloc() returns the IRAM alias (pool_dram + SOC_I_D_OFFSET) so the
+ * I-bus can fetch instructions from it.  to_write_ptr() converts that alias
+ * back to the DRAM address for fread/relocation writes.
+ *
+ * This requires CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n (set in the board's
+ * sdkconfig.defaults).  With MEMPROT enabled, the I-bus/D-bus split locks the
+ * DIRAM region so that the IRAM alias of free DRAM is non-executable and the
+ * DRAM alias of static IRAM is read-only — making dynamic code loading
+ * impossible regardless of where the pool is placed. */
+
+#ifndef CONFIG_DUNEOS_EXEC_POOL_KB
+#define CONFIG_DUNEOS_EXEC_POOL_KB 64
+#endif
+
+/* Plain DRAM BSS — written at this address, executed via IRAM alias. */
+static uint8_t s_exec_pool[CONFIG_DUNEOS_EXEC_POOL_KB * 1024u] __attribute__((aligned(4)));
+static size_t  s_exec_pool_used;
+
+/* Given an IRAM exec address (pool DRAM + SOC_I_D_OFFSET), return the DRAM write ptr. */
+static inline void *to_write_ptr(const void *iram_addr)
 {
-    void *p = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (p && app->alloc_count < MAX_SECTIONS) {
-        app->allocs[app->alloc_count++] = p;
+    uintptr_t a      = (uintptr_t)iram_addr;
+    uintptr_t pstart = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
+    if (a >= pstart && a < pstart + sizeof(s_exec_pool))
+        return (void *)(a - (uintptr_t)SOC_I_D_OFFSET);
+    return (void *)iram_addr;
+}
+
+#else /* RISC-V or other: no IRAM/DRAM split, all memory is writable */
+
+static inline void *to_write_ptr(const void *addr) { return (void *)addr; }
+
+#endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
+
+static void *section_alloc(duneos_app_t *app, size_t size, bool exec)
+{
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    if (exec) {
+        /* Round up to 4-byte alignment (Xtensa instruction alignment). */
+        size_t aligned = (size + 3u) & ~3u;
+        if (s_exec_pool_used + aligned > sizeof(s_exec_pool)) {
+            klog_e(TAG, "exec pool exhausted (%zu + %zu > %u KB)",
+                   s_exec_pool_used, aligned, CONFIG_DUNEOS_EXEC_POOL_KB);
+            return NULL;
+        }
+        /* Pool is DRAM; return IRAM alias so the I-bus can execute from it. */
+        uint8_t *dram_ptr = s_exec_pool + s_exec_pool_used;
+        s_exec_pool_used += aligned;
+        return (void *)((uintptr_t)dram_ptr + (uintptr_t)SOC_I_D_OFFSET);
     }
-    return p;
+#endif
+
+    /* Data / rodata / bss: heap allocation. */
+#ifdef CONFIG_SPIRAM
+    void *ptr = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!ptr)
+        ptr = heap_caps_malloc(size, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#else
+    void *ptr = heap_caps_malloc(size, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#endif
+    if (!ptr) return NULL;
+    if (app->alloc_count < MAX_SECTIONS)
+        app->allocs[app->alloc_count++] = ptr;
+    return ptr;
 }
 
 static esp_err_t read_at(FILE *f, long offset, void *buf, size_t len)
@@ -63,27 +144,37 @@ static const char *shdr_name(const char *shstrtab, const elf32_shdr_t *sh)
 static esp_err_t elf_validate(const elf32_hdr_t *hdr)
 {
     if (memcmp(hdr->e_ident, ELF_MAGIC, ELF_MAGIC_SIZE) != 0) {
-        ESP_LOGE(TAG, "not an ELF file");
+        klog_e(TAG, "not an ELF file — ident: %02x %02x %02x %02x",
+                 hdr->e_ident[0], hdr->e_ident[1],
+                 hdr->e_ident[2], hdr->e_ident[3]);
         return ESP_ERR_INVALID_ARG;
     }
     if (hdr->e_ident[EI_CLASS] != ELFCLASS32) {
-        ESP_LOGE(TAG, "not a 32-bit ELF");
+        klog_e(TAG, "not a 32-bit ELF (EI_CLASS=0x%02x)", hdr->e_ident[EI_CLASS]);
         return ESP_ERR_NOT_SUPPORTED;
     }
     if (hdr->e_ident[EI_DATA] != ELFDATA2LSB) {
-        ESP_LOGE(TAG, "not little-endian ELF");
+        klog_e(TAG, "not little-endian ELF (EI_DATA=0x%02x, expected 0x01)",
+                 hdr->e_ident[EI_DATA]);
         return ESP_ERR_NOT_SUPPORTED;
     }
     if (hdr->e_type != ET_REL) {
-        ESP_LOGE(TAG, "e_type=%u — only ET_REL (1) supported", hdr->e_type);
+        klog_e(TAG, "e_type=%u — only ET_REL (1) supported", hdr->e_type);
         return ESP_ERR_NOT_SUPPORTED;
     }
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     if (hdr->e_machine != EM_XTENSA) {
-        ESP_LOGE(TAG, "e_machine=%u — expected EM_XTENSA (94)", hdr->e_machine);
+        klog_e(TAG, "e_machine=%u — expected EM_XTENSA (94)", hdr->e_machine);
         return ESP_ERR_NOT_SUPPORTED;
     }
+#elif defined(CONFIG_IDF_TARGET_ARCH_RISCV)
+    if (hdr->e_machine != EM_RISCV) {
+        klog_e(TAG, "e_machine=%u — expected EM_RISCV (243)", hdr->e_machine);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+#endif
     if (hdr->e_shoff == 0 || hdr->e_shnum == 0) {
-        ESP_LOGE(TAG, "no section headers");
+        klog_e(TAG, "no section headers");
         return ESP_ERR_INVALID_ARG;
     }
     return ESP_OK;
@@ -145,26 +236,31 @@ static esp_err_t load_sections(FILE              *f,
         sec_kind_t kind = classify_section(name, sh->sh_flags);
         if (kind == SEC_IGNORE) continue;
 
-        void *mem = psram_alloc(app, sh->sh_size);
+        bool is_exec = (kind == SEC_TEXT);
+        void *mem = section_alloc(app, sh->sh_size, is_exec);
         if (!mem) {
-            ESP_LOGE(TAG, "PSRAM alloc failed: '%s' (%lu B)",
+            klog_e(TAG, "alloc failed: '%s' (%lu B)",
                      name, (unsigned long)sh->sh_size);
             return ESP_ERR_NO_MEM;
         }
         app->section_bases[i] = mem;
 
         if (sh->sh_type == SHT_NOBITS) {
-            /* .bss: zero-initialise — the data is NOT stored in the ELF */
-            memset(mem, 0, sh->sh_size);
+            /* .bss: zero-initialise via write pointer (D-bus safe on Xtensa) */
+            memset(to_write_ptr(mem), 0, sh->sh_size);
         } else {
-            if (read_at(f, sh->sh_offset, mem, sh->sh_size) != ESP_OK) {
-                ESP_LOGE(TAG, "read failed: '%s'", name);
+            /* Read via write pointer: on Xtensa, fread cannot target IRAM
+             * addresses (D-bus restriction); to_write_ptr() converts exec
+             * pool IRAM addresses to their DRAM alias. */
+            if (read_at(f, sh->sh_offset, to_write_ptr(mem), sh->sh_size) != ESP_OK) {
+                klog_e(TAG, "read failed: '%s'", name);
                 return ESP_ERR_INVALID_ARG;
             }
         }
 
-        ESP_LOGD(TAG, "  loaded %-28s %4lu B @ %p",
-                 name, (unsigned long)sh->sh_size, mem);
+        klog_d(TAG, "  loaded %-28s %4lu B @ %p%s",
+                 name, (unsigned long)sh->sh_size, mem,
+                 is_exec ? " [IRAM]" : " [DRAM]");
     }
     return ESP_OK;
 }
@@ -173,11 +269,20 @@ static esp_err_t load_sections(FILE              *f,
  * Symbol resolution
  * ---------------------------------------------------------------------- */
 
-static void * __attribute__((used)) resolve_symbol(const char *name)
+static void *resolve_symbol(const char *name,
+                              const duneos_app_manifest_t *manifest)
 {
     const duneos_symbol_t *t = duneos_symbol_table_get();
     for (; t->name; t++) {
-        if (strcmp(t->name, name) == 0) return t->ptr;
+        if (strcmp(t->name, name) != 0) continue;
+        if (t->required_perm && manifest &&
+            !(manifest->permissions & t->required_perm)) {
+            klog_w(TAG, "permission denied: '%s' (need 0x%08lx, app has 0x%08lx)",
+                   name, (unsigned long)t->required_perm,
+                   (unsigned long)manifest->permissions);
+            return NULL;
+        }
+        return t->ptr;
     }
     return NULL;
 }
@@ -192,9 +297,10 @@ static void *symbol_address(const elf32_sym_t  *sym,
     }
     if (sym->st_shndx == SHN_UNDEF) {
         const char *name = strtab + sym->st_name;
-        void *ptr = resolve_symbol(name);
+        if (!name[0]) return NULL;  /* symbol index 0 — always null, skip silently */
+        void *ptr = resolve_symbol(name, &app->manifest);
         if (!ptr) {
-            ESP_LOGE(TAG, "unresolved symbol: '%s'", name);
+            klog_e(TAG, "unresolved symbol: '%s'", name);
         }
         return ptr;
     }
@@ -210,7 +316,7 @@ static void *symbol_address(const elf32_sym_t  *sym,
  * Xtensa uses RELA (relocation with explicit addend) exclusively.
  *
  * Types handled:
- *   R_XTENSA_32        — 32-bit absolute: *ptr = S + A
+ *   R_XTENSA_32        — 32-bit absolute (additive): *ptr += S + A
  *   R_XTENSA_SLOT0_OP  — patch instruction slot 0 (typically L32R)
  *   R_XTENSA_ASM_EXPAND — assembler hint, no loader action needed
  *
@@ -235,30 +341,103 @@ static esp_err_t apply_slot0_op(uint8_t  *insn_ptr,
                                  uint32_t  insn_pc,
                                  uint32_t  target_addr)
 {
-    uint8_t opcode = insn_ptr[0] & 0x0F;
+    uint8_t  opcode = insn_ptr[0] & 0x0F;
+    int32_t  offset;
 
-    if (opcode == 0x1) {
-        /* L32R */
+    switch (opcode) {
+
+    case 0x1: {
+        /* L32R: 16-bit signed offset in bytes[2:1], in units of 4 bytes from
+         * the next 4-byte-aligned PC.  offset = (target - aligned_PC) / 4  */
         uint32_t aligned_pc = (insn_pc + 3) & ~3u;
-        int32_t  offset     = ((int32_t)target_addr - (int32_t)aligned_pc) / 4;
-
+        offset = ((int32_t)target_addr - (int32_t)aligned_pc) / 4;
         if ((offset * 4) != ((int32_t)target_addr - (int32_t)aligned_pc)) {
-            ESP_LOGE(TAG, "L32R offset not aligned: target=0x%08lx pc=0x%08lx",
-                     (unsigned long)target_addr, (unsigned long)insn_pc);
+            klog_e(TAG, "L32R target not aligned: 0x%08lx", (unsigned long)target_addr);
             return ESP_ERR_INVALID_ARG;
         }
         if (offset < -32768 || offset > 32767) {
-            ESP_LOGE(TAG, "L32R offset out of 16-bit range: %ld", (long)offset);
+            klog_e(TAG, "L32R offset out of 16-bit range: %ld", (long)offset);
             return ESP_ERR_INVALID_ARG;
         }
-
         insn_ptr[1] = (uint8_t)(offset & 0xFF);
         insn_ptr[2] = (uint8_t)((offset >> 8) & 0xFF);
-        return ESP_OK;
+        break;
     }
 
-    ESP_LOGW(TAG, "SLOT0_OP: unhandled opcode 0x%x at %p — skipping",
-             opcode, insn_ptr);
+    case 0x5: {
+        /* CALL0/4/8/12: 18-bit signed word-offset in bits[23:6].
+         * EA = ((PC+4) & ~3) + SE18 * 4  */
+        uint32_t aligned_pc = (insn_pc + 4) & ~3u;
+        offset = ((int32_t)target_addr - (int32_t)aligned_pc) >> 2;
+        if (offset < -(1<<17) || offset > (1<<17)-1) {
+            klog_e(TAG, "CALL offset out of 18-bit range at PC=0x%08lx target=0x%08lx (%ld words) — load aborted",
+                   (unsigned long)insn_pc, (unsigned long)target_addr, (long)offset);
+            return ESP_ERR_INVALID_ARG;
+        }
+        insn_ptr[0] = (insn_ptr[0] & 0x3F) | ((uint8_t)(offset & 0x3) << 6);
+        insn_ptr[1] = (uint8_t)((offset >>  2) & 0xFF);
+        insn_ptr[2] = (uint8_t)((offset >> 10) & 0xFF);
+        break;
+    }
+
+    case 0x6: {
+        /* op0=6 covers three distinct branch sub-formats, distinguished by
+         * bits[5:4] of byte[0] (= op1[1:0]):
+         *
+         *  0x00  J (RI16/CALL format): bits[23:6] = 18-bit signed byte-offset.
+         *        n=0 is always in bits[5:4]; bits[7:6] carry offset[1:0].
+         *
+         *  0x10  BRI12 (BEQZ/BNEZ/BLTZ/BGEZ, op1 ∈ {1,5,9,D}): 12-bit offset.
+         *        bits[23:12] = imm12, bits[11:8] = s (register).
+         *        byte[1] = {imm12[3:0], s[3:0]}; byte[2] = imm12[11:4].
+         *
+         *  0x20  BRI8 (BEQI/BNEI/BLTI/BGEI, op1 ∈ {2,6,A,E}): 8-bit offset.
+         *        bits[23:16] = imm8, bits[15:8] = {b4const, s} (both preserved).
+         *        Only byte[2] is updated; byte[1] is left intact. */
+        offset = (int32_t)target_addr - (int32_t)(insn_pc + 4);
+        uint8_t bits54 = insn_ptr[0] & 0x30;
+
+        if (bits54 == 0x00 && offset >= -(1<<17) && offset <= (1<<17)-1) {
+            /* J: 18-bit byte-offset in bits[23:6] */
+            insn_ptr[0] = (insn_ptr[0] & 0x3F) | ((uint8_t)(offset & 0x3) << 6);
+            insn_ptr[1] = (uint8_t)((offset >>  2) & 0xFF);
+            insn_ptr[2] = (uint8_t)((offset >> 10) & 0xFF);
+        } else if (bits54 == 0x10 && offset >= -2048 && offset <= 2047) {
+            /* BRI12: imm12 split across byte[1][7:4] and byte[2]; register preserved. */
+            insn_ptr[1] = (insn_ptr[1] & 0x0F) | ((uint8_t)(offset & 0x0F) << 4);
+            insn_ptr[2] = (uint8_t)((offset >> 4) & 0xFF);
+        } else if (bits54 == 0x20 && offset >= -128 && offset <= 127) {
+            /* BRI8: imm8 in byte[2] only; byte[1] (b4const + register) unchanged. */
+            insn_ptr[2] = (uint8_t)(int8_t)offset;
+        } else {
+            klog_d(TAG, "SLOT0_OP opcode 6: unhandled (bits54=0x%02x offset=%ld) at %p",
+                   bits54, (long)offset, insn_ptr);
+        }
+        break;
+    }
+
+    case 0x7: {
+        /* B format: BEQ/BNE/BLT/BGE/etc., 8-bit signed byte-offset in byte[2].
+         * EA = PC + 4 + offset  */
+        offset = (int32_t)target_addr - (int32_t)(insn_pc + 4);
+        if (offset < -128 || offset > 127) {
+            klog_d(TAG, "B-format offset out of 8-bit range at %p (%ld)", insn_ptr, (long)offset);
+            break;
+        }
+        insn_ptr[2] = (uint8_t)(int8_t)offset;
+        break;
+    }
+
+    case 0x8: case 0x9: case 0xa: case 0xb:
+    case 0xc: case 0xd: case 0xe: case 0xf:
+        /* Narrow (16-bit) instructions — SLOT0_OP unexpected here; skip. */
+        break;
+
+    default:
+        klog_d(TAG, "SLOT0_OP: unhandled opcode 0x%x at %p — skipping", opcode, insn_ptr);
+        break;
+    }
+
     return ESP_OK;
 }
 
@@ -293,7 +472,7 @@ static esp_err_t apply_relocations(FILE               *f,
             return ESP_ERR_INVALID_ARG;
         }
 
-        ESP_LOGD(TAG, "  rela %-28s → %-20s (%d entries)",
+        klog_d(TAG, "  rela %-28s → %-20s (%d entries)",
                  shdr_name(shstrtab, rsh),
                  shdr_name(shstrtab, &shdrs[target_idx]),
                  nentries);
@@ -304,7 +483,7 @@ static esp_err_t apply_relocations(FILE               *f,
             uint8_t  rel_type = ELF32_R_TYPE(rel->r_info);
 
             if (sym_idx >= (uint32_t)symcount) {
-                ESP_LOGE(TAG, "relocation symbol index %lu out of range",
+                klog_e(TAG, "relocation symbol index %lu out of range",
                          (unsigned long)sym_idx);
                 free(relas);
                 return ESP_ERR_INVALID_ARG;
@@ -313,25 +492,22 @@ static esp_err_t apply_relocations(FILE               *f,
             const elf32_sym_t *sym = &symtab[sym_idx];
             void *S = symbol_address(sym, strtab, app);
 
-            uint8_t *patch_ptr = (uint8_t *)target_base + rel->r_offset;
-            uint32_t patch_pc  = (uint32_t)(uintptr_t)patch_ptr;
+            /* Write via D-bus-safe alias; PC stays at exec address for offset math */
+            uint8_t *patch_ptr = (uint8_t *)to_write_ptr(target_base) + rel->r_offset;
+            uint32_t patch_pc  = (uint32_t)((uintptr_t)target_base + rel->r_offset);
             uint32_t target_addr = (uint32_t)(uintptr_t)S + rel->r_addend;
 
             switch (rel_type) {
             case R_XTENSA_32:
-                /* 32-bit absolute address */
-                if (!S) {
-                    free(relas);
-                    return ESP_ERR_INVALID_ARG;
-                }
-                *(uint32_t *)patch_ptr = target_addr;
+                /* Additive: existing content holds the within-section offset
+                 * (pre-computed by compiler for SHF_MERGE string sections).
+                 * Formula: *(ptr) += S + A, not *(ptr) = S + A. */
+                if (S) *(uint32_t *)patch_ptr += target_addr;
+                else   *(uint32_t *)patch_ptr  = 0;
                 break;
 
             case R_XTENSA_SLOT0_OP: {
-                if (!S) {
-                    free(relas);
-                    return ESP_ERR_INVALID_ARG;
-                }
+                if (!S) break;  /* skip reloc; calling site will crash if reached */
                 esp_err_t err = apply_slot0_op(patch_ptr, patch_pc, target_addr);
                 if (err != ESP_OK) { free(relas); return err; }
                 break;
@@ -341,8 +517,14 @@ static esp_err_t apply_relocations(FILE               *f,
                 /* Assembler relaxation hint — no loader action needed */
                 break;
 
+            case R_XTENSA_DIFF32:
+                /* PC-relative 32-bit difference: *ptr -= S + A
+                 * Appears in exception tables and GCC unwind info. */
+                if (S) *(int32_t *)patch_ptr -= (int32_t)target_addr;
+                break;
+
             default:
-                ESP_LOGW(TAG, "unhandled relocation type %u at offset 0x%lx — skipping",
+                klog_d(TAG, "unhandled relocation type %u at offset 0x%lx — skipping",
                          rel_type, (unsigned long)rel->r_offset);
                 break;
             }
@@ -395,21 +577,62 @@ static esp_err_t extract_manifest(FILE               *f,
             if (p) sscanf(p + 1, "%lu",
                           (unsigned long *)&out->required_abi_version);
         }
+        out->permissions = 0;
+        if ((p = strstr(json, "\"permissions\"")) != NULL) {
+            p = strchr(p + 13, ':');
+            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->permissions);
+        }
+        out->stack_size = 0;  /* 0 → supervisor uses DUNEOS_APP_DEFAULT_STACK */
+        if ((p = strstr(json, "\"stack_size\"")) != NULL) {
+            p = strchr(p + 12, ':');
+            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->stack_size);
+        }
 
         free(json);
-        ESP_LOGI(TAG, "manifest: '%s' v%s (ABI>=%lu)",
+        klog_i(TAG, "manifest: '%s' v%s (ABI>=%lu perms=0x%lx)",
                  out->name, out->version,
-                 (unsigned long)out->required_abi_version);
+                 (unsigned long)out->required_abi_version,
+                 (unsigned long)out->permissions);
         return ESP_OK;
     }
 
-    ESP_LOGW(TAG, "no " DUNEOS_MANIFEST_SECTION " section");
+    klog_w(TAG, "no " DUNEOS_MANIFEST_SECTION " section");
     return ESP_OK;
 }
 
 /* -------------------------------------------------------------------------
  * Public API
  * ---------------------------------------------------------------------- */
+
+void duneos_loader_init(void)
+{
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Verify the exec pool's IRAM alias falls within the DIRAM executable
+     * region.  Fails at boot if the kernel's DRAM BSS has grown too large. */
+    uintptr_t pool_iram_start = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
+    uintptr_t pool_iram_end   = pool_iram_start + sizeof(s_exec_pool);
+    if (pool_iram_start < SOC_DIRAM_IRAM_LOW || pool_iram_end > SOC_DIRAM_IRAM_HIGH) {
+        klog_e(TAG, "exec pool IRAM alias out of DIRAM range — "
+               "reduce DUNEOS_EXEC_POOL_KB or kernel BSS");
+        klog_e(TAG, "  pool DRAM %p, IRAM alias %p-%p, DIRAM %p-%p",
+               s_exec_pool,
+               (void *)pool_iram_start, (void *)pool_iram_end,
+               (void *)SOC_DIRAM_IRAM_LOW, (void *)SOC_DIRAM_IRAM_HIGH);
+    } else {
+        klog_i(TAG, "exec pool DRAM=%p IRAM=%p (%u KB)",
+               s_exec_pool, (void *)pool_iram_start,
+               CONFIG_DUNEOS_EXEC_POOL_KB);
+    }
+#endif
+
+    static const duneos_loader_ops_t ops = {
+        .load         = duneos_loader_load,
+        .run          = duneos_loader_run,
+        .unload       = duneos_loader_unload,
+        .get_manifest = duneos_loader_get_manifest,
+    };
+    duneos_supervisor_register_loader(&ops);
+}
 
 esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 {
@@ -418,7 +641,7 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
     FILE *f = fopen(path, "rb");
     if (!f) {
-        ESP_LOGE(TAG, "cannot open '%s'", path);
+        klog_e(TAG, "cannot open '%s'", path);
         return ESP_ERR_NOT_FOUND;
     }
 
@@ -433,7 +656,7 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
     /* 1. ELF header */
     if (read_at(f, 0, &hdr, sizeof(hdr)) != ESP_OK) {
-        ESP_LOGE(TAG, "cannot read ELF header");
+        klog_e(TAG, "cannot read ELF header");
         err = ESP_ERR_INVALID_ARG;
         goto out;
     }
@@ -441,12 +664,12 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (err != ESP_OK) goto out;
 
     if (hdr.e_shnum > MAX_SECTIONS) {
-        ESP_LOGE(TAG, "too many sections: %u (max %d)", hdr.e_shnum, MAX_SECTIONS);
+        klog_e(TAG, "too many sections: %u (max %d)", hdr.e_shnum, MAX_SECTIONS);
         err = ESP_ERR_NOT_SUPPORTED;
         goto out;
     }
 
-    ESP_LOGI(TAG, "loading '%s' (%u sections)", path, hdr.e_shnum);
+    klog_d(TAG, "loading '%s' (%u sections)", path, hdr.e_shnum);
 
     /* 2. Section header table */
     shdrs = malloc(hdr.e_shnum * sizeof(elf32_shdr_t));
@@ -495,26 +718,72 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     app = calloc(1, sizeof(duneos_app_t));
     if (!app) { err = ESP_ERR_NO_MEM; goto out; }
 
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    app->exec_pool_mark = s_exec_pool_used;
+#endif
+
     /* 6. Manifest */
     err = extract_manifest(f, &hdr, shdrs, shstrtab, &app->manifest);
     if (err != ESP_OK) goto out;
 
     if (app->manifest.required_abi_version > DUNEOS_ABI_VERSION) {
-        ESP_LOGE(TAG, "app requires ABI v%lu, kernel is v%d",
+        klog_e(TAG, "app requires ABI v%lu, kernel is v%d",
                  (unsigned long)app->manifest.required_abi_version,
                  DUNEOS_ABI_VERSION);
         err = ESP_ERR_NOT_SUPPORTED;
         goto out;
     }
 
-    /* 7. Load sections into PSRAM */
+    /* 7. Load sections */
     err = load_sections(f, &hdr, shdrs, shstrtab, app);
     if (err != ESP_OK) goto out;
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    app->exec_pool_end = s_exec_pool_used;
+    klog_d(TAG, "exec pool: %zu / %u KB used",
+           s_exec_pool_used, CONFIG_DUNEOS_EXEC_POOL_KB);
+#endif
 
     /* 8. Apply relocations */
     err = apply_relocations(f, &hdr, shdrs, shstrtab,
                              symtab, symcount, strtab, app);
     if (err != ESP_OK) goto out;
+
+    /* Scan literal pools for bad pointers:
+     *  - DROM (0x3C000000-0x3FBFFFFF): flash VA leaked in — "Cache disabled" crash
+     *  - IRAM exec-pool address past loaded code end: jump to zeros → IllegalInstruction */
+    {
+        uintptr_t pool_iram_base = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
+        uintptr_t pool_loaded_end = pool_iram_base + app->exec_pool_end;
+
+        for (int i = 0; i < hdr.e_shnum; i++) {
+            const char *nm = shdr_name(shstrtab, &shdrs[i]);
+            if (strncmp(nm, ".literal", 8) != 0) continue;
+            void *base = app->section_bases[i];
+            if (!base) continue;
+            uint32_t *dram = (uint32_t *)to_write_ptr(base);
+            size_t nw = shdrs[i].sh_size / 4;
+            for (size_t k = 0; k < nw; k++) {
+                uint32_t v = dram[k];
+                bool is_drom     = (v >= 0x3C000000u && v < 0x3FC00000u);
+                bool is_bad_pool = ((uintptr_t)v >= pool_loaded_end &&
+                                    (uintptr_t)v <  pool_iram_base + sizeof(s_exec_pool));
+                if (is_drom || is_bad_pool) {
+                    klog_e(TAG, "literal pool %s[%zu]=0x%08lx — %s",
+                           nm, k, (unsigned long)v,
+                           is_drom ? "DROM address (load aborted)"
+                                   : "past pool end (jump to zeros)");
+                    err = ESP_ERR_INVALID_STATE;
+                    goto out;
+                }
+            }
+        }
+    }
+
+    /* Xtensa: stores to IRAM via the D-bus alias are not visible to the
+     * instruction pipeline until ISYNC completes.  Without this, the CPU may
+     * execute stale instructions from the newly-loaded text sections. */
+    asm volatile("isync" ::: "memory");
 
     /* 9. Locate app_main */
     for (int i = 0; i < symcount; i++) {
@@ -524,17 +793,17 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
         void *base = app->section_bases[sym->st_shndx];
         if (!base) {
-            ESP_LOGE(TAG, "app_main is in an unloaded section");
+            klog_e(TAG, "app_main is in an unloaded section");
             err = ESP_ERR_INVALID_ARG;
             goto out;
         }
         app->entry = (void (*)(void))((uint8_t *)base + sym->st_value);
-        ESP_LOGI(TAG, "app_main @ %p", (void *)app->entry);
+        klog_d(TAG, "app_main @ %p", (void *)app->entry);
         break;
     }
 
     if (!app->entry) {
-        ESP_LOGE(TAG, "app_main not found in symbol table");
+        klog_e(TAG, "app_main not found in symbol table");
         err = ESP_ERR_NOT_FOUND;
         goto out;
     }
@@ -553,6 +822,126 @@ out:
     return err;
 }
 
+/* -------------------------------------------------------------------------
+ * App discovery — scan /sd/apps/ for ELF files
+ * ---------------------------------------------------------------------- */
+
+/*
+ * Lightweight manifest read: open an ELF, find .duneos_manifest, parse it.
+ * Does not load any section into PSRAM. Used during scan only.
+ */
+static esp_err_t read_manifest_from_file(const char            *path,
+                                          duneos_app_manifest_t *out)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return ESP_ERR_NOT_FOUND;
+
+    esp_err_t    err  = ESP_FAIL;
+    elf32_hdr_t  hdr;
+    elf32_shdr_t *shdrs    = NULL;
+    char         *shstrtab = NULL;
+
+    if (read_at(f, 0, &hdr, sizeof(hdr)) != ESP_OK) goto out;
+    if (elf_validate(&hdr) != ESP_OK)                goto out;
+    if (hdr.e_shnum > MAX_SECTIONS)                  goto out;
+
+    shdrs = malloc(hdr.e_shnum * sizeof(elf32_shdr_t));
+    if (!shdrs) { err = ESP_ERR_NO_MEM; goto out; }
+    if (read_at(f, hdr.e_shoff, shdrs,
+                hdr.e_shnum * sizeof(elf32_shdr_t)) != ESP_OK) goto out;
+
+    {
+        const elf32_shdr_t *ss = &shdrs[hdr.e_shstrndx];
+        shstrtab = malloc(ss->sh_size + 1);
+        if (!shstrtab) { err = ESP_ERR_NO_MEM; goto out; }
+        if (read_at(f, ss->sh_offset, shstrtab, ss->sh_size) != ESP_OK) goto out;
+        shstrtab[ss->sh_size] = '\0';
+    }
+
+    err = extract_manifest(f, &hdr, shdrs, shstrtab, out);
+
+out:
+    fclose(f);
+    free(shdrs);
+    free(shstrtab);
+    return err;
+}
+
+esp_err_t duneos_loader_scan(duneos_app_info_t *list, int max, int *found)
+{
+    if (!list || max <= 0 || !found) return ESP_ERR_INVALID_ARG;
+    *found = 0;
+
+    DIR *dir = opendir(DUNEOS_APPS_DIR);
+    if (!dir) {
+        klog_w(TAG, "cannot open %s", DUNEOS_APPS_DIR);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL && *found < max) {
+        /* Accept .elf (development) and .dap (DuneOS Application Package) */
+        size_t len = strlen(ent->d_name);
+        if (len < 5) continue;
+        const char *ext = ent->d_name + len - 4;
+        if (strcasecmp(ext, ".elf") != 0 && strcasecmp(ext, ".dap") != 0) continue;
+
+        duneos_app_info_t *info = &list[*found];
+        snprintf(info->path, sizeof(info->path),
+                 "%s/%s", DUNEOS_APPS_DIR, ent->d_name);
+
+        esp_err_t err = read_manifest_from_file(info->path, &info->meta);
+        if (err != ESP_OK) {
+            klog_w(TAG, "skipping '%s': cannot read manifest", ent->d_name);
+            continue;
+        }
+
+        if (info->meta.required_abi_version > DUNEOS_ABI_VERSION) {
+            klog_w(TAG, "skipping '%s': requires ABI v%lu, kernel is v%d",
+                     ent->d_name,
+                     (unsigned long)info->meta.required_abi_version,
+                     DUNEOS_ABI_VERSION);
+            continue;
+        }
+
+        klog_i(TAG, "  [%d] %s  v%s  %s",
+                 *found, info->meta.name, info->meta.version, info->path);
+        (*found)++;
+    }
+
+    closedir(dir);
+    klog_i(TAG, "scan: %d app(s) found in %s", *found, DUNEOS_APPS_DIR);
+    return ESP_OK;
+}
+
+const duneos_app_info_t *duneos_loader_select(const duneos_app_info_t *list,
+                                               int count)
+{
+    if (!list || count == 0) return NULL;
+
+    /* Read /sd/autoboot — contains just the app name, no extension */
+    FILE *f = fopen(DUNEOS_AUTOBOOT_FILE, "r");
+    if (f) {
+        char name[DUNEOS_APP_NAME_MAX] = {0};
+        if (fgets(name, sizeof(name), f)) {
+            /* Strip trailing newline */
+            name[strcspn(name, "\r\n")] = '\0';
+            fclose(f);
+            for (int i = 0; i < count; i++) {
+                if (strcmp(list[i].meta.name, name) == 0) {
+                    klog_i(TAG, "autoboot: '%s'", name);
+                    return &list[i];
+                }
+            }
+            klog_w(TAG, "autoboot '%s' not found — using first app", name);
+        } else {
+            fclose(f);
+        }
+    }
+
+    return &list[0];
+}
+
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app)
 {
     return app ? &app->manifest : NULL;
@@ -561,16 +950,107 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app)
 esp_err_t duneos_loader_run(duneos_app_t *app)
 {
     if (!app || !app->entry) return ESP_ERR_INVALID_ARG;
-    ESP_LOGI(TAG, "jumping to app_main @ %p", (void *)app->entry);
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Memory write barrier + instruction sync: ensures all D-bus writes to
+     * the exec pool are visible to the I-bus before the branch. */
+    __asm__ volatile("memw" ::: "memory");
+    __asm__ volatile("isync" ::: "memory");
+#endif
+
+    klog_d(TAG, "jumping to app_main @ %p", (void *)app->entry);
     app->entry();
+    return ESP_OK;
+}
+
+#define CAPTURE_PATH "/tmp/.duneos_stdout"
+
+esp_err_t duneos_loader_run_captured(duneos_app_t *app,
+                                      char **out_buf, size_t *out_len)
+{
+    if (!app || !app->entry || !out_buf || !out_len) return ESP_ERR_INVALID_ARG;
+    *out_buf = NULL;
+    *out_len = 0;
+
+    /* Open capture file */
+    int capfd = open(CAPTURE_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (capfd < 0) {
+        klog_e(TAG, "capture: cannot open " CAPTURE_PATH ": errno %d", errno);
+        return ESP_FAIL;
+    }
+
+    /* Save real stdout — dup/dup2 are inline in newlib, use fcntl instead */
+    int saved_stdout = fcntl(STDOUT_FILENO, F_DUPFD, 3);
+    if (saved_stdout < 0) {
+        close(capfd);
+        klog_e(TAG, "capture: fcntl(F_DUPFD) failed: errno %d", errno);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    /* Redirect stdout → capture file: close fd 1 then duplicate capfd into it */
+    close(STDOUT_FILENO);
+    if (fcntl(capfd, F_DUPFD, STDOUT_FILENO) != STDOUT_FILENO) {
+        fcntl(saved_stdout, F_DUPFD, STDOUT_FILENO); /* best-effort restore */
+        close(saved_stdout);
+        close(capfd);
+        klog_e(TAG, "capture: F_DUPFD to stdout failed: errno %d", errno);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    close(capfd);
+
+    /* Run the app */
+    klog_i(TAG, "jumping to app_main @ %p (captured)", (void *)app->entry);
+    app->entry();
+
+    /* Restore stdout */
+    close(STDOUT_FILENO);
+    fcntl(saved_stdout, F_DUPFD, STDOUT_FILENO);
+    close(saved_stdout);
+
+    /* Read the captured output from /tmp */
+    int rfd = open(CAPTURE_PATH, O_RDONLY);
+    if (rfd < 0) {
+        klog_e(TAG, "capture: cannot read back " CAPTURE_PATH);
+        return ESP_FAIL;
+    }
+
+    struct stat st;
+    fstat(rfd, &st);
+    size_t size = (size_t)st.st_size;
+
+    char *buf = malloc(size + 1);
+    if (!buf) {
+        close(rfd);
+        return ESP_ERR_NO_MEM;
+    }
+
+    ssize_t n = read(rfd, buf, size);
+    close(rfd);
+    unlink(CAPTURE_PATH);
+
+    if (n < 0) {
+        free(buf);
+        return ESP_FAIL;
+    }
+
+    buf[n] = '\0';
+    *out_buf = buf;
+    *out_len = (size_t)n;
+
+    klog_i(TAG, "capture: %zu byte(s) captured", (size_t)n);
     return ESP_OK;
 }
 
 void duneos_loader_unload(duneos_app_t *app)
 {
     if (!app) return;
-    for (int i = 0; i < app->alloc_count; i++) {
+    for (int i = 0; i < app->alloc_count; i++)
         heap_caps_free(app->allocs[i]);
-    }
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* LIFO reclaim: if this was the last app to allocate from the pool,
+     * rewind the bump pointer so the next load can reuse the space. */
+    if (s_exec_pool_used == app->exec_pool_end)
+        s_exec_pool_used = app->exec_pool_mark;
+#endif
     free(app);
 }

@@ -3,7 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
-#include "esp_log.h"
+#include "duneos/klog.h"
 
 static const char *TAG = "duneos/task";
 
@@ -28,7 +28,7 @@ esp_err_t duneos_task_create(const duneos_task_config_t *cfg,
     if (!tcb || !stack) {
         free(tcb);
         free(stack);
-        ESP_LOGE(TAG, "failed to allocate stack/TCB for task '%s'", cfg->name);
+        klog_e(TAG, "failed to allocate stack/TCB for task '%s'", cfg->name);
         return ESP_ERR_NO_MEM;
     }
 

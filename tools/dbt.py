@@ -46,7 +46,6 @@ MANIFEST_SECTION   = ".duneos_manifest"
 #   write() and malloc() must remain as relocatable references so the loader
 #   can resolve them against the kernel export table.
 CFLAGS = [
-    "-mcpu=esp32s3",        # target CPU — required with unified xtensa-esp-elf toolchain
     "-mlongcalls",          # Xtensa: enable long calls (required for PSRAM code)
     "-ffunction-sections",  # one ELF section per function → dead-code elimination
     "-fdata-sections",      # one ELF section per data object
@@ -64,7 +63,8 @@ CFLAGS = [
 # Flags for the partial link step (ld -r → ET_REL output).
 LDFLAGS = [
     "-r",                   # produce relocatable output (ET_REL)
-    "--gc-sections",        # remove unused sections (pair with -ffunction-sections)
+    "-nostdlib",            # no startup files or standard libs
+    # --gc-sections omitted: incompatible with -r (no entry point defined)
 ]
 
 # ---------------------------------------------------------------------------
@@ -87,8 +87,9 @@ def find_toolchain(target: str = "esp32s3") -> dict[str, Path]:
     is_win = platform.system() == "Windows"
     exe    = ".exe" if is_win else ""
 
-    # Candidate prefixes: unified (v5) first, then target-specific (v4)
-    prefixes = ["xtensa-esp-elf-", f"xtensa-{target}-elf-"]
+    # Target-specific prefix first (correctly configured for LE ESP32-S3),
+    # then unified xtensa-esp-elf which defaults to big-endian without -mcpu.
+    prefixes = [f"xtensa-{target}-elf-", "xtensa-esp-elf-"]
     tools    = ["gcc", "ld", "objcopy", "readelf", "nm"]
     keys     = ["cc", "ld", "objcopy", "readelf", "nm"]
 
@@ -188,7 +189,6 @@ def cmd_build(args) -> None:
 
     tc = find_toolchain()
     cc = tc["cc"]
-    ld = tc["ld"]
 
     # Gather sources
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
@@ -224,9 +224,11 @@ def cmd_build(args) -> None:
         objects.append(obj)
 
     # Partial link → single ET_REL ELF
+    # Use gcc as driver so it sets the correct little-endian Xtensa emulation for ld.
     elf = build_dir / APP_ELF_NAME
     link_cmd = (
-        [str(ld)] +
+        [str(cc)] +
+        CFLAGS +
         LDFLAGS +
         [str(o) for o in objects] +
         ["-o", str(elf)]
@@ -250,12 +252,55 @@ def cmd_info(args) -> None:
     if not elf.exists():
         sys.exit("ERROR: app.elf not found — run 'dbt build' first")
 
+    manifest = load_manifest(app_dir)
     tc = find_toolchain()
 
-    print("=== Sections ===")
-    run([str(tc["readelf"]), "-S", "--wide", str(elf)], capture=False)
+    # --- Manifest ---
+    print("=== Manifest ===")
+    for k, v in manifest.items():
+        print(f"  {k}: {v}")
 
-    print("\n=== Undefined symbols (must be resolved by kernel) ===")
+    # --- Memory footprint from section headers ---
+    print("\n=== Memory footprint ===")
+    re_out = run([str(tc["readelf"]), "-S", "--wide", str(elf)], capture=True)
+    text_sz = data_sz = rodata_sz = bss_sz = 0
+    for line in re_out.splitlines():
+        parts = line.split()
+        if len(parts) < 7:
+            continue
+        # readelf wide output: [ N] Name Type Addr Off Size ES Flg ...
+        # Find the Size column (6th zero-padded hex field)
+        try:
+            sec_name = parts[1] if parts[0].startswith('[') else None
+            if sec_name is None:
+                continue
+            size_hex = parts[5]
+            size = int(size_hex, 16)
+            if size == 0:
+                continue
+            if sec_name.startswith(".text") or sec_name.startswith(".literal"):
+                text_sz += size
+            elif sec_name.startswith(".data"):
+                data_sz += size
+            elif sec_name.startswith(".rodata"):
+                rodata_sz += size
+            elif sec_name.startswith(".bss"):
+                bss_sz += size
+        except (ValueError, IndexError):
+            continue
+
+    total_flash = text_sz + data_sz + rodata_sz
+    total_ram   = data_sz + bss_sz
+    print(f"  .text + .literal : {text_sz:>8} bytes  (IRAM/flash)")
+    print(f"  .rodata          : {rodata_sz:>8} bytes  (flash)")
+    print(f"  .data            : {data_sz:>8} bytes  (RAM, init from flash)")
+    print(f"  .bss             : {bss_sz:>8} bytes  (RAM, zero-init)")
+    print(f"  ─────────────────────────────────────")
+    print(f"  Total flash      : {total_flash:>8} bytes")
+    print(f"  Total RAM        : {total_ram:>8} bytes")
+    print(f"  ELF file size    : {elf.stat().st_size:>8} bytes")
+
+    print("\n=== Undefined symbols (kernel must export these) ===")
     nm_out = run([str(tc["nm"]), "-u", str(elf)], capture=True)
     for line in nm_out.splitlines():
         if line.strip():
@@ -281,16 +326,10 @@ def cmd_deploy(args) -> None:
     dest_dir = Path(args.path) / "apps"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    dest_elf = dest_dir / f"{app_name}.elf"
+    ext      = ".dap" if not getattr(args, "elf", False) else ".elf"
+    dest_elf = dest_dir / f"{app_name}{ext}"
     shutil.copy2(elf, dest_elf)
     print(f"Deployed → {dest_elf}")
-
-    # Remind about manifest.json on SD
-    sd_manifest = Path(args.path) / "apps" / "manifest.json"
-    if not sd_manifest.exists():
-        print(f"\nWARNING: {sd_manifest} not found.")
-        print(f"Copy {DUNEOS_ROOT}/examples/sd_root/apps/manifest.json to the SD card")
-        print(f"and add an entry for '{app_name}'.")
 
 
 # ---------------------------------------------------------------------------
@@ -398,8 +437,10 @@ def main() -> None:
     p_info = sub.add_parser("info", help="Show ELF sections, symbols and relocations")
     p_info.set_defaults(func=cmd_info)
 
-    p_deploy = sub.add_parser("deploy", help="Copy built ELF to SD card mount point")
+    p_deploy = sub.add_parser("deploy", help="Copy built app to SD card mount point")
     p_deploy.add_argument("path", help="SD card mount point (e.g. E:\\ or /mnt/sd)")
+    p_deploy.add_argument("--elf", action="store_true",
+                          help="Use .elf extension instead of .dap")
     p_deploy.set_defaults(func=cmd_deploy)
 
     p_clean = sub.add_parser("clean", help="Remove build artefacts")

@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
 if(NOT DEFINED DUNEOS_BOARD)
-    set(DUNEOS_BOARD "esp32s3-devkitc")
-    message(STATUS "DUNEOS_BOARD not set, defaulting to ${DUNEOS_BOARD}")
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.duneos_board")
+        file(READ "${CMAKE_CURRENT_LIST_DIR}/.duneos_board" DUNEOS_BOARD)
+        string(STRIP "${DUNEOS_BOARD}" DUNEOS_BOARD)
+    else()
+        set(DUNEOS_BOARD "esp32s3-devkitc")
+    endif()
 endif()
 
 # SDKCONFIG_DEFAULTS must be set before include(project.cmake).

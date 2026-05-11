@@ -1,6 +1,5 @@
 if(NOT DEFINED DUNEOS_BOARD)
     set(DUNEOS_BOARD "esp32s3-devkitc")
-    message(STATUS "DUNEOS_BOARD not set, defaulting to ${DUNEOS_BOARD}")
 endif()
 
 # CMAKE_SOURCE_DIR is unreliable during the requirements phase — it may point
@@ -18,10 +17,13 @@ endif()
 
 idf_component_register(
     SRCS
+        "src/klog.c"
         "src/task.c"
         "src/vfs.c"
-        "src/manifest.c"
+        "src/vfs_tmp.c"
+        "src/vfs_dev.c"
         "src/symbols.c"
+        "src/supervisor.c"
     INCLUDE_DIRS
         "include"
         "${DUNEOS_BOARD_CONFIG_DIR}"
@@ -30,6 +32,8 @@ idf_component_register(
         pthread
         driver
         esp_driver_sdspi
+        esp_driver_uart
+        esp_system
         fatfs
         vfs
         newlib

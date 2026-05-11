@@ -1,10 +1,15 @@
-# Flash — ESP32-S3FN8 = 8MB octal flash
+# ESP32-S3FN8: 8MB embedded flash, NO PSRAM
 CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="8MB"
 
-# QSPI PSRAM — M5Stack CardPuter
-CONFIG_SPIRAM=y
-CONFIG_SPIRAM_MODE_QUAD=y
-CONFIG_SPIRAM_SPEED_80M=y
-CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y
-CONFIG_SPIRAM_RODATA=y
+# PSRAM absent on CardPuter — do not enable SPIRAM
+CONFIG_SPIRAM=n
+
+# CardPuter console: native USB Serial/JTAG on GPIO19/20
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# DuneOS loads app code into DRAM and executes via the IRAM alias.
+# MEMPROT locks the IRAM/DRAM split at _iram_end, making the IRAM alias of
+# free DRAM non-executable and the DRAM alias of static IRAM read-only.
+# Either way dynamic code loading is impossible with MEMPROT active.
+CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n

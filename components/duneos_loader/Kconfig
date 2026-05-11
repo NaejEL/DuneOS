@@ -1,0 +1,15 @@
+menu "DuneOS Loader"
+
+    config DUNEOS_EXEC_POOL_KB
+        int "Executable section pool size (KB)"
+        depends on IDF_TARGET_ARCH_XTENSA
+        range 16 256
+        default 64
+        help
+            On Xtensa targets, executable sections (.text, .literal) are loaded
+            into a static IRAM_ATTR pool so the linker guarantees correct placement
+            in true IRAM.  This avoids the DRAM-heap arithmetic that is
+            chip-specific and can land allocations in the data-cache region.
+            Set this large enough for the biggest .dap you expect to load.
+
+endmenu
