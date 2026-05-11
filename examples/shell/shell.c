@@ -35,6 +35,8 @@
 #include <dirent.h>
 #include <errno.h>
 
+#include <duneos/gpio_ioctl.h>
+
 /* strlcpy is a BSD extension not in freestanding newlib */
 static size_t sh_strlcpy(char *dst, const char *src, size_t n)
 {
@@ -211,6 +213,14 @@ static void cmd_ls(int argc, char **argv)
     char resolved[CWD_MAX];
     resolve_path(path, resolved, sizeof(resolved));
 
+    /* ESP-IDF VFS has no root — enumerate mount points synthetically. */
+    if (strcmp(resolved, "/") == 0) {
+        shell_puts(long_fmt
+            ? "d        0  dev\r\nd        0  sd\r\nd        0  tmp"
+            : "dev  sd  tmp");
+        return;
+    }
+
     DIR *dir = opendir(resolved);
     if (!dir) {
         shell_printf("ls: %s: %s\r\n", resolved, strerror(errno));
@@ -267,10 +277,12 @@ static void cmd_cd(int argc, char **argv)
     if (argc < 2) { sh_strlcpy(s_cwd, "/sd", sizeof(s_cwd)); return; }
     char path[CWD_MAX];
     resolve_path(argv[1], path, sizeof(path));
-    struct stat st;
-    if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
-        shell_printf("cd: %s: not a directory\r\n", path);
-        return;
+    if (strcmp(path, "/") != 0) {
+        struct stat st;
+        if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
+            shell_printf("cd: %s: not a directory\r\n", path);
+            return;
+        }
     }
     sh_strlcpy(s_cwd, path, sizeof(s_cwd));
 }
@@ -348,22 +360,102 @@ static void cmd_klog(void)
     close(fd);
 }
 
+static void cmd_gpio(int argc, char **argv)
+{
+    if (argc < 2) {
+        shell_puts("usage: gpio info | get <pin> | set <pin> <0|1> | mode <pin> in|out | pull <pin> none|up|down");
+        return;
+    }
+
+    int fd = open("/dev/gpiochip0", O_RDWR);
+    if (fd < 0) {
+        shell_printf("gpio: cannot open /dev/gpiochip0: %s\r\n", strerror(errno));
+        return;
+    }
+
+    if (strcmp(argv[1], "info") == 0) {
+        gpiochip_info_t info;
+        if (ioctl(fd, GPIOCHIP_GET_INFO, &info) == 0)
+            shell_printf("%s: %u lines\r\n", info.name, (unsigned)info.lines);
+        else
+            shell_printf("gpio: info failed: %s\r\n", strerror(errno));
+    }
+    else if (strcmp(argv[1], "get") == 0) {
+        if (argc < 3) { shell_puts("usage: gpio get <pin>"); goto done; }
+        int pin = atoi(argv[2]);
+        gpio_req_t req = { .line = (uint8_t)pin, .dir = GPIO_DIR_INPUT };
+        ioctl(fd, GPIOCHIP_SET_DIR, &req);   /* auto-configure as input */
+        if (ioctl(fd, GPIOCHIP_GET_VALUE, &req) == 0)
+            shell_printf("gpio%d = %d\r\n", pin, (int)req.val);
+        else
+            shell_printf("gpio: get failed: %s\r\n", strerror(errno));
+    }
+    else if (strcmp(argv[1], "set") == 0) {
+        if (argc < 4) { shell_puts("usage: gpio set <pin> <0|1>"); goto done; }
+        int pin = atoi(argv[2]);
+        int val = atoi(argv[3]);
+        gpio_req_t req = { .line = (uint8_t)pin, .dir = GPIO_DIR_OUTPUT };
+        ioctl(fd, GPIOCHIP_SET_DIR, &req);   /* auto-configure as output */
+        req.val = (uint8_t)(val ? 1 : 0);
+        if (ioctl(fd, GPIOCHIP_SET_VALUE, &req) == 0)
+            shell_printf("gpio%d <= %d\r\n", pin, (int)req.val);
+        else
+            shell_printf("gpio: set failed: %s\r\n", strerror(errno));
+    }
+    else if (strcmp(argv[1], "mode") == 0) {
+        if (argc < 4) { shell_puts("usage: gpio mode <pin> in|out"); goto done; }
+        int pin = atoi(argv[2]);
+        gpio_req_t req = {
+            .line = (uint8_t)pin,
+            .dir  = (strcmp(argv[3], "out") == 0) ? GPIO_DIR_OUTPUT : GPIO_DIR_INPUT,
+        };
+        if (ioctl(fd, GPIOCHIP_SET_DIR, &req) == 0)
+            shell_printf("gpio%d mode = %s\r\n", pin, argv[3]);
+        else
+            shell_printf("gpio: mode failed: %s\r\n", strerror(errno));
+    }
+    else if (strcmp(argv[1], "pull") == 0) {
+        if (argc < 4) { shell_puts("usage: gpio pull <pin> none|up|down"); goto done; }
+        int pin = atoi(argv[2]);
+        uint8_t pull;
+        if      (strcmp(argv[3], "up")   == 0) pull = GPIO_PULL_UP;
+        else if (strcmp(argv[3], "down") == 0) pull = GPIO_PULL_DOWN;
+        else                                    pull = GPIO_PULL_NONE;
+        gpio_req_t req = { .line = (uint8_t)pin, .pull = pull };
+        if (ioctl(fd, GPIOCHIP_SET_PULL, &req) == 0)
+            shell_printf("gpio%d pull = %s\r\n", pin, argv[3]);
+        else
+            shell_printf("gpio: pull failed: %s\r\n", strerror(errno));
+    }
+    else {
+        shell_printf("gpio: unknown subcommand '%s'\r\n", argv[1]);
+    }
+
+done:
+    close(fd);
+}
+
 static void cmd_help(void)
 {
     shell_puts("Commands:");
-    shell_puts("  ls [-l] [path]       list directory");
-    shell_puts("  cat <file>           print file");
-    shell_puts("  echo <text>          print text");
-    shell_puts("  cd [path]            change directory");
-    shell_puts("  pwd                  print working directory");
-    shell_puts("  mkdir <path>         create directory");
-    shell_puts("  rm <file>            remove file");
-    shell_puts("  mv <src> <dst>       move/rename");
-    shell_puts("  run <app>            load and run a DuneOS app");
-    shell_puts("  free                 show free heap");
-    shell_puts("  klog                 dump kernel log ring buffer");
-    shell_puts("  reboot               restart the device");
-    shell_puts("  help                 this message");
+    shell_puts("  ls [-l] [path]                list directory");
+    shell_puts("  cat <file>                    print file");
+    shell_puts("  echo <text>                   print text");
+    shell_puts("  cd [path]                     change directory");
+    shell_puts("  pwd                           print working directory");
+    shell_puts("  mkdir <path>                  create directory");
+    shell_puts("  rm <file>                     remove file");
+    shell_puts("  mv <src> <dst>                move/rename");
+    shell_puts("  run <app>                     load and run a DuneOS app");
+    shell_puts("  free                          show free heap");
+    shell_puts("  klog                          dump kernel log ring buffer");
+    shell_puts("  gpio info                     show GPIO chip info");
+    shell_puts("  gpio get <pin>                read GPIO pin level");
+    shell_puts("  gpio set <pin> <0|1>          drive GPIO pin");
+    shell_puts("  gpio mode <pin> in|out        set GPIO direction");
+    shell_puts("  gpio pull <pin> none|up|down  set pull resistor");
+    shell_puts("  reboot                        restart the device");
+    shell_puts("  help                          this message");
 }
 
 /* ----- command parser ---------------------------------------------------- */
@@ -398,6 +490,7 @@ static void exec_line(char *line)
     else if (strcmp(cmd, "run")    == 0) cmd_run(argc, argv);
     else if (strcmp(cmd, "free")   == 0) cmd_free();
     else if (strcmp(cmd, "klog")   == 0) cmd_klog();
+    else if (strcmp(cmd, "gpio")   == 0) cmd_gpio(argc, argv);
     else if (strcmp(cmd, "reboot") == 0) esp_restart();
     else if (strcmp(cmd, "exit")   == 0) duneos_exit(0);
     else if (strcmp(cmd, "help")   == 0) cmd_help();

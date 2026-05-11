@@ -20,4 +20,4 @@ esp_err_t duneos_vfs_deinit(void);
 /* Mount/unmount individual filesystems (called internally by duneos_vfs_init) */
 esp_err_t duneos_vfs_mount_sd(void);
 esp_err_t duneos_vfs_mount_tmp(void);
-esp_err_t duneos_vfs_mount_dev(void);
+esp_err_t duneos_vfs_mount_dev(void);  /* /dev — null, zero, uart0, klog, gpiochip0, … */

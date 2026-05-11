@@ -54,10 +54,15 @@
 #define SHN_ABS         0xfff1  /* absolute value, not relocated */
 #define SHN_COMMON      0xfff2
 
-/* Xtensa relocation types (the ones DuneOS must handle) */
+/* Xtensa relocation types (RELA-only; DuneOS handles the subset below) */
 #define R_XTENSA_NONE           0
-#define R_XTENSA_32             1   /* word32: S + A */
-#define R_XTENSA_SLOT0_OP       20  /* instruction slot 0 — most common call/jump */
+#define R_XTENSA_32             1   /* word32: *(u32) += S + A                         */
+#define R_XTENSA_ASM_EXPAND     11  /* assembler relaxation hint — no-op in loader      */
+#define R_XTENSA_32_PCREL       14  /* 32-bit PC-relative — rare, not currently handled */
+#define R_XTENSA_DIFF8          17  /* difference relocs — unwind tables                */
+#define R_XTENSA_DIFF16         18
+#define R_XTENSA_DIFF32         19
+#define R_XTENSA_SLOT0_OP       20  /* patch instruction slot 0 (L32R, CALL, branch)    */
 #define R_XTENSA_SLOT1_OP       21
 #define R_XTENSA_SLOT2_OP       22
 #define R_XTENSA_SLOT3_OP       23
@@ -72,11 +77,43 @@
 #define R_XTENSA_SLOT12_OP      32
 #define R_XTENSA_SLOT13_OP      33
 #define R_XTENSA_SLOT14_OP      34
-#define R_XTENSA_ASM_EXPAND     11
-#define R_XTENSA_32_PCREL       14
-#define R_XTENSA_DIFF8          17  /* difference relocs — typically in unwind tables */
-#define R_XTENSA_DIFF16         18
-#define R_XTENSA_DIFF32         19
+
+/*
+ * RISC-V relocation types (RELA; subset used by -ffreestanding -nostdlib apps).
+ *
+ * PCREL pairs (HI20 + LO12_I/S):
+ *   The LO12 relocation's r_sym points to the runtime address of the paired
+ *   PCREL_HI20 instruction, not to the original target.  The loader caches each
+ *   HI20's (PC → target) so the subsequent LO12 can recover it.
+ */
+#define R_RISCV_NONE            0   /* no-op                                            */
+#define R_RISCV_32              1   /* *(u32) = S + A  (absolute 32-bit)                */
+#define R_RISCV_BRANCH          16  /* B-type branch  (±4 KB) — usually intra-function  */
+#define R_RISCV_JAL             17  /* J-type jump    (±1 MB) — usually intra-section   */
+#define R_RISCV_CALL            18  /* auipc+jalr pair, 32-bit PC-relative call          */
+#define R_RISCV_CALL_PLT        19  /* same as CALL (PLT irrelevant in ET_REL)           */
+#define R_RISCV_PCREL_HI20      23  /* auipc: upper 20 bits of PC-relative addr          */
+#define R_RISCV_PCREL_LO12_I    24  /* I-type lower 12 bits — pairs with PCREL_HI20     */
+#define R_RISCV_PCREL_LO12_S    25  /* S-type lower 12 bits — pairs with PCREL_HI20     */
+#define R_RISCV_HI20            26  /* lui: upper 20 bits of absolute addr               */
+#define R_RISCV_LO12_I          27  /* I-type lower 12 bits of absolute addr             */
+#define R_RISCV_LO12_S          28  /* S-type lower 12 bits of absolute addr             */
+#define R_RISCV_ADD8            33  /* *(u8)  += S  — in debug/.eh_frame, SHF_ALLOC=0   */
+#define R_RISCV_ADD16           34
+#define R_RISCV_ADD32           35
+#define R_RISCV_SUB8            37  /* *(u8)  -= S                                       */
+#define R_RISCV_SUB16           38
+#define R_RISCV_SUB32           39
+#define R_RISCV_ALIGN           43  /* alignment directive — no-op in loader             */
+#define R_RISCV_RVC_BRANCH      44  /* 16-bit compressed branch — usually intra-function */
+#define R_RISCV_RVC_JUMP        45  /* 16-bit compressed jump   — usually intra-section  */
+#define R_RISCV_RELAX           51  /* linker relaxation hint — no-op in loader          */
+#define R_RISCV_SUB6            52
+#define R_RISCV_SET6            53
+#define R_RISCV_SET8            54
+#define R_RISCV_SET16           55
+#define R_RISCV_SET32           56
+#define R_RISCV_32_PCREL        57  /* 32-bit PC-relative — in debug info, SHF_ALLOC=0  */
 
 #pragma pack(push, 1)
 

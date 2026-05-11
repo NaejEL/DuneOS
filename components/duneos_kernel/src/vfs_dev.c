@@ -16,18 +16,22 @@
 
 #include "duneos/vfs.h"
 #include "duneos/klog.h"
+#include "duneos/gpio_ioctl.h"
 
 #include "esp_vfs.h"
 #include "driver/uart_vfs.h"
 #include "driver/uart.h"
 #include "hal/uart_types.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <sys/stat.h>
 
 #define DEVFS_MAX_FDS         16
@@ -38,11 +42,12 @@
 static const char *TAG = "duneos/devfs";
 
 typedef enum {
-    DEV_NONE  = 0,
+    DEV_NONE     = 0,
     DEV_NULL,
     DEV_ZERO,
     DEV_UART0,
     DEV_KLOG,
+    DEV_GPIOCHIP,
 } dev_type_t;
 
 typedef struct {
@@ -50,6 +55,7 @@ typedef struct {
     int        oflags;
     bool       open;
     size_t     klog_pos;  /* absolute read position, DEV_KLOG only */
+    uint8_t    chip;      /* gpiochip index, DEV_GPIOCHIP only     */
 } devfs_fd_t;
 
 static devfs_fd_t        s_fds[DEVFS_MAX_FDS];
@@ -58,7 +64,7 @@ static bool              s_uart0_installed = false;
 
 /* ----- fd helpers -------------------------------------------------------- */
 
-static int fd_alloc(dev_type_t type, int oflags, size_t klog_pos)
+static int fd_alloc(dev_type_t type, int oflags, size_t klog_pos, uint8_t chip)
 {
     for (int i = 0; i < DEVFS_MAX_FDS; i++) {
         if (!s_fds[i].open) {
@@ -66,6 +72,7 @@ static int fd_alloc(dev_type_t type, int oflags, size_t klog_pos)
             s_fds[i].oflags   = oflags;
             s_fds[i].open     = true;
             s_fds[i].klog_pos = klog_pos;
+            s_fds[i].chip     = chip;
             return i;
         }
     }
@@ -113,10 +120,13 @@ static int devfs_open(const char *path, int flags, int mode)
     dev_type_t type;
     size_t     klog_pos = 0;
 
-    if      (strcmp(path, "/null")  == 0) type = DEV_NULL;
-    else if (strcmp(path, "/zero")  == 0) type = DEV_ZERO;
-    else if (strcmp(path, "/uart0") == 0) type = DEV_UART0;
-    else if (strcmp(path, "/klog")  == 0) { type = DEV_KLOG; klog_pos = klog_ring_oldest(); }
+    uint8_t chip = 0;
+
+    if      (strcmp(path, "/null")      == 0) type = DEV_NULL;
+    else if (strcmp(path, "/zero")      == 0) type = DEV_ZERO;
+    else if (strcmp(path, "/uart0")     == 0) type = DEV_UART0;
+    else if (strcmp(path, "/klog")      == 0) { type = DEV_KLOG; klog_pos = klog_ring_oldest(); }
+    else if (strcmp(path, "/gpiochip0") == 0) { type = DEV_GPIOCHIP; chip = 0; }
     else { errno = ENOENT; return -1; }
 
     if (type == DEV_UART0) {
@@ -125,7 +135,7 @@ static int devfs_open(const char *path, int flags, int mode)
     }
 
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    int fd = fd_alloc(type, flags, klog_pos);
+    int fd = fd_alloc(type, flags, klog_pos, chip);
     xSemaphoreGive(s_lock);
 
     if (fd < 0) { errno = EMFILE; return -1; }
@@ -202,6 +212,122 @@ static off_t devfs_lseek(int fd, off_t offset, int whence)
     return (off_t)-1;
 }
 
+/* ----- directory listing ------------------------------------------------- */
+
+static const char *s_dev_entries[] = {
+    "null", "zero", "uart0", "klog", "gpiochip0",
+};
+#define DEV_ENTRY_COUNT  (sizeof(s_dev_entries) / sizeof(s_dev_entries[0]))
+
+typedef struct {
+    DIR    dir;     /* must be first — VFS casts DIR* to our struct */
+    size_t idx;
+} devfs_dir_t;
+
+static DIR *devfs_opendir(const char *name)
+{
+    (void)name;
+    devfs_dir_t *d = calloc(1, sizeof(devfs_dir_t));
+    if (!d) { errno = ENOMEM; return NULL; }
+    d->idx = 0;
+    return (DIR *)d;
+}
+
+static struct dirent *devfs_readdir(DIR *pdir)
+{
+    devfs_dir_t *d = (devfs_dir_t *)pdir;
+    if (d->idx >= DEV_ENTRY_COUNT) return NULL;
+    static struct dirent ent;
+    ent.d_type = DT_CHR;
+    strncpy(ent.d_name, s_dev_entries[d->idx++], sizeof(ent.d_name) - 1);
+    ent.d_name[sizeof(ent.d_name) - 1] = '\0';
+    return &ent;
+}
+
+static int devfs_closedir(DIR *pdir)
+{
+    free(pdir);
+    return 0;
+}
+
+/* ----- ioctl ------------------------------------------------------------- */
+
+static int devfs_ioctl(int fd, int cmd, va_list args)
+{
+    if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
+        errno = EBADF;
+        return -1;
+    }
+    if (s_fds[fd].type != DEV_GPIOCHIP) {
+        errno = ENOTTY;
+        return -1;
+    }
+
+    void *arg = va_arg(args, void *);
+
+    switch (cmd) {
+
+    case GPIOCHIP_GET_INFO: {
+        gpiochip_info_t *info = (gpiochip_info_t *)arg;
+        if (!info) { errno = EINVAL; return -1; }
+        snprintf(info->name, sizeof(info->name), "gpiochip%u", (unsigned)s_fds[fd].chip);
+        info->lines = (uint8_t)GPIO_NUM_MAX;
+        return 0;
+    }
+
+    case GPIOCHIP_SET_DIR: {
+        gpio_req_t *req = (gpio_req_t *)arg;
+        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
+        gpio_mode_t mode = (req->dir == GPIO_DIR_OUTPUT)
+                           ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT;
+        if (gpio_set_direction((gpio_num_t)req->line, mode) != ESP_OK) {
+            errno = EIO; return -1;
+        }
+        return 0;
+    }
+
+    case GPIOCHIP_GET_VALUE: {
+        gpio_req_t *req = (gpio_req_t *)arg;
+        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
+        req->val = (uint8_t)gpio_get_level((gpio_num_t)req->line);
+        return 0;
+    }
+
+    case GPIOCHIP_SET_VALUE: {
+        gpio_req_t *req = (gpio_req_t *)arg;
+        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
+        if (gpio_set_level((gpio_num_t)req->line, req->val ? 1 : 0) != ESP_OK) {
+            errno = EIO; return -1;
+        }
+        return 0;
+    }
+
+    case GPIOCHIP_SET_PULL: {
+        gpio_req_t *req = (gpio_req_t *)arg;
+        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
+        gpio_pull_mode_t pull;
+        switch (req->pull) {
+        case GPIO_PULL_UP:     pull = GPIO_PULLUP_ONLY;     break;
+        case GPIO_PULL_DOWN:   pull = GPIO_PULLDOWN_ONLY;   break;
+        case GPIO_PULL_UPDOWN: pull = GPIO_PULLUP_PULLDOWN; break;
+        default:               pull = GPIO_FLOATING;        break;
+        }
+        if (gpio_set_pull_mode((gpio_num_t)req->line, pull) != ESP_OK) {
+            errno = EIO; return -1;
+        }
+        return 0;
+    }
+
+    case GPIOCHIP_SET_IRQ:
+        errno = ENOSYS;
+        return -1;
+
+    default:
+        errno = EINVAL;
+        return -1;
+    }
+}
+
 static int devfs_fstat(int fd, struct stat *st)
 {
     if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
@@ -216,10 +342,11 @@ static int devfs_fstat(int fd, struct stat *st)
 
 static int devfs_stat(const char *path, struct stat *st)
 {
-    if (strcmp(path, "/null")  != 0 &&
-        strcmp(path, "/zero")  != 0 &&
-        strcmp(path, "/uart0") != 0 &&
-        strcmp(path, "/klog")  != 0) {
+    if (strcmp(path, "/null")      != 0 &&
+        strcmp(path, "/zero")      != 0 &&
+        strcmp(path, "/uart0")     != 0 &&
+        strcmp(path, "/klog")      != 0 &&
+        strcmp(path, "/gpiochip0") != 0) {
         errno = ENOENT;
         return -1;
     }
@@ -237,14 +364,18 @@ esp_err_t duneos_vfs_mount_dev(void)
     if (!s_lock) return ESP_ERR_NO_MEM;
 
     static const esp_vfs_t vfs = {
-        .flags  = ESP_VFS_FLAG_DEFAULT,
-        .open   = devfs_open,
-        .close  = devfs_close,
-        .read   = devfs_read,
-        .write  = devfs_write,
-        .lseek  = devfs_lseek,
-        .fstat  = devfs_fstat,
-        .stat   = devfs_stat,
+        .flags    = ESP_VFS_FLAG_DEFAULT,
+        .open     = devfs_open,
+        .close    = devfs_close,
+        .read     = devfs_read,
+        .write    = devfs_write,
+        .lseek    = devfs_lseek,
+        .ioctl    = devfs_ioctl,
+        .fstat    = devfs_fstat,
+        .stat     = devfs_stat,
+        .opendir  = devfs_opendir,
+        .readdir  = devfs_readdir,
+        .closedir = devfs_closedir,
     };
 
     esp_err_t err = esp_vfs_register("/dev", &vfs, NULL);
@@ -256,6 +387,6 @@ esp_err_t duneos_vfs_mount_dev(void)
 
     uart0_ensure_driver();
 
-    klog_i(TAG, "/dev ready (/dev/null /dev/zero /dev/uart0 /dev/klog)");
+    klog_i(TAG, "/dev ready (null zero uart0 klog gpiochip0 — %d GPIO lines)", GPIO_NUM_MAX);
     return ESP_OK;
 }

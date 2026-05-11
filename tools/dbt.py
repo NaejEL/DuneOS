@@ -29,6 +29,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    import yaml as _yaml
+    _HAVE_YAML = True
+except ImportError:
+    _HAVE_YAML = False
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -41,24 +47,35 @@ APP_BUILD_DIR      = "build"
 APP_ELF_NAME       = "app.elf"
 MANIFEST_SECTION   = ".duneos_manifest"
 
-# Compiler flags for relocatable Xtensa apps.
-# -fno-builtin: prevents the compiler from inlining libc calls — calls like
-#   write() and malloc() must remain as relocatable references so the loader
-#   can resolve them against the kernel export table.
-CFLAGS = [
-    "-mlongcalls",          # Xtensa: enable long calls (required for PSRAM code)
+# CPU sets — determines toolchain prefix and CFLAGS.
+XTENSA_CPUS = {"esp32", "esp32s2", "esp32s3"}
+RISCV_CPUS  = {"esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"}
+
+# Flags common to all architectures.
+# -fno-builtin keeps libc calls as external references so the loader resolves
+# them against the kernel export table rather than inlining them.
+CFLAGS_COMMON = [
     "-ffunction-sections",  # one ELF section per function → dead-code elimination
     "-fdata-sections",      # one ELF section per data object
     "-fno-builtin",         # keep libc calls as external references
     "-fno-common",          # no common BSS symbols (use explicit definitions)
     "-ffreestanding",       # freestanding environment, no hosted startup
     "-nostdlib",            # don't link any standard library
-    "-Os",                  # optimise for size — PSRAM is shared
+    "-Os",                  # optimise for size
     "-std=c17",
     "-Wall",
     "-Wextra",
     "-Werror=implicit-function-declaration",
 ]
+
+# Xtensa-specific: long calls are required when code may run from PSRAM
+# (IRAM alias is > 1 MB away from DRAM).
+CFLAGS_XTENSA = ["-mlongcalls"]
+
+# RISC-V: ilp32 ABI (all 32-bit ESP32 RISC-V chips).
+# -mno-relax suppresses R_RISCV_RELAX hints — the DuneOS loader ignores them
+# anyway, but keeping them out makes the ET_REL output more predictable.
+CFLAGS_RISCV = ["-mabi=ilp32", "-mno-relax"]
 
 # Flags for the partial link step (ld -r → ET_REL output).
 LDFLAGS = [
@@ -71,9 +88,70 @@ LDFLAGS = [
 # Toolchain discovery
 # ---------------------------------------------------------------------------
 
-def find_toolchain(target: str = "esp32s3") -> dict[str, Path]:
+def get_board_cpu() -> tuple[str, str]:
     """
-    Locate the Xtensa cross-compiler for the given target.
+    Return (arch, cpu_variant) for the active board.
+
+    Resolution order:
+      1. DUNEOS_ROOT/.duneos_board  → board name
+      2. DUNEOS_ROOT/boards/<name>.yaml  → board.cpu
+      3. Falls back to ("xtensa", "esp32s3") if nothing is found.
+
+    Returns e.g. ("xtensa", "esp32s3") or ("riscv", "esp32c3").
+    """
+    board_file = DUNEOS_ROOT / ".duneos_board"
+    if not board_file.exists():
+        return ("xtensa", "esp32s3")  # safe default
+
+    board_name = board_file.read_text().strip().splitlines()[0].strip()
+    yaml_path  = DUNEOS_ROOT / "boards" / f"{board_name}.yaml"
+
+    cpu = None
+    if yaml_path.exists() and _HAVE_YAML:
+        with open(yaml_path) as f:
+            doc = _yaml.safe_load(f)
+        cpu = doc.get("board", {}).get("cpu")
+    elif yaml_path.exists():
+        # Minimal fallback: grep 'cpu:' without yaml library
+        for line in yaml_path.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("cpu:"):
+                cpu = stripped.split(":", 1)[1].strip().strip('"\'')
+                break
+
+    if not cpu:
+        # Last resort: parse board_config.h for DUNEOS_CPU_ARCH
+        cfg_h = DUNEOS_ROOT / "boards" / board_name / "board_config.h"
+        if cfg_h.exists():
+            for line in cfg_h.read_text().splitlines():
+                if "DUNEOS_CPU_ARCH" in line and '"riscv"' in line:
+                    return ("riscv", board_name)
+        return ("xtensa", "esp32s3")
+
+    if cpu in RISCV_CPUS:
+        return ("riscv", cpu)
+    return ("xtensa", cpu)
+
+
+def build_cflags(arch: str, cpu: str) -> list[str]:
+    """Return the complete CFLAGS list for the given architecture."""
+    if arch == "riscv":
+        return CFLAGS_COMMON + CFLAGS_RISCV + [f"-mcpu={cpu}"]
+    else:
+        return CFLAGS_COMMON + CFLAGS_XTENSA
+
+
+def find_toolchain(arch: str = "xtensa", cpu: str = "esp32s3") -> dict[str, Path]:
+    """
+    Locate the cross-compiler for the given architecture and CPU variant.
+
+    For Xtensa (esp32, esp32s2, esp32s3):
+      - Tries target-specific prefix xtensa-<cpu>-elf- first (correctly tuned).
+      - Falls back to unified xtensa-esp-elf- (requires -mcpu=<cpu>).
+
+    For RISC-V (esp32c3, esp32c6, esp32h2, esp32p4, …):
+      - Tries ESP-IDF v5 unified riscv32-esp-elf-.
+      - Falls back to generic riscv32-unknown-elf- (e.g. Ubuntu packages).
 
     ESP-IDF v5 ships a unified toolchain (xtensa-esp-elf-*) where the target
     CPU is selected via -mcpu=. ESP-IDF v4 used target-specific prefixes
@@ -87,9 +165,15 @@ def find_toolchain(target: str = "esp32s3") -> dict[str, Path]:
     is_win = platform.system() == "Windows"
     exe    = ".exe" if is_win else ""
 
-    # Target-specific prefix first (correctly configured for LE ESP32-S3),
-    # then unified xtensa-esp-elf which defaults to big-endian without -mcpu.
-    prefixes = [f"xtensa-{target}-elf-", "xtensa-esp-elf-"]
+    if arch == "riscv":
+        # All RISC-V ESP32 chips share the same riscv32-esp-elf- toolchain in IDF v5.
+        # riscv32-unknown-elf- is the distro package name (Ubuntu, Debian, Arch…).
+        prefixes = ["riscv32-esp-elf-", "riscv32-unknown-elf-"]
+    else:
+        # Xtensa: target-specific prefix first (correctly tuned for the CPU),
+        # then unified xtensa-esp-elf- (requires -mcpu flag).
+        prefixes = [f"xtensa-{cpu}-elf-", "xtensa-esp-elf-"]
+
     tools    = ["gcc", "ld", "objcopy", "readelf", "nm"]
     keys     = ["cc", "ld", "objcopy", "readelf", "nm"]
 
@@ -147,7 +231,7 @@ def find_toolchain(target: str = "esp32s3") -> dict[str, Path]:
                     return result
 
     sys.exit(
-        f"ERROR: Xtensa cross-compiler not found.\n"
+        f"ERROR: {arch.upper()} cross-compiler not found.\n"
         f"Tried prefixes: {prefixes}\n"
         "Options:\n"
         "  1. Add the toolchain bin directory to PATH\n"
@@ -187,8 +271,11 @@ def cmd_build(args) -> None:
     manifest = load_manifest(app_dir)
     validate_manifest(manifest)
 
-    tc = find_toolchain()
-    cc = tc["cc"]
+    arch, cpu = get_board_cpu()
+    tc        = find_toolchain(arch, cpu)
+    cc        = tc["cc"]
+    cflags    = build_cflags(arch, cpu)
+    print(f"  [arch] {arch} / {cpu}")
 
     # Gather sources
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
@@ -215,7 +302,7 @@ def cmd_build(args) -> None:
         obj = build_dir / (src.stem + ".o")
         compile_cmd = (
             [str(cc)] +
-            CFLAGS +
+            cflags +
             includes +
             ["-c", str(src), "-o", str(obj)]
         )
@@ -224,11 +311,11 @@ def cmd_build(args) -> None:
         objects.append(obj)
 
     # Partial link → single ET_REL ELF
-    # Use gcc as driver so it sets the correct little-endian Xtensa emulation for ld.
+    # Use gcc as the linker driver so it passes the correct emulation to ld.
     elf = build_dir / APP_ELF_NAME
     link_cmd = (
         [str(cc)] +
-        CFLAGS +
+        cflags +
         LDFLAGS +
         [str(o) for o in objects] +
         ["-o", str(elf)]
@@ -253,7 +340,8 @@ def cmd_info(args) -> None:
         sys.exit("ERROR: app.elf not found — run 'dbt build' first")
 
     manifest = load_manifest(app_dir)
-    tc = find_toolchain()
+    arch, cpu = get_board_cpu()
+    tc        = find_toolchain(arch, cpu)
 
     # --- Manifest ---
     print("=== Manifest ===")

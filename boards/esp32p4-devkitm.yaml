@@ -1,0 +1,29 @@
+board:
+  name: "esp32p4-devkitm"
+  cpu: esp32p4
+  flash_size_mb: 16
+  psram_size_mb: 32    # HP PSRAM via high-speed MSPI
+
+  uart:
+    - id: 0
+      tx_pin: 37
+      rx_pin: 38
+      default_baud: 115200
+
+  spi:
+    - id: 2
+      mosi_pin: 11
+      miso_pin: 13
+      clk_pin: 12
+      cs_pin: 10
+      max_freq_hz: 40000000
+
+  sd_card:
+    interface: spi
+    spi_id: 2
+    cd_pin: -1
+
+  leds:
+    - id: status
+      pin: 5
+      active_high: true

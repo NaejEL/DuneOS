@@ -31,6 +31,7 @@ idf_component_register(
         freertos
         pthread
         driver
+        esp_driver_gpio
         esp_driver_sdspi
         esp_driver_uart
         esp_system

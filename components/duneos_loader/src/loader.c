@@ -441,6 +441,176 @@ static esp_err_t apply_slot0_op(uint8_t  *insn_ptr,
     return ESP_OK;
 }
 
+#ifdef CONFIG_IDF_TARGET_ARCH_RISCV
+
+/* -------------------------------------------------------------------------
+ * RISC-V relocation application (RELA only, ET_REL ET32 LSB)
+ *
+ * Instruction encodings patched:
+ *   U-type  (lui/auipc)  : bits[31:12] = imm[31:12]
+ *   I-type  (addi, lw…)  : bits[31:20] = imm[11:0]
+ *   S-type  (sw, sb…)    : bits[31:25] = imm[11:5], bits[11:7] = imm[4:0]
+ *   CALL    (auipc+jalr) : two consecutive U+I words
+ *
+ * PCREL_HI20 / PCREL_LO12 pairing:
+ *   PCREL_LO12's r_sym resolves to the runtime address of the corresponding
+ *   PCREL_HI20 instruction.  We keep a small per-section ring-buffer cache of
+ *   (auipc_runtime_addr → absolute_target) to look up the pair.
+ * ---------------------------------------------------------------------- */
+
+#define RISCV_HI20_CACHE  8
+
+typedef struct { uint32_t loc; uint32_t target; } riscv_hi20_t;
+
+/* Reset before each RELA section in the relocation loop. */
+static riscv_hi20_t s_hi20[RISCV_HI20_CACHE];
+static int          s_hi20_n;
+
+static void hi20_put(uint32_t loc, uint32_t target)
+{
+    s_hi20[s_hi20_n % RISCV_HI20_CACHE] = (riscv_hi20_t){loc, target};
+    s_hi20_n++;
+}
+
+static bool hi20_get(uint32_t loc, uint32_t *out_target)
+{
+    int n = s_hi20_n < RISCV_HI20_CACHE ? s_hi20_n : RISCV_HI20_CACHE;
+    /* Most-recent first: LO12 always follows its HI20 in relocation order */
+    for (int i = 0; i < n; i++) {
+        int idx = (s_hi20_n - 1 - i + RISCV_HI20_CACHE) % RISCV_HI20_CACHE;
+        if (s_hi20[idx].loc == loc) {
+            *out_target = s_hi20[idx].target;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Split a signed 32-bit offset into (hi20, lo12) so that lo12 ∈ [-2048, 2047].
+ * Rounding by +0x800 corrects for the sign-extension of lo12 when re-added. */
+static void riscv_split(int32_t offset, int32_t *hi20, int32_t *lo12)
+{
+    *hi20 = (offset + 0x800) >> 12;
+    *lo12 = offset - (*hi20 << 12);
+}
+
+/* U-type (lui / auipc): bits[31:12] = hi20[19:0] */
+static void patch_utype(uint32_t *insn, int32_t hi20)
+{
+    *insn = (*insn & 0x00000FFFU) | ((uint32_t)(hi20 & 0xFFFFF) << 12);
+}
+
+/* I-type immediate: bits[31:20] = lo12[11:0] */
+static void patch_itype(uint32_t *insn, int32_t lo12)
+{
+    *insn = (*insn & 0x000FFFFFU) | ((uint32_t)(lo12 & 0xFFF) << 20);
+}
+
+/* S-type immediate: imm[11:5] → bits[31:25], imm[4:0] → bits[11:7] */
+static void patch_stype(uint32_t *insn, int32_t lo12)
+{
+    *insn = (*insn & 0x01FFF07FU)
+          | ((uint32_t)(lo12 & 0x1F) << 7)
+          | ((uint32_t)((lo12 >> 5) & 0x7F) << 25);
+}
+
+static esp_err_t apply_riscv_reloc(uint32_t *insn,
+                                    uint32_t  pc,
+                                    uint32_t  target,
+                                    uint8_t   type)
+{
+    int32_t hi20, lo12, offset;
+
+    switch (type) {
+
+    case R_RISCV_32:
+        /* Absolute 32-bit patch (function pointer tables, .rodata references) */
+        *insn = target;
+        return ESP_OK;
+
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT: {
+        /* auipc rd, hi   |   jalr rd, rd, lo  (two consecutive words) */
+        if (!target) return ESP_OK;  /* unresolved external — crash site logged earlier */
+        offset = (int32_t)(target - pc);
+        riscv_split(offset, &hi20, &lo12);
+        patch_utype(insn,     hi20);
+        patch_itype(insn + 1, lo12);
+        return ESP_OK;
+    }
+
+    case R_RISCV_PCREL_HI20:
+        /* auipc: upper 20 bits of PC-relative address; cache for paired LO12 */
+        if (!target) return ESP_OK;
+        offset = (int32_t)(target - pc);
+        riscv_split(offset, &hi20, &lo12);
+        patch_utype(insn, hi20);
+        hi20_put(pc, target);   /* key = this instruction's runtime address */
+        return ESP_OK;
+
+    case R_RISCV_PCREL_LO12_I: {
+        /*
+         * sym_val was passed as target here (r_addend is always 0 for LO12):
+         * target = S + 0 = S = runtime address of the paired PCREL_HI20 auipc.
+         * Look up the cache to find the original absolute target of that auipc.
+         */
+        uint32_t hi_target;
+        if (!hi20_get(target, &hi_target)) {
+            klog_e(TAG, "PCREL_LO12_I at 0x%08lx: no cached HI20 for key 0x%08lx",
+                   (unsigned long)pc, (unsigned long)target);
+            return ESP_ERR_INVALID_STATE;
+        }
+        offset = (int32_t)(hi_target - target);
+        riscv_split(offset, &hi20, &lo12);
+        patch_itype(insn, lo12);
+        return ESP_OK;
+    }
+
+    case R_RISCV_PCREL_LO12_S: {
+        uint32_t hi_target;
+        if (!hi20_get(target, &hi_target)) {
+            klog_e(TAG, "PCREL_LO12_S at 0x%08lx: no cached HI20 for key 0x%08lx",
+                   (unsigned long)pc, (unsigned long)target);
+            return ESP_ERR_INVALID_STATE;
+        }
+        offset = (int32_t)(hi_target - target);
+        riscv_split(offset, &hi20, &lo12);
+        patch_stype(insn, lo12);
+        return ESP_OK;
+    }
+
+    case R_RISCV_HI20:
+        /* lui: upper 20 bits of absolute address */
+        riscv_split((int32_t)target, &hi20, &lo12);
+        patch_utype(insn, hi20);
+        return ESP_OK;
+
+    case R_RISCV_LO12_I:
+        /* addi / load: lower 12 bits of absolute address (r_sym = same as HI20) */
+        riscv_split((int32_t)target, &hi20, &lo12);
+        patch_itype(insn, lo12);
+        return ESP_OK;
+
+    case R_RISCV_LO12_S:
+        riscv_split((int32_t)target, &hi20, &lo12);
+        patch_stype(insn, lo12);
+        return ESP_OK;
+
+    case R_RISCV_NONE:
+    case R_RISCV_RELAX:
+    case R_RISCV_ALIGN:
+        /* Linker hints — not meaningful in a loader context */
+        return ESP_OK;
+
+    default:
+        klog_d(TAG, "RISCV: unhandled reloc type %u at pc=0x%08lx — skipping",
+               type, (unsigned long)pc);
+        return ESP_OK;
+    }
+}
+
+#endif /* CONFIG_IDF_TARGET_ARCH_RISCV */
+
 static esp_err_t apply_relocations(FILE               *f,
                                     const elf32_hdr_t  *hdr,
                                     const elf32_shdr_t *shdrs,
@@ -477,9 +647,15 @@ static esp_err_t apply_relocations(FILE               *f,
                  shdr_name(shstrtab, &shdrs[target_idx]),
                  nentries);
 
+#ifdef CONFIG_IDF_TARGET_ARCH_RISCV
+        /* Reset the PCREL_HI20 cache at the start of each RELA section.
+         * HI20/LO12 pairs are always within the same section, so this is safe. */
+        s_hi20_n = 0;
+#endif
+
         for (int j = 0; j < nentries; j++) {
             const elf32_rela_t *rel = &relas[j];
-            uint32_t sym_idx = ELF32_R_SYM(rel->r_info);
+            uint32_t sym_idx  = ELF32_R_SYM(rel->r_info);
             uint8_t  rel_type = ELF32_R_TYPE(rel->r_info);
 
             if (sym_idx >= (uint32_t)symcount) {
@@ -492,11 +668,13 @@ static esp_err_t apply_relocations(FILE               *f,
             const elf32_sym_t *sym = &symtab[sym_idx];
             void *S = symbol_address(sym, strtab, app);
 
-            /* Write via D-bus-safe alias; PC stays at exec address for offset math */
-            uint8_t *patch_ptr = (uint8_t *)to_write_ptr(target_base) + rel->r_offset;
-            uint32_t patch_pc  = (uint32_t)((uintptr_t)target_base + rel->r_offset);
-            uint32_t target_addr = (uint32_t)(uintptr_t)S + rel->r_addend;
+            /* Write via D-bus-safe alias; PC stays at exec address for offset math.
+             * On RISC-V to_write_ptr() is the identity — no I/D split. */
+            uint8_t *patch_ptr  = (uint8_t *)to_write_ptr(target_base) + rel->r_offset;
+            uint32_t patch_pc   = (uint32_t)((uintptr_t)target_base + rel->r_offset);
+            uint32_t target_addr = (uint32_t)(uintptr_t)S + (uint32_t)rel->r_addend;
 
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
             switch (rel_type) {
             case R_XTENSA_32:
                 /* Additive: existing content holds the within-section offset
@@ -507,27 +685,36 @@ static esp_err_t apply_relocations(FILE               *f,
                 break;
 
             case R_XTENSA_SLOT0_OP: {
-                if (!S) break;  /* skip reloc; calling site will crash if reached */
+                if (!S) break;  /* skip; calling site will crash if reached */
                 esp_err_t err = apply_slot0_op(patch_ptr, patch_pc, target_addr);
                 if (err != ESP_OK) { free(relas); return err; }
                 break;
             }
 
             case R_XTENSA_ASM_EXPAND:
-                /* Assembler relaxation hint — no loader action needed */
-                break;
+                break;  /* assembler relaxation hint — no loader action */
 
             case R_XTENSA_DIFF32:
-                /* PC-relative 32-bit difference: *ptr -= S + A
-                 * Appears in exception tables and GCC unwind info. */
+                /* 32-bit difference: *ptr -= S + A  (unwind tables) */
                 if (S) *(int32_t *)patch_ptr -= (int32_t)target_addr;
                 break;
 
             default:
-                klog_d(TAG, "unhandled relocation type %u at offset 0x%lx — skipping",
+                klog_d(TAG, "Xtensa: unhandled reloc type %u at offset 0x%lx — skipping",
                          rel_type, (unsigned long)rel->r_offset);
                 break;
             }
+
+#elif defined(CONFIG_IDF_TARGET_ARCH_RISCV)
+            {
+                esp_err_t rerr = apply_riscv_reloc(
+                    (uint32_t *)patch_ptr, patch_pc, target_addr, rel_type);
+                if (rerr != ESP_OK) { free(relas); return rerr; }
+            }
+
+#else
+#error "No relocation handler for this CPU architecture — add support in loader.c"
+#endif
         }
 
         free(relas);
@@ -749,11 +936,12 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
                              symtab, symcount, strtab, app);
     if (err != ESP_OK) goto out;
 
-    /* Scan literal pools for bad pointers:
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Scan Xtensa literal pools for bad pointers:
      *  - DROM (0x3C000000-0x3FBFFFFF): flash VA leaked in — "Cache disabled" crash
      *  - IRAM exec-pool address past loaded code end: jump to zeros → IllegalInstruction */
     {
-        uintptr_t pool_iram_base = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
+        uintptr_t pool_iram_base  = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
         uintptr_t pool_loaded_end = pool_iram_base + app->exec_pool_end;
 
         for (int i = 0; i < hdr.e_shnum; i++) {
@@ -780,10 +968,10 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         }
     }
 
-    /* Xtensa: stores to IRAM via the D-bus alias are not visible to the
-     * instruction pipeline until ISYNC completes.  Without this, the CPU may
-     * execute stale instructions from the newly-loaded text sections. */
+    /* Stores to IRAM via the D-bus alias are not visible to the instruction
+     * pipeline until ISYNC completes. */
     asm volatile("isync" ::: "memory");
+#endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
 
     /* 9. Locate app_main */
     for (int i = 0; i < symcount; i++) {
