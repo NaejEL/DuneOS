@@ -937,9 +937,10 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Scan Xtensa literal pools for bad pointers:
-     *  - DROM (0x3C000000-0x3FBFFFFF): flash VA leaked in — "Cache disabled" crash
-     *  - IRAM exec-pool address past loaded code end: jump to zeros → IllegalInstruction */
+    /* Scan Xtensa literal pools for stale exec-pool pointers past the loaded
+     * code end — jumping there would hit zeroed memory → IllegalInstruction.
+     * DROM addresses are NOT rejected here: ABI-resolved functions in flash
+     * (newlib, ESP-IDF) are valid call targets even though they live in DROM. */
     {
         uintptr_t pool_iram_base  = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
         uintptr_t pool_loaded_end = pool_iram_base + app->exec_pool_end;
@@ -953,14 +954,11 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
             size_t nw = shdrs[i].sh_size / 4;
             for (size_t k = 0; k < nw; k++) {
                 uint32_t v = dram[k];
-                bool is_drom     = (v >= 0x3C000000u && v < 0x3FC00000u);
                 bool is_bad_pool = ((uintptr_t)v >= pool_loaded_end &&
                                     (uintptr_t)v <  pool_iram_base + sizeof(s_exec_pool));
-                if (is_drom || is_bad_pool) {
-                    klog_e(TAG, "literal pool %s[%zu]=0x%08lx — %s",
-                           nm, k, (unsigned long)v,
-                           is_drom ? "DROM address (load aborted)"
-                                   : "past pool end (jump to zeros)");
+                if (is_bad_pool) {
+                    klog_e(TAG, "literal pool %s[%zu]=0x%08lx — past pool end (jump to zeros)",
+                           nm, k, (unsigned long)v);
                     err = ESP_ERR_INVALID_STATE;
                     goto out;
                 }
