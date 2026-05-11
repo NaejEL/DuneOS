@@ -6,8 +6,7 @@
  * DO NOT EDIT — re-generate with:
  *   python tools/duneos-bspgen.py boards/lilygo-t-embed-cc1101.yaml
  *
- * Pin assignments verified from LilyGo T-Embed-CC1101 schematics.
- * Items marked [VERIFY] should be confirmed against the latest hardware revision.
+ * Pin assignments from LilyGo T-Embed-CC1101 reference firmware.
  */
 
 #define DUNEOS_BOARD_NAME                        "lilygo-t-embed-cc1101"
@@ -22,31 +21,31 @@
 #define DUNEOS_UART0_RX_PIN     44
 #define DUNEOS_UART0_BAUD       115200
 
-/* ---------- SPI2 (SD card) ---------- */
+/* ---------- SPI2 (shared: SD card, ST7789 display, CC1101) ---------- */
 #define DUNEOS_SD_SPI_HOST      SPI2_HOST
-#define DUNEOS_SD_MOSI_PIN      16
-#define DUNEOS_SD_MISO_PIN      17
-#define DUNEOS_SD_CLK_PIN       14
-#define DUNEOS_SD_CS_PIN        18
-#define DUNEOS_SD_FREQ_KHZ      20000
+#define DUNEOS_SD_MOSI_PIN      9
+#define DUNEOS_SD_MISO_PIN      10
+#define DUNEOS_SD_CLK_PIN       11
+#define DUNEOS_SD_CS_PIN        13
+#define DUNEOS_SD_FREQ_KHZ      40000
 #define DUNEOS_SD_CD_PIN        (-1)
 
-/* ---------- I2C0 (BQ25896 charger + BQ27220 fuel gauge) ---------- */
+/* ---------- I2C0 (BQ25896 charger + BQ27220 fuel gauge + PN532 NFC) ---------- */
 #define DUNEOS_HAVE_I2C         1
 #define DUNEOS_I2C0_SDA_PIN     8
-#define DUNEOS_I2C0_SCL_PIN     9
-#define DUNEOS_I2C0_FREQ_HZ     400000
+#define DUNEOS_I2C0_SCL_PIN     18
+#define DUNEOS_I2C0_FREQ_HZ     100000
 
-/* ---------- Display (ST7789, 240x280, dedicated SPI3 bus) ---------- */
+/* ---------- Display (ST7789, 240x280, shared SPI2 bus) ---------- */
 #define DUNEOS_DISPLAY_WIDTH    240
 #define DUNEOS_DISPLAY_HEIGHT   280
-#define DUNEOS_DISPLAY_SPI_HOST SPI3_HOST
-#define DUNEOS_DISPLAY_MOSI_PIN 11
-#define DUNEOS_DISPLAY_CLK_PIN  12
-#define DUNEOS_DISPLAY_CS_PIN   10
-#define DUNEOS_DISPLAY_DC_PIN   13
-#define DUNEOS_DISPLAY_RST_PIN  1
-#define DUNEOS_DISPLAY_BL_PIN   15
+#define DUNEOS_DISPLAY_SPI_HOST SPI2_HOST
+#define DUNEOS_DISPLAY_MOSI_PIN 9
+#define DUNEOS_DISPLAY_CLK_PIN  11
+#define DUNEOS_DISPLAY_CS_PIN   41
+#define DUNEOS_DISPLAY_DC_PIN   16
+#define DUNEOS_DISPLAY_RST_PIN  40
+#define DUNEOS_DISPLAY_BL_PIN   21
 #define DUNEOS_DISPLAY_FREQ_HZ  40000000
 
 /* ---------- Battery (BQ27220 fuel gauge + BQ25896 charger) ---------- */
@@ -58,11 +57,17 @@
 #define DUNEOS_BATTERY_GAUGE_ADDR        0x55
 #define DUNEOS_BATTERY_CHARGER_ADDR      0x6B
 
-/* ---------- CC1101 sub-GHz radio (userspace via /dev/spi-1, Phase 11) -- */
-/* MOSI=41  MISO=38  SCK=40  CS=46  GDO0=2  GDO2=3                       */
+/* ---------- Power switch (CC1101 + WS2812 power rail) ---------- */
+/* GPIO_NUM_15 — drive HIGH to power on CC1101 and onboard WS2812.        */
 
-/* ---------- Rotary encoder (input device, Phase 12) [VERIFY] ----------- */
-/* A=4  B=5  SW=6                                                          */
+/* ---------- PN532 NFC (on I2C0) --------------------------------- */
+/* IRQ=17  RESET=45                                                        */
+
+/* ---------- CC1101 sub-GHz radio (userspace via /dev/spi-1, Phase 11) -- */
+/* Shares SPI2 bus (MOSI=9 MISO=10 SCK=11).  CS=[VERIFY]  GDO0=2  GDO2=3 */
+
+/* ---------- Rotary encoder + side key (input, Phase 12) ---------- */
+/* KNOB_A=4  KNOB_B=5  KNOB_BTN=0  KEY_BTN=6                              */
 
 /* ---------- Onboard WS2812 LED ---------- */
 #define DUNEOS_LED_STATUS_PIN   48
