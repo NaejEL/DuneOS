@@ -45,11 +45,14 @@ typedef struct {
     char                    name[DUNEOS_APP_NAME_MAX];
     duneos_restart_policy_t restart_policy;
     char                    restart_path[DUNEOS_PATH_MAX];
+    uint32_t                restart_count;
+    bool                    force_restart;
 } app_slot_t;
 
 typedef struct {
     TaskHandle_t task;
     int          code;
+    bool         forced; /* if true, supervisor must vTaskDelete before unload */
 } exit_msg_t;
 
 /* ----- state ------------------------------------------------------------- */
@@ -145,14 +148,24 @@ static void supervisor_task(void *arg)
         QueueHandle_t           mailbox = slot->mailbox;
         duneos_restart_policy_t policy  = slot->restart_policy;
 
-        bool should_restart = (policy == DUNEOS_RESTART_ALWAYS) ||
+        bool should_restart = slot->force_restart ||
+                              (policy == DUNEOS_RESTART_ALWAYS) ||
                               (policy == DUNEOS_RESTART_ON_FAILURE && code != 0);
 
+        /* Kill the task before releasing the lock so we stop its execution
+         * before unloading its code. Only needed for forced restarts — in the
+         * normal exit path the app task already deleted itself via vTaskDelete(NULL). */
+        if (msg.forced) vTaskDelete(msg.task);
+
+        slot->force_restart = false;
         slot->app     = NULL;
         slot->mailbox = NULL;
         slot->active  = false;
         s_active_count--;
-        if (should_restart) s_want_restart++;
+        if (should_restart) {
+            slot->restart_count++;
+            s_want_restart++;
+        }
 
         xSemaphoreGive(s_lock);
 
@@ -269,8 +282,9 @@ esp_err_t duneos_supervisor_launch(const char *path)
 void duneos_supervisor_app_exited(int code)
 {
     exit_msg_t msg = {
-        .task = xTaskGetCurrentTaskHandle(),
-        .code = code,
+        .task   = xTaskGetCurrentTaskHandle(),
+        .code   = code,
+        .forced = false,
     };
     /* portMAX_DELAY: queue depth == max running apps, so this shouldn't block */
     xQueueSend(s_exit_queue, &msg, portMAX_DELAY);
@@ -301,6 +315,43 @@ int duneos_supervisor_running_count(void)
     int n = s_active_count;
     xSemaphoreGive(s_lock);
     return n;
+}
+
+int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count)
+{
+    if (!out || count <= 0) return 0;
+    int n = count < DUNEOS_MAX_RUNNING_APPS ? count : DUNEOS_MAX_RUNNING_APPS;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    for (int i = 0; i < n; i++) {
+        out[i].active        = s_slots[i].active;
+        out[i].restart_policy= s_slots[i].restart_policy;
+        out[i].restart_count = s_slots[i].restart_count;
+        strlcpy(out[i].name, s_slots[i].active ? s_slots[i].name : "",
+                sizeof(out[i].name));
+    }
+    xSemaphoreGive(s_lock);
+    return n;
+}
+
+int duneos_supervisor_restart_by_name(const char *name)
+{
+    if (!name) return -1;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_name(name);
+    if (!slot) {
+        xSemaphoreGive(s_lock);
+        return -1;
+    }
+    slot->force_restart = true;
+    TaskHandle_t task = slot->task;
+    xSemaphoreGive(s_lock);
+
+    /* Post a forced exit on behalf of the target task. The supervisor task
+     * will vTaskDelete it (to stop execution before unloading its code)
+     * then relaunch it. */
+    exit_msg_t msg = { .task = task, .code = 0, .forced = true };
+    xQueueSend(s_exit_queue, &msg, portMAX_DELAY);
+    return 0;
 }
 
 /* ----- messaging --------------------------------------------------------- */

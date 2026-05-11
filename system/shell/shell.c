@@ -21,6 +21,8 @@
  *   run <app.dap>        load and run a DuneOS app synchronously
  *   free                 show available heap
  *   klog                 dump kernel ring buffer
+ *   services             list running supervisor slots
+ *   restart <name>       force restart a named service
  *   reboot               restart ESP32
  *   help                 list commands
  */
@@ -57,6 +59,19 @@ typedef void duneos_app_t;
 extern int  duneos_loader_load(const char *path, duneos_app_t **out);
 extern int  duneos_loader_run(duneos_app_t *app);
 extern void duneos_loader_unload(duneos_app_t *app);
+
+/* Supervisor slot snapshot — mirrors duneos_slot_info_t from supervisor.h */
+#define DUNEOS_MAX_RUNNING_APPS  4
+#define DUNEOS_APP_NAME_MAX      64
+typedef enum { DUNEOS_RESTART_NO=0, DUNEOS_RESTART_ALWAYS=1, DUNEOS_RESTART_ON_FAILURE=2 } duneos_restart_policy_t;
+typedef struct {
+    char                    name[DUNEOS_APP_NAME_MAX];
+    int                     active;
+    duneos_restart_policy_t restart_policy;
+    unsigned int            restart_count;
+} duneos_slot_info_t;
+extern int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+extern int duneos_supervisor_restart_by_name(const char *name);
 
 /* ----- configuration ----------------------------------------------------- */
 
@@ -435,6 +450,41 @@ done:
     close(fd);
 }
 
+static const char *policy_str(duneos_restart_policy_t p)
+{
+    if (p == DUNEOS_RESTART_ALWAYS)     return "always";
+    if (p == DUNEOS_RESTART_ON_FAILURE) return "on-failure";
+    return "no";
+}
+
+static void cmd_services(void)
+{
+    duneos_slot_info_t slots[DUNEOS_MAX_RUNNING_APPS];
+    int n = duneos_supervisor_list_slots(slots, DUNEOS_MAX_RUNNING_APPS);
+    shell_puts("NAME                STATE   POLICY      RESTARTS");
+    shell_puts("--------------------------------------------------");
+    int found = 0;
+    for (int i = 0; i < n; i++) {
+        if (!slots[i].active) continue;
+        shell_printf("%-20s%-8s%-12s%u\r\n",
+                     slots[i].name,
+                     "active",
+                     policy_str(slots[i].restart_policy),
+                     slots[i].restart_count);
+        found++;
+    }
+    if (!found) shell_puts("(no running services)");
+}
+
+static void cmd_restart(int argc, char **argv)
+{
+    if (argc < 2) { shell_puts("usage: restart <name>"); return; }
+    if (duneos_supervisor_restart_by_name(argv[1]) != 0)
+        shell_printf("restart: '%s' not found\r\n", argv[1]);
+    else
+        shell_printf("restart: '%s' queued\r\n", argv[1]);
+}
+
 static void cmd_help(void)
 {
     shell_puts("Commands:");
@@ -454,6 +504,8 @@ static void cmd_help(void)
     shell_puts("  gpio set <pin> <0|1>          drive GPIO pin");
     shell_puts("  gpio mode <pin> in|out        set GPIO direction");
     shell_puts("  gpio pull <pin> none|up|down  set pull resistor");
+    shell_puts("  services                      list running service slots");
+    shell_puts("  restart <name>                force restart a named service");
     shell_puts("  reboot                        restart the device");
     shell_puts("  help                          this message");
 }
@@ -490,10 +542,12 @@ static void exec_line(char *line)
     else if (strcmp(cmd, "run")    == 0) cmd_run(argc, argv);
     else if (strcmp(cmd, "free")   == 0) cmd_free();
     else if (strcmp(cmd, "klog")   == 0) cmd_klog();
-    else if (strcmp(cmd, "gpio")   == 0) cmd_gpio(argc, argv);
-    else if (strcmp(cmd, "reboot") == 0) esp_restart();
-    else if (strcmp(cmd, "exit")   == 0) duneos_exit(0);
-    else if (strcmp(cmd, "help")   == 0) cmd_help();
+    else if (strcmp(cmd, "gpio")     == 0) cmd_gpio(argc, argv);
+    else if (strcmp(cmd, "services") == 0) cmd_services();
+    else if (strcmp(cmd, "restart")  == 0) cmd_restart(argc, argv);
+    else if (strcmp(cmd, "reboot")   == 0) esp_restart();
+    else if (strcmp(cmd, "exit")     == 0) duneos_exit(0);
+    else if (strcmp(cmd, "help")     == 0) cmd_help();
     else shell_printf("%s: command not found\r\n", cmd);
 }
 

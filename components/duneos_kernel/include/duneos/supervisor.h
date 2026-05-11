@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include "esp_err.h"
+#include <stdbool.h>
 #include "duneos/abi.h"
 
 /*
@@ -89,6 +90,24 @@ void duneos_supervisor_wait_all(void);
 
 /* Current number of live app tasks */
 int duneos_supervisor_running_count(void);
+
+/*
+ * Snapshot of one supervisor slot — safe to read after the call returns.
+ * active=false means the slot is empty; name/policy/restart_count are zeroed.
+ */
+typedef struct {
+    char                    name[DUNEOS_APP_NAME_MAX];
+    bool                    active;
+    duneos_restart_policy_t restart_policy;
+    uint32_t                restart_count;
+} duneos_slot_info_t;
+
+/* Fill out[] with up to count slot snapshots; returns number of entries filled. */
+int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+
+/* Force-kill and relaunch the named slot regardless of its restart policy.
+ * Returns 0 if found and kill queued, -1 if name not found or slot inactive. */
+int duneos_supervisor_restart_by_name(const char *name);
 
 /*
  * Signal that this service has finished initialisation and is ready.

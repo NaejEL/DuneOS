@@ -161,11 +161,13 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* ------------------------------------------------------------------ */
     /* DuneOS — lifecycle & IPC                                           */
     /* ------------------------------------------------------------------ */
-    SYM("duneos_exit",          duneos_exit                ),
-    SYM("duneos_run",           duneos_supervisor_launch   ),
-    SYM("duneos_send",          duneos_send                ),
-    SYM("duneos_recv",          duneos_recv                ),
-    SYM("duneos_service_ready", duneos_service_ready       ),
+    SYM("duneos_exit",                    duneos_exit                          ),
+    SYM("duneos_run",                     duneos_supervisor_launch              ),
+    SYM("duneos_send",                    duneos_send                           ),
+    SYM("duneos_recv",                    duneos_recv                           ),
+    SYM("duneos_service_ready",           duneos_service_ready                  ),
+    SYM("duneos_supervisor_list_slots",   duneos_supervisor_list_slots          ),
+    SYM("duneos_supervisor_restart_by_name", duneos_supervisor_restart_by_name ),
 
     /* ------------------------------------------------------------------ */
     /* DuneOS — loader (for shell's `run` command)                        */
