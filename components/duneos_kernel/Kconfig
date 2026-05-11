@@ -1,0 +1,58 @@
+menu "DuneOS kernel drivers"
+
+config DUNEOS_DRV_NULL
+    bool "null/zero character devices (/dev/null, /dev/zero)"
+    default y
+    help
+        Enable /dev/null (write sink, read returns EOF) and /dev/zero
+        (read returns infinite zeroes). Always safe to enable.
+
+config DUNEOS_DRV_UART
+    bool "UART0 serial device (/dev/uart0)"
+    default y
+    help
+        Enable /dev/uart0 backed by the UART port defined in board_config.h.
+        Installs the ESP-IDF UART driver and routes stdout through it.
+
+config DUNEOS_DRV_KLOG
+    bool "Kernel log reader (/dev/klog)"
+    default y
+    help
+        Enable /dev/klog. Read-only device; each open() starts replaying
+        from the oldest byte still in the kernel ring buffer.
+
+config DUNEOS_DRV_GPIO
+    bool "GPIO chip (/dev/gpiochip0)"
+    default n
+    help
+        Enable /dev/gpiochip0 for native ESP32 GPIO access via ioctl().
+        Uses esp_driver_gpio (gpio_config, gpio_get/set_level, gpio_set_pull_mode).
+
+config DUNEOS_DRV_I2C
+    bool "I2C master bus (/dev/i2c-0)"
+    default n
+    help
+        Enable /dev/i2c-0 as a raw I2C master bus.
+        Apps set the target address with ioctl(I2C_SET_ADDR) then call
+        write()/read() or ioctl(I2C_RDWR) for combined write-then-read
+        transactions. Uses the ESP-IDF v5 i2c_master API.
+
+config DUNEOS_DRV_BATTERY_ADC_SIMPLE
+    bool "Battery monitor — ADC voltage divider backend (/dev/battery0)"
+    default n
+    help
+        Enable /dev/battery0 using a resistor-divided VBAT on an ADC pin.
+        Board must define DUNEOS_BATTERY_ADC_UNIT, DUNEOS_BATTERY_ADC_CHANNEL,
+        DUNEOS_BATTERY_VDIV_FACTOR, DUNEOS_BATTERY_FULL_MV, DUNEOS_BATTERY_EMPTY_MV
+        in board_config.h. Suitable for M5Stack CardPuter (VBAT/2 on GPIO10).
+
+config DUNEOS_DRV_BATTERY_BQ27220
+    bool "Battery monitor — BQ27220 fuel gauge backend (/dev/battery0)"
+    default n
+    depends on DUNEOS_DRV_I2C
+    help
+        Enable /dev/battery0 using a TI BQ27220 coulomb-counter fuel gauge
+        connected to the I2C bus. Board must define DUNEOS_BATTERY_GAUGE_ADDR
+        in board_config.h. Suitable for LilyGo T-Embed CC1101.
+
+endmenu

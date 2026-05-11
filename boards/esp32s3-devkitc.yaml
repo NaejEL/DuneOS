@@ -25,6 +25,12 @@ board:
     spi_id: 2
     cd_pin: -1    # card detect not wired on DevKitC
 
+  i2c:
+    - id: 0
+      sda_pin: 8
+      scl_pin: 9
+      freq_hz: 400000
+
   leds:
     - id: status
       pin: 2

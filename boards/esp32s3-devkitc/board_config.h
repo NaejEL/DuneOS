@@ -27,6 +27,12 @@
 #define DUNEOS_SD_FREQ_KHZ      20000   /* 20 MHz — safe default, raise if stable */
 #define DUNEOS_SD_CD_PIN        (-1)    /* card detect not wired */
 
+/* ---------- I2C0 (general-purpose header pins) ---------- */
+#define DUNEOS_HAVE_I2C         1
+#define DUNEOS_I2C0_SDA_PIN     8
+#define DUNEOS_I2C0_SCL_PIN     9
+#define DUNEOS_I2C0_FREQ_HZ     400000
+
 /* ---------- Status LED ---------- */
 #define DUNEOS_LED_STATUS_PIN   2
 #define DUNEOS_LED_ACTIVE_HIGH  1

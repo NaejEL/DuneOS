@@ -1,28 +1,19 @@
 /*
- * DuneOS devfs — /dev virtual filesystem.
+ * DuneOS devfs — /dev VFS routing layer.
  *
- * Devices:
- *   /dev/null   — discard all writes; reads return EOF immediately
- *   /dev/zero   — reads return 0x00 bytes; writes discarded
- *   /dev/uart0  — UART0 hardware (115200 8N1); maps to uart_read/write_bytes
- *   /dev/klog   — kernel ring buffer (read-only); each open starts from oldest
+ * This file is a pure dispatcher: it implements the esp_vfs_t callbacks and
+ * routes each call to the registered duneos_dev_driver_t for the open fd.
  *
- * UART0 note: the driver is installed for buffered /dev/uart0 I/O, but fds
- * 0/1/2 (stdin/stdout/stderr) are intentionally left on whatever ESP-IDF
- * configured as the console (USB-JTAG/CDC on CardPuter and most ESP32-S3
- * boards).  The shell therefore reads/writes the interactive terminal on the
- * USB port, not the physical UART0 pins.
+ * No device-specific logic lives here.  Each device driver lives in
+ * components/duneos_kernel/src/drivers/drv_*.c and registers itself via
+ * duneos_dev_register() during duneos_vfs_mount_dev().
  */
 
+#include "duneos/dev_driver.h"
 #include "duneos/vfs.h"
 #include "duneos/klog.h"
-#include "duneos/gpio_ioctl.h"
 
 #include "esp_vfs.h"
-#include "driver/uart_vfs.h"
-#include "driver/uart.h"
-#include "hal/uart_types.h"
-#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -34,81 +25,59 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#define DEVFS_MAX_FDS         16
-#define UART0_RX_BUF          2048
-#define UART0_BAUD            115200
-#define UART0_READ_TIMEOUT_MS 20
+#define DEVFS_MAX_FDS  16
 
 static const char *TAG = "duneos/devfs";
 
-typedef enum {
-    DEV_NONE     = 0,
-    DEV_NULL,
-    DEV_ZERO,
-    DEV_UART0,
-    DEV_KLOG,
-    DEV_GPIOCHIP,
-} dev_type_t;
+/* ----- driver registry --------------------------------------------------- */
 
-typedef struct {
-    dev_type_t type;
-    int        oflags;
-    bool       open;
-    size_t     klog_pos;  /* absolute read position, DEV_KLOG only */
-    uint8_t    chip;      /* gpiochip index, DEV_GPIOCHIP only     */
-} devfs_fd_t;
+static const duneos_dev_driver_t *s_drivers[DUNEOS_DEV_MAX_DRIVERS];
+static int                        s_driver_count = 0;
 
-static devfs_fd_t        s_fds[DEVFS_MAX_FDS];
+esp_err_t duneos_dev_register(const duneos_dev_driver_t *drv)
+{
+    if (s_driver_count >= DUNEOS_DEV_MAX_DRIVERS) {
+        klog_e(TAG, "driver table full, cannot register '%s'", drv->name);
+        return ESP_ERR_NO_MEM;
+    }
+    if (drv->init) {
+        esp_err_t err = drv->init();
+        if (err != ESP_OK) {
+            klog_e(TAG, "drv '%s' init failed: %s", drv->name, esp_err_to_name(err));
+            return err;
+        }
+    }
+    s_drivers[s_driver_count++] = drv;
+    klog_i(TAG, "/dev/%s registered", drv->name);
+    return ESP_OK;
+}
+
+static const duneos_dev_driver_t *driver_find(const char *name)
+{
+    for (int i = 0; i < s_driver_count; i++) {
+        if (strcmp(s_drivers[i]->name, name) == 0)
+            return s_drivers[i];
+    }
+    return NULL;
+}
+
+/* ----- fd table ---------------------------------------------------------- */
+
+static duneos_devfd_t    s_fds[DEVFS_MAX_FDS];
 static SemaphoreHandle_t s_lock;
-static bool              s_uart0_installed = false;
 
-/* ----- fd helpers -------------------------------------------------------- */
-
-static int fd_alloc(dev_type_t type, int oflags, size_t klog_pos, uint8_t chip)
+static int fd_alloc(const duneos_dev_driver_t *drv, int oflags)
 {
     for (int i = 0; i < DEVFS_MAX_FDS; i++) {
         if (!s_fds[i].open) {
-            s_fds[i].type     = type;
-            s_fds[i].oflags   = oflags;
-            s_fds[i].open     = true;
-            s_fds[i].klog_pos = klog_pos;
-            s_fds[i].chip     = chip;
+            memset(&s_fds[i], 0, sizeof(s_fds[i]));
+            s_fds[i].open   = true;
+            s_fds[i].oflags = oflags;
+            s_fds[i].drv    = drv;
             return i;
         }
     }
     return -1;
-}
-
-/* ----- UART0 init -------------------------------------------------------- */
-
-static esp_err_t uart0_ensure_driver(void)
-{
-    if (s_uart0_installed) return ESP_OK;
-
-    uart_config_t cfg = {
-        .baud_rate  = UART0_BAUD,
-        .data_bits  = UART_DATA_8_BITS,
-        .parity     = UART_PARITY_DISABLE,
-        .stop_bits  = UART_STOP_BITS_1,
-        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-
-    esp_err_t err = uart_driver_install(UART_NUM_0, UART0_RX_BUF, 0, 0, NULL, 0);
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-        klog_e(TAG, "uart_driver_install: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    err = uart_param_config(UART_NUM_0, &cfg);
-    if (err != ESP_OK) {
-        klog_e(TAG, "uart_param_config: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    s_uart0_installed = true;
-    klog_i(TAG, "UART0 driver installed (%d baud) — /dev/uart0 ready", UART0_BAUD);
-    return ESP_OK;
 }
 
 /* ----- VFS callbacks ----------------------------------------------------- */
@@ -117,92 +86,55 @@ static int devfs_open(const char *path, int flags, int mode)
 {
     (void)mode;
 
-    dev_type_t type;
-    size_t     klog_pos = 0;
+    /* path arrives as "/uart0", "/i2c-0", etc. — strip leading slash */
+    const char *name = (*path == '/') ? path + 1 : path;
 
-    uint8_t chip = 0;
-
-    if      (strcmp(path, "/null")      == 0) type = DEV_NULL;
-    else if (strcmp(path, "/zero")      == 0) type = DEV_ZERO;
-    else if (strcmp(path, "/uart0")     == 0) type = DEV_UART0;
-    else if (strcmp(path, "/klog")      == 0) { type = DEV_KLOG; klog_pos = klog_ring_oldest(); }
-    else if (strcmp(path, "/gpiochip0") == 0) { type = DEV_GPIOCHIP; chip = 0; }
-    else { errno = ENOENT; return -1; }
-
-    if (type == DEV_UART0) {
-        esp_err_t err = uart0_ensure_driver();
-        if (err != ESP_OK) { errno = EIO; return -1; }
-    }
+    const duneos_dev_driver_t *drv = driver_find(name);
+    if (!drv) { errno = ENOENT; return -1; }
 
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    int fd = fd_alloc(type, flags, klog_pos, chip);
+    int fd = fd_alloc(drv, flags);
     xSemaphoreGive(s_lock);
-
     if (fd < 0) { errno = EMFILE; return -1; }
+
+    if (drv->open) {
+        int rc = drv->open(&s_fds[fd], flags);
+        if (rc < 0) {
+            s_fds[fd].open = false;
+            return -1;
+        }
+    }
     return fd;
 }
 
 static int devfs_close(int fd)
 {
     if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
-        errno = EBADF;
-        return -1;
+        errno = EBADF; return -1;
     }
+    int rc = 0;
+    if (s_fds[fd].drv->close)
+        rc = s_fds[fd].drv->close(&s_fds[fd]);
     s_fds[fd].open = false;
-    s_fds[fd].type = DEV_NONE;
-    return 0;
+    return rc;
 }
 
 static ssize_t devfs_read(int fd, void *buf, size_t len)
 {
     if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
-        errno = EBADF;
-        return -1;
+        errno = EBADF; return -1;
     }
-    switch (s_fds[fd].type) {
-    case DEV_NULL:
-        return 0;
-    case DEV_ZERO:
-        memset(buf, 0, len);
-        return (ssize_t)len;
-    case DEV_UART0: {
-        int n = uart_read_bytes(UART_NUM_0, buf, len,
-                                pdMS_TO_TICKS(UART0_READ_TIMEOUT_MS));
-        if (n < 0) { errno = EIO; return -1; }
-        return (ssize_t)n;
-    }
-    case DEV_KLOG: {
-        size_t n = klog_ring_read(&s_fds[fd].klog_pos, buf, len);
-        return (ssize_t)n;  /* 0 = caught up (EOF-like for one-shot readers) */
-    }
-    default:
-        errno = EBADF;
-        return -1;
-    }
+    if (!s_fds[fd].drv->read) { errno = EBADF; return -1; }
+    return s_fds[fd].drv->read(&s_fds[fd], buf, len);
 }
 
 static ssize_t devfs_write(int fd, const void *buf, size_t len)
 {
     if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
-        errno = EBADF;
-        return -1;
+        errno = EBADF; return -1;
     }
-    switch (s_fds[fd].type) {
-    case DEV_NULL:
-    case DEV_ZERO:
-        return (ssize_t)len;
-    case DEV_UART0: {
-        int n = uart_write_bytes(UART_NUM_0, buf, len);
-        if (n < 0) { errno = EIO; return -1; }
-        return (ssize_t)n;
-    }
-    case DEV_KLOG:
-        errno = EBADF;  /* read-only device */
-        return -1;
-    default:
-        errno = EBADF;
-        return -1;
-    }
+    if (!s_fds[fd].drv->write) { errno = EBADF; return -1; }
+    return s_fds[fd].drv->write(&s_fds[fd], buf, len);
 }
 
 static off_t devfs_lseek(int fd, off_t offset, int whence)
@@ -212,16 +144,40 @@ static off_t devfs_lseek(int fd, off_t offset, int whence)
     return (off_t)-1;
 }
 
-/* ----- directory listing ------------------------------------------------- */
+static int devfs_ioctl(int fd, int cmd, va_list args)
+{
+    if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
+        errno = EBADF; return -1;
+    }
+    if (!s_fds[fd].drv->ioctl) { errno = ENOTTY; return -1; }
+    void *arg = va_arg(args, void *);
+    return s_fds[fd].drv->ioctl(&s_fds[fd], cmd, arg);
+}
 
-static const char *s_dev_entries[] = {
-    "null", "zero", "uart0", "klog", "gpiochip0",
-};
-#define DEV_ENTRY_COUNT  (sizeof(s_dev_entries) / sizeof(s_dev_entries[0]))
+static int devfs_fstat(int fd, struct stat *st)
+{
+    if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
+        errno = EBADF; return -1;
+    }
+    memset(st, 0, sizeof(*st));
+    st->st_mode = S_IFCHR | 0666;
+    return 0;
+}
+
+static int devfs_stat(const char *path, struct stat *st)
+{
+    const char *name = (*path == '/') ? path + 1 : path;
+    if (!driver_find(name)) { errno = ENOENT; return -1; }
+    memset(st, 0, sizeof(*st));
+    st->st_mode = S_IFCHR | 0666;
+    return 0;
+}
+
+/* ----- directory listing (uses driver registry as source of truth) -------- */
 
 typedef struct {
-    DIR    dir;     /* must be first — VFS casts DIR* to our struct */
-    size_t idx;
+    DIR    dir;   /* must be first — VFS casts DIR* to our struct */
+    int    idx;
 } devfs_dir_t;
 
 static DIR *devfs_opendir(const char *name)
@@ -229,17 +185,16 @@ static DIR *devfs_opendir(const char *name)
     (void)name;
     devfs_dir_t *d = calloc(1, sizeof(devfs_dir_t));
     if (!d) { errno = ENOMEM; return NULL; }
-    d->idx = 0;
     return (DIR *)d;
 }
 
 static struct dirent *devfs_readdir(DIR *pdir)
 {
     devfs_dir_t *d = (devfs_dir_t *)pdir;
-    if (d->idx >= DEV_ENTRY_COUNT) return NULL;
+    if (d->idx >= s_driver_count) return NULL;
     static struct dirent ent;
     ent.d_type = DT_CHR;
-    strncpy(ent.d_name, s_dev_entries[d->idx++], sizeof(ent.d_name) - 1);
+    strncpy(ent.d_name, s_drivers[d->idx++]->name, sizeof(ent.d_name) - 1);
     ent.d_name[sizeof(ent.d_name) - 1] = '\0';
     return &ent;
 }
@@ -250,111 +205,29 @@ static int devfs_closedir(DIR *pdir)
     return 0;
 }
 
-/* ----- ioctl ------------------------------------------------------------- */
+/* ----- driver forward declarations --------------------------------------- */
 
-static int devfs_ioctl(int fd, int cmd, va_list args)
-{
-    if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
-        errno = EBADF;
-        return -1;
-    }
-    if (s_fds[fd].type != DEV_GPIOCHIP) {
-        errno = ENOTTY;
-        return -1;
-    }
-
-    void *arg = va_arg(args, void *);
-
-    switch (cmd) {
-
-    case GPIOCHIP_GET_INFO: {
-        gpiochip_info_t *info = (gpiochip_info_t *)arg;
-        if (!info) { errno = EINVAL; return -1; }
-        snprintf(info->name, sizeof(info->name), "gpiochip%u", (unsigned)s_fds[fd].chip);
-        info->lines = (uint8_t)GPIO_NUM_MAX;
-        return 0;
-    }
-
-    case GPIOCHIP_SET_DIR: {
-        gpio_req_t *req = (gpio_req_t *)arg;
-        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
-        gpio_mode_t mode = (req->dir == GPIO_DIR_OUTPUT)
-                           ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT;
-        if (gpio_set_direction((gpio_num_t)req->line, mode) != ESP_OK) {
-            errno = EIO; return -1;
-        }
-        return 0;
-    }
-
-    case GPIOCHIP_GET_VALUE: {
-        gpio_req_t *req = (gpio_req_t *)arg;
-        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
-        req->val = (uint8_t)gpio_get_level((gpio_num_t)req->line);
-        return 0;
-    }
-
-    case GPIOCHIP_SET_VALUE: {
-        gpio_req_t *req = (gpio_req_t *)arg;
-        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
-        if (gpio_set_level((gpio_num_t)req->line, req->val ? 1 : 0) != ESP_OK) {
-            errno = EIO; return -1;
-        }
-        return 0;
-    }
-
-    case GPIOCHIP_SET_PULL: {
-        gpio_req_t *req = (gpio_req_t *)arg;
-        if (!req || req->line >= GPIO_NUM_MAX) { errno = EINVAL; return -1; }
-        gpio_pull_mode_t pull;
-        switch (req->pull) {
-        case GPIO_PULL_UP:     pull = GPIO_PULLUP_ONLY;     break;
-        case GPIO_PULL_DOWN:   pull = GPIO_PULLDOWN_ONLY;   break;
-        case GPIO_PULL_UPDOWN: pull = GPIO_PULLUP_PULLDOWN; break;
-        default:               pull = GPIO_FLOATING;        break;
-        }
-        if (gpio_set_pull_mode((gpio_num_t)req->line, pull) != ESP_OK) {
-            errno = EIO; return -1;
-        }
-        return 0;
-    }
-
-    case GPIOCHIP_SET_IRQ:
-        errno = ENOSYS;
-        return -1;
-
-    default:
-        errno = EINVAL;
-        return -1;
-    }
-}
-
-static int devfs_fstat(int fd, struct stat *st)
-{
-    if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) {
-        errno = EBADF;
-        return -1;
-    }
-    memset(st, 0, sizeof(*st));
-    st->st_mode = S_IFCHR | 0444;
-    if (s_fds[fd].type != DEV_KLOG) st->st_mode |= 0222;
-    return 0;
-}
-
-static int devfs_stat(const char *path, struct stat *st)
-{
-    if (strcmp(path, "/null")      != 0 &&
-        strcmp(path, "/zero")      != 0 &&
-        strcmp(path, "/uart0")     != 0 &&
-        strcmp(path, "/klog")      != 0 &&
-        strcmp(path, "/gpiochip0") != 0) {
-        errno = ENOENT;
-        return -1;
-    }
-    memset(st, 0, sizeof(*st));
-    st->st_mode = S_IFCHR | 0444;
-    if (strcmp(path, "/klog") != 0) st->st_mode |= 0222;
-    return 0;
-}
+#ifdef CONFIG_DUNEOS_DRV_NULL
+extern void drv_null_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_UART
+extern void drv_uart_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_KLOG
+extern void drv_klog_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_GPIO
+extern void drv_gpio_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_I2C
+extern void drv_i2c_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE
+extern void drv_battery_adc_simple_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_BATTERY_BQ27220
+extern void drv_battery_bq27220_register(void);
+#endif
 
 /* ----- mount ------------------------------------------------------------- */
 
@@ -380,13 +253,34 @@ esp_err_t duneos_vfs_mount_dev(void)
 
     esp_err_t err = esp_vfs_register("/dev", &vfs, NULL);
     if (err != ESP_OK) {
-        klog_e(TAG, "esp_vfs_register failed: %s", esp_err_to_name(err));
+        klog_e(TAG, "esp_vfs_register: %s", esp_err_to_name(err));
         vSemaphoreDelete(s_lock);
         return err;
     }
 
-    uart0_ensure_driver();
+    /* Register drivers — order determines ls /dev listing order. */
+#ifdef CONFIG_DUNEOS_DRV_NULL
+    drv_null_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_UART
+    drv_uart_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_KLOG
+    drv_klog_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_GPIO
+    drv_gpio_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_I2C
+    drv_i2c_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE
+    drv_battery_adc_simple_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_BATTERY_BQ27220
+    drv_battery_bq27220_register();
+#endif
 
-    klog_i(TAG, "/dev ready (null zero uart0 klog gpiochip0 — %d GPIO lines)", GPIO_NUM_MAX);
+    klog_i(TAG, "/dev ready (%d devices)", s_driver_count);
     return ESP_OK;
 }

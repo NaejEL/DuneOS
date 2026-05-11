@@ -53,6 +53,17 @@ board:
     i2c_id: 0
     i2c_addr: 0x55
 
+  # VBAT monitoring via voltage divider: G10 (GPIO10 = ADC1_CH9) = VBAT/2
+  # TP4057 charger is not connected to any GPIO — no charging status pin.
+  battery:
+    type: adc_simple
+    adc_unit: ADC_UNIT_1
+    adc_channel: 9        # GPIO10 = ADC1_CH9 on ESP32-S3
+    vdiv_factor: 2        # VBAT_SENSE = VBAT/2
+    full_mv: 4200
+    empty_mv: 3300
+    chrg_gpio: -1
+
   leds:
     - id: status
       # Onboard WS2812 addressable LED

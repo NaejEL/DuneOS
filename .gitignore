@@ -2,6 +2,8 @@ build/
 .duneos_board
 sdkconfig
 sdkconfig.old
+# Board-change detection stamp (written by CMakeLists.txt at configure time)
+duneos_last_board.stamp
 *.pyc
 __pycache__/
 .vscode/

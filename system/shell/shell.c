@@ -38,6 +38,7 @@
 #include <errno.h>
 
 #include <duneos/gpio_ioctl.h>
+#include <duneos/battery_ioctl.h>
 
 /* strlcpy is a BSD extension not in freestanding newlib */
 static size_t sh_strlcpy(char *dst, const char *src, size_t n)
@@ -485,6 +486,27 @@ static void cmd_restart(int argc, char **argv)
         shell_printf("restart: '%s' queued\r\n", argv[1]);
 }
 
+static void cmd_battery(void)
+{
+    int fd = open("/dev/battery0", O_RDONLY);
+    if (fd < 0) {
+        shell_puts("battery: /dev/battery0 not available on this board");
+        return;
+    }
+    battery_info_t info;
+    if (ioctl(fd, BATTERY_GET_INFO, &info) < 0) {
+        shell_puts("battery: ioctl failed");
+        close(fd);
+        return;
+    }
+    close(fd);
+    const char *status_str = (info.status == BATTERY_CHARGING)     ? "charging"     :
+                             (info.status == BATTERY_FULL)         ? "full"         :
+                                                                      "discharging";
+    shell_printf("voltage: %u mV  charge: %u%%  status: %s\r\n",
+                 info.voltage_mv, (unsigned)info.percent, status_str);
+}
+
 static void cmd_help(void)
 {
     shell_puts("Commands:");
@@ -504,6 +526,7 @@ static void cmd_help(void)
     shell_puts("  gpio set <pin> <0|1>          drive GPIO pin");
     shell_puts("  gpio mode <pin> in|out        set GPIO direction");
     shell_puts("  gpio pull <pin> none|up|down  set pull resistor");
+    shell_puts("  battery                       show battery voltage and charge");
     shell_puts("  services                      list running service slots");
     shell_puts("  restart <name>                force restart a named service");
     shell_puts("  reboot                        restart the device");
@@ -543,6 +566,7 @@ static void exec_line(char *line)
     else if (strcmp(cmd, "free")   == 0) cmd_free();
     else if (strcmp(cmd, "klog")   == 0) cmd_klog();
     else if (strcmp(cmd, "gpio")     == 0) cmd_gpio(argc, argv);
+    else if (strcmp(cmd, "battery")  == 0) cmd_battery();
     else if (strcmp(cmd, "services") == 0) cmd_services();
     else if (strcmp(cmd, "restart")  == 0) cmd_restart(argc, argv);
     else if (strcmp(cmd, "reboot")   == 0) esp_restart();

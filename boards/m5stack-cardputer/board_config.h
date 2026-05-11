@@ -29,6 +29,7 @@
 #define DUNEOS_SD_CD_PIN        (-1)
 
 /* ---------- I2C0 (keyboard controller, IMU) ---------- */
+#define DUNEOS_HAVE_I2C         1
 #define DUNEOS_I2C0_SDA_PIN     13
 #define DUNEOS_I2C0_SCL_PIN     15
 #define DUNEOS_I2C0_FREQ_HZ     400000
@@ -47,6 +48,17 @@
 
 /* ---------- Keyboard (I2C, addr 0x55) ---------- */
 #define DUNEOS_KB_I2C_ADDR      0x55
+
+/* ---------- Battery (TP4057 + ADC voltage divider) ---------- */
+/* VBAT_SENSE = VBAT/2 on GPIO10 = ADC1_CH9. TP4057 CHRG not wired to GPIO. */
+#define DUNEOS_HAVE_BATTERY              1
+#define DUNEOS_BATTERY_TYPE_ADC_SIMPLE   1
+#define DUNEOS_BATTERY_ADC_UNIT          ADC_UNIT_1
+#define DUNEOS_BATTERY_ADC_CHANNEL       9
+#define DUNEOS_BATTERY_VDIV_FACTOR       2
+#define DUNEOS_BATTERY_FULL_MV           4200
+#define DUNEOS_BATTERY_EMPTY_MV          3300
+#define DUNEOS_BATTERY_CHRG_GPIO         (-1)
 
 /* ---------- Onboard WS2812 LED ---------- */
 #define DUNEOS_LED_STATUS_PIN   21
