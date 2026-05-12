@@ -109,4 +109,30 @@ config DUNEOS_DRV_INPUT_ENCODER
         Emits INPUT_EV_REL / REL_WHEEL events: +1 CW, -1 CCW per detent.
         Sampled at 500 Hz (2 ms task period).
 
+config DUNEOS_DRV_DISP
+    bool "Streaming display device (/dev/disp0) — ST7789"
+    default n
+    help
+        Enable /dev/disp0 for direct streaming pixel writes to the ST7789.
+        Apps call ioctl(DISP_SET_WINDOW) then write() host-endian RGB565
+        pixels; the driver byte-swaps each pixel before SPI DMA.
+        No back-buffer required — works on boards without PSRAM (CardPuter).
+        Board must define DUNEOS_HAVE_DISPLAY and DUNEOS_DISPLAY_* pin
+        constants in board_config.h.
+        Do not enable simultaneously with CONFIG_DUNEOS_DRV_FB on the
+        same board — both drivers share the same SPI device handle.
+
+config DUNEOS_DRV_FB
+    bool "Framebuffer device (/dev/fb0) — ST7789 kernel driver"
+    default n
+    depends on SPIRAM
+    help
+        Enable /dev/fb0 backed by a 16-bit RGB565 back-buffer in PSRAM.
+        Only available on boards with external PSRAM (CONFIG_SPIRAM=y).
+        Board must define DUNEOS_HAVE_DISPLAY and DUNEOS_DISPLAY_* pin
+        constants in board_config.h.
+        Apps write host-endian RGB565 pixels via write(); the driver
+        byte-swaps during ioctl(FB_FLUSH) DMA to the ST7789 display.
+        Do not enable simultaneously with CONFIG_DUNEOS_DRV_DISP.
+
 endmenu

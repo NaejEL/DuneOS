@@ -72,13 +72,8 @@ void klog_write(char level, const char *tag, const char *fmt, ...)
     ring_append(line, total);
     portEXIT_CRITICAL(&s_mux);
 
-    /* Forward to ESP_LOG for dev console visibility */
-    switch (level) {
-    case 'E': ESP_LOGE(tag, "%s", line + prefix_len); break;
-    case 'W': ESP_LOGW(tag, "%s", line + prefix_len); break;
-    case 'D': ESP_LOGD(tag, "%s", line + prefix_len); break;
-    default:  ESP_LOGI(tag, "%s", line + prefix_len); break;
-    }
+    /* Forward only errors to ESP_LOG — I/W/D stay in the ring buffer only. */
+    if (level == 'E') ESP_LOGE(tag, "%s", line + prefix_len);
 }
 
 /* ----- ring read API (used by /dev/klog in vfs_dev.c) -------------------- */

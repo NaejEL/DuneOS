@@ -51,6 +51,8 @@ board:
     rst_pin: 40
     bl_pin: 21
     freq_hz: 40000000
+    col_offset: 0   # ST7789 CASET offset — 240×280 panel fills the frame, no offset
+    row_offset: 0   # ST7789 RASET offset
 
   battery:
     # BQ27220 gas gauge on I2C0 — reports voltage/SoC/charge status directly.

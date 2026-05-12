@@ -8,8 +8,8 @@
  *   2. The UART is kept clean for the shell (no interleaved log spam)
  *   3. Production builds can silence the kernel entirely with DUNEOS_KERNEL_SILENT
  *
- * Debug builds forward every message to ESP_LOGx as well, so the USB/UART
- * console still shows live output during development.
+ * Only errors (klog_e) are forwarded to ESP_LOGx — I/W/D stay in the ring
+ * buffer only, readable via /dev/klog (cat /dev/klog in the shell).
  *
  * To silence: add CONFIG_DUNEOS_KERNEL_SILENT=y to sdkconfig.defaults.
  */

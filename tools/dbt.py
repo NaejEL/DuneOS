@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 dbt — DuneBuild Tool
 ====================
 Build tool for DuneOS applications, inspired by ufbt (Flipper Zero).
 
-Usage:
+Usage (single app, run from app directory):
     python dbt.py new <app_name>   Create a new app from template
     python dbt.py build            Build the app in the current directory
     python dbt.py info             Show ELF sections, symbols, relocations
     python dbt.py deploy <path>    Copy built ELF to <path> (SD card mount point)
     python dbt.py clean            Remove build artefacts
+
+Usage (all apps, run from repo root):
+    python dbt.py buildall [path]          Build all system apps; deploy if path given
+    python dbt.py buildall [path] --clean  Clean first, then build + deploy
+    python dbt.py buildall [path] --examples  Also build examples/
+
+App category is inferred from directory:
+    system/bin/*   → deployed to <sd>/bin/
+    everything else → deployed to <sd>/apps/
 
 The tool produces a single ET_REL ELF suitable for loading by duneos_loader.
 No CMake, no ESP-IDF build system — just the Xtensa cross-compiler.
@@ -166,12 +176,8 @@ def find_toolchain(arch: str = "xtensa", cpu: str = "esp32s3") -> dict[str, Path
     exe    = ".exe" if is_win else ""
 
     if arch == "riscv":
-        # All RISC-V ESP32 chips share the same riscv32-esp-elf- toolchain in IDF v5.
-        # riscv32-unknown-elf- is the distro package name (Ubuntu, Debian, Arch…).
         prefixes = ["riscv32-esp-elf-", "riscv32-unknown-elf-"]
     else:
-        # Xtensa: target-specific prefix first (correctly tuned for the CPU),
-        # then unified xtensa-esp-elf- (requires -mcpu flag).
         prefixes = [f"xtensa-{cpu}-elf-", "xtensa-esp-elf-"]
 
     tools    = ["gcc", "ld", "objcopy", "readelf", "nm"]
@@ -197,7 +203,6 @@ def find_toolchain(arch: str = "xtensa", cpu: str = "esp32s3") -> dict[str, Path
     if idf_path:
         tools_root = Path(idf_path).parent.parent.parent / "tools" / "xtensa-esp-elf"
         if not tools_root.exists():
-            # Alternative: IDF_PATH/../../tools (when IDF is in esp-idf subdir)
             tools_root = Path(idf_path).parent / "tools" / "xtensa-esp-elf"
         for version_dir in sorted(tools_root.glob("*"), reverse=True):
             bin_dir = version_dir / "xtensa-esp-elf" / "bin"
@@ -260,29 +265,66 @@ def validate_manifest(m: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Build
+# App discovery (for buildall)
 # ---------------------------------------------------------------------------
 
-def cmd_build(args) -> None:
-    app_dir   = Path(".").resolve()
+def _is_bin_app(app_dir: Path) -> bool:
+    """True if app lives under system/bin/ — deploys to <sd>/bin/."""
+    bin_root = DUNEOS_ROOT / "system" / "bin"
+    try:
+        app_dir.relative_to(bin_root)
+        return True
+    except ValueError:
+        return False
+
+
+def find_apps(include_examples: bool = False) -> list[tuple[Path, bool]]:
+    """
+    Return [(app_dir, is_bin), ...] for all apps that have a manifest.json.
+    Searches system/ and optionally examples/.
+    is_bin drives the deploy destination (bin/ vs apps/).
+    """
+    search_roots = [DUNEOS_ROOT / "system"]
+    if include_examples:
+        search_roots.append(DUNEOS_ROOT / "examples")
+
+    results = []
+    for base in search_roots:
+        if not base.exists():
+            continue
+        for manifest_path in sorted(base.rglob(APP_MANIFEST_FILE)):
+            app_dir = manifest_path.parent
+            results.append((app_dir, _is_bin_app(app_dir)))
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Core build / clean / deploy — operate on an explicit app_dir
+# ---------------------------------------------------------------------------
+
+def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
+    """
+    Build the app at app_dir.  Returns True on success, False on failure.
+    Prints progress to stdout; errors go to stderr.
+    """
     build_dir = app_dir / APP_BUILD_DIR
     build_dir.mkdir(exist_ok=True)
 
-    manifest = load_manifest(app_dir)
-    validate_manifest(manifest)
+    try:
+        manifest = load_manifest(app_dir)
+        validate_manifest(manifest)
+    except SystemExit as e:
+        print(f"  ERROR: {e}", file=sys.stderr)
+        return False
 
-    arch, cpu = get_board_cpu()
-    tc        = find_toolchain(arch, cpu)
-    cc        = tc["cc"]
-    cflags    = build_cflags(arch, cpu)
-    print(f"  [arch] {arch} / {cpu}")
+    cc     = tc["cc"]
+    cflags = build_cflags(arch, cpu)
 
-    # Gather sources
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
     if not sources:
-        sys.exit("ERROR: no .c files found in current directory or src/")
+        print(f"  ERROR: no .c files in {app_dir}", file=sys.stderr)
+        return False
 
-    # Generate a C file containing the manifest, embedded in the right section
     manifest_c = build_dir / "_manifest.c"
     manifest_json = json.dumps(manifest, separators=(",", ":"))
     manifest_c.write_text(
@@ -296,37 +338,79 @@ def cmd_build(args) -> None:
         f"-I{app_dir}",
     ]
 
-    # Compile each source to a .o
     objects = []
     for src in sources:
         obj = build_dir / (src.stem + ".o")
         compile_cmd = (
-            [str(cc)] +
-            cflags +
-            includes +
-            ["-c", str(src), "-o", str(obj)]
+            [str(cc)] + cflags + includes + ["-c", str(src), "-o", str(obj)]
         )
         print(f"  CC  {src.name}")
-        run(compile_cmd)
+        try:
+            run(compile_cmd)
+        except SystemExit:
+            return False
         objects.append(obj)
 
-    # Partial link → single ET_REL ELF
-    # Use gcc as the linker driver so it passes the correct emulation to ld.
     elf = build_dir / APP_ELF_NAME
     link_cmd = (
-        [str(cc)] +
-        cflags +
-        LDFLAGS +
-        [str(o) for o in objects] +
-        ["-o", str(elf)]
+        [str(cc)] + cflags + LDFLAGS + [str(o) for o in objects] + ["-o", str(elf)]
     )
     print(f"  LD  {elf.name}")
-    run(link_cmd)
+    try:
+        run(link_cmd)
+    except SystemExit:
+        return False
 
-    size = elf.stat().st_size
-    print(f"\nBuild OK → {elf}  ({size} bytes)")
-    print(f"Deploy:  python dbt.py deploy <sd_mount_point>")
-    print(f"Inspect: python dbt.py info")
+    print(f"  OK  {elf.stat().st_size} bytes")
+    return True
+
+
+def clean_single(app_dir: Path) -> None:
+    build_dir = app_dir / APP_BUILD_DIR
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+        print(f"  cleaned  {app_dir.relative_to(DUNEOS_ROOT)}")
+
+
+def deploy_single(app_dir: Path, sd_path: Path, is_bin: bool) -> bool:
+    elf = app_dir / APP_BUILD_DIR / APP_ELF_NAME
+    if not elf.exists():
+        print(f"  ERROR: {elf} not found — was build successful?", file=sys.stderr)
+        return False
+
+    try:
+        manifest = load_manifest(app_dir)
+    except SystemExit as e:
+        print(f"  ERROR: {e}", file=sys.stderr)
+        return False
+
+    subdir   = "bin" if is_bin else "apps"
+    dest_dir = sd_path / subdir
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest     = dest_dir / f"{manifest['name']}.dap"
+    shutil.copy2(elf, dest)
+    print(f"  ->  {dest}")
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Build (single app, run from app directory)
+# ---------------------------------------------------------------------------
+
+def cmd_build(args) -> None:
+    app_dir  = Path(".").resolve()
+    arch, cpu = get_board_cpu()
+    tc        = find_toolchain(arch, cpu)
+    print(f"  [arch] {arch} / {cpu}")
+
+    ok = build_single(app_dir, arch, cpu, tc)
+    if ok:
+        elf = app_dir / APP_BUILD_DIR / APP_ELF_NAME
+        print(f"\nBuild OK → {elf}")
+        print(f"Deploy:  python dbt.py deploy <sd_mount_point>")
+        print(f"Inspect: python dbt.py info")
+    else:
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -356,8 +440,6 @@ def cmd_info(args) -> None:
         parts = line.split()
         if len(parts) < 7:
             continue
-        # readelf wide output: [ N] Name Type Addr Off Size ES Flg ...
-        # Find the Size column (6th zero-padded hex field)
         try:
             sec_name = parts[1] if parts[0].startswith('[') else None
             if sec_name is None:
@@ -399,25 +481,118 @@ def cmd_info(args) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Deploy
+# Deploy (single app, run from app directory)
 # ---------------------------------------------------------------------------
 
 def cmd_deploy(args) -> None:
-    app_dir = Path(".").resolve()
-    elf     = app_dir / APP_BUILD_DIR / APP_ELF_NAME
+    app_dir  = Path(".").resolve()
+    is_bin   = getattr(args, "bin", False) or _is_bin_app(app_dir)
+    sd_path  = Path(args.path)
+
+    elf = app_dir / APP_BUILD_DIR / APP_ELF_NAME
     if not elf.exists():
         sys.exit("ERROR: app.elf not found — run 'dbt build' first")
 
     manifest = load_manifest(app_dir)
     app_name = manifest["name"]
 
-    dest_dir = Path(args.path) / "apps"
+    subdir   = "bin" if is_bin else "apps"
+    # --bin flag overrides auto-detection; --elf overrides extension
+    if getattr(args, "bin", False):
+        subdir = "bin"
+    dest_dir = sd_path / subdir
     dest_dir.mkdir(parents=True, exist_ok=True)
-
     ext      = ".dap" if not getattr(args, "elf", False) else ".elf"
     dest_elf = dest_dir / f"{app_name}{ext}"
     shutil.copy2(elf, dest_elf)
     print(f"Deployed → {dest_elf}")
+
+
+# ---------------------------------------------------------------------------
+# Clean (single app, run from app directory)
+# ---------------------------------------------------------------------------
+
+def cmd_clean(args) -> None:
+    build_dir = Path(".") / APP_BUILD_DIR
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+        print(f"Removed {build_dir}")
+    else:
+        print("Nothing to clean")
+
+
+# ---------------------------------------------------------------------------
+# Build-all (run from repo root or anywhere)
+# ---------------------------------------------------------------------------
+
+def cmd_buildall(args) -> None:
+    sd_path  = Path(args.path) if args.path else None
+    do_clean = getattr(args, "clean", False)
+
+    apps = find_apps(include_examples=getattr(args, "examples", False))
+    if not apps:
+        sys.exit("ERROR: no apps found under system/ (or examples/ with --examples)")
+
+    arch, cpu = get_board_cpu()
+    tc        = find_toolchain(arch, cpu)
+    print(f"Board: {arch} / {cpu}  |  {len(apps)} apps found\n")
+
+    ok_list   = []
+    fail_list = []
+
+    for app_dir, is_bin in apps:
+        rel = app_dir.relative_to(DUNEOS_ROOT)
+        print(f"{'='*60}")
+        print(f"  {rel}")
+        print(f"{'='*60}")
+
+        if do_clean:
+            clean_single(app_dir)
+
+        if not build_single(app_dir, arch, cpu, tc):
+            fail_list.append(rel)
+            print()
+            continue
+
+        if sd_path:
+            if not deploy_single(app_dir, sd_path, is_bin):
+                fail_list.append(rel)
+                print()
+                continue
+
+        ok_list.append(rel)
+        print()
+
+    # Summary
+    total = len(apps)
+    n_ok  = len(ok_list)
+    n_fail = len(fail_list)
+    print(f"{'='*60}")
+    print(f"  Results: {n_ok}/{total} OK" + (f"  {n_fail} FAILED" if n_fail else ""))
+    if fail_list:
+        print("\n  Failed apps:")
+        for p in fail_list:
+            print(f"    ✗  {p}")
+    if sd_path and ok_list:
+        print(f"\n  Deployed {n_ok} app(s) to {sd_path}")
+    print(f"{'='*60}")
+
+    if fail_list:
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# Clean-all (run from repo root or anywhere)
+# ---------------------------------------------------------------------------
+
+def cmd_cleanall(args) -> None:
+    apps = find_apps(include_examples=True)
+    if not apps:
+        print("No apps found.")
+        return
+    for app_dir, _ in apps:
+        clean_single(app_dir)
+    print(f"Cleaned {len(apps)} app(s).")
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +620,7 @@ APP_TEMPLATE_MANIFEST = """\
   "name": "{name}",
   "version": "0.1.0",
   "required_abi_version": 1,
-  "permissions": ["uart"]
+  "permissions": 0
 }}
 """
 
@@ -467,19 +642,6 @@ def cmd_new(args) -> None:
     print(f"  {name}/manifest.json")
     print(f"\nBuild with:")
     print(f"  cd {name} && python {Path(__file__).relative_to(Path('.').resolve())} build")
-
-
-# ---------------------------------------------------------------------------
-# Clean
-# ---------------------------------------------------------------------------
-
-def cmd_clean(args) -> None:
-    build_dir = Path(".") / APP_BUILD_DIR
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
-        print(f"Removed {build_dir}")
-    else:
-        print("Nothing to clean")
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +671,10 @@ def run(cmd: list, capture: bool = False) -> str:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    # Ensure stdout/stderr can emit UTF-8 on Windows (CP1252 by default).
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(
         prog="dbt",
         description="DuneBuild Tool — build DuneOS applications",
@@ -529,10 +695,33 @@ def main() -> None:
     p_deploy.add_argument("path", help="SD card mount point (e.g. E:\\ or /mnt/sd)")
     p_deploy.add_argument("--elf", action="store_true",
                           help="Use .elf extension instead of .dap")
+    p_deploy.add_argument("--bin", action="store_true",
+                          help="Deploy to <sd>/bin/ instead of <sd>/apps/ (system utilities)")
     p_deploy.set_defaults(func=cmd_deploy)
 
     p_clean = sub.add_parser("clean", help="Remove build artefacts")
     p_clean.set_defaults(func=cmd_clean)
+
+    p_buildall = sub.add_parser(
+        "buildall",
+        help="Build all system apps (and optionally deploy + examples)",
+    )
+    p_buildall.add_argument(
+        "path", nargs="?", default=None,
+        help="SD card mount point — if given, deploy after building",
+    )
+    p_buildall.add_argument(
+        "--clean", action="store_true",
+        help="Clean each app's build directory before building",
+    )
+    p_buildall.add_argument(
+        "--examples", action="store_true",
+        help="Also build apps under examples/",
+    )
+    p_buildall.set_defaults(func=cmd_buildall)
+
+    p_cleanall = sub.add_parser("cleanall", help="Remove build artefacts for all apps")
+    p_cleanall.set_defaults(func=cmd_cleanall)
 
     args = parser.parse_args()
     args.func(args)

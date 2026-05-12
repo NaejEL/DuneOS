@@ -1158,42 +1158,27 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     *out_buf = NULL;
     *out_len = 0;
 
-    /* Open capture file */
+    /* fcntl(F_DUPFD) is not supported by the USB-JTAG console VFS driver.
+     * Instead: close fd 1 to free the slot, then immediately open the capture
+     * file so it lands at fd 1 (lowest available fd).  The caller (g_shell)
+     * does not use fd 1 itself — stdout stays unrestored after capture. */
+    close(STDOUT_FILENO);
     int capfd = open(CAPTURE_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (capfd < 0) {
-        klog_e(TAG, "capture: cannot open " CAPTURE_PATH ": errno %d", errno);
+        klog_e(TAG, "capture: open failed: errno %d", errno);
         return ESP_FAIL;
     }
-
-    /* Save real stdout — dup/dup2 are inline in newlib, use fcntl instead */
-    int saved_stdout = fcntl(STDOUT_FILENO, F_DUPFD, 3);
-    if (saved_stdout < 0) {
+    if (capfd != STDOUT_FILENO) {
         close(capfd);
-        klog_e(TAG, "capture: fcntl(F_DUPFD) failed: errno %d", errno);
+        klog_e(TAG, "capture: expected fd 1, got %d", capfd);
         return ESP_ERR_NOT_SUPPORTED;
     }
 
-    /* Redirect stdout → capture file: close fd 1 then duplicate capfd into it */
-    close(STDOUT_FILENO);
-    if (fcntl(capfd, F_DUPFD, STDOUT_FILENO) != STDOUT_FILENO) {
-        fcntl(saved_stdout, F_DUPFD, STDOUT_FILENO); /* best-effort restore */
-        close(saved_stdout);
-        close(capfd);
-        klog_e(TAG, "capture: F_DUPFD to stdout failed: errno %d", errno);
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-    close(capfd);
-
-    /* Run the app */
-    klog_i(TAG, "jumping to app_main @ %p (captured)", (void *)app->entry);
+    klog_d(TAG, "jumping to app_main @ %p (captured)", (void *)app->entry);
     app->entry();
 
-    /* Restore stdout */
     close(STDOUT_FILENO);
-    fcntl(saved_stdout, F_DUPFD, STDOUT_FILENO);
-    close(saved_stdout);
 
-    /* Read the captured output from /tmp */
     int rfd = open(CAPTURE_PATH, O_RDONLY);
     if (rfd < 0) {
         klog_e(TAG, "capture: cannot read back " CAPTURE_PATH);
@@ -1223,7 +1208,7 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     *out_buf = buf;
     *out_len = (size_t)n;
 
-    klog_i(TAG, "capture: %zu byte(s) captured", (size_t)n);
+    klog_d(TAG, "capture: %zu byte(s) captured", (size_t)n);
     return ESP_OK;
 }
 

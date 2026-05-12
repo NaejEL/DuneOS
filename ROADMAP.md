@@ -490,7 +490,7 @@ Phase 15 will introduce `libgfx` to abstract this.
 
 SDK display libraries to provide:
 
-- [ ] `libst7789.c` — SPI, 240×135 or 240×320 (CardPuter, many M5Stack boards)
+- [x] `libst7789.c` — SPI, 240×135 or 240×320 (CardPuter, T-Embed, many M5Stack boards)
 - [ ] `libgc9a01.c` — SPI, 240×240 round (T-Display-S3 and others)
 - [ ] `libssd1306.c` — I2C, 128×64 monochrome OLED (devkits, small boards)
 
@@ -525,9 +525,9 @@ display:
 
 **Roadmap items (Tier B):**
 
-- [ ] `/dev/fb0` — kernel framebuffer; enabled only when `CONFIG_DUNEOS_HAVE_FB=y`
-- [ ] ST7789 kernel driver (first target: esp32s3-devkitc with PSRAM)
-- [ ] `DUNEOS_PERM_FB` permission bit
+- [x] `/dev/fb0` — kernel framebuffer; `CONFIG_DUNEOS_DRV_FB=y`; PSRAM back-buffer; chunked DMA flush
+- [x] ST7789 kernel driver — `drv_fb_st7789.c`; first target: lilygo-t-embed-cc1101 (8 MB PSRAM, shared SPI2)
+- [x] `DUNEOS_PERM_FB` permission bit (bit 9 in `abi.h`)
 - [ ] Shell: optional status bar drawn to `/dev/fb0` (board name, free heap, battery %)
 
 ---
@@ -617,20 +617,25 @@ Apps that need runtime discovery (e.g., a generic drawing demo) can read this fi
 
 ---
 
-## Phase 16 — Shell refactor: built-ins vs PATH
+## Phase 16 — Shell refactor: built-ins vs PATH ✅ DONE
 
 **Goal:** keep the shell binary minimal; every command that doesn't need shell-internal state becomes
 a standalone `.dap` in `system/bin/`, searchable via a fixed PATH.
 
 **Built-ins that must stay in the shell (modify shell-internal state):**
-`cd`, `pwd`, `exit`, `echo`, `help`
+`cd`, `pwd`, `exit`, `echo`, `help`, `run`
 
-**Commands to move to `system/bin/` as `.dap` files:**
-`ls`, `cat`, `mkdir`, `rm`, `mv`, `free`, `klog`, `gpio`, `services`, `restart`, `reboot`
+**Commands moved to `system/bin/` as `.dap` files:**
+`ls`, `cat`, `mkdir`, `rm`, `mv`, `free`, `klog`, `gpio`, `services`, `restart`, `reboot`,
+`battery`, `tail`, `input`
+
+**Args passing:** shell writes `/tmp/.exec_args` (cwd + argc + argv, one per line) before
+launching a bin app. Bin app reads it via `duneos_bin_args()` from `duneos/bin_args.h`.
+Bin apps must `return` from `app_main()` — NOT call `duneos_exit()` (which would kill the shell task).
 
 **PATH resolution in `exec_line`:**
-If a token is not a built-in, try `/flash/bin/<cmd>.dap` then `/sd/bin/<cmd>.dap` and run
-synchronously via the existing `duneos_loader_load` → `run` → `unload` path.
+If a token is not a built-in, try `/sd/bin/<cmd>.dap` and run synchronously via
+`duneos_loader_load` → `run` → `unload`. `/flash/bin/` support deferred to Phase 17.
 No `PATH` env var, no `execve` — fixed search order, zero infrastructure overhead.
 
 **Tooling:**
@@ -639,11 +644,12 @@ Phase 17 will add `dbt.py flashimg` to also embed them in `/flash/bin/`.
 
 **Roadmap items:**
 
-- [ ] Reduce shell built-ins to `cd`, `pwd`, `exit`, `echo`, `help` + PATH fallback in `exec_line`
-- [ ] Move `ls`, `cat`, `mkdir`, `rm`, `mv` to `system/bin/` (one `.c` + `manifest.json` each)
-- [ ] Move `free`, `klog`, `reboot` to `system/bin/`
-- [ ] Move `gpio`, `services`, `restart` to `system/bin/`
-- [ ] `dbt.py deploy --bin` flag (target `/sd/bin/` instead of `/sd/apps/`)
+- [x] Reduce shell built-ins to `cd`, `pwd`, `exit`, `echo`, `help`, `run` + PATH fallback in `exec_line`
+- [x] Move `ls`, `cat`, `mkdir`, `rm`, `mv` to `system/bin/` (one `.c` + `manifest.json` each)
+- [x] Move `free`, `klog`, `reboot` to `system/bin/`
+- [x] Move `gpio`, `services`, `restart`, `battery`, `tail`, `input` to `system/bin/`
+- [x] `duneos/bin_args.h` — exec args helper (cwd + argv via `/tmp/.exec_args`)
+- [x] `dbt.py deploy --bin` flag (target `/sd/bin/` instead of `/sd/apps/`)
 - [ ] Update `system/bin/` build: shared `CMakeLists.txt` or per-app `dbt.py` invocation
 
 ---

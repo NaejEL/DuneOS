@@ -36,17 +36,24 @@
 #define DUNEOS_I2C0_SCL_PIN     18
 #define DUNEOS_I2C0_FREQ_HZ     100000
 
-/* ---------- Display (ST7789, 240x280, shared SPI2 bus) ---------- */
-#define DUNEOS_DISPLAY_WIDTH    240
-#define DUNEOS_DISPLAY_HEIGHT   280
-#define DUNEOS_DISPLAY_SPI_HOST SPI2_HOST
-#define DUNEOS_DISPLAY_MOSI_PIN 9
-#define DUNEOS_DISPLAY_CLK_PIN  11
-#define DUNEOS_DISPLAY_CS_PIN   41
-#define DUNEOS_DISPLAY_DC_PIN   16
-#define DUNEOS_DISPLAY_RST_PIN  40
-#define DUNEOS_DISPLAY_BL_PIN   21
-#define DUNEOS_DISPLAY_FREQ_HZ  40000000
+/* ---------- Display (ST7789, 240×280, shared SPI2 bus) ---------- */
+#define DUNEOS_HAVE_DISPLAY                      1
+#define DUNEOS_DISPLAY_WIDTH                     240
+#define DUNEOS_DISPLAY_HEIGHT                    280
+#define DUNEOS_DISPLAY_SPI_HOST                  SPI2_HOST
+#define DUNEOS_DISPLAY_MOSI_PIN                  9
+#define DUNEOS_DISPLAY_CLK_PIN                   11
+#define DUNEOS_DISPLAY_CS_PIN                    41
+#define DUNEOS_DISPLAY_DC_PIN                    16
+#define DUNEOS_DISPLAY_RST_PIN                   40
+#define DUNEOS_DISPLAY_BL_PIN                    21
+#define DUNEOS_DISPLAY_FREQ_HZ                   40000000
+#define DUNEOS_DISPLAY_ROTATION                  0       /* portrait, no rotation */
+#define DUNEOS_DISPLAY_MADCTL                    0x00u   /* no transform */
+#define DUNEOS_DISPLAY_SWAP_XY                   0       /* MV=0: standard portrait addressing */
+#define DUNEOS_DISPLAY_COL_OFFSET                0       /* panel fills full ST7789 column range */
+#define DUNEOS_DISPLAY_ROW_OFFSET                0       /* panel fills full ST7789 row range */
+#define DUNEOS_DISPLAY_BUS_SHARED                1  /* SPI2 shared with SD + /dev/spi-1 */
 
 /* ---------- Battery (BQ27220 fuel gauge + BQ25896 charger) ---------- */
 /* BQ27220 reports voltage/SoC/charging status via I2C registers.         */

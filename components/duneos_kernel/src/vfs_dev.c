@@ -234,6 +234,12 @@ extern void drv_spi_register(void);
 #ifdef CONFIG_DUNEOS_DRV_INPUT
 extern void drv_input_register(void);
 #endif
+#ifdef CONFIG_DUNEOS_DRV_DISP
+extern void drv_disp_st7789_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_FB
+extern void drv_fb_st7789_register(void);
+#endif
 
 /* ----- mount ------------------------------------------------------------- */
 
@@ -291,6 +297,12 @@ esp_err_t duneos_vfs_mount_dev(void)
 #endif
 #ifdef CONFIG_DUNEOS_DRV_INPUT
     drv_input_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_DISP
+    drv_disp_st7789_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_FB
+    drv_fb_st7789_register();
 #endif
 
     klog_i(TAG, "/dev ready (%d devices)", s_driver_count);

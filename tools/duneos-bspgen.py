@@ -137,6 +137,7 @@ def validate(board: dict, yaml_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 SPI_HOST_NAMES = {2: "SPI2_HOST", 3: "SPI3_HOST", 1: "SPI1_HOST"}
+SPI_HOST_IDS   = {v: k for k, v in SPI_HOST_NAMES.items()}  # "SPI2_HOST" → 2
 
 
 def _define(name: str, value) -> str:
@@ -284,23 +285,90 @@ def generate(board: dict) -> str:
     # ----- Display -----
     disp = board.get("display")
     if disp:
-        host_name = disp.get("spi_host", "SPI3_HOST")
+        host_name       = disp.get("spi_host", "SPI3_HOST")
+        display_spi_id  = SPI_HOST_IDS.get(host_name, 3)
+        sd_spi_id       = board.get("sd_card", {}).get("spi_id", -1)
+        bus_shared      = (display_spi_id == sd_spi_id)
+        rotation        = disp.get("rotation", 0)
+        # ST7789 MADCTL byte: rotation 0=0x00, 1=0x60(MX+MV), 2=0xC0(MY+MX), 3=0xA0(MY+MV)
+        _madctl_table   = {0: 0x00, 1: 0x60, 2: 0xC0, 3: 0xA0}
+        madctl          = disp.get("madctl", _madctl_table.get(rotation, 0x00))
+        # MV bit (0x20) means row/column exchange → CASET/RASET axes are swapped vs portrait
+        swap_xy         = 1 if (madctl & 0x20) else 0
         lines += [
             "/* ---------- Display ---------- */",
-            _define("DUNEOS_DISPLAY_WIDTH",    disp["width"]),
-            _define("DUNEOS_DISPLAY_HEIGHT",   disp["height"]),
-            _define("DUNEOS_DISPLAY_SPI_HOST", host_name),
-            _define("DUNEOS_DISPLAY_MOSI_PIN", disp["mosi_pin"]),
-            _define("DUNEOS_DISPLAY_CLK_PIN",  disp["clk_pin"]),
-            _define("DUNEOS_DISPLAY_CS_PIN",   disp["cs_pin"]),
-            _define("DUNEOS_DISPLAY_DC_PIN",   disp["dc_pin"]),
-            _define("DUNEOS_DISPLAY_RST_PIN",  disp["rst_pin"]),
-            _define("DUNEOS_DISPLAY_BL_PIN",   disp.get("bl_pin", -1)),
-            _define("DUNEOS_DISPLAY_FREQ_HZ",  disp.get("freq_hz", 20_000_000)),
+            _define("DUNEOS_HAVE_DISPLAY",       1),
+            _define("DUNEOS_DISPLAY_WIDTH",      disp["width"]),
+            _define("DUNEOS_DISPLAY_HEIGHT",     disp["height"]),
+            _define("DUNEOS_DISPLAY_SPI_HOST",   host_name),
+            _define("DUNEOS_DISPLAY_MOSI_PIN",   disp["mosi_pin"]),
+            _define("DUNEOS_DISPLAY_CLK_PIN",    disp["clk_pin"]),
+            _define("DUNEOS_DISPLAY_CS_PIN",     disp["cs_pin"]),
+            _define("DUNEOS_DISPLAY_DC_PIN",     disp["dc_pin"]),
+            _define("DUNEOS_DISPLAY_RST_PIN",    disp["rst_pin"]),
+            _define("DUNEOS_DISPLAY_BL_PIN",     disp.get("bl_pin", -1)),
+            _define("DUNEOS_DISPLAY_FREQ_HZ",    disp.get("freq_hz", 20_000_000)),
+            _define("DUNEOS_DISPLAY_ROTATION",   rotation),
+            _define("DUNEOS_DISPLAY_MADCTL",     hex(madctl)),
+            _define("DUNEOS_DISPLAY_SWAP_XY",    swap_xy),
+            _define("DUNEOS_DISPLAY_COL_OFFSET", disp.get("col_offset", 0)),
+            _define("DUNEOS_DISPLAY_ROW_OFFSET", disp.get("row_offset", 0)),
+            _define("DUNEOS_DISPLAY_BUS_SHARED", 1 if bus_shared else 0),
             "",
         ]
 
-    # ----- Keyboard -----
+    # ----- Keyboard matrix (IOMatrix) -----
+    kb_matrix = board.get("keyboard_matrix")
+    if kb_matrix:
+        row_pins = kb_matrix.get("row_select_pins", [])
+        col_pins = kb_matrix.get("col_pins", [])
+        col_pins_str = "{" + ", ".join(str(p) for p in col_pins) + "}"
+        lines += [
+            "/* ---------- Keyboard matrix (IOMatrix + 74HC138 row decoder) ---------- */",
+            _define("DUNEOS_HAVE_KEYBOARD_MATRIX", 1),
+            _define("DUNEOS_KB_ROW_A0_PIN",   row_pins[0] if len(row_pins) > 0 else -1),
+            _define("DUNEOS_KB_ROW_A1_PIN",   row_pins[1] if len(row_pins) > 1 else -1),
+            _define("DUNEOS_KB_ROW_A2_PIN",   row_pins[2] if len(row_pins) > 2 else -1),
+            _define("DUNEOS_KB_COL_PINS",     col_pins_str),
+            _define("DUNEOS_KB_NUM_COLS",     len(col_pins)),
+            _define("DUNEOS_KB_MATRIX_ROWS",  kb_matrix.get("matrix_rows", 4)),
+            _define("DUNEOS_KB_MATRIX_COLS",  kb_matrix.get("matrix_cols", 14)),
+            "",
+        ]
+
+    # ----- GPIO buttons -----
+    buttons = board.get("buttons", [])
+    if buttons:
+        pins_str  = "{" + ", ".join(str(b["pin"]) for b in buttons) + "}"
+        KEY_CODES = {
+            "KEY_ENTER": 0x0d, "KEY_ESC": 0x1b, "KEY_UP": 0x41,
+            "KEY_DOWN": 0x42, "KEY_LEFT": 0x44, "KEY_RIGHT": 0x43,
+        }
+        codes_str = "{" + ", ".join(
+            hex(KEY_CODES[b["code"]]) if b.get("code") in KEY_CODES else str(b.get("code", 0))
+            for b in buttons
+        ) + "}"
+        lines += [
+            "/* ---------- GPIO buttons ---------- */",
+            _define("DUNEOS_HAVE_BTN_GPIO",    1),
+            _define("DUNEOS_BTN_GPIO_COUNT",   len(buttons)),
+            _define("DUNEOS_BTN_GPIO_PINS",    pins_str),
+            _define("DUNEOS_BTN_GPIO_CODES",   codes_str),
+            "",
+        ]
+
+    # ----- Rotary encoder -----
+    enc = board.get("encoder")
+    if enc:
+        lines += [
+            "/* ---------- Rotary encoder (quadrature) ---------- */",
+            _define("DUNEOS_HAVE_ENCODER",    1),
+            _define("DUNEOS_ENCODER_A_PIN",   enc["a_pin"]),
+            _define("DUNEOS_ENCODER_B_PIN",   enc["b_pin"]),
+            "",
+        ]
+
+    # ----- Keyboard (I2C expander, legacy key) -----
     kb = board.get("keyboard")
     if kb:
         lines += [
@@ -368,6 +436,25 @@ def generate_sdkconfig_board(board: dict) -> str:
             lines.append("# CONFIG_DUNEOS_DRV_BATTERY_IP5306 is not set (not yet implemented)")
         elif btype == "max17043":
             lines.append("# CONFIG_DUNEOS_DRV_BATTERY_MAX17043 is not set (not yet implemented)")
+        lines.append("")
+
+    disp = board.get("display")
+    if disp:
+        lines += ["CONFIG_DUNEOS_DRV_DISP=y"]
+        # Tier B kernel framebuffer: requires both a display AND external PSRAM.
+        if board.get("psram_size_mb", 0) > 0:
+            lines.append("CONFIG_DUNEOS_DRV_FB=y")
+        lines.append("")
+
+    has_input = board.get("keyboard_matrix") or board.get("buttons") or board.get("encoder")
+    if has_input:
+        lines.append("CONFIG_DUNEOS_DRV_INPUT=y")
+        if board.get("keyboard_matrix", {}).get("type") == "ioMatrix":
+            lines.append("CONFIG_DUNEOS_DRV_INPUT_IOMATRIX=y")
+        if board.get("buttons"):
+            lines.append("CONFIG_DUNEOS_DRV_INPUT_BTNGPIO=y")
+        if board.get("encoder"):
+            lines.append("CONFIG_DUNEOS_DRV_INPUT_ENCODER=y")
         lines.append("")
 
     return "\n".join(lines)

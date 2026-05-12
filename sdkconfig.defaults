@@ -13,3 +13,7 @@ CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 # Stack watchdog — apps that spin will be caught
 CONFIG_ESP_TASK_WDT_EN=y
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=5
+
+# FatFS LFN — required for filenames with >3-char extensions (e.g. .json, .dap)
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255

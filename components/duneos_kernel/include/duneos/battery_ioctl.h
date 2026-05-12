@@ -15,6 +15,9 @@
  * Backend is selected at build time from board_config.h (adc_simple, ip5306, …).
  */
 
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 #define BATTERY_GET_INFO  0x01  /* arg: battery_info_t* */
 
 #define BATTERY_DISCHARGING  0

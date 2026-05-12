@@ -1,30 +1,20 @@
 /*
  * DuneOS interactive shell.
  *
- * A regular DuneOS app (.dap) — not part of the kernel. Uses only exported
- * POSIX symbols plus the handful of DuneOS-specific functions (duneos_exit,
- * duneos_run, duneos_loader_load/run/unload).
+ * True built-in commands (require shell state or bootstrapping):
+ *   cd [path]     change working directory
+ *   pwd           print working directory
+ *   echo <text>   print text
+ *   exit          exit the shell
+ *   help          list available commands
+ *   run <app>     load and run a .dap app from /sd/apps/
  *
- * I/O: uses stdin/stdout (fd 0/1). On CardPuter this is the USB-JTAG console;
- * on boards with UART console it is UART0 (routed by esp_vfs_dev_uart after
- * duneos_vfs_mount_dev installs the UART driver).
+ * All other commands are looked up as /sd/bin/<cmd>.dap and launched
+ * synchronously.  Shell state (cwd) is passed via /tmp/.exec_args.
+ * See components/duneos_kernel/include/duneos/bin_args.h for the format.
  *
- * Built-in commands:
- *   ls [-l] [path]       directory listing
- *   cat <file>           print file to stdout
- *   echo <text>          print text
- *   cd <path>            change working directory (local state, no chdir syscall)
- *   pwd                  print working directory
- *   mkdir <path>         create directory
- *   rm <file>            remove file
- *   mv <src> <dst>       rename/move
- *   run <app.dap>        load and run a DuneOS app synchronously
- *   free                 show available heap
- *   klog                 dump kernel ring buffer
- *   services             list running supervisor slots
- *   restart <name>       force restart a named service
- *   reboot               restart ESP32
- *   help                 list commands
+ * Bin apps must return from app_main() — they must NOT call duneos_exit(),
+ * which would delete the shell task.
  */
 
 #include <unistd.h>
@@ -34,12 +24,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <errno.h>
-
-#include <duneos/gpio_ioctl.h>
-#include <duneos/battery_ioctl.h>
-#include <duneos/input_ioctl.h>
 
 /* strlcpy is a BSD extension not in freestanding newlib */
 static size_t sh_strlcpy(char *dst, const char *src, size_t n)
@@ -57,39 +42,26 @@ extern int  esp_get_free_heap_size(void);
 extern void esp_restart(void);
 extern int  usleep(unsigned int useconds);
 
-/* Opaque loader handle — apps only hold a pointer */
 typedef void duneos_app_t;
 extern int  duneos_loader_load(const char *path, duneos_app_t **out);
 extern int  duneos_loader_run(duneos_app_t *app);
 extern void duneos_loader_unload(duneos_app_t *app);
 
-/* Supervisor slot snapshot — mirrors duneos_slot_info_t from supervisor.h */
-#define DUNEOS_MAX_RUNNING_APPS  4
-#define DUNEOS_APP_NAME_MAX      64
-typedef enum { DUNEOS_RESTART_NO=0, DUNEOS_RESTART_ALWAYS=1, DUNEOS_RESTART_ON_FAILURE=2 } duneos_restart_policy_t;
-typedef struct {
-    char                    name[DUNEOS_APP_NAME_MAX];
-    int                     active;
-    duneos_restart_policy_t restart_policy;
-    unsigned int            restart_count;
-} duneos_slot_info_t;
-extern int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
-extern int duneos_supervisor_restart_by_name(const char *name);
-
 /* ----- configuration ----------------------------------------------------- */
 
-#define SHELL_PROMPT    "$ "
-#define LINE_MAX_LEN    256
-#define HISTORY_DEPTH   16
-#define CWD_MAX         256
-#define APPS_DIR        "/sd/apps"
+#define SHELL_PROMPT   "$ "
+#define LINE_MAX_LEN   256
+#define HISTORY_DEPTH  16
+#define CWD_MAX        256
+#define APPS_DIR       "/sd/apps"
+#define BIN_DIR        "/sd/bin"
 
 /* ----- state ------------------------------------------------------------- */
 
-static char s_cwd[CWD_MAX]              = "/sd";
+static char s_cwd[CWD_MAX]             = "/sd";
 static char s_history[HISTORY_DEPTH][LINE_MAX_LEN];
-static int  s_hist_count                = 0;
-static int  s_hist_nav                  = -1;  /* -1 = not navigating */
+static int  s_hist_count               = 0;
+static int  s_hist_nav                 = -1;
 
 /* ----- I/O helpers ------------------------------------------------------- */
 
@@ -119,8 +91,8 @@ static void shell_printf(const char *fmt, ...)
 static void history_push(const char *line)
 {
     if (line[0] == '\0') return;
-    /* Don't duplicate last entry */
-    if (s_hist_count > 0 && strcmp(s_history[(s_hist_count - 1) % HISTORY_DEPTH], line) == 0)
+    if (s_hist_count > 0 &&
+        strcmp(s_history[(s_hist_count - 1) % HISTORY_DEPTH], line) == 0)
         return;
     sh_strlcpy(s_history[s_hist_count % HISTORY_DEPTH], line, LINE_MAX_LEN);
     s_hist_count++;
@@ -136,47 +108,34 @@ static int read_line(char *buf, int max)
         int r = read(STDIN_FILENO, &c, 1);
         if (r <= 0) continue;
 
-        if (c == '\r' || c == '\n') {
-            shell_write("\r\n");
-            break;
-        }
+        if (c == '\r' || c == '\n') { shell_write("\r\n"); break; }
 
-        /* Backspace / DEL */
         if (c == 127 || c == '\b') {
-            if (n > 0) {
-                n--;
-                shell_write("\b \b");
-            }
+            if (n > 0) { n--; shell_write("\b \b"); }
             continue;
         }
 
-        /* ANSI escape sequences (arrows) */
         if (c == '\x1b') {
             char seq[3] = {0};
             read(STDIN_FILENO, &seq[0], 1);
             read(STDIN_FILENO, &seq[1], 1);
             if (seq[0] == '[') {
                 if (seq[1] == 'A') {
-                    /* Up arrow — older history entry */
-                    int next = (s_hist_nav < 0) ? s_hist_count - 1
-                                                 : s_hist_nav - 1;
+                    int next = (s_hist_nav < 0) ? s_hist_count - 1 : s_hist_nav - 1;
                     if (next < 0 || s_hist_count == 0) continue;
-                    if (next < s_hist_count - HISTORY_DEPTH) next = s_hist_count - HISTORY_DEPTH;
+                    if (next < s_hist_count - HISTORY_DEPTH)
+                        next = s_hist_count - HISTORY_DEPTH;
                     s_hist_nav = next;
-                    /* Erase current line and redraw */
                     while (n--) shell_write("\b \b");
                     sh_strlcpy(buf, s_history[s_hist_nav % HISTORY_DEPTH], max);
                     n = (int)strlen(buf);
                     shell_write(buf);
                 } else if (seq[1] == 'B') {
-                    /* Down arrow — newer history entry */
                     if (s_hist_nav < 0) continue;
                     int next = s_hist_nav + 1;
                     while (n--) shell_write("\b \b");
                     if (next >= s_hist_count) {
-                        s_hist_nav = -1;
-                        buf[0] = '\0';
-                        n = 0;
+                        s_hist_nav = -1; buf[0] = '\0'; n = 0;
                     } else {
                         s_hist_nav = next;
                         sh_strlcpy(buf, s_history[s_hist_nav % HISTORY_DEPTH], max);
@@ -188,14 +147,8 @@ static int read_line(char *buf, int max)
             continue;
         }
 
-        /* Ctrl-C */
-        if (c == '\x03') {
-            shell_write("^C\r\n");
-            buf[0] = '\0';
-            return 0;
-        }
+        if (c == '\x03') { shell_write("^C\r\n"); buf[0] = '\0'; return 0; }
 
-        /* Printable chars */
         if (c >= 0x20 && c < 0x7f && n < max - 1) {
             buf[n++] = c;
             write(STDOUT_FILENO, &c, 1);
@@ -209,86 +162,39 @@ static int read_line(char *buf, int max)
 
 static void resolve_path(const char *arg, char *out, size_t out_sz)
 {
-    if (arg[0] == '/') {
-        sh_strlcpy(out, arg, out_sz);
-    } else {
-        snprintf(out, out_sz, "%s/%s", s_cwd, arg);
-    }
+    if (arg[0] == '/') sh_strlcpy(out, arg, out_sz);
+    else snprintf(out, out_sz, "%s/%s", s_cwd, arg);
 }
 
-/* ----- command implementations ------------------------------------------- */
+/* ----- exec args --------------------------------------------------------- */
 
-static void cmd_ls(int argc, char **argv)
+/*
+ * Write /tmp/.exec_args so the bin app can read its cwd + argv.
+ * Format: cwd\nargc\narg0\narg1\n...
+ */
+static void write_exec_args(int argc, char **argv)
 {
-    int long_fmt = 0;
-    const char *path = s_cwd;
+    int fd = open("/tmp/.exec_args", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) return;
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-l") == 0) { long_fmt = 1; continue; }
-        path = argv[i];
+    /* cwd */
+    write(fd, s_cwd, strlen(s_cwd));
+    write(fd, "\n", 1);
+
+    /* argc */
+    char num[12];
+    snprintf(num, sizeof(num), "%d\n", argc);
+    write(fd, num, strlen(num));
+
+    /* args */
+    for (int i = 0; i < argc; i++) {
+        write(fd, argv[i], strlen(argv[i]));
+        write(fd, "\n", 1);
     }
-
-    char resolved[CWD_MAX];
-    resolve_path(path, resolved, sizeof(resolved));
-
-    /* ESP-IDF VFS has no root — enumerate mount points synthetically. */
-    if (strcmp(resolved, "/") == 0) {
-        shell_puts(long_fmt
-            ? "d        0  dev\r\nd        0  sd\r\nd        0  tmp"
-            : "dev  sd  tmp");
-        return;
-    }
-
-    DIR *dir = opendir(resolved);
-    if (!dir) {
-        shell_printf("ls: %s: %s\r\n", resolved, strerror(errno));
-        return;
-    }
-
-    struct dirent *ent;
-    while ((ent = readdir(dir)) != NULL) {
-        if (long_fmt) {
-            char fpath[CWD_MAX + 64];
-            snprintf(fpath, sizeof(fpath), "%s/%s", resolved, ent->d_name);
-            struct stat st;
-            if (stat(fpath, &st) == 0) {
-                shell_printf("%c %8ld  %s\r\n",
-                             S_ISDIR(st.st_mode) ? 'd' : '-',
-                             (long)st.st_size, ent->d_name);
-            } else {
-                shell_printf("? %8d  %s\r\n", 0, ent->d_name);
-            }
-        } else {
-            shell_printf("%s  ", ent->d_name);
-        }
-    }
-    closedir(dir);
-    if (!long_fmt) shell_write("\r\n");
-}
-
-static void cmd_cat(int argc, char **argv)
-{
-    if (argc < 2) { shell_puts("usage: cat <file>"); return; }
-    char path[CWD_MAX];
-    resolve_path(argv[1], path, sizeof(path));
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) { shell_printf("cat: %s: %s\r\n", path, strerror(errno)); return; }
-    char buf[256];
-    ssize_t n;
-    while ((n = read(fd, buf, sizeof(buf))) > 0)
-        write(STDOUT_FILENO, buf, n);
     close(fd);
-    shell_write("\r\n");
 }
 
-static void cmd_echo(int argc, char **argv)
-{
-    for (int i = 1; i < argc; i++) {
-        shell_write(argv[i]);
-        if (i < argc - 1) shell_write(" ");
-    }
-    shell_write("\r\n");
-}
+/* ----- built-in commands ------------------------------------------------- */
 
 static void cmd_cd(int argc, char **argv)
 {
@@ -305,32 +211,13 @@ static void cmd_cd(int argc, char **argv)
     sh_strlcpy(s_cwd, path, sizeof(s_cwd));
 }
 
-static void cmd_mkdir(int argc, char **argv)
+static void cmd_echo(int argc, char **argv)
 {
-    if (argc < 2) { shell_puts("usage: mkdir <path>"); return; }
-    char path[CWD_MAX];
-    resolve_path(argv[1], path, sizeof(path));
-    if (mkdir(path, 0777) != 0)
-        shell_printf("mkdir: %s: %s\r\n", path, strerror(errno));
-}
-
-static void cmd_rm(int argc, char **argv)
-{
-    if (argc < 2) { shell_puts("usage: rm <file>"); return; }
-    char path[CWD_MAX];
-    resolve_path(argv[1], path, sizeof(path));
-    if (unlink(path) != 0)
-        shell_printf("rm: %s: %s\r\n", path, strerror(errno));
-}
-
-static void cmd_mv(int argc, char **argv)
-{
-    if (argc < 3) { shell_puts("usage: mv <src> <dst>"); return; }
-    char src[CWD_MAX], dst[CWD_MAX];
-    resolve_path(argv[1], src, sizeof(src));
-    resolve_path(argv[2], dst, sizeof(dst));
-    if (rename(src, dst) != 0)
-        shell_printf("mv: %s → %s: %s\r\n", src, dst, strerror(errno));
+    for (int i = 1; i < argc; i++) {
+        shell_write(argv[i]);
+        if (i < argc - 1) shell_write(" ");
+    }
+    shell_write("\r\n");
 }
 
 static void cmd_run(int argc, char **argv)
@@ -340,11 +227,9 @@ static void cmd_run(int argc, char **argv)
     if (argv[1][0] == '/') {
         sh_strlcpy(path, argv[1], sizeof(path));
     } else {
-        /* Look in apps dir first, then cwd */
         snprintf(path, sizeof(path), "%s/%s", APPS_DIR, argv[1]);
         struct stat st;
-        if (stat(path, &st) != 0)
-            resolve_path(argv[1], path, sizeof(path));
+        if (stat(path, &st) != 0) resolve_path(argv[1], path, sizeof(path));
     }
 
     duneos_app_t *app = NULL;
@@ -356,305 +241,64 @@ static void cmd_run(int argc, char **argv)
     duneos_loader_unload(app);
 }
 
-static void cmd_free(void)
-{
-    int heap = esp_get_free_heap_size();
-    shell_printf("free heap: %d bytes\r\n", heap);
-}
-
-static void cmd_klog(void)
-{
-    int fd = open("/dev/klog", O_RDONLY);
-    if (fd < 0) { shell_puts("klog: cannot open /dev/klog"); return; }
-    char buf[128];
-    ssize_t n;
-    while ((n = read(fd, buf, sizeof(buf))) > 0) {
-        /* Replace bare \n with \r\n for terminal */
-        for (ssize_t i = 0; i < n; i++) {
-            if (buf[i] == '\n') shell_write("\r\n");
-            else write(STDOUT_FILENO, &buf[i], 1);
-        }
-    }
-    close(fd);
-}
-
-static void cmd_gpio(int argc, char **argv)
-{
-    if (argc < 2) {
-        shell_puts("usage: gpio info | get <pin> | set <pin> <0|1> | mode <pin> in|out | pull <pin> none|up|down");
-        return;
-    }
-
-    int fd = open("/dev/gpiochip0", O_RDWR);
-    if (fd < 0) {
-        shell_printf("gpio: cannot open /dev/gpiochip0: %s\r\n", strerror(errno));
-        return;
-    }
-
-    if (strcmp(argv[1], "info") == 0) {
-        gpiochip_info_t info;
-        if (ioctl(fd, GPIOCHIP_GET_INFO, &info) == 0)
-            shell_printf("%s: %u lines\r\n", info.name, (unsigned)info.lines);
-        else
-            shell_printf("gpio: info failed: %s\r\n", strerror(errno));
-    }
-    else if (strcmp(argv[1], "get") == 0) {
-        if (argc < 3) { shell_puts("usage: gpio get <pin>"); goto done; }
-        int pin = atoi(argv[2]);
-        gpio_req_t req = { .line = (uint8_t)pin, .dir = GPIO_DIR_INPUT };
-        ioctl(fd, GPIOCHIP_SET_DIR, &req);   /* auto-configure as input */
-        if (ioctl(fd, GPIOCHIP_GET_VALUE, &req) == 0)
-            shell_printf("gpio%d = %d\r\n", pin, (int)req.val);
-        else
-            shell_printf("gpio: get failed: %s\r\n", strerror(errno));
-    }
-    else if (strcmp(argv[1], "set") == 0) {
-        if (argc < 4) { shell_puts("usage: gpio set <pin> <0|1>"); goto done; }
-        int pin = atoi(argv[2]);
-        int val = atoi(argv[3]);
-        gpio_req_t req = { .line = (uint8_t)pin, .dir = GPIO_DIR_OUTPUT };
-        ioctl(fd, GPIOCHIP_SET_DIR, &req);   /* auto-configure as output */
-        req.val = (uint8_t)(val ? 1 : 0);
-        if (ioctl(fd, GPIOCHIP_SET_VALUE, &req) == 0)
-            shell_printf("gpio%d <= %d\r\n", pin, (int)req.val);
-        else
-            shell_printf("gpio: set failed: %s\r\n", strerror(errno));
-    }
-    else if (strcmp(argv[1], "mode") == 0) {
-        if (argc < 4) { shell_puts("usage: gpio mode <pin> in|out"); goto done; }
-        int pin = atoi(argv[2]);
-        gpio_req_t req = {
-            .line = (uint8_t)pin,
-            .dir  = (strcmp(argv[3], "out") == 0) ? GPIO_DIR_OUTPUT : GPIO_DIR_INPUT,
-        };
-        if (ioctl(fd, GPIOCHIP_SET_DIR, &req) == 0)
-            shell_printf("gpio%d mode = %s\r\n", pin, argv[3]);
-        else
-            shell_printf("gpio: mode failed: %s\r\n", strerror(errno));
-    }
-    else if (strcmp(argv[1], "pull") == 0) {
-        if (argc < 4) { shell_puts("usage: gpio pull <pin> none|up|down"); goto done; }
-        int pin = atoi(argv[2]);
-        uint8_t pull;
-        if      (strcmp(argv[3], "up")   == 0) pull = GPIO_PULL_UP;
-        else if (strcmp(argv[3], "down") == 0) pull = GPIO_PULL_DOWN;
-        else                                    pull = GPIO_PULL_NONE;
-        gpio_req_t req = { .line = (uint8_t)pin, .pull = pull };
-        if (ioctl(fd, GPIOCHIP_SET_PULL, &req) == 0)
-            shell_printf("gpio%d pull = %s\r\n", pin, argv[3]);
-        else
-            shell_printf("gpio: pull failed: %s\r\n", strerror(errno));
-    }
-    else {
-        shell_printf("gpio: unknown subcommand '%s'\r\n", argv[1]);
-    }
-
-done:
-    close(fd);
-}
-
-static const char *policy_str(duneos_restart_policy_t p)
-{
-    if (p == DUNEOS_RESTART_ALWAYS)     return "always";
-    if (p == DUNEOS_RESTART_ON_FAILURE) return "on-failure";
-    return "no";
-}
-
-static void cmd_services(void)
-{
-    duneos_slot_info_t slots[DUNEOS_MAX_RUNNING_APPS];
-    int n = duneos_supervisor_list_slots(slots, DUNEOS_MAX_RUNNING_APPS);
-    shell_puts("NAME                STATE   POLICY      RESTARTS");
-    shell_puts("--------------------------------------------------");
-    int found = 0;
-    for (int i = 0; i < n; i++) {
-        if (!slots[i].active) continue;
-        shell_printf("%-20s%-8s%-12s%u\r\n",
-                     slots[i].name,
-                     "active",
-                     policy_str(slots[i].restart_policy),
-                     slots[i].restart_count);
-        found++;
-    }
-    if (!found) shell_puts("(no running services)");
-}
-
-static void cmd_restart(int argc, char **argv)
-{
-    if (argc < 2) { shell_puts("usage: restart <name>"); return; }
-    if (duneos_supervisor_restart_by_name(argv[1]) != 0)
-        shell_printf("restart: '%s' not found\r\n", argv[1]);
-    else
-        shell_printf("restart: '%s' queued\r\n", argv[1]);
-}
-
-static void cmd_battery(void)
-{
-    int fd = open("/dev/battery0", O_RDONLY);
-    if (fd < 0) {
-        shell_puts("battery: /dev/battery0 not available on this board");
-        return;
-    }
-    battery_info_t info;
-    if (ioctl(fd, BATTERY_GET_INFO, &info) < 0) {
-        shell_puts("battery: ioctl failed");
-        close(fd);
-        return;
-    }
-    close(fd);
-    const char *status_str = (info.status == BATTERY_CHARGING)     ? "charging"     :
-                             (info.status == BATTERY_FULL)         ? "full"         :
-                                                                      "discharging";
-    shell_printf("voltage: %u mV  charge: %u%%  status: %s\r\n",
-                 info.voltage_mv, (unsigned)info.percent, status_str);
-}
-
-static void cmd_tail(int argc, char **argv)
-{
-    int follow = 0;
-    const char *path_arg = NULL;
-
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-f") == 0) follow = 1;
-        else path_arg = argv[i];
-    }
-    if (!path_arg) { shell_puts("usage: tail [-f] <file>"); return; }
-
-    char path[CWD_MAX];
-    resolve_path(path_arg, path, sizeof(path));
-
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) { shell_printf("tail: %s: %s\r\n", path, strerror(errno)); return; }
-
-    if (!follow) {
-        /* Print last 512 bytes */
-        struct stat st;
-        if (fstat(fd, &st) == 0 && st.st_size > 512)
-            lseek(fd, st.st_size - 512, SEEK_SET);
-        char buf[128];
-        ssize_t n;
-        while ((n = read(fd, buf, sizeof(buf))) > 0)
-            write(STDOUT_FILENO, buf, n);
-        shell_write("\r\n");
-    } else {
-        /* Follow mode: seek to end then poll, checking stdin for Ctrl-C */
-        lseek(fd, 0, SEEK_END);
-
-        int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-        fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
-        fcntl(fd, F_SETFL, O_NONBLOCK);
-
-        shell_puts("[following — Ctrl-C to stop]");
-        char buf[128];
-        while (1) {
-            ssize_t n = read(fd, buf, sizeof(buf));
-            if (n > 0)
-                write(STDOUT_FILENO, buf, (size_t)n);
-
-            char c;
-            if (read(STDIN_FILENO, &c, 1) > 0 && c == '\x03') {
-                shell_write("^C\r\n");
-                break;
-            }
-            if (n <= 0)
-                usleep(100000);
-        }
-
-        fcntl(STDIN_FILENO, F_SETFL, flags);
-    }
-    close(fd);
-}
-
-static const char *input_code_name(uint16_t code)
-{
-    switch (code) {
-    case KEY_BACKSPACE: return "BACKSPACE";
-    case KEY_TAB:       return "TAB";
-    case KEY_ENTER:     return "ENTER";
-    case KEY_ESC:       return "ESC";
-    case KEY_DELETE:    return "DELETE";
-    case KEY_CTRL:      return "CTRL";
-    case KEY_SHIFT:     return "SHIFT";
-    case KEY_ALT:       return "ALT";
-    case KEY_OPT:       return "OPT";
-    case KEY_FN:        return "FN";
-    case KEY_UP:        return "UP";
-    case KEY_DOWN:      return "DOWN";
-    case KEY_LEFT:      return "LEFT";
-    case KEY_RIGHT:     return "RIGHT";
-    default:            return NULL;
-    }
-}
-
-static void cmd_input(void)
-{
-    int fd = open("/dev/input/event0", O_RDONLY);
-    if (fd < 0) {
-        shell_puts("input: /dev/input/event0 not available");
-        return;
-    }
-
-    shell_puts("[reading events — press ESC to stop]");
-
-    input_event_t ev;
-    while (read(fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) {
-        if (ev.type == INPUT_EV_KEY) {
-            const char *name = input_code_name(ev.code);
-            const char *action = (ev.value == INPUT_VAL_PRESS)   ? "press"   :
-                                 (ev.value == INPUT_VAL_RELEASE)  ? "release" : "repeat";
-            if (name) {
-                shell_printf("KEY  %-8s  %s\r\n", name, action);
-            } else if (ev.code >= 0x20 && ev.code < 0x7f) {
-                shell_printf("KEY  '%c'      %s\r\n", (char)ev.code, action);
-            } else {
-                shell_printf("KEY  0x%02x     %s\r\n", ev.code, action);
-            }
-            if (ev.code == KEY_ESC && ev.value == INPUT_VAL_PRESS)
-                break;
-        } else if (ev.type == INPUT_EV_REL) {
-            shell_printf("REL  wheel    %+d\r\n", (int)ev.value);
-        }
-    }
-
-    close(fd);
-}
-
 static void cmd_help(void)
 {
-    shell_puts("Commands:");
+    shell_puts("Built-in commands:");
+    shell_puts("  cd [path]     change directory");
+    shell_puts("  pwd           print working directory");
+    shell_puts("  echo <text>   print text");
+    shell_puts("  run <app>     load and run a .dap app from /sd/apps/");
+    shell_puts("  exit          exit the shell");
+    shell_puts("  help          this message");
+    shell_puts("");
+    shell_puts("External commands (from /sd/bin/):");
     shell_puts("  ls [-l] [path]                list directory");
     shell_puts("  cat <file>                    print file");
-    shell_puts("  echo <text>                   print text");
-    shell_puts("  cd [path]                     change directory");
-    shell_puts("  pwd                           print working directory");
     shell_puts("  mkdir <path>                  create directory");
     shell_puts("  rm <file>                     remove file");
     shell_puts("  mv <src> <dst>                move/rename");
-    shell_puts("  run <app>                     load and run a DuneOS app");
     shell_puts("  free                          show free heap");
-    shell_puts("  klog                          dump kernel log ring buffer");
-    shell_puts("  gpio info                     show GPIO chip info");
-    shell_puts("  gpio get <pin>                read GPIO pin level");
-    shell_puts("  gpio set <pin> <0|1>          drive GPIO pin");
-    shell_puts("  gpio mode <pin> in|out        set GPIO direction");
-    shell_puts("  gpio pull <pin> none|up|down  set pull resistor");
-    shell_puts("  battery                       show battery voltage and charge");
-    shell_puts("  services                      list running service slots");
-    shell_puts("  restart <name>                force restart a named service");
-    shell_puts("  tail [-f] <file>              print end of file; -f follows");
-    shell_puts("  input                         print /dev/input/event0 events (ESC to stop)");
+    shell_puts("  klog                          dump kernel log");
+    shell_puts("  gpio info|get|set|mode|pull   GPIO control");
+    shell_puts("  battery                       battery status");
+    shell_puts("  services                      list running services");
+    shell_puts("  restart <name>                force restart a service");
+    shell_puts("  tail [-f] <file>              print end of file");
+    shell_puts("  input                         print input events (ESC to stop)");
     shell_puts("  reboot                        restart the device");
-    shell_puts("  help                          this message");
+}
+
+/* ----- PATH fallback ----------------------------------------------------- */
+
+static int try_run_bin(const char *cmd, int argc, char **argv)
+{
+    char path[CWD_MAX];
+
+    /* Phase 17: /flash/bin/ will be tried first when it exists */
+    snprintf(path, sizeof(path), "%s/%s.dap", BIN_DIR, cmd);
+
+    struct stat st;
+    if (stat(path, &st) != 0) return -1;
+
+    write_exec_args(argc, argv);
+
+    duneos_app_t *app = NULL;
+    if (duneos_loader_load(path, &app) != 0) {
+        shell_printf("%s: load failed\r\n", cmd);
+        return 0;
+    }
+    duneos_loader_run(app);
+    duneos_loader_unload(app);
+    return 0;
 }
 
 /* ----- command parser ---------------------------------------------------- */
 
 static void exec_line(char *line)
 {
-    /* Tokenise in-place */
     char *argv[16];
     int   argc = 0;
-    char *p = line;
+    char *p    = line;
 
     while (*p) {
         while (*p == ' ') p++;
@@ -668,34 +312,21 @@ static void exec_line(char *line)
 
     const char *cmd = argv[0];
 
-    if (strcmp(cmd, "ls")     == 0) cmd_ls(argc, argv);
-    else if (strcmp(cmd, "cat")    == 0) cmd_cat(argc, argv);
-    else if (strcmp(cmd, "echo")   == 0) cmd_echo(argc, argv);
-    else if (strcmp(cmd, "cd")     == 0) cmd_cd(argc, argv);
-    else if (strcmp(cmd, "pwd")    == 0) shell_puts(s_cwd);
-    else if (strcmp(cmd, "mkdir")  == 0) cmd_mkdir(argc, argv);
-    else if (strcmp(cmd, "rm")     == 0) cmd_rm(argc, argv);
-    else if (strcmp(cmd, "mv")     == 0) cmd_mv(argc, argv);
-    else if (strcmp(cmd, "run")    == 0) cmd_run(argc, argv);
-    else if (strcmp(cmd, "free")   == 0) cmd_free();
-    else if (strcmp(cmd, "klog")   == 0) cmd_klog();
-    else if (strcmp(cmd, "gpio")     == 0) cmd_gpio(argc, argv);
-    else if (strcmp(cmd, "battery")  == 0) cmd_battery();
-    else if (strcmp(cmd, "services") == 0) cmd_services();
-    else if (strcmp(cmd, "restart")  == 0) cmd_restart(argc, argv);
-    else if (strcmp(cmd, "tail")     == 0) cmd_tail(argc, argv);
-    else if (strcmp(cmd, "input")    == 0) cmd_input();
-    else if (strcmp(cmd, "reboot")   == 0) esp_restart();
-    else if (strcmp(cmd, "exit")     == 0) duneos_exit(0);
-    else if (strcmp(cmd, "help")     == 0) cmd_help();
-    else shell_printf("%s: command not found\r\n", cmd);
+    if      (strcmp(cmd, "cd")   == 0) cmd_cd(argc, argv);
+    else if (strcmp(cmd, "pwd")  == 0) shell_puts(s_cwd);
+    else if (strcmp(cmd, "echo") == 0) cmd_echo(argc, argv);
+    else if (strcmp(cmd, "run")  == 0) cmd_run(argc, argv);
+    else if (strcmp(cmd, "exit") == 0) duneos_exit(0);
+    else if (strcmp(cmd, "help") == 0) cmd_help();
+    else if (try_run_bin(cmd, argc, argv) != 0)
+        shell_printf("%s: command not found\r\n", cmd);
 }
 
 /* ----- entry point ------------------------------------------------------- */
 
 void app_main(void)
 {
-    shell_puts("\r\nDuneOS shell v0.1 — type 'help' for commands");
+    shell_puts("\r\nDuneOS shell v0.2 -- type 'help' for commands");
     shell_printf("cwd: %s\r\n", s_cwd);
 
     char line[LINE_MAX_LEN];

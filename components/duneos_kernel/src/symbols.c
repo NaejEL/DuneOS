@@ -56,6 +56,7 @@ static int duneos_dup2(int fd, int newfd)
 /* loader.c (duneos_loader component) — forward-declared to avoid circular include */
 esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app);
 esp_err_t duneos_loader_run(duneos_app_t *app);
+esp_err_t duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t *out_len);
 void      duneos_loader_unload(duneos_app_t *app);
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
 
@@ -175,6 +176,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* ------------------------------------------------------------------ */
     SYM("duneos_loader_load",         duneos_loader_load         ),
     SYM("duneos_loader_run",          duneos_loader_run          ),
+    SYM("duneos_loader_run_captured", duneos_loader_run_captured ),
     SYM("duneos_loader_unload",       duneos_loader_unload       ),
     SYM("duneos_loader_get_manifest", duneos_loader_get_manifest ),
 

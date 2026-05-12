@@ -98,6 +98,19 @@ if(CONFIG_DUNEOS_DRV_INPUT_ENCODER)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/input/enc_quadrature.c")
 endif()
 
+# st7789_hw.c is shared by both /dev/disp0 and /dev/fb0
+if(CONFIG_DUNEOS_DRV_DISP OR CONFIG_DUNEOS_DRV_FB)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/st7789_hw.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_DISP)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/drv_disp_st7789.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_FB)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/drv_fb_st7789.c")
+endif()
+
 # ---------------------------------------------------------------------------
 
 idf_component_register(

@@ -29,16 +29,23 @@
 #define DUNEOS_SD_CD_PIN        (-1)
 
 /* ---------- Display (ST7789, 240×135, dedicated SPI3 bus) ----------------- */
-#define DUNEOS_DISPLAY_WIDTH    240
-#define DUNEOS_DISPLAY_HEIGHT   135
-#define DUNEOS_DISPLAY_SPI_HOST SPI3_HOST
-#define DUNEOS_DISPLAY_MOSI_PIN 6
-#define DUNEOS_DISPLAY_CLK_PIN  5
-#define DUNEOS_DISPLAY_CS_PIN   37
-#define DUNEOS_DISPLAY_DC_PIN   35
-#define DUNEOS_DISPLAY_RST_PIN  33
-#define DUNEOS_DISPLAY_BL_PIN   38
-#define DUNEOS_DISPLAY_FREQ_HZ  40000000
+#define DUNEOS_HAVE_DISPLAY                      1
+#define DUNEOS_DISPLAY_WIDTH                     240
+#define DUNEOS_DISPLAY_HEIGHT                    135
+#define DUNEOS_DISPLAY_SPI_HOST                  SPI3_HOST
+#define DUNEOS_DISPLAY_MOSI_PIN                  35
+#define DUNEOS_DISPLAY_CLK_PIN                   36
+#define DUNEOS_DISPLAY_CS_PIN                    37
+#define DUNEOS_DISPLAY_DC_PIN                    34
+#define DUNEOS_DISPLAY_RST_PIN                   33
+#define DUNEOS_DISPLAY_BL_PIN                    38
+#define DUNEOS_DISPLAY_FREQ_HZ                   40000000
+#define DUNEOS_DISPLAY_ROTATION                  1       /* 90° CW — landscape */
+#define DUNEOS_DISPLAY_MADCTL                    0x60u   /* MX|MV */
+#define DUNEOS_DISPLAY_SWAP_XY                   1       /* MV=1: CASET↔X, RASET↔Y swapped */
+#define DUNEOS_DISPLAY_COL_OFFSET                53      /* portrait column start in ST7789 RAM */
+#define DUNEOS_DISPLAY_ROW_OFFSET                40      /* portrait row start in ST7789 RAM */
+#define DUNEOS_DISPLAY_BUS_SHARED                0  /* SPI3 dedicated to display */
 
 /* ---------- Keyboard matrix (IOMatrix + 74HC138 row decoder) -------------- */
 /*
