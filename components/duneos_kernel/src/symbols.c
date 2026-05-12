@@ -46,6 +46,14 @@
 #define SYM_P(n, p, perm) { (n), (void *)(p), (perm) }
 
 extern int *__errno(void);   /* newlib errno accessor — needed by any code that uses errno */
+
+/* GCC soft-float / 64-bit runtime support — Xtensa has no 64-bit divide hw */
+typedef long long          s_di_t;
+typedef unsigned long long u_di_t;
+extern s_di_t __divdi3(s_di_t, s_di_t);
+extern s_di_t __moddi3(s_di_t, s_di_t);
+extern u_di_t __udivdi3(u_di_t, u_di_t);
+extern u_di_t __umoddi3(u_di_t, u_di_t);
 void duneos_exit(int code);
 int  duneos_nanosleep(const struct timespec *req, struct timespec *rem);
 /* dup/dup2 are static inline in ESP-IDF newlib — implement via fcntl */
@@ -160,6 +168,14 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("sscanf",    sscanf    ),
     SYM("strerror",  strerror  ),
     SYM("__errno",   __errno   ),
+
+    /* ------------------------------------------------------------------ */
+    /* GCC runtime — 64-bit integer arithmetic (Xtensa has no hw 64-div)  */
+    /* ------------------------------------------------------------------ */
+    SYM("__divdi3",  __divdi3  ),
+    SYM("__moddi3",  __moddi3  ),
+    SYM("__udivdi3", __udivdi3 ),
+    SYM("__umoddi3", __umoddi3 ),
 
     /* ------------------------------------------------------------------ */
     /* System                                                              */
