@@ -45,6 +45,7 @@ typedef struct {
 #define DUNEOS_PERM_BATTERY     (1u << 7)
 #define DUNEOS_PERM_INPUT       (1u << 8)
 #define DUNEOS_PERM_FB          (1u << 9)
+#define DUNEOS_PERM_NET_RAW     (1u << 10)  /* raw 802.11 frame injection via /dev/raw80211 */
 
 /*
  * One entry in the kernel export symbol table.

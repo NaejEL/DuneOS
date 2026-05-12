@@ -240,6 +240,9 @@ extern void drv_disp_st7789_register(void);
 #ifdef CONFIG_DUNEOS_DRV_FB
 extern void drv_fb_st7789_register(void);
 #endif
+#ifdef CONFIG_DUNEOS_DRV_RAW80211
+extern void drv_raw80211_register(void);
+#endif
 
 /* ----- mount ------------------------------------------------------------- */
 
@@ -303,6 +306,9 @@ esp_err_t duneos_vfs_mount_dev(void)
 #endif
 #ifdef CONFIG_DUNEOS_DRV_FB
     drv_fb_st7789_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_RAW80211
+    drv_raw80211_register();
 #endif
 
     klog_i(TAG, "/dev ready (%d devices)", s_driver_count);

@@ -135,4 +135,31 @@ config DUNEOS_DRV_FB
         byte-swaps during ioctl(FB_FLUSH) DMA to the ST7789 display.
         Do not enable simultaneously with CONFIG_DUNEOS_DRV_DISP.
 
+config DUNEOS_DRV_WIFI
+    bool "WiFi STA helper functions (duneos_wifi_* ABI symbols)"
+    default n
+    help
+        Export duneos_wifi_init / duneos_wifi_sta_connect /
+        duneos_wifi_sta_disconnect / duneos_wifi_get_info /
+        duneos_netif_wait_ip to userspace apps.
+        All ESP-IDF WiFi / netif / NVS complexity is encapsulated in
+        drv_wifi.c; apps only need to include duneos/wifi.h.
+        No /dev device node is registered — this driver exposes pure
+        function-pointer ABI, not a file interface.
+        Enable wifi_daemon.dap to connect at boot via /sd/wifi.conf.
+
+config DUNEOS_DRV_RAW80211
+    bool "Raw 802.11 frame injection (/dev/raw80211)"
+    default n
+    depends on DUNEOS_DRV_WIFI
+    help
+        Enable /dev/raw80211 for injecting arbitrary IEEE 802.11 frames
+        directly via esp_wifi_80211_tx(), bypassing the TCP/IP stack.
+        write(fd, frame, len) transmits one frame on the selected interface
+        (STA by default; switch to AP via ioctl(RAW80211_SET_IFACE)).
+        Requires DUNEOS_PERM_NET_RAW in the app manifest.
+        Requires WiFi to be initialised (wifi_daemon running, or
+        duneos_wifi_init() called before open()).
+        Analogous to AF_PACKET / monitor-mode sockets on Linux.
+
 endmenu

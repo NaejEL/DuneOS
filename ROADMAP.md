@@ -532,33 +532,73 @@ display:
 
 ---
 
-## Phase 14 — WiFi daemon (userspace)
+## Phase 14 — WiFi daemon + raw frame injection ✅ DONE
 
-**Userspace service.** BSD sockets are already exported via lwIP. The missing piece is a daemon
-that initialises `esp_wifi`, connects to a network, and signals `duneos_service_ready()` so
-apps with `after: ["network"]` in `init.json` can start.
+**Userspace service + kernel raw-frame driver.**
 
-**No kernel changes required.** `wifi_daemon.dap` calls `esp_wifi_init()` + `esp_netif_*` which are
-already (or will be) exported in `symbols.c`.
+### WiFi daemon
 
-**Userspace daemon responsibilities:**
+**Architecture:** all ESP-IDF WiFi / netif complexity is encapsulated in `drv_wifi.c` (kernel).
+Apps that do networking only call `socket()` — they never see WiFi-specific code.
+`wifi_daemon.dap` is the DuneOS equivalent of `wpa_supplicant`: it connects the transport
+and signals `duneos_service_ready()`, unblocking any services that declared `after:` it.
 
-- Read `/sd/wifi.conf` (SSID + password, simple INI format)
-- Connect; retry with back-off; call `duneos_service_ready()` on IP acquired
-- Write `/tmp/net_status` (IP address, RSSI) for other apps to read
-- Optionally expose `/dev/net/status` via a kernel-registered thin shim (one `read()` returns JSON)
+**`/sd/wifi.conf` format (simple key=value):**
 
-**New symbol exports needed in `symbols.c`:**
-`esp_wifi_init`, `esp_wifi_start`, `esp_wifi_connect`, `esp_netif_init`, `esp_netif_create_default_wifi_sta`,
-`esp_event_loop_create_default`, `esp_event_handler_register`
+```ini
+ssid=MyNetwork
+password=MyPassword
+```
+
+**`/tmp/net_status` (written by daemon once connected, refreshed every 30 s):**
+
+```ini
+ip=192.168.1.100
+gw=192.168.1.1
+netmask=255.255.255.0
+ssid=MyNetwork
+rssi=-65
+```
+
+**Network transport abstraction:**
+Apps that use sockets are already transport-agnostic — they call `socket()` regardless of whether
+the underlying transport is WiFi, Ethernet, or PPP. `duneos_wifi_*` symbols are used only by
+connection daemons, never by apps that communicate. This mirrors Linux's architecture where
+`wpa_supplicant` manages WiFi, but HTTP/MQTT apps only use BSD sockets.
+
+**`duneos_netif_wait_ip(timeout_ms)`** — transport-agnostic primitive; blocks until ANY
+`esp_netif_t` has an IP (WiFi today, Ethernet/PPP in the future). The equivalent of systemd
+`network-online.target`. Exported with `DUNEOS_PERM_NET`.
+
+### Raw 802.11 frame injection (`/dev/raw80211`)
+
+**Kernel driver** (`drv_raw80211.c`, `CONFIG_DUNEOS_DRV_RAW80211=y`, opt-in per board).
+Analogous to Linux AF_PACKET / monitor-mode sockets. No TCP/IP stack involved.
+
+```c
+int fd = open("/dev/raw80211", O_WRONLY);
+/* default: WIFI_IF_STA — works while wifi_daemon maintains STA connection  */
+/* optional: switch to AP interface (requires WiFi in APSTA mode)           */
+int iface = DUNEOS_WIFI_IF_AP;
+ioctl(fd, RAW80211_SET_IFACE, &iface);
+write(fd, frame_buf, frame_len);   /* → esp_wifi_80211_tx() */
+close(fd);
+```
+
+New permission bit: `DUNEOS_PERM_NET_RAW (1u << 10)` — equivalent of Linux `CAP_NET_RAW`.
 
 **Roadmap items:**
 
-- [ ] Export WiFi + netif + event loop symbols (with `DUNEOS_PERM_WIFI` permission gate)
-- [ ] `wifi_daemon.dap` example app: reads `/sd/wifi.conf`, connects, signals ready
-- [ ] `/sd/wifi.conf` format documented in SDK
-- [ ] Shell: `ifconfig` built-in (reads `/tmp/net_status`)
-- [ ] Shell: `ping <host>` built-in (uses exported `getaddrinfo` + raw socket)
+- [x] `duneos_wifi_init / sta_connect / sta_disconnect / get_info` — kernel wrappers hiding `wifi_init_config_t` and `WIFI_INIT_CONFIG_DEFAULT()` from userspace
+- [x] `duneos_netif_wait_ip(timeout_ms)` — transport-agnostic "wait for any IP" primitive
+- [x] `wifi_daemon.dap` — reads `/sd/wifi.conf`, connects with exponential backoff (5→60 s), calls `duneos_service_ready()`, monitors link, reconnects on drop
+- [x] `system/bin/ifconfig` — calls `duneos_wifi_get_info()`, prints IP/netmask/gw/SSID/RSSI
+- [x] BSD socket exports: `socket`, `bind`, `listen`, `accept`, `connect`, `send`, `recv`, `sendto`, `recvfrom`, `setsockopt`, `getsockopt`, `shutdown`, `getaddrinfo`, `freeaddrinfo`, `inet_addr`, `inet_ntoa_r` (all `DUNEOS_PERM_NET`)
+- [x] `CONFIG_DUNEOS_DRV_WIFI=y` on CardPuter, T-Embed CC1101, esp32s3-devkitc
+- [x] `DUNEOS_PERM_NET_RAW (1u << 10)` in `abi.h`
+- [x] `/dev/raw80211` — `write()` = `esp_wifi_80211_tx()`; `ioctl(RAW80211_SET_IFACE)` selects STA/AP; `CONFIG_DUNEOS_DRV_RAW80211=y` (opt-in)
+- [ ] Shell: `ping <host>` (uses `socket` + `getaddrinfo`)
+- [ ] `duneos_netif_wait_ip()` extended to cover Ethernet when `drv_eth.c` is added
 
 ---
 

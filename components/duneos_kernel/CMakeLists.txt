@@ -51,6 +51,10 @@ set(DUNEOS_KERNEL_REQUIRES
     vfs
     newlib
     json
+    nvs_flash
+    esp_wifi
+    esp_netif
+    esp_event
 )
 
 # --- Conditional driver sources --------------------------------------------
@@ -111,6 +115,14 @@ if(CONFIG_DUNEOS_DRV_FB)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/drv_fb_st7789.c")
 endif()
 
+if(CONFIG_DUNEOS_DRV_WIFI)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/net/drv_wifi.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_RAW80211)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/net/drv_raw80211.c")
+endif()
+
 # ---------------------------------------------------------------------------
 
 idf_component_register(
@@ -125,3 +137,9 @@ idf_component_register(
     REQUIRES
         ${DUNEOS_KERNEL_REQUIRES}
 )
+
+# ieee80211_raw_frame_sanity_check in drv_raw80211.c shadows the symbol from
+# the closed-source WiFi library — requires muldefs to resolve the conflict.
+if(CONFIG_DUNEOS_DRV_RAW80211)
+    target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,-zmuldefs")
+endif()

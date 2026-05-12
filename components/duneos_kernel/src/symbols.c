@@ -19,6 +19,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#ifdef CONFIG_DUNEOS_DRV_WIFI
+#include "duneos/wifi.h"
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+#include "lwip/inet.h"
+#endif
+
 /*
  * Kernel export symbol table — the ABI contract between DuneOS and apps.
  *
@@ -179,6 +186,43 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_loader_run_captured", duneos_loader_run_captured ),
     SYM("duneos_loader_unload",       duneos_loader_unload       ),
     SYM("duneos_loader_get_manifest", duneos_loader_get_manifest ),
+
+#ifdef CONFIG_DUNEOS_DRV_WIFI
+    /* ------------------------------------------------------------------ */
+    /* WiFi STA — duneos_wifi_* wrappers                                  */
+    /* ------------------------------------------------------------------ */
+    SYM_P("duneos_wifi_init",            duneos_wifi_init,            DUNEOS_PERM_NET),
+    SYM_P("duneos_wifi_sta_connect",     duneos_wifi_sta_connect,     DUNEOS_PERM_NET),
+    SYM_P("duneos_wifi_sta_disconnect",  duneos_wifi_sta_disconnect,  DUNEOS_PERM_NET),
+    SYM_P("duneos_wifi_get_info",        duneos_wifi_get_info,        DUNEOS_PERM_NET),
+    SYM_P("duneos_netif_wait_ip",        duneos_netif_wait_ip,        DUNEOS_PERM_NET),
+
+    /* ------------------------------------------------------------------ */
+    /* BSD sockets — lwIP POSIX layer                                     */
+    /* Apps reference these as "socket", "connect", etc.  The lwip_       */
+    /* prefix is the real link-time name in the ESP-IDF binary.           */
+    /* ------------------------------------------------------------------ */
+    SYM_P("socket",       lwip_socket,     DUNEOS_PERM_NET),
+    SYM_P("bind",         lwip_bind,       DUNEOS_PERM_NET),
+    SYM_P("listen",       lwip_listen,     DUNEOS_PERM_NET),
+    SYM_P("accept",       lwip_accept,     DUNEOS_PERM_NET),
+    SYM_P("connect",      lwip_connect,    DUNEOS_PERM_NET),
+    SYM_P("send",         lwip_send,       DUNEOS_PERM_NET),
+    SYM_P("recv",         lwip_recv,       DUNEOS_PERM_NET),
+    SYM_P("sendto",       lwip_sendto,     DUNEOS_PERM_NET),
+    SYM_P("recvfrom",     lwip_recvfrom,   DUNEOS_PERM_NET),
+    SYM_P("setsockopt",   lwip_setsockopt, DUNEOS_PERM_NET),
+    SYM_P("getsockopt",   lwip_getsockopt, DUNEOS_PERM_NET),
+    SYM_P("shutdown",     lwip_shutdown,   DUNEOS_PERM_NET),
+    SYM_P("getaddrinfo",  lwip_getaddrinfo, DUNEOS_PERM_NET),
+    SYM_P("freeaddrinfo", lwip_freeaddrinfo, DUNEOS_PERM_NET),
+    SYM_P("inet_addr",    ipaddr_addr,      DUNEOS_PERM_NET),
+    SYM_P("inet_ntoa_r",  ip4addr_ntoa_r,  DUNEOS_PERM_NET),
+    SYM_P("inet_ntop",    lwip_inet_ntop,  DUNEOS_PERM_NET),
+    SYM_P("inet_pton",    lwip_inet_pton,  DUNEOS_PERM_NET),
+    SYM_P("select",       lwip_select,     DUNEOS_PERM_NET),
+    SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),
+#endif /* CONFIG_DUNEOS_DRV_WIFI */
 
     /* Sentinel */
     { NULL, NULL, 0 },
