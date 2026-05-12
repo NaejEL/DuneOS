@@ -38,6 +38,7 @@ void app_main(void)
 
     outf("wlan0: inet %s  netmask %s  gateway %s\r\n",
          info.ip, info.netmask, info.gw);
+    outf("       ether %s\r\n", info.mac);
     outf("       ssid: %s  signal: %d dBm\r\n",
          info.ssid, (int)info.rssi);
 }

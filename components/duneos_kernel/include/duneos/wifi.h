@@ -19,6 +19,7 @@ typedef struct {
     char   netmask[16];  /* "255.255.255.0\0"                                 */
     char   ssid[33];     /* connected AP SSID                                 */
     int8_t rssi;         /* dBm; 0 if unknown                                 */
+    char   mac[18];      /* "aa:bb:cc:dd:ee:ff\0" — STA MAC address          */
 } duneos_net_info_t;
 
 /*
