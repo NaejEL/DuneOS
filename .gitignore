@@ -21,6 +21,9 @@ __pycache__/
 # IDF Component Manager — downloaded deps (like node_modules)
 managed_components/
 
+# dbt self-managed virtualenv
+tools/.dbt-venv/
+
 # BSP generator artefacts — re-generated from boards/*/board.yaml, never committed
 boards/*/board_config.h
 boards/*/sdkconfig.board

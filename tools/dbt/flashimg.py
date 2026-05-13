@@ -83,10 +83,16 @@ def _get_board_name() -> str | None:
 
 
 def _find_esptool() -> str | None:
-    """Locate esptool in PATH or via the DUNEOS_ESPTOOL env variable."""
+    """Locate esptool via DUNEOS_ESPTOOL, the current venv, or PATH."""
     override = os.environ.get("DUNEOS_ESPTOOL")
     if override:
         return override
+    # When running inside the dbt venv, esptool lives next to the Python binary.
+    bin_dir = Path(sys.executable).parent
+    for name in ("esptool.exe", "esptool.py", "esptool"):
+        candidate = bin_dir / name
+        if candidate.exists():
+            return str(candidate)
     for name in ("esptool.py", "esptool"):
         found = shutil.which(name)
         if found:
