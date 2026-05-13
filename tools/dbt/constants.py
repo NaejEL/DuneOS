@@ -22,6 +22,9 @@ CFLAGS_COMMON = [
     "-nostdlib",
     "-Os",
     "-std=c17",
+    # -std=c17 sets __STRICT_ANSI__, which prevents PicoLibc from exposing POSIX
+    # functions (clock_gettime, etc.) by default.  Explicitly request POSIX.1-2008.
+    "-D_POSIX_C_SOURCE=200809L",
     "-Wall",
     "-Wextra",
     "-Werror=implicit-function-declaration",

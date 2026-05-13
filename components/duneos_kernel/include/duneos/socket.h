@@ -164,7 +164,12 @@ struct addrinfo {
 /* ------------------------------------------------------------------ */
 /* select() — fd_set                                                   */
 /* lwIP FD_SETSIZE = 64; fd_mask = unsigned long (4 bytes on Xtensa)  */
+/*                                                                     */
+/* PicoLibc (ESP-IDF v6 toolchain) defines fd_set and declares        */
+/* select() in sys/_select.h, pulled in unconditionally by            */
+/* sys/time.h above.  Guard against that to avoid redefinition.       */
 /* ------------------------------------------------------------------ */
+#ifndef FD_SET
 #define FD_SETSIZE  64
 
 typedef unsigned long fd_mask;
@@ -178,6 +183,9 @@ typedef struct {
 #define FD_CLR(n, p)   ((p)->fds_bits[(unsigned)(n) / NFDBITS] &= ~(1UL << ((unsigned)(n) % NFDBITS)))
 #define FD_ISSET(n, p) ((int)(((p)->fds_bits[(unsigned)(n) / NFDBITS] >> ((unsigned)(n) % NFDBITS)) & 1))
 #define FD_ZERO(p)     (memset((p), 0, sizeof(*(p))))
+/* Sentinel: we defined fd_set, so select() is not yet declared. */
+#define _DUNEOS_SOCKET_NEED_SELECT
+#endif /* FD_SET */
 
 /* ------------------------------------------------------------------ */
 /* poll()                                                              */
@@ -225,8 +233,11 @@ int     setsockopt(int sockfd, int level, int optname,
 int     getsockopt(int sockfd, int level, int optname,
                    void *optval, socklen_t *optlen);
 int     shutdown(int sockfd, int how);
+#ifdef _DUNEOS_SOCKET_NEED_SELECT
 int     select(int maxfdp1, fd_set *readset, fd_set *writeset,
                fd_set *exceptset, struct timeval *timeout);
+#undef _DUNEOS_SOCKET_NEED_SELECT
+#endif
 int     poll(struct pollfd *fds, nfds_t nfds, int timeout);
 int     getaddrinfo(const char *nodename, const char *servname,
                     const struct addrinfo *hints, struct addrinfo **res);
