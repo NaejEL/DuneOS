@@ -175,7 +175,10 @@ static void resolve_path(const char *arg, char *out, size_t out_sz)
 static void write_exec_args(int argc, char **argv)
 {
     int fd = open("/tmp/.exec_args", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) return;
+    if (fd < 0) {
+        shell_printf("warn: exec_args open failed: %s\r\n", strerror(errno));
+        return;
+    }
 
     /* cwd */
     write(fd, s_cwd, strlen(s_cwd));
@@ -222,14 +225,24 @@ static void cmd_echo(int argc, char **argv)
 
 static void cmd_run(int argc, char **argv)
 {
-    if (argc < 2) { shell_puts("usage: run <app.dap>"); return; }
+    if (argc < 2) { shell_puts("usage: run <app>"); return; }
+
+    /* Add .dap extension if omitted */
+    const char *name = argv[1];
+    char name_buf[128];
+    size_t nlen = strlen(name);
+    if (nlen < 4 || strcmp(name + nlen - 4, ".dap") != 0) {
+        snprintf(name_buf, sizeof(name_buf), "%s.dap", name);
+        name = name_buf;
+    }
+
     char path[CWD_MAX];
-    if (argv[1][0] == '/') {
-        sh_strlcpy(path, argv[1], sizeof(path));
+    if (name[0] == '/') {
+        sh_strlcpy(path, name, sizeof(path));
     } else {
-        snprintf(path, sizeof(path), "%s/%s", APPS_DIR, argv[1]);
+        snprintf(path, sizeof(path), "%s/%s", APPS_DIR, name);
         struct stat st;
-        if (stat(path, &st) != 0) resolve_path(argv[1], path, sizeof(path));
+        if (stat(path, &st) != 0) resolve_path(name, path, sizeof(path));
     }
 
     duneos_app_t *app = NULL;

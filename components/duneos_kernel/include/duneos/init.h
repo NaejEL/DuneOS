@@ -31,7 +31,7 @@ typedef struct {
 } duneos_init_config_t;
 
 /*
- * Parse /sd/init.json and populate cfg.
+ * Parse /sd/init.yaml and populate cfg.
  * Returns ESP_OK on success.
  * Returns ESP_ERR_NOT_FOUND if the file does not exist (caller should fall
  * back to the legacy scan/autoboot path).

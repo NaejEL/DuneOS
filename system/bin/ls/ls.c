@@ -22,6 +22,9 @@ void app_main(void)
     static char buf[DUNEOS_EXEC_ARGS_BUF_SIZE];
     char *argv[8]; char *cwd;
     int argc = duneos_bin_args(buf, sizeof(buf), &cwd, argv, 8);
+    if (argc == 0) {
+        outn("ls: warn: exec_args missing — using default cwd");
+    }
 
     int long_fmt = 0;
     const char *target = cwd;

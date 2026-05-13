@@ -89,7 +89,15 @@ static esp_err_t parse_yaml(char *buf, duneos_init_config_t *cfg)
         const char *val = ltrim(colon + 1);
 
         if (strcmp(key, "path") == 0) {
-            strlcpy(cur->path, val, sizeof(cur->path));
+            if (val[0] != '/') {
+                /* Paths without leading '/' are relative — prepend it.
+                 * init.json historically stored paths as "sd/apps/foo.dap". */
+                char norm[sizeof(cur->path)];
+                snprintf(norm, sizeof(norm), "/%s", val);
+                strlcpy(cur->path, norm, sizeof(cur->path));
+            } else {
+                strlcpy(cur->path, val, sizeof(cur->path));
+            }
         } else if (strcmp(key, "restart") == 0) {
             cur->restart = parse_restart(val);
         }

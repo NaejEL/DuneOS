@@ -1,7 +1,0 @@
-{
-  "name": "mv",
-  "version": "0.1.0",
-  "required_abi_version": 1,
-  "permissions": 64,
-  "stack_size": 4096
-}
