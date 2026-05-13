@@ -1,23 +1,106 @@
 #include "duneos/init.h"
 #include "duneos/klog.h"
 
-#include "cJSON.h"
-
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 static const char *TAG = "duneos/init";
 
-#define INIT_JSON_BUF_MAX 2048
+#define INIT_BUF_MAX 2048
 
 static duneos_restart_policy_t parse_restart(const char *s)
 {
-    if (!s)                         return DUNEOS_RESTART_NO;
-    if (strcmp(s, "always") == 0)   return DUNEOS_RESTART_ALWAYS;
-    if (strcmp(s, "on-failure") == 0) return DUNEOS_RESTART_ON_FAILURE;
+    if (!s)                              return DUNEOS_RESTART_NO;
+    if (strcmp(s, "always") == 0)        return DUNEOS_RESTART_ALWAYS;
+    if (strcmp(s, "on-failure") == 0)    return DUNEOS_RESTART_ON_FAILURE;
     return DUNEOS_RESTART_NO;
+}
+
+/* Trim leading whitespace in-place, return pointer to first non-space. */
+static const char *ltrim(const char *s)
+{
+    while (*s && isspace((unsigned char)*s)) s++;
+    return s;
+}
+
+/*
+ * Minimal init.yaml parser.
+ *
+ * Accepts only the fixed schema used by DuneOS:
+ *
+ *   services:
+ *     - path: /sd/apps/shell.dap
+ *       restart: always
+ *     - path: /sd/apps/wifi.dap
+ *       restart: on-failure
+ *
+ * Rules:
+ *  - Lines starting with '#' are ignored.
+ *  - A line whose first non-space character is '-' starts a new service entry.
+ *  - "key: value" pairs are parsed for "path" and "restart".
+ *  - Indentation is not validated beyond detecting list items.
+ */
+static esp_err_t parse_yaml(char *buf, duneos_init_config_t *cfg)
+{
+    char *line = buf;
+    duneos_service_desc_t *cur = NULL;
+
+    while (*line) {
+        /* Find end of line */
+        char *eol = line;
+        while (*eol && *eol != '\n') eol++;
+        char saved = *eol;
+        *eol = '\0';
+
+        const char *trimmed = ltrim(line);
+
+        if (*trimmed == '#' || *trimmed == '\0') {
+            goto next_line;
+        }
+
+        /* New list item */
+        if (*trimmed == '-') {
+            if (cfg->count >= DUNEOS_MAX_SERVICES) {
+                klog_w(TAG, "init.yaml: more than %d services — ignoring extras",
+                       DUNEOS_MAX_SERVICES);
+                goto next_line;
+            }
+            cur = &cfg->services[cfg->count];
+            memset(cur, 0, sizeof(*cur));
+            cfg->count++;
+            trimmed = ltrim(trimmed + 1);   /* skip '-' and any space after it */
+            if (*trimmed == '\0') goto next_line;
+            /* Fall through: the same line may have "key: value" after '-' */
+        }
+
+        /* key: value */
+        const char *colon = strchr(trimmed, ':');
+        if (!colon || !cur) goto next_line;
+
+        char key[32];
+        size_t klen = (size_t)(colon - trimmed);
+        if (klen == 0 || klen >= sizeof(key)) goto next_line;
+        memcpy(key, trimmed, klen);
+        key[klen] = '\0';
+
+        const char *val = ltrim(colon + 1);
+
+        if (strcmp(key, "path") == 0) {
+            strlcpy(cur->path, val, sizeof(cur->path));
+        } else if (strcmp(key, "restart") == 0) {
+            cur->restart = parse_restart(val);
+        }
+        /* "services:" and unknown keys are silently skipped */
+
+next_line:
+        *eol = saved;
+        line = (*eol == '\n') ? eol + 1 : eol;
+    }
+
+    return cfg->count > 0 ? ESP_OK : ESP_FAIL;
 }
 
 esp_err_t duneos_init_load(duneos_init_config_t *cfg)
@@ -28,54 +111,23 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
     int fd = open(DUNEOS_INIT_PATH, O_RDONLY);
     if (fd < 0) return ESP_ERR_NOT_FOUND;
 
-    char *buf = malloc(INIT_JSON_BUF_MAX);
+    char *buf = malloc(INIT_BUF_MAX);
     if (!buf) { close(fd); return ESP_ERR_NO_MEM; }
 
-    ssize_t n = read(fd, buf, INIT_JSON_BUF_MAX - 1);
+    ssize_t n = read(fd, buf, INIT_BUF_MAX - 1);
     close(fd);
 
     if (n <= 0) { free(buf); return ESP_FAIL; }
     buf[n] = '\0';
 
-    cJSON *root = cJSON_ParseWithLength(buf, (size_t)n);
+    esp_err_t ret = parse_yaml(buf, cfg);
     free(buf);
-    if (!root) {
-        klog_e(TAG, "JSON parse error in %s", DUNEOS_INIT_PATH);
+
+    if (ret != ESP_OK) {
+        klog_e(TAG, "YAML parse error or empty services list in %s", DUNEOS_INIT_PATH);
         return ESP_FAIL;
     }
 
-    cJSON *services = cJSON_GetObjectItemCaseSensitive(root, "services");
-    if (!cJSON_IsArray(services)) {
-        klog_e(TAG, "init.json: 'services' array missing");
-        cJSON_Delete(root);
-        return ESP_FAIL;
-    }
-
-    cJSON *svc;
-    cJSON_ArrayForEach(svc, services) {
-        if (cfg->count >= DUNEOS_MAX_SERVICES) {
-            klog_w(TAG, "init.json: more than %d services — ignoring extras",
-                   DUNEOS_MAX_SERVICES);
-            break;
-        }
-
-        cJSON *path_item    = cJSON_GetObjectItemCaseSensitive(svc, "path");
-        cJSON *restart_item = cJSON_GetObjectItemCaseSensitive(svc, "restart");
-
-        if (!cJSON_IsString(path_item) || !path_item->valuestring) {
-            klog_w(TAG, "init.json: service entry missing 'path' — skipping");
-            continue;
-        }
-
-        duneos_service_desc_t *desc = &cfg->services[cfg->count];
-        strlcpy(desc->path, path_item->valuestring, sizeof(desc->path));
-        desc->restart = parse_restart(
-            cJSON_IsString(restart_item) ? restart_item->valuestring : NULL);
-
-        cfg->count++;
-    }
-
-    cJSON_Delete(root);
     klog_i(TAG, "loaded %d service(s) from %s", cfg->count, DUNEOS_INIT_PATH);
     return ESP_OK;
 }

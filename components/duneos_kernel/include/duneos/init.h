@@ -4,22 +4,20 @@
 #include "duneos/supervisor.h"
 
 /*
- * DuneOS init system — reads /sd/init.json and produces a list of services
+ * DuneOS init system — reads /sd/init.yaml and produces a list of services
  * for the supervisor to launch at boot.
  *
- * init.json format:
- *   {
- *     "version": 1,
- *     "services": [
- *       { "path": "/sd/apps/shell.dap", "restart": "no" },
- *       { "path": "/sd/apps/wifi.dap",  "restart": "always" }
- *     ]
- *   }
+ * init.yaml format:
+ *   services:
+ *     - path: /sd/apps/shell.dap
+ *       restart: no
+ *     - path: /sd/apps/wifi.dap
+ *       restart: always
  *
  * "restart" values: "no" (default), "always", "on-failure"
  */
 
-#define DUNEOS_INIT_PATH    "/sd/init.json"
+#define DUNEOS_INIT_PATH    "/sd/init.yaml"
 #define DUNEOS_MAX_SERVICES 8
 
 typedef struct {
