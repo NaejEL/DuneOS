@@ -33,7 +33,7 @@ def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
         return False
 
     cc     = tc["cc"]
-    cflags = build_cflags(arch, cpu)
+    cflags = build_cflags(arch, cpu, tc)
 
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
 

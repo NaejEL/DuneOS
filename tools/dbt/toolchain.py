@@ -47,10 +47,32 @@ def get_board_cpu() -> tuple[str, str]:
     return ("xtensa", cpu)
 
 
-def build_cflags(arch: str, cpu: str) -> list[str]:
-    if arch == "riscv":
-        return CFLAGS_COMMON + CFLAGS_RISCV + [f"-mcpu={cpu}"]
-    return CFLAGS_COMMON + CFLAGS_XTENSA
+def find_picolibc_include(tc: dict) -> Path | None:
+    """Return the PicoLibc include dir bundled with the toolchain, if present.
+
+    ESP-IDF v6 switched from Newlib to PicoLibc.  The two libraries use
+    different O_* / fcntl flag values (e.g. O_CREAT: newlib=0x200, picolibc=0x40).
+    Apps compiled with newlib headers would pass the wrong bits to the kernel
+    VFS, causing open() with O_CREAT to silently fail with ENOENT.
+    Adding -isystem <picolibc_include> ensures apps see the PicoLibc values.
+    """
+    cc = tc.get("cc")
+    if cc is None:
+        return None
+    # cc = .../xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc[.exe]
+    # picolibc include = .../xtensa-esp-elf/picolibc/include/
+    candidate = Path(cc).parent.parent / "picolibc" / "include"
+    return candidate if candidate.is_dir() else None
+
+
+def build_cflags(arch: str, cpu: str, tc: dict | None = None) -> list[str]:
+    flags = CFLAGS_COMMON + (CFLAGS_RISCV + [f"-mcpu={cpu}"] if arch == "riscv"
+                              else CFLAGS_XTENSA)
+    if tc:
+        picolibc = find_picolibc_include(tc)
+        if picolibc:
+            flags = [f"-isystem{picolibc}"] + flags
+    return flags
 
 
 def find_toolchain(arch: str = "xtensa", cpu: str = "esp32s3") -> dict[str, Path]:
