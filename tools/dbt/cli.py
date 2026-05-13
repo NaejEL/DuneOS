@@ -190,7 +190,7 @@ def cmd_buildall(args) -> None:
     sd_path  = Path(args.path) if args.path else None
     do_clean = getattr(args, "clean", False)
 
-    apps = find_apps(include_examples=getattr(args, "examples", False))
+    apps = find_apps(include_examples=True)
     if not apps:
         sys.exit("ERROR: no apps found under system/ (or examples/ with --examples)")
 
@@ -288,8 +288,6 @@ def main() -> None:
                             help="SD card mount point — if given, deploy after building")
     p_buildall.add_argument("--clean", action="store_true",
                             help="Clean each app's build directory before building")
-    p_buildall.add_argument("--examples", action="store_true",
-                            help="Also build apps under examples/")
     p_buildall.set_defaults(func=cmd_buildall)
 
     p_cleanall = sub.add_parser("cleanall", help="Remove build artefacts for all apps")
