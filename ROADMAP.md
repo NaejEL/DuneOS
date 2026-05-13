@@ -749,3 +749,86 @@ flash-constrained boards (e.g. 8 MB: kernel 1.5 MB + sysbin 1 MB + FAT 5.3 MB).
 | FAT SD filenames are 8.3 uppercase | Long filename support depends on FatFS LFN config |
 | BSP build-time validation | Missing pins do not yet cause CMake fatal error |
 | Shell `ls /` mount list is hardcoded | Should query a kernel-side mount registry via ABI |
+
+---
+
+# Architecture V2: The Path to Hardware Independence
+
+### The "Why DuneOS?" Manifesto
+*NuttX and Zephyr offer incredible POSIX and ANSI C compliance, but at the cost of a brutally steep learning curve (Kconfig hell, West, complex Device Trees). DuneOS targets the sweet spot: **The POSIX compliance of a true RTOS, paired with the frictionless Developer Experience (DX) of a Flipper Zero or Playdate.***
+
+App developers should never touch CMake or Kconfig. A simple YAML file and C code should be enough to compile, link, and deploy an app dynamically to any supported MCU.
+
+**Goal:** Evolve DuneOS from an ESP-IDF extension into a true baremetal RTOS alternative, focusing heavily on developer tooling, modularity, an isolated OSAL, and premium embedded features.
+
+## Phase 18 — OSAL & Platform Decoupling
+*Tear out FreeRTOS and ESP-IDF dependencies from the core kernel and drivers.*
+
+- **Architecture Restructuring**: Restructure the repository into a true OS tree:
+  - `arch/<cpu>/` (Context switching, ISR traps, boot code)
+  - `boards/<board>/` (Board specific init and pinmux)
+  - `osal/` (Core OS Abstraction Layer wrapping threads, mutexes, delays)
+- **The WiFi Blob Trick (Rust `esp-wifi` approach)**: To drop FreeRTOS on ESP32 while keeping WiFi, DuneOS will implement FreeRTOS API stubs (`xTaskCreate`, `xQueueCreate`) inside the OSAL. The closed-source Espressif WiFi blob will call these stubs, seamlessly routing to native DuneOS mechanisms.
+- **DuneOS VFS**: Replace `esp_vfs` with a custom lightweight VFS (`duneos_vfs`). Implement FD tracking, mount points, and directly wire FatFS/LittleFS.
+
+## Phase 19 — Syscall Vectorization & DuneLibc
+*Replace slow, string-based symbol resolution with a fast, deterministic syscall table.*
+
+- **Syscall Vector Table**: Define an architecture-agnostic fixed array of function pointers (`void **syscall_table`) passed to apps at startup.
+- **PicoLibc Integration**: Migrate to PicoLibc. It is significantly lighter and more suited for deeply embedded OSes than newlib.
+- **DuneLibc**: Create a minimalistic `libdune.a` that applications link against statically. It wraps standard POSIX calls (`read()`, `write()`) and translates them into syscall vector indices.
+
+## Phase 20 — Memory Sandbox & Core Dumps (Post-Mortem Debugging)
+*Prevent fragmentation, isolate apps, and provide world-class debugging.*
+
+- **Monolithic App Pools**: Apps declare `heap_size` in their manifest. The loader allocates a **single contiguous block** of RAM (`.text` + `.data` + `.bss` + `stack` + `heap`).
+- **TLSF Local Allocator**: `DuneLibc` implements a TLSF memory allocator. App `malloc()` calls operate strictly within the app's pre-allocated `heap` space. Zeros out kernel heap fragmentation.
+- **Syscall Boundary Validation**: Kernel syscall handlers validate that pointers passed from userspace strictly fall within the app's contiguous memory bounds (`-EFAULT`).
+- **Core Dumps**: On hardware exception/crash, the supervisor intercepts the fault and writes a `core.X` ELF file to `/sd/dumps/`. App restarts safely, and the developer can analyse the dump offline via GDB.
+
+## Phase 21 — Advanced IPC & POSIX Signals
+*Evolve beyond simple queues.*
+
+- **Advanced IPC**: Allow applications and daemons to communicate via Unix Domain Sockets (`AF_UNIX`) or a D-Bus lite publish/subscribe system.
+- **POSIX Signals**: 
+  - Hard signals (`SIGKILL`): Supervisor immediately purges the task, cleans up open FDs via the VFS, and frees the memory pool.
+  - Soft signals (`SIGINT`, `SIGHUP`): Implemented via OSAL Thread-Local Storage (TLS) flags. `DuneLibc` checks these flags upon returning from any blocking syscall and safely triggers registered handlers.
+
+## Phase 22 — Power Management & Shared Libraries
+*Optimise for battery life and RAM constrained devices.*
+
+- **Power Management Subsystem**: Implement a Wake Lock mechanism (`PM_LOCK_DISPLAY`, `PM_LOCK_CPU`). When all locks are released, the kernel transitions the MCU to Light/Deep sleep.
+- **Interrupt-Driven Input**: Rewrite `btn_gpio.c` and matrix scanners to use ISRs and Task Notifications instead of polling.
+- **Shared Libraries (`.dsl`)**: Extend the ELF loader to support DuneOS Shared Libraries (`libgfx`, `libui`) loaded once in RAM and linked dynamically by multiple running apps.
+
+## Phase 23 — Tooling & DX: The YAML Revolution
+*Consolidate `dbt.py` into a world-class build and package management tool.*
+
+- **Kill Kconfig for Users**: Keep Kconfig *only* for kernel compilation. Apps are configured entirely via `duneos.yaml` (replaces `manifest.json`).
+- **`dbt.py` as a Package Manager**: Introduce `dbt.py install <github-repo>`. Fetch and compile community `.dap` apps instantly.
+- **Emulator / Simulator**: Provide a native Linux/macOS build of the DuneOS kernel. App developers can run `dbt.py run --sim` to test their app locally using a mocked VFS and simulated display window (SDL/Wayland).
+
+## Phase 24 — USB Device Subsystem (The Flipper DX)
+*Make deployment seamless without removing the SD card.*
+
+- **TinyUSB Integration**: Integrate the TinyUSB stack into the kernel.
+- **Mass Storage Class (MSC)**: Expose the SD card filesystem natively over USB. Developers can drag & drop `.dap` files directly into the device from their OS.
+- **CDC (Serial)**: Expose `/dev/usb_cdc` for the DuneOS shell, freeing up the hardware UART for other uses.
+- **HID (Keyboard/Mouse)**: Allow DuneOS apps to act as USB input devices via `/dev/usb_hid`.
+
+## Phase 25 — Audio Subsystem
+*Bring sound to portable devices.*
+
+- **PCM Framework (`/dev/pcm`)**: Implement an ALSA-lite interface.
+- **Mixer Daemon**: A system service that opens the raw I2S/DAC hardware and exposes software channels so multiple apps can play audio simultaneously.
+- **SDK Libraries**: Provide `libwav.a` and `libsynth.a` for app developers.
+
+## Phase 26 — Hardware Crypto & Secure Enclave
+*Leverage hardware accelerators and protect the OS.*
+
+- **Crypto API (`/dev/crypto` & `/dev/urandom`)**: Expose hardware AES, SHA, and True Random Number Generators via a standard API so apps don't need to statically link heavy software crypto libraries (like mbedtls).
+- **Cryptographic Signatures**: Add Ed25519 signatures to `.dap` files via `dbt.py`. The loader verifies the signature against an embedded public key before execution.
+
+## Core vs Userland Repository Strategy
+- **Stay in Monorepo (`system/`)**: Core OS utilities (shell, `init`, `wifi_daemon`, `audio_mixer`).
+- **Move to Ecosystem (`apps/`)**: Third-party apps, complex UI demos, and games will eventually be migrated to a community-driven repository (e.g., `duneos-apps`), downloadable via `dbt.py`.
