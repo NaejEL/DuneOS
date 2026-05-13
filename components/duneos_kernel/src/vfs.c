@@ -2,6 +2,7 @@
 #include "duneos/klog.h"
 
 #include "esp_vfs_fat.h"
+#include "esp_littlefs.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "sdmmc_cmd.h"
@@ -11,19 +12,107 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <errno.h>
+
+/* DUNEOS_HAS_SD defaults to 1 (SD present) if not set by bspgen */
+#ifndef DUNEOS_HAS_SD
+#define DUNEOS_HAS_SD 1
+#endif
 
 static const char *TAG = "duneos/vfs";
 
-#define SD_MOUNT_POINT  "/sd"
-#define SD_MAX_FILES    8
+#define FLASH_MOUNT_POINT   "/flash"
+#define FLASH_PARTITION     "sysbin"
+#define SD_MOUNT_POINT      "/sd"
+#define SD_MAX_FILES        8
 
-static sdmmc_card_t *s_card = NULL;
-static bool          s_initialized = false;
+static sdmmc_card_t *s_card          = NULL;
+static bool          s_initialized   = false;
+static bool          s_flash_mounted = false;
+static bool          s_sd_mounted    = false;
+
+/* -------------------------------------------------------------------------
+ * Public availability queries
+ * ---------------------------------------------------------------------- */
+
+bool duneos_vfs_flash_available(void) { return s_flash_mounted; }
+bool duneos_vfs_sd_available(void)    { return s_sd_mounted;    }
+
+/* -------------------------------------------------------------------------
+ * Flash (LittleFS)
+ * ---------------------------------------------------------------------- */
+
+esp_err_t duneos_vfs_mount_flash(void)
+{
+    esp_vfs_littlefs_conf_t conf = {
+        .base_path              = FLASH_MOUNT_POINT,
+        .partition_label        = FLASH_PARTITION,
+        .format_if_mount_failed = true,
+        .dont_mount             = false,
+    };
+
+    esp_err_t err = esp_vfs_littlefs_register(&conf);
+    if (err != ESP_OK) {
+        klog_e(TAG, "LittleFS mount failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    s_flash_mounted = true;
+    klog_i(TAG, "LittleFS mounted at " FLASH_MOUNT_POINT);
+    return ESP_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * First-boot provisioning
+ * ---------------------------------------------------------------------- */
+
+esp_err_t duneos_vfs_provision_flash(void)
+{
+    if (g_duneos_blob_count == 0) return ESP_OK;
+
+    /* Ensure /flash/bin exists */
+    struct stat st;
+    if (stat(FLASH_MOUNT_POINT "/bin", &st) != 0) {
+        if (mkdir(FLASH_MOUNT_POINT "/bin", 0755) != 0 && errno != EEXIST) {
+            klog_w(TAG, "cannot create /flash/bin: %d", errno);
+            return ESP_FAIL;
+        }
+    }
+
+    for (int i = 0; i < g_duneos_blob_count; i++) {
+        char path[64];
+        snprintf(path, sizeof(path), FLASH_MOUNT_POINT "/bin/%s",
+                 g_duneos_blobs[i].name);
+
+        if (stat(path, &st) == 0) continue;  /* already provisioned */
+
+        int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0) {
+            klog_w(TAG, "cannot create %s: %d", path, errno);
+            continue;
+        }
+        ssize_t written = write(fd, g_duneos_blobs[i].data,
+                                g_duneos_blobs[i].size);
+        close(fd);
+
+        if (written != (ssize_t)g_duneos_blobs[i].size) {
+            klog_w(TAG, "partial write to %s", path);
+        } else {
+            klog_i(TAG, "provisioned %s (%u B)", path,
+                   (unsigned)g_duneos_blobs[i].size);
+        }
+    }
+
+    return ESP_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * SD card (FatFS over SPI)
+ * ---------------------------------------------------------------------- */
 
 esp_err_t duneos_vfs_mount_sd(void)
 {
-    esp_err_t err;
-
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = DUNEOS_SD_SPI_HOST;
 
@@ -36,17 +125,18 @@ esp_err_t duneos_vfs_mount_sd(void)
         .max_transfer_sz = 4096,
     };
 
-    err = spi_bus_initialize(DUNEOS_SD_SPI_HOST, &bus_cfg, SDSPI_DEFAULT_DMA);
+    esp_err_t err = spi_bus_initialize(DUNEOS_SD_SPI_HOST, &bus_cfg,
+                                       SDSPI_DEFAULT_DMA);
     if (err != ESP_OK) {
         klog_e(TAG, "SPI bus init failed: %s", esp_err_to_name(err));
         return err;
     }
 
     sdspi_device_config_t slot_cfg = SDSPI_DEVICE_CONFIG_DEFAULT();
-    slot_cfg.gpio_cs   = DUNEOS_SD_CS_PIN;
-    slot_cfg.host_id   = DUNEOS_SD_SPI_HOST;
+    slot_cfg.gpio_cs = DUNEOS_SD_CS_PIN;
+    slot_cfg.host_id = DUNEOS_SD_SPI_HOST;
 #if DUNEOS_SD_CD_PIN >= 0
-    slot_cfg.gpio_cd   = DUNEOS_SD_CD_PIN;
+    slot_cfg.gpio_cd = DUNEOS_SD_CD_PIN;
 #endif
 
     esp_vfs_fat_sdmmc_mount_config_t mount_cfg = {
@@ -59,34 +149,75 @@ esp_err_t duneos_vfs_mount_sd(void)
                                    &mount_cfg, &s_card);
     if (err != ESP_OK) {
         klog_e(TAG, "SD mount failed: %s", esp_err_to_name(err));
-        if (err == ESP_FAIL) {
+        if (err == ESP_FAIL)
             klog_e(TAG, "Is a FAT-formatted SD card inserted?");
-        }
         spi_bus_free(DUNEOS_SD_SPI_HOST);
         return err;
     }
 
+    s_sd_mounted = true;
     klog_i(TAG, "SD mounted at %s — %s %.1f GB",
-             SD_MOUNT_POINT,
-             s_card->cid.name,
-             (double)((uint64_t)s_card->csd.capacity * s_card->csd.sector_size)
-                 / (1024.0 * 1024.0 * 1024.0));
+           SD_MOUNT_POINT,
+           s_card->cid.name,
+           (double)((uint64_t)s_card->csd.capacity * s_card->csd.sector_size)
+               / (1024.0 * 1024.0 * 1024.0));
     return ESP_OK;
 }
+
+/* -------------------------------------------------------------------------
+ * board.info — written at boot so apps can discover hardware capabilities
+ * ---------------------------------------------------------------------- */
+
+#ifdef DUNEOS_HAVE_DISPLAY
+static void write_board_info(const char *path)
+{
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) return;
+
+    char buf[256];
+    int n = snprintf(buf, sizeof(buf),
+        "board: " DUNEOS_BOARD_NAME "\n"
+        "display: st7789\n"
+        "width: %u\n"
+        "height: %u\n"
+        "fb: %s\n",
+        (unsigned)DUNEOS_DISPLAY_WIDTH,
+        (unsigned)DUNEOS_DISPLAY_HEIGHT,
+#ifdef CONFIG_DUNEOS_DRV_FB
+        "true"
+#else
+        "false"
+#endif
+    );
+    write(fd, buf, n);
+    close(fd);
+}
+#endif
 
 /* duneos_vfs_mount_tmp() lives in vfs_tmp.c */
 /* duneos_vfs_mount_dev() lives in vfs_dev.c */
 
+/* -------------------------------------------------------------------------
+ * Top-level init / deinit
+ * ---------------------------------------------------------------------- */
+
 esp_err_t duneos_vfs_init(void)
 {
-    if (s_initialized) {
-        return ESP_ERR_INVALID_STATE;
-    }
+    if (s_initialized) return ESP_ERR_INVALID_STATE;
 
-    esp_err_t err;
-
-    err = duneos_vfs_mount_sd();
+    /* Flash is the primary storage — required for boot */
+    esp_err_t err = duneos_vfs_mount_flash();
     if (err != ESP_OK) return err;
+
+    /* Copy firmware-embedded blobs to /flash/bin/ on first boot */
+    duneos_vfs_provision_flash();
+
+#if DUNEOS_HAS_SD
+    /* SD is secondary — failure is non-fatal (flash is sufficient) */
+    err = duneos_vfs_mount_sd();
+    if (err != ESP_OK)
+        klog_w(TAG, "SD unavailable — running from /flash only");
+#endif
 
     err = duneos_vfs_mount_tmp();
     if (err != ESP_OK) return err;
@@ -95,48 +226,35 @@ esp_err_t duneos_vfs_init(void)
     if (err != ESP_OK) return err;
 
     s_initialized = true;
-    klog_i(TAG, "VFS ready (/sd /tmp /dev)");
 
 #ifdef DUNEOS_HAVE_DISPLAY
-    /* Write /sd/board.info so apps can discover display capabilities at runtime */
-    {
-        int fd = open("/sd/board.info", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        if (fd >= 0) {
-            char buf[192];
-            int n = snprintf(buf, sizeof(buf),
-                "board: " DUNEOS_BOARD_NAME "\n"
-                "display: st7789\n"
-                "width: %u\n"
-                "height: %u\n"
-                "fb: %s\n",
-                (unsigned)DUNEOS_DISPLAY_WIDTH,
-                (unsigned)DUNEOS_DISPLAY_HEIGHT,
-#ifdef CONFIG_DUNEOS_DRV_FB
-                "true"
-#else
-                "false"
-#endif
-            );
-            write(fd, buf, n);
-            close(fd);
-        }
-    }
+    write_board_info(FLASH_MOUNT_POINT "/board.info");
+    if (s_sd_mounted)
+        write_board_info(SD_MOUNT_POINT "/board.info");
 #endif
 
+    klog_i(TAG, "VFS ready (/flash%s /tmp /dev)",
+           s_sd_mounted ? " /sd" : "");
     return ESP_OK;
 }
 
 esp_err_t duneos_vfs_deinit(void)
 {
-    if (!s_initialized) {
-        return ESP_ERR_INVALID_STATE;
+    if (!s_initialized) return ESP_ERR_INVALID_STATE;
+
+    if (s_sd_mounted) {
+        esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, s_card);
+        spi_bus_free(DUNEOS_SD_SPI_HOST);
+        s_card       = NULL;
+        s_sd_mounted = false;
     }
 
-    esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, s_card);
-    spi_bus_free(DUNEOS_SD_SPI_HOST);
-    s_card = NULL;
-    s_initialized = false;
+    if (s_flash_mounted) {
+        esp_vfs_littlefs_unregister(FLASH_PARTITION);
+        s_flash_mounted = false;
+    }
 
+    s_initialized = false;
     klog_i(TAG, "VFS unmounted");
     return ESP_OK;
 }

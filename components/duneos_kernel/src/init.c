@@ -114,28 +114,37 @@ next_line:
 esp_err_t duneos_init_load(duneos_init_config_t *cfg)
 {
     if (!cfg) return ESP_ERR_INVALID_ARG;
-    cfg->count = 0;
 
-    int fd = open(DUNEOS_INIT_PATH, O_RDONLY);
-    if (fd < 0) return ESP_ERR_NOT_FOUND;
+    static const char *const paths[] = {
+        DUNEOS_INIT_PATH_FLASH,
+        DUNEOS_INIT_PATH_SD,
+        NULL,
+    };
 
     char *buf = malloc(INIT_BUF_MAX);
-    if (!buf) { close(fd); return ESP_ERR_NO_MEM; }
+    if (!buf) return ESP_ERR_NO_MEM;
 
-    ssize_t n = read(fd, buf, INIT_BUF_MAX - 1);
-    close(fd);
+    for (int i = 0; paths[i]; i++) {
+        int fd = open(paths[i], O_RDONLY);
+        if (fd < 0) continue;
 
-    if (n <= 0) { free(buf); return ESP_FAIL; }
-    buf[n] = '\0';
+        cfg->count = 0;
+        ssize_t n = read(fd, buf, INIT_BUF_MAX - 1);
+        close(fd);
 
-    esp_err_t ret = parse_yaml(buf, cfg);
-    free(buf);
+        if (n <= 0) continue;
+        buf[n] = '\0';
 
-    if (ret != ESP_OK) {
-        klog_e(TAG, "YAML parse error or empty services list in %s", DUNEOS_INIT_PATH);
-        return ESP_FAIL;
+        esp_err_t ret = parse_yaml(buf, cfg);
+        if (ret == ESP_OK && cfg->count > 0) {
+            free(buf);
+            klog_i(TAG, "loaded %d service(s) from %s", cfg->count, paths[i]);
+            return ESP_OK;
+        }
+
+        klog_w(TAG, "YAML parse error or empty services list in %s", paths[i]);
     }
 
-    klog_i(TAG, "loaded %d service(s) from %s", cfg->count, DUNEOS_INIT_PATH);
-    return ESP_OK;
+    free(buf);
+    return ESP_ERR_NOT_FOUND;
 }

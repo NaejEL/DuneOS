@@ -54,6 +54,7 @@ set(DUNEOS_KERNEL_REQUIRES
     esp_wifi
     esp_netif
     esp_event
+    joltwallet__littlefs
 )
 
 # --- Conditional driver sources --------------------------------------------
@@ -123,6 +124,37 @@ if(CONFIG_DUNEOS_DRV_RAW80211)
 endif()
 
 # ---------------------------------------------------------------------------
+# First-boot provisioning blobs (optional).
+# Place pre-built .dap files under firmware/blobs/ to embed them in the
+# firmware image.  At first boot, vfs.c copies any missing blob to /flash/bin/.
+# ---------------------------------------------------------------------------
+
+file(GLOB DUNEOS_FIRMWARE_BLOBS "${CMAKE_SOURCE_DIR}/firmware/blobs/*.dap")
+
+# Always generate blobs_gen.c; table is empty when no blobs are present.
+set(BLOBS_GEN_C "${CMAKE_CURRENT_BINARY_DIR}/blobs_gen.c")
+set(_BLOBS_EXTERN "")
+set(_BLOBS_ENTRIES "")
+foreach(BLOB_PATH ${DUNEOS_FIRMWARE_BLOBS})
+    get_filename_component(BLOB_FNAME "${BLOB_PATH}" NAME)
+    string(MAKE_C_IDENTIFIER "${BLOB_FNAME}" BLOB_SYM)
+    string(APPEND _BLOBS_EXTERN
+        "extern const uint8_t _binary_${BLOB_SYM}_start[];\n"
+        "extern const uint8_t _binary_${BLOB_SYM}_end[];\n")
+    string(APPEND _BLOBS_ENTRIES
+        "    { \"${BLOB_FNAME}\", _binary_${BLOB_SYM}_start, (size_t)(_binary_${BLOB_SYM}_end - _binary_${BLOB_SYM}_start) },\n")
+endforeach()
+file(WRITE "${BLOBS_GEN_C}"
+    "#include \"duneos/vfs.h\"\n\n"
+    "${_BLOBS_EXTERN}\n"
+    "const duneos_blob_entry_t g_duneos_blobs[] = {\n"
+    "${_BLOBS_ENTRIES}"
+    "};\n"
+    "const int g_duneos_blob_count = (int)(sizeof(g_duneos_blobs) / sizeof(g_duneos_blobs[0]));\n"
+)
+list(APPEND DUNEOS_KERNEL_SRCS "${BLOBS_GEN_C}")
+
+# ---------------------------------------------------------------------------
 
 idf_component_register(
     SRCS
@@ -135,6 +167,8 @@ idf_component_register(
         "src/drivers"
     REQUIRES
         ${DUNEOS_KERNEL_REQUIRES}
+    EMBED_FILES
+        ${DUNEOS_FIRMWARE_BLOBS}
 )
 
 # ieee80211_raw_frame_sanity_check in drv_raw80211.c shadows the symbol from

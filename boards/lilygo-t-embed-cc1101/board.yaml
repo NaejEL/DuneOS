@@ -5,6 +5,7 @@ board:
   flash_size_mb: 16
   psram_size_mb: 8
   psram_type: opi
+  console: usb_jtag
 
   uart:
     - id: 0

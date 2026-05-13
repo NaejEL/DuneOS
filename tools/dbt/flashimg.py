@@ -1,0 +1,253 @@
+"""
+flashimg — DuneOS sysbin LittleFS image builder and flasher
+============================================================
+
+Creates a 1 MB LittleFS image suitable for flashing to the 'sysbin' partition,
+then optionally flashes it directly to the device.
+
+Port is read from (in priority order):
+  1. --port CLI argument
+  2. .duneos_port file at the repo root  (echo COM13 > .duneos_port)
+  3. DUNEOS_PORT environment variable
+
+Requires:
+  pip install littlefs-python
+"""
+
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from .constants import DUNEOS_ROOT
+from .manifest import find_apps
+from .toolchain import get_board_cpu
+from .builder import build_single
+from .deploy import deploy_single
+
+_SYSBIN_SIZE   = 0x100000   # 1 MB — must match partitions.csv
+_LFS_BLOCK_SIZE = 4096
+_LFS_BLOCK_COUNT = _SYSBIN_SIZE // _LFS_BLOCK_SIZE   # 256
+_LFS_READ_SIZE  = 256
+_LFS_PROG_SIZE  = 256
+
+_PORT_FILE = DUNEOS_ROOT / ".duneos_port"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _find_port(cli_port: str | None) -> str | None:
+    """Resolve serial port: CLI arg > .duneos_port > DUNEOS_PORT env."""
+    if cli_port:
+        return cli_port
+    if _PORT_FILE.exists():
+        p = _PORT_FILE.read_text().strip()
+        if p:
+            return p
+    return os.environ.get("DUNEOS_PORT")
+
+
+def _get_sysbin_offset(board_name: str | None) -> int:
+    """Read sysbin partition offset from the board's (or root) partitions.csv."""
+    candidates = []
+    if board_name:
+        candidates.append(DUNEOS_ROOT / "boards" / board_name / "partitions.csv")
+    candidates.append(DUNEOS_ROOT / "partitions.csv")
+
+    for csv_path in candidates:
+        if not csv_path.exists():
+            continue
+        for line in csv_path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("#") or not line:
+                continue
+            parts = [x.strip() for x in line.split(",")]
+            if len(parts) >= 4 and parts[0] == "sysbin":
+                try:
+                    return int(parts[3], 16)
+                except ValueError:
+                    pass
+
+    # Fallback to the hardcoded default (8 MB board layout)
+    return 0x190000
+
+
+def _get_board_name() -> str | None:
+    board_file = DUNEOS_ROOT / ".duneos_board"
+    if board_file.exists():
+        return board_file.read_text().strip() or None
+    return None
+
+
+def _find_esptool() -> str | None:
+    """Locate esptool in PATH or via the DUNEOS_ESPTOOL env variable."""
+    override = os.environ.get("DUNEOS_ESPTOOL")
+    if override:
+        return override
+    for name in ("esptool.py", "esptool"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+def _create_image(staging_dir: Path, out_path: Path) -> None:
+    """Pack staging_dir into a LittleFS image at out_path."""
+    try:
+        from littlefs import LittleFS  # type: ignore
+    except ImportError:
+        sys.exit(
+            "ERROR: littlefs-python is not installed.\n"
+            "  pip install littlefs-python\n"
+            "Then re-run:  python dbt.py flashimg"
+        )
+
+    lfs = LittleFS(
+        block_size=_LFS_BLOCK_SIZE,
+        block_count=_LFS_BLOCK_COUNT,
+        read_size=_LFS_READ_SIZE,
+        prog_size=_LFS_PROG_SIZE,
+    )
+
+    for root, _dirs, files in os.walk(staging_dir):
+        rel_root = Path(root).relative_to(staging_dir)
+        lfs_dir = "/" + str(rel_root).replace("\\", "/") if str(rel_root) != "." else ""
+        if lfs_dir:
+            try:
+                lfs.mkdir(lfs_dir)
+            except Exception:
+                pass
+        for fname in files:
+            src = Path(root) / fname
+            lfs_path = (lfs_dir + "/" + fname) if lfs_dir else ("/" + fname)
+            data = src.read_bytes()
+            with lfs.open(lfs_path, "wb") as lf:
+                lf.write(data)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_bytes(bytes(lfs.context.buffer))
+
+
+# ---------------------------------------------------------------------------
+# Stage: collect .dap files + write a default init.yaml
+# ---------------------------------------------------------------------------
+
+def _stage(staging_dir: Path) -> int:
+    """
+    Copy all built system .dap files to staging_dir/bin/ and generate
+    a minimal /init.yaml for no-SD boot.  Returns the number of staged apps.
+    """
+    bin_dir = staging_dir / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+
+    apps = find_apps(include_examples=False)
+    staged = []
+
+    for app_dir, is_bin in apps:
+        if not is_bin:
+            continue
+        elf = app_dir / "build" / "app.elf"
+        if not elf.exists():
+            print(f"  [skip] {app_dir.name} — not built")
+            continue
+        from .manifest import load_manifest
+        try:
+            manifest = load_manifest(app_dir)
+        except SystemExit:
+            continue
+        app_name = manifest["name"]
+        dest = bin_dir / f"{app_name}.dap"
+        shutil.copy2(elf, dest)
+        print(f"  staged → /bin/{app_name}.dap")
+        staged.append(app_name)
+
+    # Generate a minimal init.yaml so the device boots without an SD card.
+    # shell.dap (restart: always) is the primary service; others are left to
+    # init.yaml on the SD card.
+    shell_present = "shell" in staged
+    services_yaml = ""
+    if shell_present:
+        services_yaml += "  - path: /flash/bin/shell.dap\n    restart: always\n"
+
+    init_yaml_content = (
+        "# DuneOS init — generated by dbt flashimg\n"
+        "# Edit /flash/init.yaml on the device to customise boot services.\n"
+        "services:\n"
+        + (services_yaml if services_yaml else "  # (no shell.dap found — add services manually)\n")
+    )
+    (staging_dir / "init.yaml").write_text(init_yaml_content)
+    print(f"  staged → /init.yaml")
+
+    return len(staged)
+
+
+# ---------------------------------------------------------------------------
+# Public command
+# ---------------------------------------------------------------------------
+
+def cmd_flashimg(args) -> None:
+    board_name = _get_board_name()
+
+    if getattr(args, "build", False):
+        print("Building system apps…")
+        arch, cpu = get_board_cpu()
+        from .toolchain import find_toolchain
+        tc = find_toolchain(arch, cpu)
+        apps = find_apps(include_examples=False)
+        for app_dir, is_bin in apps:
+            if not is_bin:
+                continue
+            if not build_single(app_dir, arch, cpu, tc):
+                print(f"  [FAIL] {app_dir.name}")
+        print()
+
+    staging_dir = DUNEOS_ROOT / "build" / "sysbin_staging"
+    if staging_dir.exists():
+        shutil.rmtree(staging_dir)
+
+    print("Staging apps…")
+    n = _stage(staging_dir)
+    print(f"  {n} app(s) staged\n")
+
+    out_path = DUNEOS_ROOT / "build" / "sysbin.bin"
+    print(f"Creating LittleFS image → {out_path.relative_to(DUNEOS_ROOT)}")
+    _create_image(staging_dir, out_path)
+    size_kb = out_path.stat().st_size // 1024
+    print(f"  {size_kb} KB  ({_SYSBIN_SIZE // 1024} KB partition)\n")
+
+    port = _find_port(getattr(args, "port", None))
+
+    if not port:
+        print("Image ready. To flash:")
+        print(f"  echo <PORT> > .duneos_port   # save for future use")
+        print(f"  python dbt.py flashimg --port <PORT>")
+        return
+
+    esptool = _find_esptool()
+    if not esptool:
+        print(f"Image ready at {out_path}")
+        print("ERROR: esptool not found in PATH.")
+        print("  Set DUNEOS_ESPTOOL=/path/to/esptool.py  or install it:")
+        print("  pip install esptool")
+        sys.exit(1)
+
+    offset = _get_sysbin_offset(board_name)
+    baud   = getattr(args, "baud", 460800)
+
+    cmd = [
+        esptool,
+        "--port", port,
+        "--baud", str(baud),
+        "write_flash",
+        hex(offset),
+        str(out_path),
+    ]
+    print(f"Flashing sysbin @ {hex(offset)} via {port}…")
+    print("  " + " ".join(cmd))
+    result = subprocess.run(cmd)
+    if result.returncode != 0:
+        sys.exit(f"esptool exited with code {result.returncode}")
+    print("\nFlash complete.")

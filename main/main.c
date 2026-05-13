@@ -78,7 +78,7 @@ static int launch_autoboot(void)
     duneos_loader_scan(apps, DUNEOS_MAX_APPS, &count);
 
     if (count == 0) {
-        klog_w(TAG, "no apps found in %s", DUNEOS_APPS_DIR);
+        klog_w(TAG, "no apps found in /flash/bin, /sd/bin or /sd/apps");
         return 0;
     }
 
@@ -100,7 +100,7 @@ void app_main(void)
     klog_i(TAG, "DuneOS " DUNEOS_VERSION_STRING " (ABI v%d)", DUNEOS_ABI_VERSION);
 
     if (duneos_vfs_init() != ESP_OK) {
-        klog_w(TAG, "VFS init failed — no SD card?");
+        klog_e(TAG, "VFS init failed — sysbin partition missing or corrupt");
         kernel_idle();
         return;
     }

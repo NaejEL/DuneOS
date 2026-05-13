@@ -12,20 +12,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Current dev board:** M5Stack CardPuter (ESP32-S3FN8 — 8 MB embedded flash, **no PSRAM**).
 **Reference board:** ESP32-S3-DevKitC (with PSRAM).
-**Toolchain:** ESP-IDF v5.5.1, CMake, `xtensa-esp32s3-elf-gcc`.
+**Toolchain:** ESP-IDF v6.0.1, CMake, `xtensa-esp32s3-elf-gcc`.
 
 ## Build & Test Commands
 
 ```bash
-# Select active board (gitignored, each dev sets their own)
-echo m5stack-cardputer > .duneos_board
+# First-time setup (or after switching boards):
+echo m5stack-cardputer > .duneos_board                       # gitignored, per-developer
+echo COM13 > .duneos_port                                    # gitignored, used by dbt flashimg
+python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml  # generates sdkconfig.board, partitions.csv, board_config.h, idf_target.txt
 
-# Build kernel (VS Code ESP-IDF extension: Ctrl+E B)
-# Flash + monitor (Ctrl+E F then Ctrl+E M, or combined Ctrl+E D)
-# Port is COM13 (configured in .vscode/settings.json)
+# Build kernel: idf.py build  (or IDE equivalent)
+# Flash kernel: idf.py -p COM13 flash
+# Monitor:      idf.py -p COM13 monitor
 
 # Clean when switching boards — sdkconfig is board-specific
-# Use VS Code: Ctrl+Shift+P → "ESP-IDF: Full Clean"
+# idf.py fullclean
 
 # Build the shell (system app, ships with DuneOS)
 cd system/shell
@@ -252,9 +254,11 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 14 — WiFi daemon + raw frame injection | **DONE** | `drv_wifi.c` kernel wrappers; `wifi_daemon.dap` (STA, backoff, reconnect); `duneos_netif_wait_ip()`; `/dev/raw80211` (`DUNEOS_PERM_NET_RAW`); `system/bin/ifconfig`; BSD socket exports |
 | Phase 15 — Multi-target portability | Not started | `libgfx` display-agnostic API; `board.info` written at boot; `dbt.py` backend selection |
 | Phase 16 — Shell refactor: built-ins vs PATH | **DONE** | Shell stripped to 6 built-ins (`cd`, `pwd`, `echo`, `exit`, `help`, `run`). 14 commands moved to `system/bin/` as `.dap` files. Args via `/tmp/.exec_args` (`bin_args.h`). `dbt.py deploy --bin` copies to `/sd/bin/`. |
-| Phase 17 — Flash app storage (`/flash`) | Not started | LittleFS partition (`sysbin`, ~1 MB) mounted at `/flash`; loader search order: `/flash/bin/` → `/sd/apps/`. Essential system apps (`shell.dap`, `ls.dap`, `cat.dap` …) embedded as binary blobs in the firmware image via `cmake_embed_binary` or `esptool` custom partition image — board boots and is usable with no SD card. `dbt.py flashimg` produces a ready-to-flash LittleFS image. BSP YAML gains `has_sd: false` to skip SD mount and rely solely on `/flash`. |
+| Phase 17 — Tooling DX | **DONE** | `dbt.py` split into sub-modules (`cli`, `builder`, `deploy`, `toolchain`, `manifest`); `duneos.yaml` replaces `manifest.json`; `init.yaml` replaces `init.json`; `bspgen.py` purged of ESP-IDF dep. |
+| Phase 18 — libgfx (display portability) | **DONE** | `/flash/board.info` (+ `/sd/board.info`) written at boot; `libgfx` display-agnostic API with `gfx_st7789` and `gfx_fb` backends; `dbt.py` selects backend from `.duneos_board`. |
+| Phase 19 — Flash storage (boot sans SD) | **DONE** | `sysbin` LittleFS partition (1 MB) at `/flash`; boot order: flash → SD; `duneos_vfs_provision_flash()` copies firmware-embedded blobs to `/flash/bin/`; init.yaml cascade (`/flash` then `/sd`); loader cascade (`/flash/bin/` → `/sd/bin/` → `/sd/apps/`); `bspgen` generates per-board `partitions.csv` from `flash_size_mb`; `DUNEOS_HAS_SD` flag; `dbt.py flashimg` builds LittleFS image and flashes directly (port from `.duneos_port` / `--port` / `DUNEOS_PORT`). |
 
-**Current state:** Phases 1–14 + 16 implemented. The kernel boots, mounts SD, reads `/sd/init.json` to launch services. The text shell (`system/shell/`) dispatches PATH commands to `system/bin/` `.dap` files via `/tmp/.exec_args`. The graphical shell (`system/g_shell/`) renders on `/dev/disp0` (ST7789, 8×8 font) and reads `/dev/input/event0`. WiFi is provided by `wifi_daemon.dap` (reads `/sd/wifi.conf`, calls `duneos_service_ready()`); apps use BSD `socket()` and are transport-agnostic. Raw 802.11 frame injection is available via `/dev/raw80211` (`CONFIG_DUNEOS_DRV_RAW80211=y`, opt-in). Stack canaries and per-app exception handlers remain as known technical debt.
+**Current state:** Phases 1–14, 16–19 implemented. The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. Stack canaries and per-app exception handlers remain as known technical debt.
 
 ## Key Technical Decisions
 
@@ -262,7 +266,9 @@ display-agnostic API with pluggable backends to restore source-level portability
 - **ELF format = ET_REL** (relocatable object), not ET_DYN. Same as Flipper Zero FAP.
 - **No manifest.json on SD** — manifest is a JSON string embedded in `.duneos_manifest` ELF section.
 - **VFS = ESP-IDF `esp_vfs_register`** reused, not reinvented.
-- **Board config** selected at build time via `.duneos_board` file → `boards/<board>/` directory.
+- **Board config** selected at build time via `.duneos_board` file → `boards/<board>/` directory. `bspgen.py` generates `board_config.h`, `sdkconfig.board`, `idf_target.txt`, and `partitions.csv` (sized to `flash_size_mb`).
+- **Flash-first VFS**: `/flash` (LittleFS, `sysbin` partition) is always mounted first and is fatal if absent. SD is optional (`DUNEOS_HAS_SD` in `board_config.h`, defaults 1). Init and scan cascade: `/flash` before `/sd`.
+- **Port config**: `.duneos_port` file at repo root (gitignored) stores the active serial port. `dbt.py flashimg` reads it; `--port` overrides; `DUNEOS_ESPTOOL` overrides the esptool binary path.
 - **PSRAM auto-detection**: `#ifdef CONFIG_SPIRAM` in loader.c — PSRAM boards allocate app sections in SPIRAM, others in DRAM.
 - **Xtensa relocations**: ET_REL uses RELA (with addend). Implemented: R_XTENSA_32, R_XTENSA_SLOT0_OP (L32R), R_XTENSA_ASM_EXPAND (ignored), R_XTENSA_DIFF8/16/32.
 - **`.bss` section**: SHT_NOBITS — not in ELF, allocated by loader + `memset(0)`.

@@ -29,6 +29,7 @@ from .manifest import load_manifest, find_apps, _is_bin_app
 from .toolchain import get_board_cpu, find_toolchain
 from .builder import build_single, clean_single, run
 from .deploy import deploy_single
+from .flashimg import cmd_flashimg
 
 # ---------------------------------------------------------------------------
 # App template — generates duneos.yaml
@@ -292,6 +293,28 @@ def main() -> None:
 
     p_cleanall = sub.add_parser("cleanall", help="Remove build artefacts for all apps")
     p_cleanall.set_defaults(func=cmd_cleanall)
+
+    p_flashimg = sub.add_parser(
+        "flashimg",
+        help="Build a LittleFS sysbin image and optionally flash it to the device",
+    )
+    p_flashimg.add_argument(
+        "--build", action="store_true",
+        help="Build all system apps before packaging",
+    )
+    p_flashimg.add_argument(
+        "--port",
+        help=(
+            "Serial port (e.g. COM13 or /dev/ttyUSB0). "
+            "Defaults to .duneos_port file or DUNEOS_PORT env var. "
+            "Omit to only build the image."
+        ),
+    )
+    p_flashimg.add_argument(
+        "--baud", type=int, default=460800,
+        help="Flash baud rate (default: 460800)",
+    )
+    p_flashimg.set_defaults(func=cmd_flashimg)
 
     args = parser.parse_args()
     args.func(args)

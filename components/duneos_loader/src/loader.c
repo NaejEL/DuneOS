@@ -1053,51 +1053,68 @@ out:
     return err;
 }
 
+/* Search order: flash takes priority over SD, bin/ over apps/. */
+static const char *const s_scan_dirs[] = {
+    "/flash/bin",
+    "/sd/bin",
+    "/sd/apps",
+    NULL,
+};
+
 esp_err_t duneos_loader_scan(duneos_app_info_t *list, int max, int *found)
 {
     if (!list || max <= 0 || !found) return ESP_ERR_INVALID_ARG;
     *found = 0;
 
-    DIR *dir = opendir(DUNEOS_APPS_DIR);
-    if (!dir) {
-        klog_w(TAG, "cannot open %s", DUNEOS_APPS_DIR);
-        return ESP_ERR_NOT_FOUND;
+    for (int d = 0; s_scan_dirs[d]; d++) {
+        DIR *dir = opendir(s_scan_dirs[d]);
+        if (!dir) continue;  /* directory absent — silently skip */
+
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != NULL && *found < max) {
+            size_t len = strlen(ent->d_name);
+            if (len < 5) continue;
+            const char *ext = ent->d_name + len - 4;
+            if (strcasecmp(ext, ".elf") != 0 && strcasecmp(ext, ".dap") != 0)
+                continue;
+
+            duneos_app_info_t *info = &list[*found];
+            snprintf(info->path, sizeof(info->path),
+                     "%s/%s", s_scan_dirs[d], ent->d_name);
+
+            esp_err_t err = read_manifest_from_file(info->path, &info->meta);
+            if (err != ESP_OK) {
+                klog_w(TAG, "skipping '%s': cannot read manifest", ent->d_name);
+                continue;
+            }
+
+            if (info->meta.required_abi_version > DUNEOS_ABI_VERSION) {
+                klog_w(TAG, "skipping '%s': requires ABI v%lu, kernel is v%d",
+                       ent->d_name,
+                       (unsigned long)info->meta.required_abi_version,
+                       DUNEOS_ABI_VERSION);
+                continue;
+            }
+
+            /* Dedup by app name — earlier directory wins (flash > SD). */
+            bool dup = false;
+            for (int j = 0; j < *found; j++) {
+                if (strcmp(list[j].meta.name, info->meta.name) == 0) {
+                    dup = true;
+                    break;
+                }
+            }
+            if (dup) continue;
+
+            klog_i(TAG, "  [%d] %s  v%s  %s",
+                   *found, info->meta.name, info->meta.version, info->path);
+            (*found)++;
+        }
+        closedir(dir);
     }
 
-    struct dirent *ent;
-    while ((ent = readdir(dir)) != NULL && *found < max) {
-        /* Accept .elf (development) and .dap (DuneOS Application Package) */
-        size_t len = strlen(ent->d_name);
-        if (len < 5) continue;
-        const char *ext = ent->d_name + len - 4;
-        if (strcasecmp(ext, ".elf") != 0 && strcasecmp(ext, ".dap") != 0) continue;
-
-        duneos_app_info_t *info = &list[*found];
-        snprintf(info->path, sizeof(info->path),
-                 "%s/%s", DUNEOS_APPS_DIR, ent->d_name);
-
-        esp_err_t err = read_manifest_from_file(info->path, &info->meta);
-        if (err != ESP_OK) {
-            klog_w(TAG, "skipping '%s': cannot read manifest", ent->d_name);
-            continue;
-        }
-
-        if (info->meta.required_abi_version > DUNEOS_ABI_VERSION) {
-            klog_w(TAG, "skipping '%s': requires ABI v%lu, kernel is v%d",
-                     ent->d_name,
-                     (unsigned long)info->meta.required_abi_version,
-                     DUNEOS_ABI_VERSION);
-            continue;
-        }
-
-        klog_i(TAG, "  [%d] %s  v%s  %s",
-                 *found, info->meta.name, info->meta.version, info->path);
-        (*found)++;
-    }
-
-    closedir(dir);
-    klog_i(TAG, "scan: %d app(s) found in %s", *found, DUNEOS_APPS_DIR);
-    return ESP_OK;
+    klog_i(TAG, "scan: %d app(s) found", *found);
+    return (*found > 0) ? ESP_OK : ESP_ERR_NOT_FOUND;
 }
 
 const duneos_app_info_t *duneos_loader_select(const duneos_app_info_t *list,

@@ -69,16 +69,17 @@ Une app qui dessine doit compiler et tourner identiquement sur CardPuter (ST7789
 
 ---
 
-### Phase 19 — Flash storage (Boot sans SD)
+### Phase 19 — Flash storage (Boot sans SD) ✅
 
 DuneOS doit booter et être utilisable même sans carte SD insérée.
 
-- [ ] **Partition `sysbin` LittleFS** dans `partitions.csv` (~1 MB) ; monter sur `/flash` dans `vfs.c`.
-- [ ] **Embed des apps vitales** (`shell.dap`, commandes `system/bin/`) en blobs firmware via `COMPONENT_EMBED_FILES`.
-- [ ] **First-boot provisioning** : Le noyau copie les blobs manquants vers `/flash/bin/` au premier démarrage.
-- [ ] **Cascade loader** : Chercher `/flash/bin/` → `/sd/bin/` → `/sd/apps/`.
-- [ ] **BSP YAML** : Champ `has_sd: false` ; `vfs.c` skip le montage SD et lit `init.yaml` depuis `/flash`.
-- [ ] **`dbt.py flashimg`** : Produit une image LittleFS flashable via `esptool.py`.
+- [x] **Partition `sysbin` LittleFS** dans `partitions.csv` (~1 MB) ; monter sur `/flash` dans `vfs.c`.
+- [x] **Embed des apps vitales** (`shell.dap`, commandes `system/bin/`) en blobs firmware via `COMPONENT_EMBED_FILES`.
+- [x] **First-boot provisioning** : Le noyau copie les blobs manquants vers `/flash/bin/` au premier démarrage.
+- [x] **Cascade loader** : Chercher `/flash/bin/` → `/sd/bin/` → `/sd/apps/`.
+- [x] **BSP YAML** : Champ `has_sd: false` ; `vfs.c` skip le montage SD et lit `init.yaml` depuis `/flash`.
+- [x] **`dbt.py flashimg`** : Produit une image LittleFS flashable directement via `esptool` (port depuis `.duneos_port` / `--port` / `DUNEOS_PORT`).
+- [x] **`bspgen.py`** : Génère `partitions.csv` par board depuis `flash_size_mb` ; `sdkconfig.board` remplace les `sdkconfig.defaults` manuscrits.
 
 ---
 

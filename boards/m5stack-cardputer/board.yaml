@@ -3,6 +3,7 @@ board:
   cpu: esp32s3
   # ESP32-S3FN8: 8MB embedded flash (octal), NO external PSRAM
   flash_size_mb: 8
+  console: usb_jtag
   psram_size_mb: 0
 
   uart:

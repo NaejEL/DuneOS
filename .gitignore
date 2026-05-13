@@ -1,9 +1,15 @@
 build/
+
+# Per-developer board/port selection
 .duneos_board
+.duneos_port
+
 sdkconfig
 sdkconfig.old
+
 # Board-change detection stamp (written by CMakeLists.txt at configure time)
 duneos_last_board.stamp
+
 *.pyc
 __pycache__/
 .vscode/
@@ -11,5 +17,15 @@ __pycache__/
 *.swo
 *.o
 *.d
+
 # IDF Component Manager — downloaded deps (like node_modules)
 managed_components/
+
+# BSP generator artefacts — re-generated from boards/*/board.yaml, never committed
+boards/*/board_config.h
+boards/*/sdkconfig.board
+boards/*/partitions.csv
+boards/*/idf_target.txt
+
+# Root partitions.csv superseded by per-board generation
+partitions.csv
