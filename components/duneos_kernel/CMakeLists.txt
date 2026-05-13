@@ -49,8 +49,7 @@ set(DUNEOS_KERNEL_REQUIRES
     esp_system
     fatfs
     vfs
-    newlib
-    json
+    esp_libc
     nvs_flash
     esp_wifi
     esp_netif

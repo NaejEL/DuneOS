@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -45,7 +46,7 @@
 #define SYM(n, p)         { (n), (void *)(p), 0 }
 #define SYM_P(n, p, perm) { (n), (void *)(p), (perm) }
 
-extern int *__errno(void);   /* newlib errno accessor — needed by any code that uses errno */
+extern int *__errno(void);   /* libc errno accessor — needed by any code that uses errno */
 
 /* GCC soft-float / 64-bit runtime support — Xtensa has no 64-bit divide hw */
 typedef long long          s_di_t;
@@ -56,6 +57,18 @@ extern u_di_t __udivdi3(u_di_t, u_di_t);
 extern u_di_t __umoddi3(u_di_t, u_di_t);
 void duneos_exit(int code);
 int  duneos_nanosleep(const struct timespec *req, struct timespec *rem);
+/* dprintf not in PicoLibc — implement via vsnprintf + write */
+static int duneos_dprintf(int fd, const char *fmt, ...)
+{
+    char buf[256];
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    if (n > 0) write(fd, buf, (size_t)n);
+    return n;
+}
+
 /* dup/dup2 are static inline in ESP-IDF newlib — implement via fcntl */
 static int duneos_dup(int fd)
 {
@@ -92,7 +105,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("dup",          duneos_dup ),
     SYM("dup2",         duneos_dup2),
     SYM("fcntl",        fcntl      ),
-    SYM("dprintf",      dprintf   ),
+    SYM("dprintf",      duneos_dprintf),
     SYM("ioctl",        ioctl     ),
 
     /* ------------------------------------------------------------------ */

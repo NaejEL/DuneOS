@@ -11,3 +11,5 @@ __pycache__/
 *.swo
 *.o
 *.d
+# IDF Component Manager — downloaded deps (like node_modules)
+managed_components/
