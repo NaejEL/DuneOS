@@ -8,6 +8,10 @@
 
 #include "board_config.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+
 static const char *TAG = "duneos/vfs";
 
 #define SD_MOUNT_POINT  "/sd"
@@ -92,6 +96,33 @@ esp_err_t duneos_vfs_init(void)
 
     s_initialized = true;
     klog_i(TAG, "VFS ready (/sd /tmp /dev)");
+
+#ifdef DUNEOS_HAVE_DISPLAY
+    /* Write /sd/board.info so apps can discover display capabilities at runtime */
+    {
+        int fd = open("/sd/board.info", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd >= 0) {
+            char buf[192];
+            int n = snprintf(buf, sizeof(buf),
+                "board: " DUNEOS_BOARD_NAME "\n"
+                "display: st7789\n"
+                "width: %u\n"
+                "height: %u\n"
+                "fb: %s\n",
+                (unsigned)DUNEOS_DISPLAY_WIDTH,
+                (unsigned)DUNEOS_DISPLAY_HEIGHT,
+#ifdef CONFIG_DUNEOS_DRV_FB
+                "true"
+#else
+                "false"
+#endif
+            );
+            write(fd, buf, n);
+            close(fd);
+        }
+    }
+#endif
+
     return ESP_OK;
 }
 

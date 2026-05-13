@@ -1,6 +1,7 @@
 from pathlib import Path
 
 DUNEOS_ROOT       = Path(__file__).resolve().parent.parent.parent
+SDK_DIR           = DUNEOS_ROOT / "sdk"
 SDK_INCLUDE       = DUNEOS_ROOT / "components" / "duneos_kernel" / "include"
 
 MANIFEST_YAML_FILE = "duneos.yaml"

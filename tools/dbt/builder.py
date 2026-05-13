@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, LDFLAGS
+from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, SDK_DIR, LDFLAGS
 from .manifest import load_manifest, validate_manifest
 from .toolchain import build_cflags
 
@@ -36,6 +36,25 @@ def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
     cflags = build_cflags(arch, cpu)
 
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
+
+    # Extra sources declared in duneos.yaml — supports $SDK/ prefix
+    extra_sources = manifest.get("sources", [])
+    extra_includes = set()
+    for entry in extra_sources:
+        entry = str(entry)
+        if entry.startswith("$SDK/"):
+            p = SDK_DIR / entry[len("$SDK/"):]
+        else:
+            p = app_dir / entry
+        if not p.exists():
+            print(f"  ERROR: source not found: {p}", file=sys.stderr)
+            return False
+        sources.append(p)
+        # Auto-add include/<duneos/> sibling of sdk/*/gfx.c → sdk/*/include
+        sdk_inc = p.parent / "include"
+        if sdk_inc.is_dir():
+            extra_includes.add(sdk_inc)
+
     if not sources:
         print(f"  ERROR: no .c files in {app_dir}", file=sys.stderr)
         return False
@@ -50,6 +69,8 @@ def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
     sources = [manifest_c] + list(sources)
 
     includes = [f"-I{SDK_INCLUDE}", f"-I{app_dir}"]
+    for inc in sorted(extra_includes):
+        includes.append(f"-I{inc}")
 
     objects = []
     for src in sources:

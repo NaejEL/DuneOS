@@ -1,0 +1,7 @@
+name: gfx_demo
+version: "0.1.0"
+required_abi_version: 1
+permissions: 0
+stack_size: 8192
+sources:
+  - $SDK/display/gfx.c
