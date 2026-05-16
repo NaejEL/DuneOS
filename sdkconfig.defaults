@@ -15,3 +15,9 @@ CONFIG_ESP_TASK_WDT_TIMEOUT_S=5
 # FatFS LFN — required for filenames with >3-char extensions (e.g. .json, .dap)
 CONFIG_FATFS_LFN_HEAP=y
 CONFIG_FATFS_MAX_LFN=255
+
+# Phase 20: FreeRTOS stack canary — fills bottom of each task stack with 0xa5a5a5a5
+# and checks it at every context switch. vApplicationStackOverflowHook fires on
+# overflow and gives the supervisor a chance to kill the app without kernel reboot.
+CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y
+

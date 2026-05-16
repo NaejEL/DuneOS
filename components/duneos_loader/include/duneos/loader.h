@@ -91,3 +91,11 @@ void duneos_loader_unload(duneos_app_t *app);
 
 /* Return a pointer to the app's parsed manifest (valid until unload). */
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
+
+/*
+ * Return the base address and size of the app's monolithic data pool
+ * (rodata + data + bss).  Valid until duneos_loader_unload().
+ * Used by the supervisor for syscall pointer bounds checking.
+ */
+void duneos_loader_get_data_pool(const duneos_app_t *app,
+                                  uintptr_t *base, size_t *size);

@@ -46,6 +46,8 @@ typedef void duneos_app_t;
 extern int  duneos_loader_load(const char *path, duneos_app_t **out);
 extern int  duneos_loader_run(duneos_app_t *app);
 extern void duneos_loader_unload(duneos_app_t *app);
+extern int  duneos_supervisor_launch(const char *path);
+extern int  duneos_supervisor_running_count(void);
 
 /* ----- configuration ----------------------------------------------------- */
 
@@ -245,13 +247,19 @@ static void cmd_run(int argc, char **argv)
         if (stat(path, &st) != 0) resolve_path(name, path, sizeof(path));
     }
 
-    duneos_app_t *app = NULL;
-    if (duneos_loader_load(path, &app) != 0) {
-        shell_printf("run: cannot load '%s'\r\n", path);
+    /* Launch via supervisor so the app gets its own FreeRTOS task.
+     * Direct duneos_loader_run() here runs app_main in the shell task;
+     * if the app calls duneos_exit() that kills the shell task. */
+    int count_before = duneos_supervisor_running_count();
+    if (duneos_supervisor_launch(path) != 0) {
+        shell_printf("run: cannot launch '%s'\r\n", path);
         return;
     }
-    duneos_loader_run(app);
-    duneos_loader_unload(app);
+    /* Brief delay to let xTaskCreate() complete before polling */
+    usleep(50000);
+    /* Block until the launched app finishes */
+    while (duneos_supervisor_running_count() > count_before)
+        usleep(100000);
 }
 
 static void cmd_help(void)

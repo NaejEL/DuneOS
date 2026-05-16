@@ -13,6 +13,13 @@
  *   Each running slot has a FreeRTOS queue (mailbox). duneos_send() looks up
  *   the target slot by name. duneos_recv() looks up the calling task's slot.
  *   Both are O(DUNEOS_MAX_RUNNING_APPS) — fine for a small embedded system.
+ *
+ * Phase 20 — Memory hardening:
+ *   - Per-app heap pool (multi_heap_register) for malloc isolation
+ *   - Software WDT: supervisor checks every 500 ms, app calls duneos_wdt_reset()
+ *   - Stack overflow hook: kills app task, kernel survives
+ *   - CPU exception handler (Xtensa): forced-exit recovery without kernel reboot
+ *   - Syscall pointer validation: NULL + peripheral range check
  */
 
 #include "duneos/supervisor.h"
@@ -22,9 +29,21 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
+#include "freertos/timers.h"
+
+#include "esp_heap_caps.h"
+#include "esp_system.h"
+#include "multi_heap.h"
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+#include "xtensa_api.h"       /* xt_set_exception_handler / xt_exc_handler */
+#include "xtensa/corebits.h"  /* EXCCAUSE_*, XCHAL_EXCCAUSE_NUM */
+#include "esp_rom_sys.h"
+#endif
 
 static const char *TAG = "duneos/supervisor";
 
@@ -47,6 +66,24 @@ typedef struct {
     char                    restart_path[DUNEOS_PATH_MAX];
     uint32_t                restart_count;
     bool                    force_restart;
+
+    /* Phase 20: per-app heap pool */
+    uint8_t            *heap_pool_buf;   /* raw buffer for this app's heap */
+    size_t              heap_pool_size;
+    multi_heap_handle_t heap_handle;     /* NULL when heap_size == 0 */
+
+    /* Phase 20: data pool bounds (from loader, for bounds checking) */
+    uintptr_t           data_pool_base;
+    size_t              data_pool_size;
+
+    /* Phase 20: crash recovery — set by exception/overflow/WDT handlers */
+    bool                crashed;    /* prevents double-post from WDT on already-killed slot */
+    uint32_t            exc_cause;  /* Xtensa EXCCAUSE at crash */
+    uint32_t            exc_pc;     /* PC at crash */
+
+    /* Phase 20: software WDT */
+    TickType_t          wdt_timeout_ticks;  /* 0 = disabled */
+    TickType_t          wdt_last_kick_tick;
 } app_slot_t;
 
 typedef struct {
@@ -64,8 +101,24 @@ static SemaphoreHandle_t s_lock;
 static int               s_active_count = 0;
 /* Counts slots in the unload→relaunch window to prevent spurious all_done */
 static int               s_want_restart = 0;
+static TimerHandle_t     s_wdt_timer;
+
+/* Minimum pool size accepted by multi_heap_register (internal requirement) */
+#define MULTI_HEAP_MIN_SIZE  64u
+
+/* WDT check interval for the software timer */
+#define DUNEOS_WDT_CHECK_MS  500u
 
 /* ----- slot helpers ------------------------------------------------------ */
+
+/* Lock-free scan: safe from ISR/exception context (O(4), read-only). */
+static app_slot_t *slot_by_task_unsafe(TaskHandle_t t)
+{
+    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
+        if (s_slots[i].task == t) return &s_slots[i];
+    }
+    return NULL;
+}
 
 static app_slot_t *slot_by_task(TaskHandle_t t)
 {
@@ -92,16 +145,145 @@ static app_slot_t *slot_alloc(void)
     return NULL;
 }
 
+/* ----- forward declarations ---------------------------------------------- */
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+static void register_exc_handlers(void *arg);
+#endif
+
 /* ----- app task wrapper -------------------------------------------------- */
 
 static void app_task_entry(void *arg)
 {
     app_slot_t *slot = (app_slot_t *)arg;
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Ensure exception handlers are installed on whichever core this task
+     * landed on.  _xtos_set_exception_handler is per-core, so this must run
+     * on the actual executing core before any app code runs. */
+    register_exc_handlers(NULL);
+#endif
+
     klog_d(TAG, "starting '%s'", slot->name);
+    slot->crashed = false;
     s_loader_ops.run(slot->app);
-    /* app_main returned without calling duneos_exit — treat as exit(0) */
+    /* app_main returned without calling duneos_exit — treat as exit(0).
+     * duneos_supervisor_app_exited deletes the task before returning, so
+     * the exec pool is never accessed again after this call. */
     duneos_supervisor_app_exited(0);
-    vTaskDelete(NULL);
+}
+
+/* ----- Phase 20: Xtensa CPU exception handler ---------------------------- */
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+
+static xt_exc_handler s_orig_exc[XCHAL_EXCCAUSE_NUM];
+
+/* Causes we intercept for app recovery. */
+static const int s_exc_causes[] = {
+    EXCCAUSE_ILLEGAL,
+    EXCCAUSE_DIVIDE_BY_ZERO,
+    EXCCAUSE_LOAD_PROHIBITED,
+    EXCCAUSE_STORE_PROHIBITED,
+};
+#define NUM_EXC_CAUSES  ((int)(sizeof(s_exc_causes)/sizeof(s_exc_causes[0])))
+
+/* Landing pad after CPU exception recovery.
+ * The exception handler redirects frame->pc here before returning so that rfe
+ * resumes at this function with normal PS (INTLEVEL=0, no EXCM, task context).
+ *
+ * We notify the supervisor via xQueueSend (not xQueueSendFromISR) because the
+ * exception fired at INTLEVEL=0 — we are in task context without the kernel
+ * lock.  On SMP, calling xQueueSendFromISR from the exception handler (which
+ * only masks interrupts via INTLEVEL, not via the kernel spinlock) races with
+ * xTaskIncrementTick on the other core, which holds the kernel lock while
+ * iterating the delayed-task list.  That race leaves uxNumberOfItems=1 with
+ * self-referential list pointers, causing the next tick to read a phantom TCB
+ * and crash with LoadProhibited. */
+static void safe_app_exit(void)
+{
+    duneos_supervisor_app_exited(DUNEOS_EXIT_CRASHED);
+}
+
+static void app_exception_handler(XtExcFrame *frame)
+{
+    TaskHandle_t t    = xTaskGetCurrentTaskHandle();
+    app_slot_t  *slot = slot_by_task_unsafe(t);
+
+    /* frame->ps bits 0-3 = PS.INTLEVEL.  Non-zero means the exception fired
+     * inside an ISR or critical section; we cannot safely redirect frame->pc
+     * because rfe would resume the wrong stack.  Fall through to the original
+     * panic handler so the kernel reboots cleanly in that case. */
+    bool in_task_context = ((frame->ps & 0xFu) == 0u);
+
+    if (slot && slot->active && !slot->crashed && in_task_context) {
+        slot->crashed   = true;
+        slot->exc_cause = frame->exccause;
+        slot->exc_pc    = frame->pc;
+        esp_rom_printf("[KERN] app '%s' exception cause=%lu PC=0x%08lx — killing\n",
+                       slot->name,
+                       (unsigned long)frame->exccause,
+                       (unsigned long)frame->pc);
+        /* Redirect to safe_app_exit; supervisor notification happens there from
+         * task context with proper FreeRTOS kernel-lock semantics. */
+        frame->pc = (uint32_t)safe_app_exit;
+        return;
+    }
+
+    /* Kernel task or unrecognised — call the original handler (panic/reboot) */
+    int cause = (int)frame->exccause;
+    if (cause >= 0 && cause < XCHAL_EXCCAUSE_NUM && s_orig_exc[cause])
+        s_orig_exc[cause](frame);
+    esp_system_abort("unhandled kernel CPU exception");
+}
+
+/* Per-core flag: true once handlers have been installed on that core. */
+static bool s_exc_registered[portNUM_PROCESSORS];
+
+/* Register our exception handlers on the calling core.
+ * Safe to call multiple times: idempotent after the first registration.
+ * s_orig_exc[] is updated only the first time a given cause is registered
+ * (i.e. when prev != app_exception_handler), so the real fallback handler
+ * is preserved regardless of which core registers first. */
+static void register_exc_handlers(void *arg)
+{
+    (void)arg;
+    int core = (int)xPortGetCoreID();
+    if (s_exc_registered[core]) return;
+    s_exc_registered[core] = true;
+
+    for (int i = 0; i < NUM_EXC_CAUSES; i++) {
+        int c = s_exc_causes[i];
+        xt_exc_handler prev = xt_set_exception_handler(c, app_exception_handler);
+        /* Only save when prev is not already our handler: preserves the real
+         * original (ESP-IDF panic) even if called multiple times. */
+        if (prev != app_exception_handler)
+            s_orig_exc[c] = prev;
+    }
+}
+
+#endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
+
+/* ----- Phase 20: FreeRTOS stack overflow hook ---------------------------- */
+
+/* Called from ISR (tick) context when FreeRTOS detects stack canary corruption.
+ * We post a forced exit to the supervisor queue so it can vTaskDelete the
+ * offending task and free its resources.  Kernel tasks abort normally. */
+void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
+{
+    app_slot_t *slot = slot_by_task_unsafe(task);
+    if (slot && slot->active && !slot->crashed) {
+        slot->crashed = true;
+        esp_rom_printf("[KERN] stack overflow: app '%s' (task '%s') — killing\n",
+                       slot->name, name);
+        BaseType_t woken = pdFALSE;
+        exit_msg_t msg   = { .task = task, .code = DUNEOS_EXIT_STACK_OVF,
+                             .forced = true };
+        xQueueSendFromISR(s_exit_queue, &msg, &woken);
+        portYIELD_FROM_ISR(woken);
+        return;
+    }
+    esp_system_abort("kernel task stack overflow");
 }
 
 /* ----- helpers ----------------------------------------------------------- */
@@ -115,6 +297,47 @@ static void maybe_signal_all_done(void)
     if (all_done) xSemaphoreGive(s_all_done);
 }
 
+static void slot_heap_free(app_slot_t *slot)
+{
+    if (slot->heap_pool_buf) {
+        if (slot->heap_handle) {
+            bool pool_ok = multi_heap_check(slot->heap_handle, false);
+            if (!pool_ok)
+                klog_e(TAG, "slot_heap_free: per-app heap corrupted before free!");
+        }
+        heap_caps_free(slot->heap_pool_buf);
+        slot->heap_pool_buf  = NULL;
+        slot->heap_handle    = NULL;
+        slot->heap_pool_size = 0;
+    }
+}
+
+/* ----- WDT timer callback ------------------------------------------------ */
+
+/* Runs in the FreeRTOS timer-daemon task context (a proper task, not an ISR).
+ * Using a timer here — instead of blocking the supervisor on a finite-timeout
+ * xQueueReceive — keeps the supervisor task out of the FreeRTOS delayed-task
+ * list.  If the supervisor used xQueueReceive(500ms) it would be inserted into
+ * xDelayedTaskList every cycle; hardware ISRs (SPI DMA, keyboard scan) that
+ * call xQueueSendFromISR concurrently with xTaskIncrementTick on the other
+ * core can race on that list without holding the kernel spinlock, corrupting
+ * uxNumberOfItems and crashing with LoadProhibited inside xTaskIncrementTick. */
+static void wdt_timer_cb(TimerHandle_t timer)
+{
+    (void)timer;
+    TickType_t now = xTaskGetTickCount();
+    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
+        app_slot_t *s = &s_slots[i];
+        if (!s->active || !s->wdt_timeout_ticks || s->crashed) continue;
+        if ((now - s->wdt_last_kick_tick) >= s->wdt_timeout_ticks) {
+            s->crashed = true;
+            esp_rom_printf("[KERN] WDT: app '%s' timeout\n", s->name);
+            exit_msg_t msg = { .task = s->task, .code = DUNEOS_EXIT_WDT, .forced = true };
+            xQueueSend(s_exit_queue, &msg, 0);
+        }
+    }
+}
+
 /* ----- supervisor task --------------------------------------------------- */
 
 static void supervisor_task(void *arg)
@@ -123,14 +346,17 @@ static void supervisor_task(void *arg)
     exit_msg_t msg;
 
     while (1) {
-        if (xQueueReceive(s_exit_queue, &msg, portMAX_DELAY) != pdTRUE) continue;
+        xQueueReceive(s_exit_queue, &msg, portMAX_DELAY);
 
         xSemaphoreTake(s_lock, portMAX_DELAY);
 
         app_slot_t *slot = slot_by_task(msg.task);
         if (!slot) {
             xSemaphoreGive(s_lock);
-            klog_w(TAG, "exit from unknown task — ignoring");
+            /* Expected after WDT/crash: supervisor already cleared the slot for
+             * a forced exit, then the app's own duneos_exit() message arrives. */
+            klog_d(TAG, "stale exit (task=%p code=%d forced=%d) — ignoring",
+                   msg.task, msg.code, msg.forced);
             continue;
         }
 
@@ -153,14 +379,17 @@ static void supervisor_task(void *arg)
                               (policy == DUNEOS_RESTART_ON_FAILURE && code != 0);
 
         /* Kill the task before releasing the lock so we stop its execution
-         * before unloading its code. Only needed for forced restarts — in the
-         * normal exit path the app task already deleted itself via vTaskDelete(NULL). */
+         * before unloading its code. Only needed for forced exits (stack
+         * overflow, WDT, external restart) — in the normal path the app task
+         * already deleted itself via vTaskDelete(NULL). */
         if (msg.forced) vTaskDelete(msg.task);
 
-        slot->force_restart = false;
-        slot->app     = NULL;
-        slot->mailbox = NULL;
-        slot->active  = false;
+        slot->force_restart      = false;
+        slot->app                = NULL;
+        slot->mailbox            = NULL;
+        slot->task               = NULL;
+        slot->active             = false;
+        slot->wdt_timeout_ticks  = 0;   /* prevent stale WDT fire during reload */
         s_active_count--;
         if (should_restart) {
             slot->restart_count++;
@@ -169,15 +398,20 @@ static void supervisor_task(void *arg)
 
         xSemaphoreGive(s_lock);
 
-        klog_i(TAG, "'%s' exited (code %d)%s", name, code,
+        /* klog_e is forwarded to ESP_LOGE → visible on serial console */
+        klog_e(TAG, "'%s' exited (code %d)%s", name, code,
                should_restart ? " — restarting" : "");
 
         s_loader_ops.unload(app);
+        slot_heap_free(slot);           /* Phase 20: free per-app heap pool */
         if (mailbox) vQueueDelete(mailbox);
 
         if (should_restart) {
             /* Relaunch inherits same policy so restarts persist */
-            duneos_supervisor_launch_policy(rpath, policy);
+            esp_err_t rerr = duneos_supervisor_launch_policy(rpath, policy);
+            if (rerr != ESP_OK)
+                klog_e(TAG, "'%s' relaunch FAILED (err %d) — service will not restart",
+                       name, rerr);
             xSemaphoreTake(s_lock, portMAX_DELAY);
             s_want_restart--;
             xSemaphoreGive(s_lock);
@@ -204,10 +438,36 @@ esp_err_t duneos_supervisor_init(void)
     s_all_done = xSemaphoreCreateBinary();
     if (!s_all_done) return ESP_ERR_NO_MEM;
 
-    BaseType_t ret = xTaskCreate(supervisor_task, "duneos_sv",
-                                  4096, NULL, DUNEOS_APP_TASK_PRIORITY + 1,
-                                  NULL);
+    /* 16 KB: supervisor calls duneos_loader_load on restart, which chains
+     * fopen → FatFS → SPI DMA — a very deep call stack.  4 KB overflows
+     * into adjacent BSS and corrupts FreeRTOS list pointers. */
+    /* Pin to Core 0: all DuneOS tasks run on Core 0 to avoid cross-core
+     * SMP races on FreeRTOS ready/delayed lists without kernel spinlock. */
+    BaseType_t ret = xTaskCreatePinnedToCore(supervisor_task, "duneos_sv",
+                                              16384, NULL,
+                                              DUNEOS_APP_TASK_PRIORITY + 1,
+                                              NULL, 0);
     if (ret != pdPASS) return ESP_ERR_NO_MEM;
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Register on Core 0 now so kernel-task exceptions are caught before any
+     * app launches.  Each app_task_entry() also calls register_exc_handlers()
+     * on whichever core FreeRTOS assigns it — that's the true guarantee for
+     * app recovery; this call merely covers the init window. */
+    register_exc_handlers(NULL);
+#endif
+
+    /* Software WDT timer: fires every 500 ms from the FreeRTOS timer-daemon
+     * task.  Using a timer (not a finite xQueueReceive timeout) keeps the
+     * supervisor task out of the FreeRTOS delayed-task list, which prevents
+     * a race with xQueueSendFromISR callers that lack the kernel spinlock. */
+    s_wdt_timer = xTimerCreate("sv_wdt",
+                               pdMS_TO_TICKS(DUNEOS_WDT_CHECK_MS),
+                               pdTRUE,        /* auto-reload */
+                               NULL,
+                               wdt_timer_cb);
+    if (!s_wdt_timer) return ESP_ERR_NO_MEM;
+    xTimerStart(s_wdt_timer, 0);
 
     klog_d(TAG, "supervisor ready (max %d concurrent apps)", DUNEOS_MAX_RUNNING_APPS);
     return ESP_OK;
@@ -242,6 +502,40 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     slot->restart_policy = policy;
     slot->app = app;
 
+    /* Phase 20: per-app heap pool */
+    slot->heap_pool_buf  = NULL;
+    slot->heap_handle    = NULL;
+    slot->heap_pool_size = 0;
+    if (m->heap_size >= MULTI_HEAP_MIN_SIZE) {
+        slot->heap_pool_buf = heap_caps_malloc(m->heap_size,
+                                                MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        if (slot->heap_pool_buf) {
+            slot->heap_pool_size = m->heap_size;
+            slot->heap_handle    = multi_heap_register(slot->heap_pool_buf,
+                                                        slot->heap_pool_size);
+            klog_d(TAG, "'%s' heap pool: %lu B @ %p",
+                   slot->name, (unsigned long)m->heap_size, slot->heap_pool_buf);
+        } else {
+            klog_w(TAG, "'%s' heap pool alloc failed (%lu B) — using global heap",
+                   slot->name, (unsigned long)m->heap_size);
+        }
+    }
+
+    /* Phase 20: record data pool bounds for syscall pointer validation */
+    if (s_loader_ops.get_data_pool)
+        s_loader_ops.get_data_pool(app, &slot->data_pool_base, &slot->data_pool_size);
+
+    esp_rom_printf("[DIAG] '%s' app=%p data_pool=%p..%p mailbox=%p\n",
+                   slot->name, slot->app,
+                   (void *)slot->data_pool_base,
+                   (void *)(slot->data_pool_base + slot->data_pool_size),
+                   slot->mailbox);
+
+    /* Phase 20: software WDT */
+    slot->wdt_timeout_ticks = m->wdt_timeout_ms
+                              ? pdMS_TO_TICKS(m->wdt_timeout_ms) : 0;
+    slot->wdt_last_kick_tick = xTaskGetTickCount();
+
     slot->mailbox = xQueueCreate(DUNEOS_MAILBOX_DEPTH, sizeof(duneos_msg_t));
     /* Mailbox failure is non-fatal — messaging just won't work */
 
@@ -255,22 +549,29 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     s_active_count++;
     xSemaphoreGive(s_lock);
 
-    BaseType_t ret = xTaskCreate(app_task_entry, slot->name,
-                                  stack / sizeof(StackType_t),
-                                  slot, DUNEOS_APP_TASK_PRIORITY, &slot->task);
+    /* IDF v6+: xTaskCreate stack depth is in BYTES (not words). Pass stack
+     * directly — do NOT divide by sizeof(StackType_t). */
+    BaseType_t ret = xTaskCreatePinnedToCore(app_task_entry, slot->name,
+                                              stack, slot,
+                                              DUNEOS_APP_TASK_PRIORITY,
+                                              &slot->task, 0);
     if (ret != pdPASS) {
         xSemaphoreTake(s_lock, portMAX_DELAY);
         s_active_count--;
         xSemaphoreGive(s_lock);
         s_loader_ops.unload(app);
+        slot_heap_free(slot);
         if (slot->mailbox) vQueueDelete(slot->mailbox);
         slot->active = false;
         klog_e(TAG, "xTaskCreate failed for '%s'", slot->name);
         return ESP_ERR_NO_MEM;
     }
 
-    klog_d(TAG, "launched '%s' (stack %lu B, restart=%d)",
-           slot->name, (unsigned long)stack, (int)policy);
+    esp_rom_printf("[DIAG] '%s' TCB=%p\n", slot->name, (void *)slot->task);
+    klog_d(TAG, "launched '%s' (stack %lu B, heap %lu B, wdt %lu ms, restart=%d)",
+           slot->name, (unsigned long)stack,
+           (unsigned long)m->heap_size, (unsigned long)m->wdt_timeout_ms,
+           (int)policy);
     return ESP_OK;
 }
 
@@ -286,8 +587,14 @@ void duneos_supervisor_app_exited(int code)
         .code   = code,
         .forced = false,
     };
-    /* portMAX_DELAY: queue depth == max running apps, so this shouldn't block */
     xQueueSend(s_exit_queue, &msg, portMAX_DELAY);
+    /* Delete ourselves immediately so the scheduler never resumes this task
+     * in app code after the supervisor has processed the exit message and
+     * potentially unloaded (freed) the exec pool.  On SMP the supervisor
+     * can run on Core 1 between the xQueueSend and our return, making the
+     * app's return-from-duneos_exit execute freed/reused code. */
+    vTaskDelete(NULL);
+    while (1) {} /* unreachable — prevents compiler from assuming we return */
 }
 
 void duneos_supervisor_wait_all(void)
@@ -394,4 +701,70 @@ int duneos_recv(duneos_msg_t *out, uint32_t timeout_ms)
     TickType_t ticks = (timeout_ms == 0) ? 0 : pdMS_TO_TICKS(timeout_ms);
     if (xQueueReceive(mb, out, ticks) != pdTRUE) return -1;
     return (int)out->len;
+}
+
+/* ----- Phase 20: per-app memory API ------------------------------------- */
+
+void *duneos_supervisor_app_malloc(size_t size)
+{
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (slot && slot->active && slot->heap_handle)
+        return multi_heap_malloc(slot->heap_handle, size);
+    return heap_caps_malloc(size, MALLOC_CAP_DEFAULT);
+}
+
+void *duneos_supervisor_app_realloc(void *ptr, size_t size)
+{
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (slot && slot->heap_handle && slot->heap_pool_buf && ptr) {
+        uintptr_t p    = (uintptr_t)ptr;
+        uintptr_t base = (uintptr_t)slot->heap_pool_buf;
+        if (p >= base && p < base + slot->heap_pool_size)
+            return multi_heap_realloc(slot->heap_handle, ptr, size);
+    }
+    return heap_caps_realloc(ptr, size, MALLOC_CAP_DEFAULT);
+}
+
+void *duneos_supervisor_app_calloc(size_t n, size_t size)
+{
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (slot && slot->active && slot->heap_handle) {
+        void *p = multi_heap_malloc(slot->heap_handle, n * size);
+        if (p) memset(p, 0, n * size);
+        return p;
+    }
+    return heap_caps_calloc(n, size, MALLOC_CAP_DEFAULT);
+}
+
+void duneos_supervisor_app_free(void *ptr)
+{
+    if (!ptr) return;
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (slot && slot->heap_handle && slot->heap_pool_buf) {
+        uintptr_t p    = (uintptr_t)ptr;
+        uintptr_t base = (uintptr_t)slot->heap_pool_buf;
+        if (p >= base && p < base + slot->heap_pool_size) {
+            multi_heap_free(slot->heap_handle, ptr);
+            return;
+        }
+    }
+    heap_caps_free(ptr);
+}
+
+bool duneos_supervisor_check_user_ptr(const void *ptr, size_t len)
+{
+    if (!ptr) return false;
+    (void)len;
+    uintptr_t p = (uintptr_t)ptr;
+    /* Reject NULL-region and mapped peripheral registers */
+    if (p < 0x1000u) return false;
+    if (p >= 0x60000000u && p < 0x70000000u) return false;
+    return true;
+}
+
+void duneos_supervisor_wdt_reset(void)
+{
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (slot && slot->active)
+        slot->wdt_last_kick_tick = xTaskGetTickCount();
 }

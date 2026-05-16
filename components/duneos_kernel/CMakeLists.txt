@@ -55,6 +55,7 @@ set(DUNEOS_KERNEL_REQUIRES
     esp_netif
     esp_event
     joltwallet__littlefs
+    xtensa
 )
 
 # --- Conditional driver sources --------------------------------------------

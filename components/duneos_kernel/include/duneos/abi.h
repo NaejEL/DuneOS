@@ -11,8 +11,10 @@
  *   - calling convention of any exported kernel symbol
  *
  * The loader rejects apps whose required_abi_version > DUNEOS_ABI_VERSION.
+ * v2: added heap_size and wdt_timeout_ms to duneos_app_manifest_t.
+ *     Backward compat: apps with required_abi_version=1 run unchanged on v2.
  */
-#define DUNEOS_ABI_VERSION      1
+#define DUNEOS_ABI_VERSION      2
 #define DUNEOS_VERSION_STRING   "0.2.0"
 
 /* ELF section name where the app embeds its manifest JSON */
@@ -32,6 +34,8 @@ typedef struct {
     uint32_t required_abi_version;
     uint32_t permissions;           /* bitmask — see DUNEOS_PERM_* below */
     uint32_t stack_size;            /* app task stack in bytes; 0 → default */
+    uint32_t heap_size;             /* per-app heap in bytes; 0 → global heap */
+    uint32_t wdt_timeout_ms;        /* software WDT timeout; 0 → disabled */
 } duneos_app_manifest_t;
 
 /* Permission bits — enforced by the loader during symbol resolution */

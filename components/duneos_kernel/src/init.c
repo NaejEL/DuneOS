@@ -54,6 +54,9 @@ static esp_err_t parse_yaml(char *buf, duneos_init_config_t *cfg)
         while (*eol && *eol != '\n') eol++;
         char saved = *eol;
         *eol = '\0';
+        /* Strip trailing \r and other whitespace (handles Windows CRLF files) */
+        char *tail = eol - 1;
+        while (tail >= line && isspace((unsigned char)*tail)) *tail-- = '\0';
 
         const char *trimmed = ltrim(line);
 

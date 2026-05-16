@@ -15,6 +15,8 @@
 #include "duneos/klog.h"
 #include "esp_heap_caps.h"
 
+#include "esp_rom_sys.h"
+
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 #include "soc/soc.h"
 #endif
@@ -35,14 +37,16 @@ struct duneos_app {
     void *section_bases[MAX_SECTIONS];
     int   section_count;
 
-    /* Heap allocations (data/rodata/bss) freed on unload.
-     * Exec sections on Xtensa come from the static pool — not tracked here. */
-    void *allocs[MAX_SECTIONS];
-    int   alloc_count;
+    /* Monolithic pool for all data sections (rodata + data + bss).
+     * One contiguous allocation freed in a single heap_caps_free on unload. */
+    uint8_t *data_pool;
+    size_t   data_pool_size;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    size_t exec_pool_mark;  /* s_exec_pool_used before this app loaded */
-    size_t exec_pool_end;   /* s_exec_pool_used after section loading */
+    void  *exec_block;       /* IRAM alias — used as section_bases[i] */
+    size_t exec_block_size;
+    size_t exec_pool_mark;   /* s_exec_pool_used before this app's exec alloc */
+    size_t exec_pool_end;    /* s_exec_pool_used after this app's exec alloc */
 #endif
 
     void (*entry)(void);
@@ -58,26 +62,27 @@ struct duneos_app {
  * I-bus (IRAM, exec-only).  D-bus STORE instructions cannot target IRAM
  * addresses — they trigger a cache error.
  *
- * Strategy: pool lives in DRAM BSS (writable via D-bus, predictable address).
- * section_alloc() returns the IRAM alias (pool_dram + SOC_I_D_OFFSET) so the
- * I-bus can fetch instructions from it.  to_write_ptr() converts that alias
- * back to the DRAM address for fread/relocation writes.
+ * Strategy: a static DRAM BSS array (s_exec_pool) is the backing store for
+ * all app .text/.literal sections.  A bump allocator (s_exec_pool_used) tracks
+ * usage; LIFO reclaim is possible when the unloading app was the last to
+ * allocate (exec_pool_end == s_exec_pool_used).  Each allocation returns a DRAM
+ * address; we compute the IRAM alias (dram + SOC_I_D_OFFSET) for the I-bus.
+ * to_write_ptr() converts the IRAM alias back to DRAM for fread/relocation.
  *
  * This requires CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n (set in the board's
- * sdkconfig.defaults).  With MEMPROT enabled, the I-bus/D-bus split locks the
- * DIRAM region so that the IRAM alias of free DRAM is non-executable and the
- * DRAM alias of static IRAM is read-only — making dynamic code loading
- * impossible regardless of where the pool is placed. */
+ * sdkconfig.defaults).  With MEMPROT enabled the DIRAM region is locked so
+ * that dynamic code loading is impossible regardless of pool placement. */
 
 #ifndef CONFIG_DUNEOS_EXEC_POOL_KB
 #define CONFIG_DUNEOS_EXEC_POOL_KB 64
 #endif
 
 /* Plain DRAM BSS — written at this address, executed via IRAM alias. */
-static uint8_t s_exec_pool[CONFIG_DUNEOS_EXEC_POOL_KB * 1024u] __attribute__((aligned(4)));
-static size_t  s_exec_pool_used;
+static uint8_t s_exec_pool[CONFIG_DUNEOS_EXEC_POOL_KB * 1024u]
+                   __attribute__((aligned(4)));
+static size_t  s_exec_pool_used; /* bump pointer: bytes consumed so far */
 
-/* Given an IRAM exec address (pool DRAM + SOC_I_D_OFFSET), return the DRAM write ptr. */
+/* Given the IRAM alias of a pool allocation, return the writable DRAM address. */
 static inline void *to_write_ptr(const void *iram_addr)
 {
     uintptr_t a      = (uintptr_t)iram_addr;
@@ -92,38 +97,6 @@ static inline void *to_write_ptr(const void *iram_addr)
 static inline void *to_write_ptr(const void *addr) { return (void *)addr; }
 
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
-
-static void *section_alloc(duneos_app_t *app, size_t size, bool exec)
-{
-#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    if (exec) {
-        /* Round up to 4-byte alignment (Xtensa instruction alignment). */
-        size_t aligned = (size + 3u) & ~3u;
-        if (s_exec_pool_used + aligned > sizeof(s_exec_pool)) {
-            klog_e(TAG, "exec pool exhausted (%zu + %zu > %u KB)",
-                   s_exec_pool_used, aligned, CONFIG_DUNEOS_EXEC_POOL_KB);
-            return NULL;
-        }
-        /* Pool is DRAM; return IRAM alias so the I-bus can execute from it. */
-        uint8_t *dram_ptr = s_exec_pool + s_exec_pool_used;
-        s_exec_pool_used += aligned;
-        return (void *)((uintptr_t)dram_ptr + (uintptr_t)SOC_I_D_OFFSET);
-    }
-#endif
-
-    /* Data / rodata / bss: heap allocation. */
-#ifdef CONFIG_SPIRAM
-    void *ptr = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (!ptr)
-        ptr = heap_caps_malloc(size, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
-#else
-    void *ptr = heap_caps_malloc(size, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
-#endif
-    if (!ptr) return NULL;
-    if (app->alloc_count < MAX_SECTIONS)
-        app->allocs[app->alloc_count++] = ptr;
-    return ptr;
-}
 
 static esp_err_t read_at(FILE *f, long offset, void *buf, size_t len)
 {
@@ -226,6 +199,80 @@ static esp_err_t load_sections(FILE              *f,
 {
     app->section_count = hdr->e_shnum;
 
+    /* --- Pass 1: measure total section sizes ---
+     * On Xtensa: exec_total covers .text/.literal; data_total covers the rest.
+     * On RISC-V: no IRAM/DRAM split — all sections go into data_total. */
+    size_t data_total = 0;
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    size_t exec_total = 0;
+#endif
+    for (int i = 0; i < hdr->e_shnum; i++) {
+        const elf32_shdr_t *sh   = &shdrs[i];
+        const char         *name = shdr_name(shstrtab, sh);
+        if (sh->sh_size == 0) continue;
+        sec_kind_t kind = classify_section(name, sh->sh_flags);
+        if (kind == SEC_IGNORE) continue;
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+        if (kind == SEC_TEXT) {
+            exec_total += (sh->sh_size + 3u) & ~3u;
+            continue;
+        }
+#endif
+        data_total += (sh->sh_size + 3u) & ~3u;
+    }
+
+    /* --- Allocate exec block from static DRAM pool (Xtensa IRAM alias) --- */
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    if (exec_total > 0) {
+        size_t aligned = (s_exec_pool_used + 3u) & ~3u;
+        if (aligned + exec_total > sizeof(s_exec_pool)) {
+            klog_e(TAG, "exec pool full (%zu B requested, %zu B free)",
+                   exec_total, sizeof(s_exec_pool) - aligned);
+            return ESP_ERR_NO_MEM;
+        }
+        app->exec_pool_mark  = aligned;
+        void *dram           = s_exec_pool + aligned;
+        s_exec_pool_used     = aligned + exec_total;
+        app->exec_pool_end   = s_exec_pool_used;
+        app->exec_block      = (void *)((uintptr_t)dram + (uintptr_t)SOC_I_D_OFFSET);
+        app->exec_block_size = exec_total;
+        klog_d(TAG, "exec block: %zu B DRAM=%p IRAM=%p pool=%zu/%zu",
+               exec_total, dram, app->exec_block,
+               s_exec_pool_used, sizeof(s_exec_pool));
+        esp_rom_printf("[DIAG] text_base=0x%08x  (GDB: add-symbol-file app.elf 0x%08x)\n",
+                       (unsigned)(uintptr_t)app->exec_block,
+                       (unsigned)(uintptr_t)app->exec_block);
+    }
+#endif
+
+    /* --- Allocate monolithic data pool (one malloc for all data sections) --- */
+    if (data_total > 0) {
+#ifdef CONFIG_SPIRAM
+        app->data_pool = heap_caps_malloc(data_total,
+                                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (!app->data_pool)
+            app->data_pool = heap_caps_malloc(data_total,
+                                               MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#else
+        app->data_pool = heap_caps_malloc(data_total,
+                                          MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#endif
+        if (!app->data_pool) {
+            klog_e(TAG, "data pool alloc failed (%zu B)", data_total);
+            return ESP_ERR_NO_MEM;
+        }
+        app->data_pool_size = data_total;
+        esp_rom_printf("[DIAG] data_pool=%p..%p (%u B)\n",
+                       app->data_pool, app->data_pool + data_total, (unsigned)data_total);
+        klog_d(TAG, "data pool: %zu B @ %p", data_total, app->data_pool);
+    }
+
+    /* --- Pass 2: place each section into exec block or data pool --- */
+    size_t data_offset = 0;
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    size_t exec_offset = 0;
+#endif
+
     for (int i = 0; i < hdr->e_shnum; i++) {
         const elf32_shdr_t *sh   = &shdrs[i];
         const char         *name = shdr_name(shstrtab, sh);
@@ -236,13 +283,20 @@ static esp_err_t load_sections(FILE              *f,
         sec_kind_t kind = classify_section(name, sh->sh_flags);
         if (kind == SEC_IGNORE) continue;
 
-        bool is_exec = (kind == SEC_TEXT);
-        void *mem = section_alloc(app, sh->sh_size, is_exec);
-        if (!mem) {
-            klog_e(TAG, "alloc failed: '%s' (%lu B)",
-                     name, (unsigned long)sh->sh_size);
-            return ESP_ERR_NO_MEM;
+        void *mem;
+
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+        if (kind == SEC_TEXT) {
+            mem = (uint8_t *)app->exec_block + exec_offset;
+            exec_offset += (sh->sh_size + 3u) & ~3u;
+        } else
+#endif
+        {
+            /* Place in data pool at current offset */
+            mem = app->data_pool + data_offset;
+            data_offset += (sh->sh_size + 3u) & ~3u;
         }
+
         app->section_bases[i] = mem;
 
         if (sh->sh_type == SHT_NOBITS) {
@@ -258,9 +312,9 @@ static esp_err_t load_sections(FILE              *f,
             }
         }
 
-        klog_d(TAG, "  loaded %-28s %4lu B @ %p%s",
+        klog_d(TAG, "  loaded %-28s %4lu B @ %p [%s]",
                  name, (unsigned long)sh->sh_size, mem,
-                 is_exec ? " [IRAM]" : " [DRAM]");
+                 kind == SEC_TEXT ? "IRAM" : "pool");
     }
     return ESP_OK;
 }
@@ -642,6 +696,8 @@ static esp_err_t apply_relocations(FILE               *f,
             return ESP_ERR_INVALID_ARG;
         }
 
+        uint32_t target_sec_size = shdrs[target_idx].sh_size;
+
         klog_d(TAG, "  rela %-28s → %-20s (%d entries)",
                  shdr_name(shstrtab, rsh),
                  shdr_name(shstrtab, &shdrs[target_idx]),
@@ -663,6 +719,21 @@ static esp_err_t apply_relocations(FILE               *f,
                          (unsigned long)sym_idx);
                 free(relas);
                 return ESP_ERR_INVALID_ARG;
+            }
+
+            /* Guard against out-of-bounds r_offset — a corrupt or Xtensa-generated
+             * section-end sentinel reloc would write past the data_pool into
+             * adjacent heap metadata, silently corrupting FreeRTOS list structures.
+             * Skip rather than abort: if the reloc was needed the app will fault
+             * and be killed by the exception handler instead of crashing the kernel. */
+            if (rel->r_offset >= target_sec_size) {
+                esp_rom_printf("[DIAG] reloc[%d] SKIP: target=%s r_offset=0x%lx sec_size=0x%lx base=%p write_would_be=%p\n",
+                               j, shdr_name(shstrtab, &shdrs[target_idx]),
+                               (unsigned long)rel->r_offset,
+                               (unsigned long)target_sec_size,
+                               to_write_ptr(target_base),
+                               (uint8_t *)to_write_ptr(target_base) + rel->r_offset);
+                continue;
             }
 
             const elf32_sym_t *sym = &symtab[sym_idx];
@@ -774,12 +845,24 @@ static esp_err_t extract_manifest(FILE               *f,
             p = strchr(p + 12, ':');
             if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->stack_size);
         }
+        out->heap_size = 0;   /* 0 → global heap */
+        if ((p = strstr(json, "\"heap_size\"")) != NULL) {
+            p = strchr(p + 11, ':');
+            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->heap_size);
+        }
+        out->wdt_timeout_ms = 0;  /* 0 → WDT disabled */
+        if ((p = strstr(json, "\"wdt_timeout_ms\"")) != NULL) {
+            p = strchr(p + 16, ':');
+            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->wdt_timeout_ms);
+        }
 
         free(json);
-        klog_i(TAG, "manifest: '%s' v%s (ABI>=%lu perms=0x%lx)",
+        klog_i(TAG, "manifest: '%s' v%s (ABI>=%lu perms=0x%lx heap=%lu wdt=%lu ms)",
                  out->name, out->version,
                  (unsigned long)out->required_abi_version,
-                 (unsigned long)out->permissions);
+                 (unsigned long)out->permissions,
+                 (unsigned long)out->heap_size,
+                 (unsigned long)out->wdt_timeout_ms);
         return ESP_OK;
     }
 
@@ -794,29 +877,29 @@ static esp_err_t extract_manifest(FILE               *f,
 void duneos_loader_init(void)
 {
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Verify the exec pool's IRAM alias falls within the DIRAM executable
-     * region.  Fails at boot if the kernel's DRAM BSS has grown too large. */
+    /* Verify the pool's IRAM alias falls within the DIRAM executable region.
+     * Fails at boot if kernel BSS has grown too large to alias into DIRAM. */
     uintptr_t pool_iram_start = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
     uintptr_t pool_iram_end   = pool_iram_start + sizeof(s_exec_pool);
     if (pool_iram_start < SOC_DIRAM_IRAM_LOW || pool_iram_end > SOC_DIRAM_IRAM_HIGH) {
-        klog_e(TAG, "exec pool IRAM alias out of DIRAM range — "
-               "reduce DUNEOS_EXEC_POOL_KB or kernel BSS");
-        klog_e(TAG, "  pool DRAM %p, IRAM alias %p-%p, DIRAM %p-%p",
+        klog_e(TAG, "exec pool IRAM alias out of DIRAM range — reduce kernel BSS");
+        klog_e(TAG, "  DRAM %p  IRAM %p-%p  DIRAM %p-%p",
                s_exec_pool,
                (void *)pool_iram_start, (void *)pool_iram_end,
                (void *)SOC_DIRAM_IRAM_LOW, (void *)SOC_DIRAM_IRAM_HIGH);
     } else {
         klog_i(TAG, "exec pool DRAM=%p IRAM=%p (%u KB)",
-               s_exec_pool, (void *)pool_iram_start,
-               CONFIG_DUNEOS_EXEC_POOL_KB);
+               s_exec_pool, (void *)pool_iram_start, CONFIG_DUNEOS_EXEC_POOL_KB);
     }
+    s_exec_pool_used = 0;
 #endif
 
     static const duneos_loader_ops_t ops = {
-        .load         = duneos_loader_load,
-        .run          = duneos_loader_run,
-        .unload       = duneos_loader_unload,
-        .get_manifest = duneos_loader_get_manifest,
+        .load          = duneos_loader_load,
+        .run           = duneos_loader_run,
+        .unload        = duneos_loader_unload,
+        .get_manifest  = duneos_loader_get_manifest,
+        .get_data_pool = duneos_loader_get_data_pool,
     };
     duneos_supervisor_register_loader(&ops);
 }
@@ -905,10 +988,6 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     app = calloc(1, sizeof(duneos_app_t));
     if (!app) { err = ESP_ERR_NO_MEM; goto out; }
 
-#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    app->exec_pool_mark = s_exec_pool_used;
-#endif
-
     /* 6. Manifest */
     err = extract_manifest(f, &hdr, shdrs, shstrtab, &app->manifest);
     if (err != ESP_OK) goto out;
@@ -925,47 +1004,12 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     err = load_sections(f, &hdr, shdrs, shstrtab, app);
     if (err != ESP_OK) goto out;
 
-#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    app->exec_pool_end = s_exec_pool_used;
-    klog_d(TAG, "exec pool: %zu / %u KB used",
-           s_exec_pool_used, CONFIG_DUNEOS_EXEC_POOL_KB);
-#endif
-
     /* 8. Apply relocations */
     err = apply_relocations(f, &hdr, shdrs, shstrtab,
                              symtab, symcount, strtab, app);
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Scan Xtensa literal pools for stale exec-pool pointers past the loaded
-     * code end — jumping there would hit zeroed memory → IllegalInstruction.
-     * DROM addresses are NOT rejected here: ABI-resolved functions in flash
-     * (newlib, ESP-IDF) are valid call targets even though they live in DROM. */
-    {
-        uintptr_t pool_iram_base  = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
-        uintptr_t pool_loaded_end = pool_iram_base + app->exec_pool_end;
-
-        for (int i = 0; i < hdr.e_shnum; i++) {
-            const char *nm = shdr_name(shstrtab, &shdrs[i]);
-            if (strncmp(nm, ".literal", 8) != 0) continue;
-            void *base = app->section_bases[i];
-            if (!base) continue;
-            uint32_t *dram = (uint32_t *)to_write_ptr(base);
-            size_t nw = shdrs[i].sh_size / 4;
-            for (size_t k = 0; k < nw; k++) {
-                uint32_t v = dram[k];
-                bool is_bad_pool = ((uintptr_t)v >= pool_loaded_end &&
-                                    (uintptr_t)v <  pool_iram_base + sizeof(s_exec_pool));
-                if (is_bad_pool) {
-                    klog_e(TAG, "literal pool %s[%zu]=0x%08lx — past pool end (jump to zeros)",
-                           nm, k, (unsigned long)v);
-                    err = ESP_ERR_INVALID_STATE;
-                    goto out;
-                }
-            }
-        }
-    }
-
     /* Stores to IRAM via the D-bus alias are not visible to the instruction
      * pipeline until ISYNC completes. */
     asm volatile("isync" ::: "memory");
@@ -1150,6 +1194,13 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app)
     return app ? &app->manifest : NULL;
 }
 
+void duneos_loader_get_data_pool(const duneos_app_t *app,
+                                  uintptr_t *base, size_t *size)
+{
+    if (base) *base = app ? (uintptr_t)app->data_pool : 0;
+    if (size) *size = app ? app->data_pool_size : 0;
+}
+
 esp_err_t duneos_loader_run(duneos_app_t *app)
 {
     if (!app || !app->entry) return ESP_ERR_INVALID_ARG;
@@ -1232,13 +1283,13 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
 void duneos_loader_unload(duneos_app_t *app)
 {
     if (!app) return;
-    for (int i = 0; i < app->alloc_count; i++)
-        heap_caps_free(app->allocs[i]);
+    heap_caps_free(app->data_pool);
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* LIFO reclaim: if this was the last app to allocate from the pool,
-     * rewind the bump pointer so the next load can reuse the space. */
-    if (s_exec_pool_used == app->exec_pool_end)
+    /* LIFO reclaim: only possible when this app was the last to allocate. */
+    if (app->exec_block_size > 0 && s_exec_pool_used == app->exec_pool_end) {
         s_exec_pool_used = app->exec_pool_mark;
+        klog_d(TAG, "exec pool reclaimed: pool now %zu B used", s_exec_pool_used);
+    }
 #endif
     free(app);
 }

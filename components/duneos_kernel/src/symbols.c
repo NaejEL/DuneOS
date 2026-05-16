@@ -88,15 +88,28 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t *
 void      duneos_loader_unload(duneos_app_t *app);
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
 
+/* Phase 20 — syscall wrappers with basic pointer validation */
+static ssize_t duneos_read(int fd, void *buf, size_t len)
+{
+    if (!duneos_supervisor_check_user_ptr(buf, len)) { errno = EFAULT; return -1; }
+    return read(fd, buf, len);
+}
+
+static ssize_t duneos_write(int fd, const void *buf, size_t len)
+{
+    if (!duneos_supervisor_check_user_ptr(buf, len)) { errno = EFAULT; return -1; }
+    return write(fd, buf, len);
+}
+
 static const duneos_symbol_t s_symbol_table[] = {
 
     /* ------------------------------------------------------------------ */
     /* POSIX — file I/O                                                    */
     /* ------------------------------------------------------------------ */
-    SYM("open",         open      ),
-    SYM("close",        close     ),
-    SYM("read",         read      ),
-    SYM("write",        write     ),
+    SYM("open",         open           ),
+    SYM("close",        close          ),
+    SYM("read",         duneos_read    ),
+    SYM("write",        duneos_write   ),
     SYM("lseek",        lseek     ),
     SYM("fstat",        fstat     ),
     SYM("stat",         stat      ),
@@ -118,12 +131,12 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("rmdir",      rmdir,    DUNEOS_PERM_FS_WRITE),
 
     /* ------------------------------------------------------------------ */
-    /* POSIX — memory                                                      */
+    /* POSIX — memory (per-app heap when configured, global heap fallback) */
     /* ------------------------------------------------------------------ */
-    SYM("malloc",       malloc    ),
-    SYM("free",         free      ),
-    SYM("realloc",      realloc   ),
-    SYM("calloc",       calloc    ),
+    SYM("malloc",       duneos_supervisor_app_malloc  ),
+    SYM("free",         duneos_supervisor_app_free    ),
+    SYM("realloc",      duneos_supervisor_app_realloc ),
+    SYM("calloc",       duneos_supervisor_app_calloc  ),
 
     /* ------------------------------------------------------------------ */
     /* POSIX — threads & synchronisation                                   */
@@ -200,12 +213,15 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* DuneOS — lifecycle & IPC                                           */
     /* ------------------------------------------------------------------ */
     SYM("duneos_exit",                    duneos_exit                          ),
-    SYM("duneos_run",                     duneos_supervisor_launch              ),
-    SYM("duneos_send",                    duneos_send                           ),
-    SYM("duneos_recv",                    duneos_recv                           ),
-    SYM("duneos_service_ready",           duneos_service_ready                  ),
-    SYM("duneos_supervisor_list_slots",   duneos_supervisor_list_slots          ),
-    SYM("duneos_supervisor_restart_by_name", duneos_supervisor_restart_by_name ),
+    SYM("duneos_run",                          duneos_supervisor_launch              ),
+    SYM("duneos_supervisor_launch",            duneos_supervisor_launch              ),
+    SYM("duneos_supervisor_running_count",     duneos_supervisor_running_count       ),
+    SYM("duneos_send",                         duneos_send                           ),
+    SYM("duneos_recv",                         duneos_recv                           ),
+    SYM("duneos_service_ready",                duneos_service_ready                  ),
+    SYM("duneos_supervisor_list_slots",        duneos_supervisor_list_slots          ),
+    SYM("duneos_supervisor_restart_by_name",   duneos_supervisor_restart_by_name     ),
+    SYM("duneos_wdt_reset",                    duneos_supervisor_wdt_reset           ),
 
     /* ------------------------------------------------------------------ */
     /* DuneOS — loader (for shell's `run` command)                        */

@@ -195,7 +195,7 @@ void kb_iomatrix_init(void)
     }
 
     memset(s_prev_state, 0, sizeof(s_prev_state));
-    xTaskCreate(scan_task, "kb_scan", 2048, NULL, 5, NULL);
+    xTaskCreatePinnedToCore(scan_task, "kb_scan", 2048, NULL, 5, NULL, 0);
     klog_i(TAG, "IOMatrix %dx%d scan task started",
            DUNEOS_KB_MATRIX_ROWS, DUNEOS_KB_MATRIX_COLS);
 }

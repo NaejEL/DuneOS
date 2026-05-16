@@ -31,6 +31,11 @@
 #define DUNEOS_APP_DEFAULT_STACK 8192   /* bytes — overridden by manifest stack_size */
 #define DUNEOS_APP_TASK_PRIORITY 2      /* tskIDLE_PRIORITY + 2 */
 
+/* Special exit codes set by the kernel when killing an app abnormally */
+#define DUNEOS_EXIT_CRASHED    127  /* CPU exception (load/store prohibited, illegal, div/0) */
+#define DUNEOS_EXIT_STACK_OVF  126  /* FreeRTOS stack overflow detection */
+#define DUNEOS_EXIT_WDT        125  /* Software watchdog timeout */
+
 /*
  * Restart policy for services launched via duneos_supervisor_launch_policy().
  * RESTART_NO    — service exits and is not relaunched (default).
@@ -61,12 +66,15 @@ typedef esp_err_t (*duneos_load_fn_t)(const char *path, duneos_app_t **out);
 typedef esp_err_t (*duneos_run_fn_t)(duneos_app_t *app);
 typedef void      (*duneos_unload_fn_t)(duneos_app_t *app);
 typedef const duneos_app_manifest_t *(*duneos_get_manifest_fn_t)(const duneos_app_t *app);
+typedef void (*duneos_get_data_pool_fn_t)(const duneos_app_t *app,
+                                          uintptr_t *base, size_t *size);
 
 typedef struct {
-    duneos_load_fn_t         load;
-    duneos_run_fn_t          run;
-    duneos_unload_fn_t       unload;
-    duneos_get_manifest_fn_t get_manifest;
+    duneos_load_fn_t          load;
+    duneos_run_fn_t           run;
+    duneos_unload_fn_t        unload;
+    duneos_get_manifest_fn_t  get_manifest;
+    duneos_get_data_pool_fn_t get_data_pool;
 } duneos_loader_ops_t;
 
 /* Called by duneos_loader_init() before any supervisor_launch() */
@@ -121,3 +129,31 @@ int duneos_send(const char *dest, const void *data, size_t len);
 
 /* Receive a message from this app's mailbox. Returns bytes received or -1 */
 int duneos_recv(duneos_msg_t *out, uint32_t timeout_ms);
+
+/* -------------------------------------------------------------------------
+ * Phase 20 — Memory hardening API
+ * ---------------------------------------------------------------------- */
+
+/*
+ * Allocate/free from the calling app's per-app heap (manifest heap_size > 0).
+ * Falls back to the global heap when no per-app heap is configured.
+ * Safe to call from any app task context.
+ */
+void *duneos_supervisor_app_malloc(size_t size);
+void *duneos_supervisor_app_realloc(void *ptr, size_t size);
+void *duneos_supervisor_app_calloc(size_t n, size_t size);
+void  duneos_supervisor_app_free(void *ptr);
+
+/*
+ * Basic pointer validation for syscall arguments.
+ * Returns false for NULL or obviously invalid addresses (peripheral range).
+ * Called from read/write wrappers in symbols.c.
+ */
+bool duneos_supervisor_check_user_ptr(const void *ptr, size_t len);
+
+/*
+ * Kick the software watchdog for the calling app task.
+ * The app must call this at least once every wdt_timeout_ms (from manifest)
+ * to avoid being killed by the supervisor.  No-op if WDT is disabled.
+ */
+void duneos_supervisor_wdt_reset(void);

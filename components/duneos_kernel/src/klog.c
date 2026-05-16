@@ -27,7 +27,7 @@
 #include <string.h>
 #include <stddef.h>
 
-#define KLOG_RING_SIZE  4096
+#define KLOG_RING_SIZE  16384
 #define KLOG_RING_MASK  (KLOG_RING_SIZE - 1)
 
 static char         s_ring[KLOG_RING_SIZE];
