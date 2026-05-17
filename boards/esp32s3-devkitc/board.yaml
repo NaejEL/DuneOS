@@ -1,5 +1,7 @@
 board:
   name: "esp32s3-devkitc"
+  arch: xtensa-esp32s3
+  sdk: esp-idf
   cpu: esp32s3
   flash_size_mb: 8
   psram_size_mb: 8

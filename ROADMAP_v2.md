@@ -96,13 +96,15 @@ Garantir qu'une application ne peut pas crasher le système. Purger la dette tec
 
 ---
 
-### Phase 21 — DHI (DuneOS Hardware Interface)
+### Phase 21 — dbt : plugin toolchain multi-arch ✅
 
-Isoler le noyau pour amorcer la sortie du framework Espressif. Objectif concret : aucun `esp_err_t` ni type propriétaire dans les headers publics des drivers.
+`board.yaml` gagne les champs `arch:` et `sdk:`. `tools/dbt/toolchain/` devient un répertoire de plugins.
 
-- [ ] **Headers DHI** : Définir `hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h` avec des types purs (`uint32_t`, `int`, callbacks C standards).
-- [ ] **Migration des backends** : Réécrire les implémentations de `drv_uart.c`, `drv_gpio.c`, `drv_i2c.c`, `drv_spi.c` pour n'utiliser les types ESP-IDF qu'*en interne*.
-- [ ] **Abstraction des interruptions** : Callbacks C standards enregistrés par le kernel, mappés par `arch/xtensa/` ou `arch/riscv/` sur l'allocateur matériel ESP-IDF.
+- [x] **`board.yaml`** : Champs `arch:` et `sdk:` ajoutés aux 4 boards existantes.
+- [x] **`tools/dbt/toolchain/__init__.py`** : `load_plugin(sdk)` + `get_board_plugin()` — dispatche vers le bon module plugin.
+- [x] **`tools/dbt/toolchain/esp_idf.py`** : Premier plugin — `SDK`, `ARCH`, `find_compiler()`, `cflags()`, `ldflags()`, `linker_script()`, `build_kernel()`, `flash_kernel()`, `monitor()`, `find_toolchain_root()`.
+- [x] **`builder.py`**, **`cli.py`**, **`flashimg.py`**, **`kernel.py`** : Dispatch via `get_board_plugin()` — plus d'import direct de `toolchain.py`.
+- [x] Ancien `toolchain.py` supprimé — remplacé par le package `toolchain/`.
 
 ---
 

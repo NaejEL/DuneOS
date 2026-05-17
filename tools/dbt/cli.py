@@ -24,7 +24,7 @@ from pathlib import Path
 
 from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_YAML_FILE, DUNEOS_ROOT
 from .manifest import load_manifest, find_apps, _is_bin_app
-from .toolchain import get_board_cpu, find_toolchain
+from .toolchain import get_board_plugin
 from .builder import build_single, clean_single, run
 from .deploy import deploy_single
 from .flashimg import cmd_flashimg
@@ -85,11 +85,11 @@ def cmd_new(args) -> None:
 
 def cmd_build(args) -> None:
     app_dir  = Path(".").resolve()
-    arch, cpu = get_board_cpu()
-    tc        = find_toolchain(arch, cpu)
+    plugin, arch, cpu, board_cfg = get_board_plugin()
+    tc = plugin.find_compiler(arch, cpu)
     print(f"  [arch] {arch} / {cpu}")
 
-    ok = build_single(app_dir, arch, cpu, tc)
+    ok = build_single(app_dir, plugin, arch, cpu, board_cfg, tc)
     if ok:
         elf = app_dir / APP_BUILD_DIR / APP_ELF_NAME
         print(f"\nBuild OK → {elf}")
@@ -105,9 +105,9 @@ def cmd_info(args) -> None:
     if not elf.exists():
         sys.exit("ERROR: app.elf not found — run 'dbt build' first")
 
-    manifest  = load_manifest(app_dir)
-    arch, cpu = get_board_cpu()
-    tc        = find_toolchain(arch, cpu)
+    manifest = load_manifest(app_dir)
+    plugin, arch, cpu, board_cfg = get_board_plugin()
+    tc = plugin.find_compiler(arch, cpu)
 
     print("=== Manifest ===")
     for k, v in manifest.items():
@@ -201,8 +201,8 @@ def cmd_buildall(args) -> None:
     if not apps:
         sys.exit("ERROR: no apps found under system/ (or examples/ with --examples)")
 
-    arch, cpu = get_board_cpu()
-    tc        = find_toolchain(arch, cpu)
+    plugin, arch, cpu, board_cfg = get_board_plugin()
+    tc = plugin.find_compiler(arch, cpu)
     print(f"Board: {arch} / {cpu}  |  {len(apps)} apps found\n")
 
     ok_list   = []
@@ -217,7 +217,7 @@ def cmd_buildall(args) -> None:
         if do_clean:
             clean_single(app_dir)
 
-        if not build_single(app_dir, arch, cpu, tc):
+        if not build_single(app_dir, plugin, arch, cpu, board_cfg, tc):
             fail_list.append(rel)
             print()
             continue
@@ -272,8 +272,8 @@ def cmd_flash_sd(args) -> None:
     if not apps:
         sys.exit("ERROR: no apps found under system/")
 
-    arch, cpu = get_board_cpu()
-    tc        = find_toolchain(arch, cpu)
+    plugin, arch, cpu, board_cfg = get_board_plugin()
+    tc = plugin.find_compiler(arch, cpu)
     print(f"Building {len(apps)} apps for {arch}/{cpu}…\n")
 
     ok_list   = []
@@ -281,7 +281,7 @@ def cmd_flash_sd(args) -> None:
 
     for app_dir, is_bin in apps:
         rel = app_dir.relative_to(DUNEOS_ROOT)
-        if not build_single(app_dir, arch, cpu, tc):
+        if not build_single(app_dir, plugin, arch, cpu, board_cfg, tc):
             fail_list.append(rel)
             continue
         if not deploy_single(app_dir, sd_path, is_bin):

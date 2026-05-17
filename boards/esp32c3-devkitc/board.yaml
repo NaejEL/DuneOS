@@ -1,5 +1,7 @@
 board:
   name: "esp32c3-devkitc"
+  arch: riscv32
+  sdk: esp-idf
   cpu: esp32c3
   flash_size_mb: 4
   psram_size_mb: 0

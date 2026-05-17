@@ -1,5 +1,7 @@
 board:
   name: "m5stack-cardputer"
+  arch: xtensa-esp32s3
+  sdk: esp-idf
   cpu: esp32s3
   # ESP32-S3FN8: 8MB embedded flash (octal), NO external PSRAM
   flash_size_mb: 8

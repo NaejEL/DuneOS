@@ -3,9 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, SDK_DIR, LDFLAGS
+from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, SDK_DIR
 from .manifest import load_manifest, validate_manifest
-from .toolchain import build_cflags
 
 
 def run(cmd: list, capture: bool = False) -> str:
@@ -21,7 +20,7 @@ def run(cmd: list, capture: bool = False) -> str:
         sys.exit(f"ERROR: executable not found: {cmd[0]}")
 
 
-def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
+def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc: dict) -> bool:
     build_dir = app_dir / APP_BUILD_DIR
     build_dir.mkdir(exist_ok=True)
 
@@ -33,7 +32,7 @@ def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
         return False
 
     cc     = tc["cc"]
-    cflags = build_cflags(arch, cpu, tc)
+    cflags = plugin.cflags(board_cfg, tc)
 
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
 
@@ -84,7 +83,7 @@ def build_single(app_dir: Path, arch: str, cpu: str, tc: dict) -> bool:
         objects.append(obj)
 
     elf = build_dir / APP_ELF_NAME
-    link_cmd = [str(cc)] + cflags + LDFLAGS + [str(o) for o in objects] + ["-o", str(elf)]
+    link_cmd = [str(cc)] + cflags + plugin.ldflags(board_cfg) + [str(o) for o in objects] + ["-o", str(elf)]
     print(f"  LD  {elf.name}")
     try:
         run(link_cmd)

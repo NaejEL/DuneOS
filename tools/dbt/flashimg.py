@@ -22,7 +22,7 @@ from pathlib import Path
 
 from .constants import DUNEOS_ROOT
 from .manifest import find_apps
-from .toolchain import get_board_cpu
+from .toolchain import get_board_plugin
 from .builder import build_single
 from .deploy import deploy_single
 
@@ -199,14 +199,13 @@ def cmd_flashimg(args) -> None:
 
     if getattr(args, "build", False):
         print("Building system apps…")
-        arch, cpu = get_board_cpu()
-        from .toolchain import find_toolchain
-        tc = find_toolchain(arch, cpu)
+        plugin, arch, cpu, board_cfg = get_board_plugin()
+        tc = plugin.find_compiler(arch, cpu)
         apps = find_apps(include_examples=False)
         for app_dir, is_bin in apps:
             if not is_bin:
                 continue
-            if not build_single(app_dir, arch, cpu, tc):
+            if not build_single(app_dir, plugin, arch, cpu, board_cfg, tc):
                 print(f"  [FAIL] {app_dir.name}")
         print()
 

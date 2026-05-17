@@ -1,5 +1,7 @@
 board:
   name: "lilygo-t-embed-cc1101"
+  arch: xtensa-esp32s3
+  sdk: esp-idf
   cpu: esp32s3
   # ESP32-S3-WROOM-1-N16R8: 16MB embedded flash (octal), 8MB OPI PSRAM
   flash_size_mb: 16
