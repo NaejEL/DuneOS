@@ -252,13 +252,102 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 12 — Input | **DONE** | `/dev/input/event0`; IOMatrix scan (CardPuter), GPIO buttons + quadrature encoder (T-Embed); 3-layer keymap (normal/shift/fn); `DUNEOS_PERM_INPUT`; shell `input` + `tail` commands |
 | Phase 13 — Framebuffer + display SDK | **DONE** | `/dev/disp0` streaming driver (all boards); `/dev/fb0` PSRAM back-buffer (T-Embed); `st7789_hw.c` shared HW module; `disp_ioctl.h` POSIX API; `g_shell` graphical terminal (30×16 8×8 font, stdout capture, PATH bin execution) |
 | Phase 14 — WiFi daemon + raw frame injection | **DONE** | `drv_wifi.c` kernel wrappers; `wifi_daemon.dap` (STA, backoff, reconnect); `duneos_netif_wait_ip()`; `/dev/raw80211` (`DUNEOS_PERM_NET_RAW`); `system/bin/ifconfig`; BSD socket exports |
-| Phase 15 — Multi-target portability | Not started | `libgfx` display-agnostic API; `board.info` written at boot; `dbt.py` backend selection |
+| Phase 15 — Multi-target portability | Superseded by 18 | Merged into Phase 18 (libgfx + board.info). |
 | Phase 16 — Shell refactor: built-ins vs PATH | **DONE** | Shell stripped to 6 built-ins (`cd`, `pwd`, `echo`, `exit`, `help`, `run`). 14 commands moved to `system/bin/` as `.dap` files. Args via `/tmp/.exec_args` (`bin_args.h`). `dbt.py deploy --bin` copies to `/sd/bin/`. |
 | Phase 17 — Tooling DX | **DONE** | `dbt.py` split into sub-modules (`cli`, `builder`, `deploy`, `toolchain`, `manifest`); `duneos.yaml` replaces `manifest.json`; `init.yaml` replaces `init.json`; `bspgen.py` purged of ESP-IDF dep. |
 | Phase 18 — libgfx (display portability) | **DONE** | `/flash/board.info` (+ `/sd/board.info`) written at boot; `libgfx` display-agnostic API with `gfx_st7789` and `gfx_fb` backends; `dbt.py` selects backend from `.duneos_board`. |
 | Phase 19 — Flash storage (boot sans SD) | **DONE** | `sysbin` LittleFS partition (1 MB) at `/flash`; boot order: flash → SD; `duneos_vfs_provision_flash()` copies firmware-embedded blobs to `/flash/bin/`; init.yaml cascade (`/flash` then `/sd`); loader cascade (`/flash/bin/` → `/sd/bin/` → `/sd/apps/`); `bspgen` generates per-board `partitions.csv` from `flash_size_mb`; `DUNEOS_HAS_SD` flag; `dbt.py flashimg` builds LittleFS image and flashes directly (port from `.duneos_port` / `--port` / `DUNEOS_PORT`). |
+| Phase 20 — Memory hardening | **DONE** | Per-app heap caps (DRAM pool, `heap_caps_malloc`); software WDT per slot (`esp_task_wdt`); per-app exception handler (`esp_register_shared_stack_event_handler`); supervisor recovery on WDT timeout or exception. |
+| Phase 21 — dbt: multi-arch toolchain plugin model | Not started | `board.yaml` gains `arch:` + `sdk:` fields. `tools/dbt/toolchain/` becomes a plugin directory: one `.py` per SDK family (`esp_idf.py`, `pico_sdk.py`, `stm32_hal.py`, `wch_sdk.py`). `builder.py` dispatches to plugin. External maintainer adds a board by dropping a `board.yaml` + at most one new `toolchain/<sdk>.py`. See **Multi-arch extensibility model** section. |
+| Phase 22 — Kernel HAL abstraction | Not started | Define `components/duneos_hal/include/duneos/hal.h` (gpio, uart, i2c, spi, flash primitives). Refactor ESP-IDF calls out of `duneos_kernel` into `components/duneos_hal_esp32s3/`. Extract Xtensa ELF relocation constants to `loader_reloc_xtensa.c` behind a `duneos_reloc_ops_t` interface. `duneos_kernel` depends only on `duneos_hal.h`, not ESP-IDF directly. |
+| Phase 23 — First non-ESP32 port | Not started | Validate Phases 21–22 against a real second target. RP2040 (Cortex-M0+, pico-sdk) is the leading candidate: FreeRTOS first-class in pico-sdk, LittleFS portable, `arm-none-eabi-gcc` widely available, `picotool` for flash. Adds `boards/rp2040-pico/board.yaml`, `tools/dbt/toolchain/pico_sdk.py`, `components/duneos_hal_rp2040/`. |
 
-**Current state:** Phases 1–14, 16–19 implemented. The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. Stack canaries and per-app exception handlers remain as known technical debt.
+**Current state:** Phases 1–14, 16–20 implemented. The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. Phases 21–23 (multi-arch extensibility) are planned next.
+
+## Multi-arch extensibility model
+
+The goal: an external maintainer can add a new board — or a new SDK family — **without touching core dbt or kernel code**.
+
+### Two independent axes
+
+| Axis | Determined by | Affects |
+| --- | --- | --- |
+| **arch** (`xtensa-esp32s3`, `arm-cortex-m0plus`, `riscv32`) | `board.yaml → arch:` | Compiler prefix, CFLAGS, ELF relocation constants in loader |
+| **sdk** (`esp-idf`, `pico-sdk`, `stm32-hal`, `wch-sdk`) | `board.yaml → sdk:` | Build system invocation, flash tool, monitor tool, kernel HAL implementation |
+
+These are separate. Two boards can share an `arch` (ESP32-S3 + ESP32-C3 both RISC-V eventually) but different `sdk`. Or share an `sdk` (two STM32 boards) but different `arch` (M4 vs M33).
+
+### dbt side — `tools/dbt/toolchain/` plugin directory
+
+```
+tools/dbt/toolchain/
+  __init__.py        # load_plugin(arch, sdk) → plugin module
+  esp_idf.py         # SDK=esp-idf  / ARCH=xtensa-esp32s3  (exists today, refactor target)
+  pico_sdk.py        # SDK=pico-sdk / ARCH=arm-cortex-m0plus (Phase 23)
+  stm32_hal.py       # SDK=stm32-hal / ARCH=arm-cortex-m*   (future)
+  wch_sdk.py         # SDK=wch-sdk  / ARCH=riscv32           (future)
+```
+
+Each plugin is a plain Python module exporting:
+
+```python
+SDK      = "esp-idf"                  # matched against board.yaml sdk:
+ARCH     = "xtensa-esp32s3"           # matched against board.yaml arch:
+COMPILER = "xtensa-esp32s3-elf-gcc"   # binary name; searched in PATH + known install dirs
+
+def cflags(board_cfg: dict) -> list[str]: ...       # per-board flags from board.yaml fields
+def ldflags(board_cfg: dict) -> list[str]: ...
+def linker_script(board_dir: Path) -> Path: ...     # returns path to the .ld file
+def build_kernel(board_dir: Path, build_dir: Path, port: str | None) -> int: ...
+def flash_kernel(build_dir: Path, port: str, baud: int) -> int: ...
+def monitor(port: str) -> None: ...                 # may call with self.suspend()
+def find_toolchain_root() -> Path | None: ...       # locate SDK install (IDF root, pico-sdk, etc.)
+```
+
+`builder.py` and `cli.py` never import a specific plugin — they call `load_plugin(arch, sdk)` which discovers the module by name convention. Adding a new SDK = dropping one `.py` file.
+
+### Kernel side — `components/duneos_hal/`
+
+```
+components/
+  duneos_hal/
+    include/duneos/hal.h        # pure interface — no SDK headers
+  duneos_hal_esp32s3/           # implements duneos/hal.h using ESP-IDF (Phase 22)
+  duneos_hal_rp2040/            # implements duneos/hal.h using pico-sdk  (Phase 23)
+  duneos_kernel/                # depends only on duneos/hal.h (after Phase 22 refactor)
+  duneos_loader/
+    src/
+      loader.c                  # arch-agnostic dispatch
+      loader_reloc_xtensa.c     # Xtensa RELA constants + apply()
+      loader_reloc_arm.c        # ARM RELA constants + apply()   (Phase 23)
+      loader_reloc_riscv.c      # RISC-V RELA constants + apply() (future)
+```
+
+`duneos/hal.h` exposes only what the kernel actually needs — roughly: uart write/read, i2c write_read, spi transfer, gpio set/get, flash read/write/erase, a monotonic tick, and task yield. It is **not** a full HAL reimplementation; boards with richer peripherals expose them through the normal `CONFIG_DUNEOS_DRV_*` Kconfig (ESP-IDF) or CMake option equivalent (other SDKs).
+
+### What an external maintainer must do
+
+**New board, existing SDK family** (e.g. a second ESP32-S3 board):
+1. Add `boards/<name>/board.yaml` with `arch: xtensa-esp32s3` and `sdk: esp-idf`
+2. `bspgen.py` generates `board_config.h`, `sdkconfig.board`, `partitions.csv`, `idf_target.txt`
+3. Done — zero changes to dbt or kernel.
+
+**New SDK family** (e.g. RP2040):
+1. Add `boards/<name>/board.yaml` with `arch: arm-cortex-m0plus` and `sdk: pico-sdk`
+2. Add `tools/dbt/toolchain/pico_sdk.py` implementing the plugin interface
+3. Add `components/duneos_hal_rp2040/` implementing `duneos/hal.h`
+4. Add `components/duneos_loader/src/loader_reloc_arm.c`
+5. Done — core `duneos_kernel`, `duneos_loader`, and all existing toolchain plugins are untouched.
+
+### Toolchain source discovery
+
+Each plugin's `find_toolchain_root()` searches in this priority order:
+1. `DUNEOS_<SDK>_ROOT` environment variable (e.g. `DUNEOS_IDF_ROOT`, `DUNEOS_PICO_SDK`)
+2. `.duneos_idf` / `.duneos_pico_sdk` file at repo root (gitignored, per-developer)
+3. Known default install paths (e.g. `~/.espressif/v6.0.x/esp-idf`, `~/pico/pico-sdk`)
+4. `PATH` scan for the compiler binary
+
+`dbt setup` runs the wizard for whichever SDK the active board needs — not all SDKs at once.
 
 ## Key Technical Decisions
 
