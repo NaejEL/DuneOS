@@ -3,6 +3,7 @@ build/
 # Per-developer board/port selection
 .duneos_board
 .duneos_port
+.duneos_idf
 
 sdkconfig
 sdkconfig.old
@@ -13,6 +14,8 @@ duneos_last_board.stamp
 *.pyc
 __pycache__/
 .vscode/
+.devcontainer/
+.claude/
 *.swp
 *.swo
 *.o

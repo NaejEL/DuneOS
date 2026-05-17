@@ -14,10 +14,19 @@ from pathlib import Path
 _TOOLS_DIR = Path(__file__).resolve().parent
 _VENV_DIR  = _TOOLS_DIR / ".dbt-venv"
 
+# pip package name → import module name (when they differ).
+_DEP_MODULE = {
+    "littlefs-python": "littlefs",
+    "pyyaml": "yaml",
+}
+
 # All Python packages required by the dbt package itself.
 _DEPS = [
     "littlefs-python",
     "esptool",
+    "rich",
+    "pyyaml",
+    "textual",
 ]
 
 
@@ -28,13 +37,25 @@ def _venv_python() -> Path:
 
 
 def _in_dbt_venv() -> bool:
-    exe = Path(sys.executable).resolve()
-    venv = _VENV_DIR.resolve()
+    # sys.executable.resolve() follows symlinks to the real binary, not the venv
+    # copy. Use sys.prefix instead — it always equals the venv root when the venv
+    # python is invoked directly, even without sourcing activate.sh.
     try:
-        exe.relative_to(venv)
+        Path(sys.prefix).resolve().relative_to(_VENV_DIR.resolve())
         return True
     except ValueError:
         return False
+
+
+def _deps_satisfied(python: Path) -> bool:
+    """True if all _DEPS are importable in the venv — no network needed."""
+    for dep in _DEPS:
+        mod = _DEP_MODULE.get(dep, dep.replace("-", "_").split("[")[0])
+        r = subprocess.run([str(python), "-c", f"import {mod}"],
+                           capture_output=True)
+        if r.returncode != 0:
+            return False
+    return True
 
 
 def _bootstrap() -> None:
@@ -43,9 +64,12 @@ def _bootstrap() -> None:
         print("dbt: first run — creating tool venv…", flush=True)
         subprocess.check_call([sys.executable, "-m", "venv", str(_VENV_DIR)])
 
-    # pip is idempotent: already-installed packages resolve in <1 s.
+    if _deps_satisfied(python):
+        return
+
+    print("dbt: installing dependencies…", flush=True)
     result = subprocess.run(
-        [str(python), "-m", "pip", "install", "--quiet"] + _DEPS,
+        [str(python), "-m", "pip", "install"] + _DEPS,
     )
     if result.returncode != 0:
         sys.exit("dbt: dependency installation failed.")

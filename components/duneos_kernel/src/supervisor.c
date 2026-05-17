@@ -525,12 +525,6 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     if (s_loader_ops.get_data_pool)
         s_loader_ops.get_data_pool(app, &slot->data_pool_base, &slot->data_pool_size);
 
-    esp_rom_printf("[DIAG] '%s' app=%p data_pool=%p..%p mailbox=%p\n",
-                   slot->name, slot->app,
-                   (void *)slot->data_pool_base,
-                   (void *)(slot->data_pool_base + slot->data_pool_size),
-                   slot->mailbox);
-
     /* Phase 20: software WDT */
     slot->wdt_timeout_ticks = m->wdt_timeout_ms
                               ? pdMS_TO_TICKS(m->wdt_timeout_ms) : 0;
@@ -567,7 +561,6 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
         return ESP_ERR_NO_MEM;
     }
 
-    esp_rom_printf("[DIAG] '%s' TCB=%p\n", slot->name, (void *)slot->task);
     klog_d(TAG, "launched '%s' (stack %lu B, heap %lu B, wdt %lu ms, restart=%d)",
            slot->name, (unsigned long)stack,
            (unsigned long)m->heap_size, (unsigned long)m->wdt_timeout_ms,

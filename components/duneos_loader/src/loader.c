@@ -239,9 +239,6 @@ static esp_err_t load_sections(FILE              *f,
         klog_d(TAG, "exec block: %zu B DRAM=%p IRAM=%p pool=%zu/%zu",
                exec_total, dram, app->exec_block,
                s_exec_pool_used, sizeof(s_exec_pool));
-        esp_rom_printf("[DIAG] text_base=0x%08x  (GDB: add-symbol-file app.elf 0x%08x)\n",
-                       (unsigned)(uintptr_t)app->exec_block,
-                       (unsigned)(uintptr_t)app->exec_block);
     }
 #endif
 
@@ -262,8 +259,6 @@ static esp_err_t load_sections(FILE              *f,
             return ESP_ERR_NO_MEM;
         }
         app->data_pool_size = data_total;
-        esp_rom_printf("[DIAG] data_pool=%p..%p (%u B)\n",
-                       app->data_pool, app->data_pool + data_total, (unsigned)data_total);
         klog_d(TAG, "data pool: %zu B @ %p", data_total, app->data_pool);
     }
 
@@ -727,12 +722,9 @@ static esp_err_t apply_relocations(FILE               *f,
              * Skip rather than abort: if the reloc was needed the app will fault
              * and be killed by the exception handler instead of crashing the kernel. */
             if (rel->r_offset >= target_sec_size) {
-                esp_rom_printf("[DIAG] reloc[%d] SKIP: target=%s r_offset=0x%lx sec_size=0x%lx base=%p write_would_be=%p\n",
-                               j, shdr_name(shstrtab, &shdrs[target_idx]),
-                               (unsigned long)rel->r_offset,
-                               (unsigned long)target_sec_size,
-                               to_write_ptr(target_base),
-                               (uint8_t *)to_write_ptr(target_base) + rel->r_offset);
+                klog_d(TAG, "reloc[%d] skip: r_offset=0x%lx >= sec_size=0x%lx (%s)",
+                       j, (unsigned long)rel->r_offset, (unsigned long)target_sec_size,
+                       shdr_name(shstrtab, &shdrs[target_idx]));
                 continue;
             }
 
