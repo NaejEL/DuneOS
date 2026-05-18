@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -43,6 +44,11 @@ def _board() -> str:
 
 def _port() -> str:
     return _PORT_FILE.read_text().strip() if _PORT_FILE.exists() else ""
+
+_SD_FILE = DUNEOS_ROOT / ".duneos_sd"
+
+def _sd_path() -> str:
+    return _SD_FILE.read_text().strip() if _SD_FILE.exists() else ""
 
 def _idf_export() -> Path | None:
     root = find_idf_root()
@@ -322,6 +328,7 @@ class SdPathModal(ModalScreen):
     def __init__(self, app_name: str = "") -> None:
         super().__init__()
         self._app_name = app_name
+        self._saved    = _sd_path()
 
     def compose(self) -> ComposeResult:
         lbl = f" App: {self._app_name}" if self._app_name else ""
@@ -331,6 +338,7 @@ class SdPathModal(ModalScreen):
                 yield Label(f"[bold #c9d1d9]{lbl}[/bold #c9d1d9]")
             yield Label("  SD card mount point:")
             yield Input(
+                value=self._saved,
                 placeholder="/mnt/sd  or  /media/user/SD",
                 id="sd-inp",
             )
@@ -338,6 +346,103 @@ class SdPathModal(ModalScreen):
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.dismiss(event.value.strip() or None)
+
+
+# ---------------------------------------------------------------------------
+# Board / port quick-select screens
+# ---------------------------------------------------------------------------
+
+class BoardPickScreen(Screen):
+    """OptionList of all boards — Enter saves and dismisses."""
+
+    BINDINGS = [Binding("escape", "dismiss(None)", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        boards = _list_boards()
+        cur    = _board()
+        opts   = []
+        for name, desc in boards:
+            t = Text()
+            t.append(f" {name:<30}", style="bold #c9d1d9")
+            if desc:
+                t.append(desc, style="#6e7681")
+            if name == cur:
+                t.append("  [active]", style="#3fb950")
+            opts.append(Option(t, id=name))
+        idf   = find_idf_root()
+        idf_s = "  IDF: [#3fb950]found[/#3fb950]" if idf else "  IDF: [#f85149]not found[/#f85149]"
+        with Vertical(id="apppanel") as v:
+            v.border_title = "  Select Board  "
+            yield OptionList(*opts, id="applist")
+        yield Static(f"  \u2191\u2193 nav   Enter select   Esc cancel{idf_s}", id="apphint")
+
+    def on_mount(self) -> None:
+        cur   = _board()
+        names = [n for n, _ in _list_boards()]
+        if cur in names:
+            try:
+                self.query_one("#applist", OptionList).highlighted = names.index(cur)
+            except Exception:
+                pass
+
+    @on(OptionList.OptionSelected, "#applist")
+    def _pick(self, event: OptionList.OptionSelected) -> None:
+        self.dismiss(event.option_id)
+
+
+class PortInputModal(ModalScreen):
+    """Text-input fallback for ports not appearing in the scan."""
+
+    BINDINGS = [("escape", "dismiss(None)", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="setupbox") as v:
+            v.border_title = "  Enter Port  "
+            yield Label("  Serial port:")
+            yield Input(
+                value=_port(),
+                placeholder="/dev/ttyUSB0  or  COM13",
+                id="port-inp",
+            )
+            yield Label("  [dim]Enter: confirm   Esc: cancel[/dim]")
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value.strip() or None)
+
+
+class PortPickScreen(Screen):
+    """OptionList of detected serial ports + manual-entry fallback."""
+
+    BINDINGS = [Binding("escape", "dismiss(None)", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        ports = _list_ports()
+        cur   = _port()
+        opts  = []
+        for p in ports:
+            t = Text()
+            t.append(f" {p}", style="bold #c9d1d9")
+            if p == cur:
+                t.append("  [active]", style="#3fb950")
+            opts.append(Option(t, id=p))
+        opts.append(Option(Text("  \u270f  Enter manually\u2026", style="#58a6ff"), id="__manual__"))
+        with Vertical(id="apppanel") as v:
+            v.border_title = "  Select Port  "
+            yield OptionList(*opts, id="applist")
+        yield Static("  \u2191\u2193 nav   Enter select   Esc cancel", id="apphint")
+
+    def on_mount(self) -> None:
+        ports = _list_ports()
+        cur   = _port()
+        if cur in ports:
+            try:
+                self.query_one("#applist", OptionList).highlighted = ports.index(cur)
+            except Exception:
+                pass
+
+    @on(OptionList.OptionSelected, "#applist")
+    def _pick(self, event: OptionList.OptionSelected) -> None:
+        self.dismiss(event.option_id)
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +458,7 @@ class AppSelectScreen(Screen):
         self._apps: list[tuple[Path, bool]] = []
 
     def compose(self) -> ComposeResult:
-        self._apps = find_apps(include_examples=True)
+        self._apps = find_apps()
         opts = []
         for app_dir, is_bin in self._apps:
             rel = app_dir.relative_to(DUNEOS_ROOT)
@@ -380,6 +485,146 @@ class AppSelectScreen(Screen):
 
 
 # ---------------------------------------------------------------------------
+# Init Config screen (edit boards/<board>/init.yaml)
+# ---------------------------------------------------------------------------
+
+_INIT_PATH_RE    = re.compile(r'^\s+-\s+path:\s+\S*/([^/\s]+?)(?:\.dap)?\s*$')
+_INIT_RESTART_RE = re.compile(r'^\s+restart:\s+(\S+)\s*$')
+_RESTART_CYCLE   = ["always", "on-failure", "no"]
+
+
+def _parse_init_yaml(path: Path) -> dict[str, str]:
+    """Return {app_name: restart_policy} for services listed in path."""
+    result: dict[str, str] = {}
+    if not path.exists():
+        return result
+    current: str | None = None
+    for line in path.read_text().splitlines():
+        m = _INIT_PATH_RE.match(line)
+        if m:
+            current = m.group(1)
+            result[current] = "always"
+            continue
+        if current:
+            m = _INIT_RESTART_RE.match(line)
+            if m:
+                result[current] = m.group(1)
+    return result
+
+
+class InitCfgScreen(Screen):
+    """Interactive editor for boards/<board>/init.yaml.
+
+    Space/Enter toggles a service on/off (default restart: always).
+    R cycles the restart policy: always → on-failure → no → always.
+    S saves; Esc discards.
+    """
+
+    BINDINGS = [
+        Binding("escape", "discard",       "Discard"),
+        Binding("s",      "save",          "Save"),
+        Binding("space",  "toggle",        "Enable/Disable"),
+        Binding("enter",  "toggle",        "Enable/Disable", show=False),
+        Binding("r",      "cycle_restart", "Cycle restart"),
+    ]
+
+    def __init__(self, board_name: str) -> None:
+        super().__init__()
+        self._board   = board_name
+        self._apps:   list[str]             = []
+        self._policy: dict[str, str | None] = {}  # None = disabled
+        self._cursor: int                   = 0
+
+    def compose(self) -> ComposeResult:
+        self._load()
+        with Vertical(id="apppanel") as v:
+            v.border_title = f"  Init Config: {self._board}  "
+            yield OptionList(*self._make_opts(), id="applist")
+        yield Static(
+            "  ↑↓ nav   Space enable/disable   R cycle restart (always/on-failure/no)   S save   Esc discard",
+            id="apphint",
+        )
+
+    def _load(self) -> None:
+        board_init = DUNEOS_ROOT / "boards" / self._board / "init.yaml"
+        current    = _parse_init_yaml(board_init)
+        from .manifest import load_manifest
+        for app_dir, _ in find_apps():
+            try:
+                name = load_manifest(app_dir)["name"]
+            except Exception:
+                name = app_dir.name
+            if name not in self._apps:
+                self._apps.append(name)
+                self._policy[name] = current.get(name)
+
+    def _make_opts(self) -> list[Option]:
+        opts = []
+        for name in self._apps:
+            policy = self._policy[name]
+            t = Text()
+            if policy is not None:
+                t.append(" \u2611 ", style="bold #3fb950")
+                t.append(f"{name:<26}", style="bold #c9d1d9")
+                t.append(f"restart: {policy}", style="#58a6ff")
+            else:
+                t.append(" \u2610 ", style="#6e7681")
+                t.append(name, style="#6e7681")
+            opts.append(Option(t, id=name))
+        return opts
+
+    @on(OptionList.OptionHighlighted, "#applist")
+    def _on_hi(self, event: OptionList.OptionHighlighted) -> None:
+        self._cursor = event.option_index
+
+    def _refresh(self) -> None:
+        ol = self.query_one("#applist", OptionList)
+        ol.clear_options()
+        for opt in self._make_opts():
+            ol.add_option(opt)
+        try:
+            ol.highlighted = self._cursor
+        except Exception:
+            pass
+
+    def action_toggle(self) -> None:
+        if 0 <= self._cursor < len(self._apps):
+            name = self._apps[self._cursor]
+            self._policy[name] = "always" if self._policy[name] is None else None
+            self._refresh()
+
+    def action_cycle_restart(self) -> None:
+        if 0 <= self._cursor < len(self._apps):
+            name = self._apps[self._cursor]
+            p    = self._policy[name]
+            if p is None:
+                return
+            idx = _RESTART_CYCLE.index(p) if p in _RESTART_CYCLE else -1
+            self._policy[name] = _RESTART_CYCLE[(idx + 1) % len(_RESTART_CYCLE)]
+            self._refresh()
+
+    def action_save(self) -> None:
+        board_init = DUNEOS_ROOT / "boards" / self._board / "init.yaml"
+        enabled    = [(n, p) for n in self._apps if (p := self._policy[n]) is not None]
+        lines      = [
+            f"# DuneOS /flash/init.yaml for {self._board}\n",
+            f"# Edit this file or use 'dbt' TUI (Init Config) to manage boot services.\n",
+            f"services:\n",
+        ]
+        if not enabled:
+            lines.append("  # No services enabled — all services start from /sd/init.yaml.\n")
+        else:
+            for name, policy in enabled:
+                lines.append(f"  - path: /flash/bin/{name}.dap\n")
+                lines.append(f"    restart: {policy}\n")
+        board_init.write_text("".join(lines))
+        self.dismiss(True)
+
+    def action_discard(self) -> None:
+        self.dismiss(False)
+
+
+# ---------------------------------------------------------------------------
 # Main TUI
 # ---------------------------------------------------------------------------
 
@@ -392,8 +637,11 @@ _MENU: list[tuple[str, str, str] | None] = [
     ("build-app",    "a", "Build App…"),
     ("flash-sd",     "d", "Flash SD…"),
     None,
+    ("init-cfg",     "i", "Init Config…"),
     ("bspgen",       "g", "BSP Gen…"),
-    ("setup",        "c", "Setup"),
+    None,
+    ("board",        "c", "Board…"),
+    ("port",         "p", "Port…"),
     ("quit",         "q", "Quit"),
 ]
 
@@ -411,9 +659,11 @@ class DbtApp(App):
         Binding("b", "do('build-all')",    "Build All"),
         Binding("a", "do('build-app')",    "Build App"),
         Binding("d", "do('flash-sd')",     "Flash SD"),
-        Binding("g", "do('bspgen')",       "BSP Gen"),
-        Binding("c", "do('setup')",        "Setup"),
-        Binding("q", "quit",               "Quit"),
+        Binding("i", "do('init-cfg')",     "Init Config"),
+        Binding("g", "do('bspgen')",         "BSP Gen"),
+        Binding("c", "do('board')",          "Board"),
+        Binding("p", "do('port')",           "Port"),
+        Binding("q", "quit",                 "Quit"),
     ]
 
     # -- Compose / mount ─────────────────────────────────────────────────────
@@ -467,8 +717,10 @@ class DbtApp(App):
             "build-all":    self._run_build_all,
             "build-app":    self._pick_and_build,
             "flash-sd":     self._run_flash_sd,
+            "init-cfg":     self._run_init_cfg,
             "bspgen":       self._run_bspgen,
-            "setup":        self._open_setup,
+            "board":        self._run_board_pick,
+            "port":         self._run_port_pick,
             "quit":         self.action_quit,
         }
         fn = dispatch.get(action_id)
@@ -560,6 +812,22 @@ class DbtApp(App):
             return False
         return True
 
+    # -- Init Config ─────────────────────────────────────────────────────────
+
+    def _run_init_cfg(self) -> None:
+        board = _board()
+        if not board:
+            self._err("Board not configured", "Press c to open Setup.")
+            return
+
+        def _done(saved: bool | None) -> None:
+            if saved:
+                self._log(f"[#3fb950]✓[/#3fb950]  boards/{board}/init.yaml saved")
+            else:
+                self._log("[dim]  init config: discarded[/dim]")
+
+        self.push_screen(InitCfgScreen(board), _done)
+
     # -- Flash Kernel ────────────────────────────────────────────────────────
 
     def _run_flash_kernel(self) -> None:
@@ -631,7 +899,7 @@ class DbtApp(App):
             staging = DUNEOS_ROOT / "build" / "sysbin_staging"
             if staging.exists():
                 _sh.rmtree(staging)
-            n = _stage(staging)
+            n = _stage(staging, _get_board_name())
             self.call_from_thread(self._log, f"  {n} app(s) staged")
 
             out = DUNEOS_ROOT / "build" / "sysbin.bin"
@@ -733,6 +1001,7 @@ class DbtApp(App):
     def _run_flash_sd(self) -> None:
         def _got_path(sd_str: str | None) -> None:
             if sd_str:
+                _SD_FILE.write_text(sd_str + "\n")
                 self._worker_flash_sd(Path(sd_str))
         self.push_screen(SdPathModal(), _got_path)
 
@@ -831,13 +1100,40 @@ class DbtApp(App):
         finally:
             self.call_from_thread(self._set_busy, False)
 
-    # -- Setup ───────────────────────────────────────────────────────────────
+    # -- Board & Port pickers ────────────────────────────────────────────────
+
+    def _run_board_pick(self) -> None:
+        def _done(board: str | None) -> None:
+            if board:
+                _BOARD_FILE.write_text(board + "\n")
+                self._refresh_status()
+                self._log(f"[#3fb950]✓[/#3fb950]  board → {board}")
+            else:
+                self._log("[dim]  board: cancelled[/dim]")
+        self.push_screen(BoardPickScreen(), _done)
+
+    def _run_port_pick(self) -> None:
+        def _got(choice: str | None) -> None:
+            if choice == "__manual__":
+                self.push_screen(PortInputModal(), _save)
+            elif choice:
+                _save(choice)
+            else:
+                self._log("[dim]  port: cancelled[/dim]")
+
+        def _save(port: str | None) -> None:
+            if port:
+                _PORT_FILE.write_text(port + "\n")
+                self._refresh_status()
+                self._log(f"[#3fb950]✓[/#3fb950]  port → {port}")
+
+        self.push_screen(PortPickScreen(), _got)
+
+    # -- Setup (kept for programmatic use) ───────────────────────────────────
 
     def _open_setup(self) -> None:
         def _done(_) -> None:
-            # This callback runs on the main UI thread — call directly.
             self._refresh_status()
-
         self.push_screen(SetupScreen(), _done)
 
     # -- Quit ────────────────────────────────────────────────────────────────
