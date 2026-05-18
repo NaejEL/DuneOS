@@ -88,9 +88,9 @@ DuneOS doit booter et être utilisable même sans carte SD insérée.
 Garantir qu'une application ne peut pas crasher le système. Purger la dette technique accumulée.
 
 - [ ] **Stack canary** par task applicative.
-- [ ] **Per-app exception handler** : Intercepter le crash → logger dans `/dev/klog` → unload propre sans reboot du kernel.
-- [ ] **Task WDT** : Le supervisor nourrit le WDT pour l'app ; kick de l'app en cas de timeout.
-- [ ] **Pools RAM monolithiques** : Un bloc contigu unique par app (Code + Data + BSS + Stack + Heap). Fin de la fragmentation du tas noyau.
+- [x] **Per-app exception handler** : Intercepter le crash → logger dans `/dev/klog` → unload propre sans reboot du kernel.
+- [x] **Task WDT** : Le supervisor nourrit le WDT pour l'app ; kick de l'app en cas de timeout.
+- [x] **Per-app heap** : Pool DRAM dédié par app via `heap_caps_malloc` (bloc contigu Code+Data+Heap). Bloc monolithique TLSF différé Phase 22.
 - [ ] **TLSF userspace allocator** : `libdune.a` gère son propre `malloc()` uniquement dans ce pool.
 - [ ] **Validation syscall** : Le noyau vérifie que les pointeurs d'arguments (read/write buffers) appartiennent à la zone mémoire autorisée de l'app.
 
@@ -122,9 +122,10 @@ Vitesse et légèreté : fiabiliser l'ABI.
 
 L'expérience Plug and Play ultime.
 
-- [x] **TinyUSB** : Brancher la stack USB open-source sur la HAL DuneOS.
-- [x] **USB MSC (Mass Storage)** : Exposer `/sd` ou `/flash` au PC. Glisser-déposer `.dap` comme sur une clé USB.
-- [x] **USB CDC (Console)** : Exposer le shell sur un port série virtuel USB, libérant l'UART physique.
+- [x] **TinyUSB** : Composite MSC+CDC sur `espressif/esp_tinyusb ^2.0.1~1`. `drv_usb.c` initialise le device stack.
+- [x] **USB MSC (Mass Storage)** : `/sd` exposé en drag-and-drop. `duneos_vfs_get_sd_card()` passe le handle sdmmc au backend MSC.
+- [x] **USB CDC (Console)** : `drv_usb_cdc.c` — TX mutex-sérialisé (un seul `write_flush` non-bloquant, pas de collision), RX via ring buffer + sémaphore → `/dev/ttyUSB0`. `system/usb_shell/` + `system/shell_core/` remplacent `system/shell/`.
+- [x] **`console: none`** : `bspgen.py` émet `CONFIG_ESP_CONSOLE_NONE=y` pour les boards OTG — UART0 reste libre pour les apps. Le klog est redirigé vers CDC à l'exécution via `esp_log_set_vprintf`.
 
 ---
 

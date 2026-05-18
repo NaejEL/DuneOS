@@ -29,8 +29,8 @@ python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml  # generates s
 # Clean when switching boards — sdkconfig is board-specific
 # idf.py fullclean
 
-# Build the shell (system app, ships with DuneOS)
-cd system/shell
+# Build the USB shell (system app, ships with DuneOS)
+cd system/usb_shell
 python ../../tools/dbt.py build
 python ../../tools/dbt.py deploy E:\   # E: = SD card drive
 
@@ -270,11 +270,12 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 19 — Flash storage (boot sans SD) | **DONE** | `sysbin` LittleFS partition (1 MB) at `/flash`; boot order: flash → SD; `duneos_vfs_provision_flash()` copies firmware-embedded blobs to `/flash/bin/`; init.yaml cascade (`/flash` then `/sd`); loader cascade (`/flash/bin/` → `/sd/bin/` → `/sd/apps/`); `bspgen` generates per-board `partitions.csv` from `flash_size_mb`; `DUNEOS_HAS_SD` flag; `dbt.py flashimg` builds LittleFS image and flashes directly (port from `.duneos_port` / `--port` / `DUNEOS_PORT`). |
 | Phase 20 — Memory hardening | **DONE** | Per-app heap caps (DRAM pool, `heap_caps_malloc`); software WDT per slot (`esp_task_wdt`); per-app exception handler (`esp_register_shared_stack_event_handler`); supervisor recovery on WDT timeout or exception. |
 | Phase 21 — dbt: multi-arch toolchain plugin model | **DONE** | `board.yaml` gains `arch:` + `sdk:` fields (all boards updated). `tools/dbt/toolchain/` package replaces `toolchain.py`: `__init__.py` exposes `load_plugin(sdk)` + `get_board_plugin()`; `esp_idf.py` is the first plugin (SDK/ARCH constants, `find_compiler`, `cflags`, `ldflags`, `build_kernel`, `flash_kernel`, `monitor`, `find_toolchain_root`). `builder.py`, `cli.py`, `flashimg.py`, `kernel.py` dispatch through `get_board_plugin()`. |
-| Phase 23 (ROADMAP_v2) — USB Device Subsystem | **DONE** | `espressif/esp_tinyusb ^2.0.1~1` managed component; `drv_usb.c` installs TinyUSB device stack (MSC+CDC composite descriptor); `drv_usb_cdc.c` bridges CDC-ACM RX/TX to POSIX via FreeRTOS ring buffer + semaphore; `/dev/ttyUSB0` registered as standalone VFS path; `duneos_vfs_get_sd_card()` exposes sdmmc handle to MSC; `board.yaml` gains `usb:` section; `bspgen.py` generates `DUNEOS_USB_*` defines + `CONFIG_DUNEOS_DRV_USB_MSC/CDC=y`; CardPuter switched to `console: uart` since USB OTG owns GPIO19/20. |
-| Phase 22 — Kernel HAL abstraction | Not started | Define `components/duneos_hal/include/duneos/hal.h` (gpio, uart, i2c, spi, flash primitives). Refactor ESP-IDF calls out of `duneos_kernel` into `components/duneos_hal_esp32s3/`. Extract Xtensa ELF relocation constants to `loader_reloc_xtensa.c` behind a `duneos_reloc_ops_t` interface. `duneos_kernel` depends only on `duneos_hal.h`, not ESP-IDF directly. |
-| Phase 23 — First non-ESP32 port | Not started | Validate Phases 21–22 against a real second target. RP2040 (Cortex-M0+, pico-sdk) is the leading candidate: FreeRTOS first-class in pico-sdk, LittleFS portable, `arm-none-eabi-gcc` widely available, `picotool` for flash. Adds `boards/rp2040-pico/board.yaml`, `tools/dbt/toolchain/pico_sdk.py`, `components/duneos_hal_rp2040/`. |
+| Phase 22 — Syscalls + PicoLibc migration | Not started | O(1) syscall dispatch table (array of function pointers) replacing string search in `symbols.c`. PicoLibc replaces Newlib. `libdune.a` wraps POSIX calls against syscall indices. |
+| Phase 23 — USB Device Subsystem | **DONE** | `espressif/esp_tinyusb ^2.0.1~1` managed component; `drv_usb.c` TinyUSB MSC+CDC composite device; `drv_usb_cdc.c` mutex-serialised TX (no concurrent flush collisions) + semaphore-gated RX → `/dev/ttyUSB0`; `system/usb_shell/` + `system/shell_core/` replace `system/shell/`; `bspgen.py` adds `console: none` → `CONFIG_ESP_CONSOLE_NONE=y` (default for OTG boards — keeps UART0 free for apps; klog redirected to CDC at runtime via `esp_log_set_vprintf`); `board.yaml` gains `usb:` section. |
+| Phase 24 — VFS native + networking | Not started | Native `duneos_vfs` replacing `esp_vfs`; `poll()`/`select()` support; Ethernet RMII + LwIP; BSD socket routing. |
+| Phase 25 — OSAL + WiFi emancipation | Not started | DuneOS scheduler; FreeRTOS OSAL shim; WiFi blob confinement behind OSAL. |
 
-**Current state:** Phases 1–14, 16–21 implemented plus USB Device Subsystem (ROADMAP_v2 Phase 23). The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. On the CardPuter, TinyUSB exposes the SD card as a drag-and-drop USB drive (MSC) and a virtual serial console (CDC `/dev/ttyUSB0`). Phases 22–23 (HAL abstraction + RP2040 port) are planned next.
+**Current state:** Phases 1–14, 16–23 implemented. The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. On the CardPuter, TinyUSB exposes the SD card as a drag-and-drop USB drive (MSC) and a virtual serial console (CDC `/dev/ttyUSB0`; `usb_shell.dap` runs on it). `console: none` in `board.yaml` emits `CONFIG_ESP_CONSOLE_NONE=y` — UART0 stays free for app use. Phases 22–25 (Syscalls+PicoLibc, VFS native, OSAL) are planned next per ROADMAP_v2.
 
 ## Multi-arch extensibility model
 
@@ -395,6 +396,10 @@ Each plugin's `find_toolchain_root()` searches in this priority order:
 - **`nanosleep` is not in ESP-IDF newlib** — implemented as `duneos_nanosleep()` via `usleep()`.
 - **Inline comments in `partitions.csv` are parsed as flags by ESP-IDF** — remove all inline comments.
 - **`CMAKE_SOURCE_DIR` is unreliable during ESP-IDF requirements phase** — use `CMAKE_CURRENT_LIST_DIR` instead.
+- **`CONFIG_ESP_CONSOLE_USB_CDC=y` conflicts with TinyUSB** — if set alongside TinyUSB, the device doesn't enumerate at all (nothing in `lsusb`). For OTG boards use `console: none` in `board.yaml`; bspgen emits `CONFIG_ESP_CONSOLE_NONE=y`. The `console:` field controls only the ESP-IDF early-boot serial — DuneOS redirects all log output to CDC at runtime via `esp_log_set_vprintf` regardless.
+- **Never hand-edit bspgen-generated files** — `sdkconfig.board`, `board_config.h`, `partitions.csv`, and `idf_target.txt` under `boards/<name>/` are generated by `tools/duneos-bspgen.py`. Fix the YAML or bspgen logic, then re-run bspgen.
+- **Concurrent `tinyusb_cdcacm_write_flush` calls cause "Flush failed"** — all CDC TX must flow through a single mutex (`xSemaphoreCreateMutex`) with a non-blocking flush (`timeout_ticks=0`). TinyUSB's `cdcd_xfer_cb` auto-flushes remaining FIFO data after each transfer. Using `timeout_ticks > 0` from a second task loops on `tud_cdc_n_write_flush` and collides with the first task.
+- **UART0 (GPIO43/44) on the CardPuter has no physical header** — it is inaccessible. Never route klog or the ESP-IDF console to UART0; it must stay free for application use.
 
 ## Code Style & Constraints
 
