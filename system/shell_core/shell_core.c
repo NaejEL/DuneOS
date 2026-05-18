@@ -191,9 +191,11 @@ static void shell_run(int fd_r, int fd_w)
 
 #ifdef SHELL_FLUSH_ON_START
     /* Drain stale RX bytes buffered before the shell started.
+     * Loop for 20 × CDC_READ_TIMEOUT_MS (≈2 s) so boot-time log fragments
+     * that arrive up to ~1.5 s after USB enumeration are silently discarded.
      * Only safe when the read fd has a timeout (e.g. /dev/ttyUSB0).
      * Do NOT define SHELL_FLUSH_ON_START when using blocking stdin. */
-    { char d[64]; while (read(s_fd_r, d, sizeof(d)) > 0); }
+    { char d[64]; for (int _fi = 0; _fi < 20; _fi++) read(s_fd_r, d, sizeof(d)); }
 #endif
 
     sh_outln("\r\n" SHELL_BANNER " -- type 'help' for commands");

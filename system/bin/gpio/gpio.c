@@ -18,7 +18,7 @@ static void outf(const char *fmt, ...)
 
 void app_main(void)
 {
-    static char buf[DUNEOS_EXEC_ARGS_BUF_SIZE];
+    char buf[DUNEOS_EXEC_ARGS_BUF_SIZE];
     char *argv[8]; char *cwd;
     int argc = duneos_bin_args(buf, sizeof(buf), &cwd, argv, 8);
     (void)cwd;

@@ -10,7 +10,7 @@
 #include <duneos/bin_args.h>
 
 /* Kernel ABI: list active VFS mount points ("/flash", "/sd", "/tmp", "/dev"). */
-extern int duneos_vfs_list_mounts(const char **out, int max);
+extern int duneos_vfs_list_mounts(char (*out)[32], int max);
 
 static void out(const char *s)           { write(STDOUT_FILENO, s, strlen(s)); }
 static void outn(const char *s)          { out(s); out("\r\n"); }
@@ -22,7 +22,7 @@ static void outf(const char *fmt, ...)
 
 void app_main(void)
 {
-    static char buf[DUNEOS_EXEC_ARGS_BUF_SIZE];
+    char buf[DUNEOS_EXEC_ARGS_BUF_SIZE];
     char *argv[8]; char *cwd;
     int argc = duneos_bin_args(buf, sizeof(buf), &cwd, argv, 8);
     if (argc == 0) {
@@ -40,7 +40,7 @@ void app_main(void)
     duneos_bin_resolve(target, cwd, resolved, sizeof(resolved));
 
     if (strcmp(resolved, "/") == 0) {
-        const char *mounts[8];
+        char mounts[8][32];
         int n = duneos_vfs_list_mounts(mounts, 8);
         for (int i = 0; i < n; i++) {
             const char *name = mounts[i] + 1; /* strip leading '/' */

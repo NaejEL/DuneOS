@@ -2,12 +2,18 @@
  * drv_usb_cdc.c — USB CDC-ACM VFS device (/dev/ttyUSB0)
  *
  * TX path: mutex-serialized write_queue + single non-blocking flush.
- * Mirrors vfs_tinyusb.c's tusb_write design — eliminates concurrent
- * write_flush collisions that caused echo chars to appear only on Enter.
  *
- * RX path: TinyUSB RX callback enqueues into a FreeRTOS ring buffer;
- * cdc_read blocks on a counting semaphore with 100ms timeout — compatible
- * with shell_core.c's idle-reprinting (50 × 100ms = 5s).
+ * RX path: TinyUSB RX callback stores bytes in a plain C circular buffer;
+ * a counting semaphore carries exactly one token per byte so that
+ * cdc_read always advances the tail by exactly the number of bytes it
+ * actually consumed.
+ *
+ * We deliberately avoid xRingbufferReceiveUpTo (BYTEBUF type) because
+ * vRingbufferReturnItem advances the read pointer by the full contiguous
+ * block, not by the caller's maxSize, silently dropping bytes when a USB
+ * packet carries more than 1 character.  We also avoid xStreamBufferReceive
+ * because it uses task notifications, which can conflict with other
+ * FreeRTOS mechanisms active on the shell task.
  */
 
 #include "duneos/klog.h"
@@ -17,7 +23,6 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "freertos/ringbuf.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,18 +38,24 @@ static const char *TAG = "duneos/usb_cdc";
 
 /* -------------------------------------------------------------------------
  * TX — single mutex shared by cdc_write and s_cdc_log_vprintf.
- * tinyusb_cdcacm_write_flush(itf, 0) is non-blocking (one tud_cdc_n_write_flush
- * call, no vTaskDelay) — safe to call from any task including TinyUSB's own.
  * ---------------------------------------------------------------------- */
 
 static SemaphoreHandle_t s_write_mutex = NULL;
 
 /* -------------------------------------------------------------------------
- * RX state
+ * RX — plain circular byte buffer + counting semaphore.
+ *
+ * s_rx_sem: one token per byte in the buffer.  s_rx_head/tail protected by
+ * s_rx_mux (portMUX, safe to take inside and outside ISR context).
+ *
+ * Invariant: semaphore count == (s_rx_head - s_rx_tail) % CDC_RX_BUF_SIZE
  * ---------------------------------------------------------------------- */
 
-static RingbufHandle_t   s_rx_ring   = NULL;
+static uint8_t           s_rx_buf[CDC_RX_BUF_SIZE];
+static volatile uint16_t s_rx_head   = 0;   /* write index (RX callback) */
+static volatile uint16_t s_rx_tail   = 0;   /* read  index (cdc_read)   */
 static SemaphoreHandle_t s_rx_sem    = NULL;
+static portMUX_TYPE      s_rx_mux    = portMUX_INITIALIZER_UNLOCKED;
 static bool              s_connected = false;
 
 /* -------------------------------------------------------------------------
@@ -62,8 +73,22 @@ void drv_usb_cdc_rx_cb(int itf, cdcacm_event_t *event)
                                          sizeof(buf), &rx_size);
     if (ret != ESP_OK || rx_size == 0) return;
 
-    xRingbufferSend(s_rx_ring, buf, rx_size, 0);
-    xSemaphoreGive(s_rx_sem);
+    /* Write bytes into the circular buffer, counting only stored bytes.
+     * Give exactly one semaphore token per byte actually stored so the
+     * semaphore count stays equal to (s_rx_head - s_rx_tail) % BUF_SIZE. */
+    size_t stored = 0;
+    portENTER_CRITICAL(&s_rx_mux);
+    for (size_t i = 0; i < rx_size; i++) {
+        uint16_t next = (s_rx_head + 1u) % CDC_RX_BUF_SIZE;
+        if (next == s_rx_tail) break;   /* full — drop remaining bytes */
+        s_rx_buf[s_rx_head] = buf[i];
+        s_rx_head = next;
+        stored++;
+    }
+    portEXIT_CRITICAL(&s_rx_mux);
+
+    /* Give tokens AFTER the critical section to avoid priority inversion. */
+    for (size_t i = 0; i < stored; i++) xSemaphoreGive(s_rx_sem);
 }
 
 void drv_usb_cdc_line_state_cb(int itf, cdcacm_event_t *event)
@@ -94,35 +119,28 @@ static int cdc_close(duneos_devfd_t *fd)
 static ssize_t cdc_read(duneos_devfd_t *fd, void *dst, size_t size)
 {
     (void)fd;
-    if (!s_rx_ring) { errno = EIO; return -1; }
+    if (!s_rx_sem) { errno = EIO; return -1; }
+    if (size == 0) return 0;
 
     uint8_t *out   = (uint8_t *)dst;
     size_t   total = 0;
 
+    /* Block until the first byte arrives (or 100 ms timeout). */
+    if (xSemaphoreTake(s_rx_sem, pdMS_TO_TICKS(CDC_READ_TIMEOUT_MS)) != pdTRUE)
+        return 0;  /* timeout — shell_core treats 0 as idle */
+
+    portENTER_CRITICAL(&s_rx_mux);
+    out[total++] = s_rx_buf[s_rx_tail];
+    s_rx_tail = (s_rx_tail + 1u) % CDC_RX_BUF_SIZE;
+    portEXIT_CRITICAL(&s_rx_mux);
+
+    /* Greedily drain any additional bytes the caller requested. */
     while (total < size) {
-        size_t item_size = 0;
-        if (xSemaphoreTake(s_rx_sem,
-                           pdMS_TO_TICKS(CDC_READ_TIMEOUT_MS)) != pdTRUE) {
-            break;
-        }
-
-        uint8_t *item = xRingbufferReceiveUpTo(s_rx_ring, &item_size,
-                                                0, size - total);
-        if (!item || item_size == 0) break;
-
-        memcpy(out + total, item, item_size);
-        vRingbufferReturnItem(s_rx_ring, item);
-        total += item_size;
-
-        while (total < size) {
-            item = xRingbufferReceiveUpTo(s_rx_ring, &item_size, 0,
-                                          size - total);
-            if (!item) break;
-            memcpy(out + total, item, item_size);
-            vRingbufferReturnItem(s_rx_ring, item);
-            total += item_size;
-        }
-        break;
+        if (xSemaphoreTake(s_rx_sem, 0) != pdTRUE) break;  /* non-blocking */
+        portENTER_CRITICAL(&s_rx_mux);
+        out[total++] = s_rx_buf[s_rx_tail];
+        s_rx_tail = (s_rx_tail + 1u) % CDC_RX_BUF_SIZE;
+        portEXIT_CRITICAL(&s_rx_mux);
     }
 
     return (ssize_t)total;
@@ -141,10 +159,6 @@ static ssize_t cdc_write(duneos_devfd_t *fd, const void *src, size_t size)
 
 /* -------------------------------------------------------------------------
  * klog → CDC redirect
- *
- * Uses the same write_mutex as cdc_write — no concurrent flush collisions.
- * write_flush(0) is non-blocking so this is safe from any task context.
- * Uses a short timeout (10ms) so a slow host never stalls ESP_LOG callers.
  * ---------------------------------------------------------------------- */
 
 static int s_cdc_log_vprintf(const char *fmt, va_list ap)
@@ -173,14 +187,13 @@ void drv_usb_cdc_attach_log(void)
 void drv_usb_cdc_preinit(void)
 {
     s_write_mutex = xSemaphoreCreateMutex();
-    s_rx_ring     = xRingbufferCreate(CDC_RX_BUF_SIZE, RINGBUF_TYPE_BYTEBUF);
     s_rx_sem      = xSemaphoreCreateCounting(CDC_RX_BUF_SIZE, 0);
 
-    if (!s_write_mutex || !s_rx_ring || !s_rx_sem) {
-        klog_e(TAG, "mutex / ring buffer / semaphore alloc failed");
+    if (!s_write_mutex || !s_rx_sem) {
+        klog_e(TAG, "mutex / semaphore alloc failed");
         return;
     }
-    klog_d(TAG, "CDC RX ring allocated (%u B)", CDC_RX_BUF_SIZE);
+    klog_d(TAG, "CDC RX circular buffer ready (%u B)", CDC_RX_BUF_SIZE);
 }
 
 void drv_usb_cdc_register(void)

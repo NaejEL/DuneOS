@@ -114,6 +114,19 @@ next_line:
     return cfg->count > 0 ? ESP_OK : ESP_FAIL;
 }
 
+/* Extract app name from path: "/flash/bin/usb_shell.dap" → "usb_shell".
+ * Used for cross-filesystem deduplication (same app, different path prefix). */
+static void app_name_from_path(const char *path, char *out, size_t outsz)
+{
+    const char *base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    size_t len = strlen(base);
+    if (len > 4 && strcmp(base + len - 4, ".dap") == 0) len -= 4;
+    if (len >= outsz) len = outsz - 1;
+    memcpy(out, base, len);
+    out[len] = '\0';
+}
+
 esp_err_t duneos_init_load(duneos_init_config_t *cfg)
 {
     if (!cfg) return ESP_ERR_INVALID_ARG;
@@ -130,7 +143,9 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
     cfg->count = 0;
 
     /* Merge services from all init files (flash first, then SD).
-     * Duplicate paths are skipped so a service in both files runs once. */
+     * Duplicate entries are skipped by app name (basename without .dap) so
+     * "/flash/bin/usb_shell.dap" and "/sd/bin/usb_shell.dap" both resolve to
+     * the same service and the flash-side entry wins. */
     for (int i = 0; paths[i]; i++) {
         int fd = open(paths[i], O_RDONLY);
         if (fd < 0) continue;
@@ -151,9 +166,15 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
 
         int added = 0;
         for (int s = 0; s < tmp->count; s++) {
+            char new_name[64];
+            app_name_from_path(tmp->services[s].path, new_name, sizeof(new_name));
             int dup = 0;
             for (int j = 0; j < cfg->count; j++) {
-                if (strcmp(cfg->services[j].path, tmp->services[s].path) == 0) {
+                char existing_name[64];
+                app_name_from_path(cfg->services[j].path, existing_name, sizeof(existing_name));
+                if (strcmp(existing_name, new_name) == 0) {
+                    klog_d(TAG, "init: skipping '%s' from %s (already registered as '%s')",
+                           new_name, paths[i], cfg->services[j].path);
                     dup = 1; break;
                 }
             }
