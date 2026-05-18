@@ -145,11 +145,19 @@ void *duneos_supervisor_app_calloc(size_t n, size_t size);
 void  duneos_supervisor_app_free(void *ptr);
 
 /*
- * Basic pointer validation for syscall arguments.
- * Returns false for NULL or obviously invalid addresses (peripheral range).
- * Called from read/write wrappers in symbols.c.
+ * Permissive pointer validation — rejects NULL, peripheral range, and IRAM.
+ * Used for read-source buffers (kernel reads FROM ptr) which may legitimately
+ * point into kernel-returned data (e.g. strerror result).
  */
 bool duneos_supervisor_check_user_ptr(const void *ptr, size_t len);
+
+/*
+ * Strict pointer validation — ptr must be within the calling app's own
+ * allocated memory (data pool, per-app heap, or task stack).
+ * Used for read-target buffers (kernel writes INTO ptr).
+ * Falls back to check_user_ptr when called from a non-app context.
+ */
+bool duneos_supervisor_check_app_writable_ptr(const void *ptr, size_t len);
 
 /*
  * Kick the software watchdog for the calling app task.
@@ -157,3 +165,10 @@ bool duneos_supervisor_check_user_ptr(const void *ptr, size_t len);
  * to avoid being killed by the supervisor.  No-op if WDT is disabled.
  */
 void duneos_supervisor_wdt_reset(void);
+
+/*
+ * App-callable exit — notify the supervisor and delete the calling task.
+ * Exported to apps via the symbol table and the API table.
+ * Never returns.
+ */
+void duneos_exit(int code) __attribute__((noreturn));

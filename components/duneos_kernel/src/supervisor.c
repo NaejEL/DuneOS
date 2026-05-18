@@ -84,6 +84,13 @@ typedef struct {
     /* Phase 20: software WDT */
     TickType_t          wdt_timeout_ticks;  /* 0 = disabled */
     TickType_t          wdt_last_kick_tick;
+
+    /* Phase 22: static stack allocation — gives us exact bounds for the
+     * app-writable pointer validator.  We own the stack memory so we know
+     * [stack_mem, stack_mem+stack_size) is a valid write target.           */
+    uint8_t            *stack_mem;       /* heap_caps_malloc'd stack buffer */
+    size_t              stack_size;      /* bytes (== manifest stack_size or default) */
+    StaticTask_t        tcb;             /* FreeRTOS TCB — must outlive the task */
 } app_slot_t;
 
 typedef struct {
@@ -403,7 +410,16 @@ static void supervisor_task(void *arg)
                should_restart ? " — restarting" : "");
 
         s_loader_ops.unload(app);
-        slot_heap_free(slot);           /* Phase 20: free per-app heap pool */
+        slot_heap_free(slot);           /* free per-app heap pool */
+        /* Phase 22: free the static stack buffer after the task is deleted.
+         * vTaskDelete (called above for forced exits, or by the task itself)
+         * guarantees the TCB is no longer referenced by FreeRTOS before the
+         * supervisor processes the exit message. */
+        if (slot->stack_mem) {
+            heap_caps_free(slot->stack_mem);
+            slot->stack_mem  = NULL;
+            slot->stack_size = 0;
+        }
         if (mailbox) vQueueDelete(mailbox);
 
         if (should_restart) {
@@ -535,6 +551,22 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
 
     uint32_t stack = m->stack_size > 0 ? m->stack_size : DUNEOS_APP_DEFAULT_STACK;
 
+    /* Phase 22: allocate the task stack ourselves so we know its exact bounds.
+     * xTaskCreateStaticPinnedToCore requires an external stack buffer and a
+     * StaticTask_t (TCB) that both outlive the task — both live in app_slot_t.
+     * Aligning to 16 bytes satisfies Xtensa's CALL0/CALL8 ABI requirements. */
+    slot->stack_mem  = heap_caps_aligned_alloc(16, stack,
+                                                MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    slot->stack_size = stack;
+    if (!slot->stack_mem) {
+        s_loader_ops.unload(app);
+        slot_heap_free(slot);
+        if (slot->mailbox) vQueueDelete(slot->mailbox);
+        slot->active = false;
+        klog_e(TAG, "stack alloc failed for '%s' (%lu B)", slot->name, (unsigned long)stack);
+        return ESP_ERR_NO_MEM;
+    }
+
     /* Increment before xTaskCreate: the new task may exit and the supervisor
      * may process the exit before this task resumes after the yield inside
      * xTaskCreate, causing s_active_count to underflow to -1 if we increment
@@ -543,23 +575,29 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     s_active_count++;
     xSemaphoreGive(s_lock);
 
-    /* IDF v6+: xTaskCreate stack depth is in BYTES (not words). Pass stack
-     * directly — do NOT divide by sizeof(StackType_t). */
-    BaseType_t ret = xTaskCreatePinnedToCore(app_task_entry, slot->name,
-                                              stack, slot,
-                                              DUNEOS_APP_TASK_PRIORITY,
-                                              &slot->task, 0);
-    if (ret != pdPASS) {
+    /* IDF v6+: stack depth is in BYTES. StaticTask_t lives in slot->tcb and
+     * must remain valid until the task is deleted. */
+    TaskHandle_t handle = xTaskCreateStaticPinnedToCore(
+        app_task_entry, slot->name,
+        stack, slot,
+        DUNEOS_APP_TASK_PRIORITY,
+        (StackType_t *)slot->stack_mem,
+        &slot->tcb,
+        0);
+    if (!handle) {
         xSemaphoreTake(s_lock, portMAX_DELAY);
         s_active_count--;
         xSemaphoreGive(s_lock);
         s_loader_ops.unload(app);
         slot_heap_free(slot);
+        heap_caps_free(slot->stack_mem);
+        slot->stack_mem = NULL;
         if (slot->mailbox) vQueueDelete(slot->mailbox);
         slot->active = false;
-        klog_e(TAG, "xTaskCreate failed for '%s'", slot->name);
+        klog_e(TAG, "xTaskCreateStatic failed for '%s'", slot->name);
         return ESP_ERR_NO_MEM;
     }
+    slot->task = handle;
 
     klog_d(TAG, "launched '%s' (stack %lu B, heap %lu B, wdt %lu ms, restart=%d)",
            slot->name, (unsigned long)stack,
@@ -571,6 +609,15 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
 esp_err_t duneos_supervisor_launch(const char *path)
 {
     return duneos_supervisor_launch_policy(path, DUNEOS_RESTART_NO);
+}
+
+void duneos_exit(int code)
+{
+    duneos_supervisor_app_exited(code);
+    /* duneos_supervisor_app_exited calls vTaskDelete(NULL) and never returns,
+     * but the compiler cannot see that without the noreturn attribute on the
+     * FreeRTOS function.  The loop is unreachable but satisfies noreturn. */
+    while (1) {}
 }
 
 void duneos_supervisor_app_exited(int code)
@@ -747,12 +794,74 @@ void duneos_supervisor_app_free(void *ptr)
 bool duneos_supervisor_check_user_ptr(const void *ptr, size_t len)
 {
     if (!ptr) return false;
-    (void)len;
     uintptr_t p = (uintptr_t)ptr;
-    /* Reject NULL-region and mapped peripheral registers */
-    if (p < 0x1000u) return false;
-    if (p >= 0x60000000u && p < 0x70000000u) return false;
+
+    /* Reject the NULL page, peripheral registers, and Xtensa IRAM.
+     * This is the permissive path for read-source buffers: the pointer may
+     * legitimately point into kernel-returned string data (e.g. strerror). */
+    if (p < 0x1000u)                              return false;
+    if (p >= 0x60000000u && p < 0x70000000u)      return false;
+    /* ESP32-S3 IRAM: 0x40370000-0x403DFFFF — app must not pass code addrs  */
+    if (p >= 0x40370000u && p < 0x403E0000u)      return false;
+
+    /* Guard against pointer + len wrapping around the address space          */
+    if (len > 0 && p + len < p)                   return false;
+
     return true;
+}
+
+bool duneos_supervisor_check_app_writable_ptr(const void *ptr, size_t len)
+{
+    /* Strict check: the pointer must be within one of the app's own memory
+     * regions.  Used for read() targets — the kernel writes into this buffer
+     * so it MUST be app-owned, writable memory.
+     *
+     * Valid regions for the calling slot:
+     *   [data_pool_base, data_pool_base + data_pool_size)  — rodata/data/bss
+     *   [heap_pool_buf,  heap_pool_buf  + heap_pool_size)  — per-app heap
+     *   [stack_mem,      stack_mem      + stack_size)       — task stack
+     *
+     * Falls back to the permissive check when called from a non-app task
+     * (should not happen, but avoids a hard failure during early boot).     */
+    if (!ptr) return false;
+    uintptr_t p    = (uintptr_t)ptr;
+    uintptr_t pend = p + len;
+
+    if (p < 0x1000u)                              return false;
+    if (p >= 0x60000000u && p < 0x70000000u)      return false;
+    if (len > 0 && pend < p)                      return false;  /* overflow */
+
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (!slot || !slot->active) {
+        /* Non-app task — apply the permissive check only */
+        return duneos_supervisor_check_user_ptr(ptr, len);
+    }
+
+    /* data pool: rodata + data + bss sections */
+    if (slot->data_pool_base && slot->data_pool_size) {
+        uintptr_t base = slot->data_pool_base;
+        uintptr_t end  = base + slot->data_pool_size;
+        if (p >= base && (len == 0 || pend <= end)) return true;
+    }
+
+    /* per-app heap pool */
+    if (slot->heap_pool_buf) {
+        uintptr_t base = (uintptr_t)slot->heap_pool_buf;
+        uintptr_t end  = base + slot->heap_pool_size;
+        if (p >= base && (len == 0 || pend <= end)) return true;
+    }
+
+    /* task stack (Phase 22: known because we allocate it statically) */
+    if (slot->stack_mem) {
+        uintptr_t base = (uintptr_t)slot->stack_mem;
+        uintptr_t end  = base + slot->stack_size;
+        if (p >= base && (len == 0 || pend <= end)) return true;
+    }
+
+    klog_w("supervisor",
+           "syscall: ptr 0x%08lx+%zu outside app '%s' bounds — EFAULT",
+           (unsigned long)p, len, slot->name);
+    return false;
 }
 
 void duneos_supervisor_wdt_reset(void)

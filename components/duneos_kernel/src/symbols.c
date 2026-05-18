@@ -56,9 +56,20 @@ extern s_di_t __divdi3(s_di_t, s_di_t);
 extern s_di_t __moddi3(s_di_t, s_di_t);
 extern u_di_t __udivdi3(u_di_t, u_di_t);
 extern u_di_t __umoddi3(u_di_t, u_di_t);
-void duneos_exit(int code);
-int  duneos_nanosleep(const struct timespec *req, struct timespec *rem);
-/* dprintf not in PicoLibc — implement via vsnprintf + write */
+
+/* duneos_exit is defined in supervisor.c and declared in supervisor.h */
+
+/* nanosleep is not in ESP-IDF newlib — bridge via usleep */
+int duneos_nanosleep(const struct timespec *req, struct timespec *rem)
+{
+    if (!req) { errno = EFAULT; return -1; }
+    uint64_t us = (uint64_t)req->tv_sec * 1000000ULL + req->tv_nsec / 1000;
+    if (us > 0) usleep((useconds_t)us);
+    if (rem) { rem->tv_sec = 0; rem->tv_nsec = 0; }
+    return 0;
+}
+
+/* dprintf is absent from PicoLibc — implement via vsnprintf + write */
 static int duneos_dprintf(int fd, const char *fmt, ...)
 {
     char buf[256];
@@ -70,16 +81,13 @@ static int duneos_dprintf(int fd, const char *fmt, ...)
     return n;
 }
 
-/* dup/dup2 are static inline in ESP-IDF newlib — implement via fcntl */
-static int duneos_dup(int fd)
-{
-    return fcntl(fd, F_DUPFD, 0);
-}
+/* dup/dup2 are static inline in ESP-IDF newlib — cannot take their address */
+static int duneos_dup(int fd)  { return fcntl(fd, F_DUPFD, 0); }
 static int duneos_dup2(int fd, int newfd)
 {
     if (fd == newfd) return newfd;
-    close(newfd);           /* make newfd available */
-    return fcntl(fd, F_DUPFD, newfd);  /* F_DUPFD returns lowest fd >= newfd */
+    close(newfd);
+    return fcntl(fd, F_DUPFD, newfd);
 }
 
 /* loader.c (duneos_loader component) — forward-declared to avoid circular include */
@@ -89,10 +97,10 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t *
 void      duneos_loader_unload(duneos_app_t *app);
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
 
-/* Phase 20 — syscall wrappers with basic pointer validation */
+/* Phase 20/22 — syscall wrappers with pointer validation */
 static ssize_t duneos_read(int fd, void *buf, size_t len)
 {
-    if (!duneos_supervisor_check_user_ptr(buf, len)) { errno = EFAULT; return -1; }
+    if (!duneos_supervisor_check_app_writable_ptr(buf, len)) { errno = EFAULT; return -1; }
     return read(fd, buf, len);
 }
 
@@ -282,17 +290,3 @@ const duneos_symbol_t *duneos_symbol_table_get(void)
     return s_symbol_table;
 }
 
-void duneos_exit(int code)
-{
-    duneos_supervisor_app_exited(code);
-    vTaskDelete(NULL);
-}
-
-int duneos_nanosleep(const struct timespec *req, struct timespec *rem)
-{
-    if (!req) return -1;
-    uint64_t us = (uint64_t)req->tv_sec * 1000000ULL + req->tv_nsec / 1000;
-    if (us > 0) usleep((useconds_t)us);
-    if (rem) { rem->tv_sec = 0; rem->tv_nsec = 0; }
-    return 0;
-}

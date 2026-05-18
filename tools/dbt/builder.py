@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, SDK_DIR
+from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, SDK_DIR, LIBDUNE_DIR
 from .manifest import load_manifest, validate_manifest
 
 
@@ -18,6 +18,50 @@ def run(cmd: list, capture: bool = False) -> str:
         sys.exit(f"ERROR: command failed: {' '.join(cmd)}")
     except FileNotFoundError:
         sys.exit(f"ERROR: executable not found: {cmd[0]}")
+
+
+def build_libdune(plugin, arch: str, board_cfg: dict, tc: dict) -> Path:
+    """Build libdune.a for the given arch, returning the path to the archive.
+
+    Uses mtime-based caching: rebuilds only when a source or kernel header is
+    newer than the cached archive.  Cache: libdune/build/{arch}/libdune.a
+    """
+    lib_dir = LIBDUNE_DIR / "build" / arch
+    lib_dir.mkdir(parents=True, exist_ok=True)
+    lib_path = lib_dir / "libdune.a"
+
+    sources = sorted((LIBDUNE_DIR / "src").glob("*.c"))
+    if not sources:
+        sys.exit("ERROR: libdune/src/ has no .c files")
+
+    # Cache: skip rebuild if archive is newer than all sources and duneos/ headers.
+    if lib_path.exists():
+        archive_mtime = lib_path.stat().st_mtime
+        candidates = list(sources) + sorted((SDK_INCLUDE / "duneos").glob("*.h"))
+        if all(f.stat().st_mtime <= archive_mtime for f in candidates):
+            return lib_path
+
+    cc = tc["cc"]
+    ar = tc.get("ar") or Path(str(cc)).parent / Path(str(cc)).name.replace("gcc", "ar")
+
+    cflags   = plugin.cflags(board_cfg, tc)
+    includes = [f"-I{SDK_INCLUDE}"]
+
+    objects = []
+    for src in sources:
+        obj = lib_dir / (src.stem + ".o")
+        compile_cmd = [str(cc)] + cflags + includes + ["-c", str(src), "-o", str(obj)]
+        print(f"  CC [libdune]  {src.name}")
+        run(compile_cmd)
+        objects.append(obj)
+
+    if lib_path.exists():
+        lib_path.unlink()
+    ar_cmd = [str(ar), "rcs", str(lib_path)] + [str(o) for o in objects]
+    print(f"  AR [libdune]  libdune.a")
+    run(ar_cmd)
+
+    return lib_path
 
 
 def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc: dict) -> bool:
@@ -82,8 +126,17 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
             return False
         objects.append(obj)
 
+    libdune = build_libdune(plugin, arch, board_cfg, tc)
+
     elf = build_dir / APP_ELF_NAME
-    link_cmd = [str(cc)] + cflags + plugin.ldflags(board_cfg) + [str(o) for o in objects] + ["-o", str(elf)]
+    link_cmd = (
+        [str(cc)]
+        + cflags
+        + plugin.ldflags(board_cfg)
+        + [str(o) for o in objects]
+        + [str(libdune)]
+        + ["-o", str(elf)]
+    )
     print(f"  LD  {elf.name}")
     try:
         run(link_cmd)

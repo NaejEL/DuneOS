@@ -1,6 +1,7 @@
 #include "duneos/loader.h"
 #include "duneos/elf.h"
 #include "duneos/supervisor.h"
+#include "duneos/api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +15,8 @@
 
 #include "duneos/klog.h"
 #include "esp_heap_caps.h"
-
 #include "esp_rom_sys.h"
+#include "cJSON.h"
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 #include "soc/soc.h"
@@ -27,7 +28,7 @@ static const char *TAG = "duneos/loader";
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
-#define MAX_SECTIONS 128
+#define MAX_SECTIONS 512
 
 struct duneos_app {
     duneos_app_manifest_t manifest;
@@ -789,6 +790,17 @@ static esp_err_t apply_relocations(FILE               *f,
  * Manifest extraction
  * ---------------------------------------------------------------------- */
 
+/* Parse a cJSON number item as uint32, with a sentinel for "not present" */
+static uint32_t json_u32(const cJSON *root, const char *key, uint32_t dflt)
+{
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, key);
+    if (!cJSON_IsNumber(item)) return dflt;
+    double v = item->valuedouble;
+    if (v < 0.0) return dflt;
+    if (v > (double)UINT32_MAX) return UINT32_MAX;
+    return (uint32_t)v;
+}
+
 static esp_err_t extract_manifest(FILE               *f,
                                    const elf32_hdr_t  *hdr,
                                    const elf32_shdr_t *shdrs,
@@ -800,65 +812,66 @@ static esp_err_t extract_manifest(FILE               *f,
                    DUNEOS_MANIFEST_SECTION) != 0) continue;
 
         const elf32_shdr_t *sh = &shdrs[i];
-        if (sh->sh_size < 2 || sh->sh_size > 4096) return ESP_ERR_INVALID_SIZE;
+        if (sh->sh_size < 2 || sh->sh_size > 4096) {
+            klog_e(TAG, "manifest section size invalid: %lu",
+                   (unsigned long)sh->sh_size);
+            return ESP_ERR_INVALID_SIZE;
+        }
 
-        char *json = malloc(sh->sh_size + 1);
-        if (!json) return ESP_ERR_NO_MEM;
-        if (read_at(f, sh->sh_offset, json, sh->sh_size) != ESP_OK) {
-            free(json);
+        char *raw = malloc(sh->sh_size + 1);
+        if (!raw) return ESP_ERR_NO_MEM;
+        if (read_at(f, sh->sh_offset, raw, sh->sh_size) != ESP_OK) {
+            free(raw);
             return ESP_ERR_INVALID_ARG;
         }
-        json[sh->sh_size] = '\0';
+        raw[sh->sh_size] = '\0';
 
-        strlcpy(out->name, "unknown", sizeof(out->name));
+        /* Apply safe defaults before parsing — unknown fields keep these. */
+        strlcpy(out->name,    "unknown", sizeof(out->name));
+        strlcpy(out->version, "0.0.0",   sizeof(out->version));
         out->required_abi_version = 1;
+        out->permissions    = 0;
+        out->stack_size     = 0;   /* 0 → supervisor uses DUNEOS_APP_DEFAULT_STACK */
+        out->heap_size      = 0;   /* 0 → global heap */
+        out->wdt_timeout_ms = 0;   /* 0 → WDT disabled */
 
-        const char *p;
-        if ((p = strstr(json, "\"name\"")) != NULL) {
-            p = strchr(p + 6, '"');
-            if (p++) sscanf(p, "%63[^\"]", out->name);
-        }
-        if ((p = strstr(json, "\"version\"")) != NULL) {
-            p = strchr(p + 9, '"');
-            if (p++) sscanf(p, "%15[^\"]", out->version);
-        }
-        if ((p = strstr(json, "\"required_abi_version\"")) != NULL) {
-            p = strchr(p + 22, ':');
-            if (p) sscanf(p + 1, "%lu",
-                          (unsigned long *)&out->required_abi_version);
-        }
-        out->permissions = 0;
-        if ((p = strstr(json, "\"permissions\"")) != NULL) {
-            p = strchr(p + 13, ':');
-            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->permissions);
-        }
-        out->stack_size = 0;  /* 0 → supervisor uses DUNEOS_APP_DEFAULT_STACK */
-        if ((p = strstr(json, "\"stack_size\"")) != NULL) {
-            p = strchr(p + 12, ':');
-            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->stack_size);
-        }
-        out->heap_size = 0;   /* 0 → global heap */
-        if ((p = strstr(json, "\"heap_size\"")) != NULL) {
-            p = strchr(p + 11, ':');
-            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->heap_size);
-        }
-        out->wdt_timeout_ms = 0;  /* 0 → WDT disabled */
-        if ((p = strstr(json, "\"wdt_timeout_ms\"")) != NULL) {
-            p = strchr(p + 16, ':');
-            if (p) sscanf(p + 1, "%lu", (unsigned long *)&out->wdt_timeout_ms);
+        cJSON *root = cJSON_ParseWithLength(raw, sh->sh_size);
+        free(raw);  /* cJSON owns its own copy — we can free raw now */
+
+        if (!root) {
+            klog_w(TAG, "manifest JSON parse error — booting with defaults");
+            return ESP_OK;  /* non-fatal: boot with defaults rather than reject */
         }
 
-        free(json);
-        klog_i(TAG, "manifest: '%s' v%s (ABI>=%lu perms=0x%lx heap=%lu wdt=%lu ms)",
-                 out->name, out->version,
-                 (unsigned long)out->required_abi_version,
-                 (unsigned long)out->permissions,
-                 (unsigned long)out->heap_size,
-                 (unsigned long)out->wdt_timeout_ms);
+        const cJSON *item;
+        if ((item = cJSON_GetObjectItemCaseSensitive(root, "name")) &&
+            cJSON_IsString(item) && item->valuestring)
+            strlcpy(out->name, item->valuestring, sizeof(out->name));
+
+        if ((item = cJSON_GetObjectItemCaseSensitive(root, "version")) &&
+            cJSON_IsString(item) && item->valuestring)
+            strlcpy(out->version, item->valuestring, sizeof(out->version));
+
+        out->required_abi_version = json_u32(root, "required_abi_version", 1);
+        out->permissions          = json_u32(root, "permissions",          0);
+        out->stack_size           = json_u32(root, "stack_size",           0);
+        out->heap_size            = json_u32(root, "heap_size",            0);
+        out->wdt_timeout_ms       = json_u32(root, "wdt_timeout_ms",       0);
+
+        cJSON_Delete(root);
+
+        klog_i(TAG, "manifest: '%s' v%s (ABI>=%lu perms=0x%lx"
+               " stack=%lu heap=%lu wdt=%lu ms)",
+               out->name, out->version,
+               (unsigned long)out->required_abi_version,
+               (unsigned long)out->permissions,
+               (unsigned long)out->stack_size,
+               (unsigned long)out->heap_size,
+               (unsigned long)out->wdt_timeout_ms);
         return ESP_OK;
     }
 
-    klog_w(TAG, "no " DUNEOS_MANIFEST_SECTION " section");
+    klog_w(TAG, "no " DUNEOS_MANIFEST_SECTION " section — booting with defaults");
     return ESP_OK;
 }
 
@@ -1006,6 +1019,39 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
      * pipeline until ISYNC completes. */
     asm volatile("isync" ::: "memory");
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
+
+    /* 8.5. API table injection (Phase 22 / ABI v3).
+     *
+     * Apps built with libdune.a contain a DEFINED symbol named
+     * DUNEOS_API_SYMBOL ("__duneos_api_ptr") in their data section.
+     * libdune.a initialises it to NULL; we overwrite it with the kernel's
+     * API table pointer here — before app_main is called — so that every
+     * libdune wrapper can dispatch through it from the very first call.
+     *
+     * We search DEFINED symbols (st_shndx != SHN_UNDEF) for the magic name.
+     * The pointer variable lives in the data pool (D-bus accessible), so a
+     * plain dereference is safe.  to_write_ptr() is called for correctness
+     * on Xtensa, though data sections are never in the exec pool.           */
+    for (int i = 0; i < symcount; i++) {
+        const elf32_sym_t *sym = &symtab[i];
+        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr.e_shnum) continue;
+        if (strcmp(strtab + sym->st_name, DUNEOS_API_SYMBOL) != 0)        continue;
+
+        void *section_base = app->section_bases[sym->st_shndx];
+        if (!section_base) {
+            klog_w(TAG, DUNEOS_API_SYMBOL " is in an unloaded section — skip");
+            break;
+        }
+        void *sym_addr = (uint8_t *)section_base + sym->st_value;
+        /* to_write_ptr is a no-op for data sections; keeps the code correct
+         * unconditionally without a separate Xtensa ifdef.                  */
+        const duneos_api_t **inject_ptr =
+            (const duneos_api_t **)to_write_ptr(sym_addr);
+        *inject_ptr = duneos_api_get();
+        klog_d(TAG, "API table (v%u) injected @ %p",
+               (unsigned)duneos_api_get()->version, (void *)inject_ptr);
+        break;
+    }
 
     /* 9. Locate app_main */
     for (int i = 0; i < symcount; i++) {

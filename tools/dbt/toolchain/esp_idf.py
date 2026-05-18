@@ -45,8 +45,8 @@ def find_compiler(arch: str, cpu: str) -> dict[str, Path]:
     else:
         prefixes = [f"xtensa-{cpu}-elf-", "xtensa-esp-elf-"]
 
-    tool_names = ["gcc", "ld", "objcopy", "readelf", "nm"]
-    keys       = ["cc",  "ld", "objcopy", "readelf", "nm"]
+    tool_names = ["gcc", "ld", "objcopy", "readelf", "nm", "ar"]
+    keys       = ["cc",  "ld", "objcopy", "readelf", "nm", "ar"]
 
     def make_result(bin_dir: Path, prefix: str) -> dict[str, Path]:
         return {k: bin_dir / (prefix + t + exe) for k, t in zip(keys, tool_names)}

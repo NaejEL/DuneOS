@@ -25,6 +25,7 @@ set(DUNEOS_KERNEL_SRCS
     "src/symbols.c"
     "src/supervisor.c"
     "src/init.c"
+    "src/api.c"
     "src/drivers/drv_null.c"
     "src/drivers/drv_uart.c"
     "src/drivers/drv_klog.c"

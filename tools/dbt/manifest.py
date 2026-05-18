@@ -59,14 +59,12 @@ def _is_bin_app(app_dir: Path) -> bool:
         return False
 
 
-def find_apps(include_examples: bool = False) -> list[tuple[Path, bool]]:
+def find_apps() -> list[tuple[Path, bool]]:
     """
     Return [(app_dir, is_bin), ...] for all apps with a manifest.
-    Searches system/, apps/, and optionally examples/.
+    Searches system/ and apps/ (examples/ merged into apps/).
     """
     search_roots = [DUNEOS_ROOT / "system", DUNEOS_ROOT / "apps"]
-    if include_examples:
-        search_roots.append(DUNEOS_ROOT / "examples")
 
     results = []
     for base in search_roots:

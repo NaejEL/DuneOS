@@ -9,13 +9,19 @@
  *   - duneos_symbol_t layout
  *   - duneos_app_manifest_t layout
  *   - calling convention of any exported kernel symbol
+ *   - duneos_api_t layout (see duneos/api.h)
  *
  * The loader rejects apps whose required_abi_version > DUNEOS_ABI_VERSION.
  * v2: added heap_size and wdt_timeout_ms to duneos_app_manifest_t.
  *     Backward compat: apps with required_abi_version=1 run unchanged on v2.
+ * v3: duneos_api_t typed dispatch table (duneos/api.h).
+ *     Loader injects the table address into __duneos_api_ptr before app_main.
+ *     Apps built with libdune.a declare required_abi_version: 3.
+ *     Backward compat: apps with required_abi_version<=2 run unchanged on v3
+ *     via the legacy per-symbol resolution path in the loader.
  */
-#define DUNEOS_ABI_VERSION      2
-#define DUNEOS_VERSION_STRING   "0.2.0"
+#define DUNEOS_ABI_VERSION      3
+#define DUNEOS_VERSION_STRING   "0.3.0"
 
 /* ELF section name where the app embeds its manifest JSON */
 #define DUNEOS_MANIFEST_SECTION ".duneos_manifest"

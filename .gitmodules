@@ -1,0 +1,6 @@
+[submodule "third_party/cjson"]
+	path = third_party/cjson
+	url = https://github.com/DaveGamble/cJSON.git
+[submodule "third_party/littlefs"]
+	path = third_party/littlefs
+	url = https://github.com/littlefs-project/littlefs.git

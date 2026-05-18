@@ -197,9 +197,9 @@ def cmd_buildall(args) -> None:
     sd_path  = Path(args.path) if getattr(args, "path", None) else None
     do_clean = getattr(args, "clean", False)
 
-    apps = find_apps(include_examples=True)
+    apps = find_apps()
     if not apps:
-        sys.exit("ERROR: no apps found under system/ (or examples/ with --examples)")
+        sys.exit("ERROR: no apps found under system/ or apps/")
 
     plugin, arch, cpu, board_cfg = get_board_plugin()
     tc = plugin.find_compiler(arch, cpu)
@@ -249,7 +249,7 @@ def cmd_buildall(args) -> None:
 
 
 def cmd_cleanall(args) -> None:
-    apps = find_apps(include_examples=True)
+    apps = find_apps()
     if not apps:
         print("No apps found.")
         return
@@ -268,9 +268,9 @@ def cmd_flash_sd(args) -> None:
     if not sd_path.exists():
         sys.exit(f"ERROR: SD path does not exist: {sd_path}")
 
-    apps = find_apps(include_examples=False)
+    apps = find_apps()
     if not apps:
-        sys.exit("ERROR: no apps found under system/")
+        sys.exit("ERROR: no apps found under system/ or apps/")
 
     plugin, arch, cpu, board_cfg = get_board_plugin()
     tc = plugin.find_compiler(arch, cpu)

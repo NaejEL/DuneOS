@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
 
@@ -50,10 +51,13 @@ static void register_mount(const char *path)
     s_mount_count++;
 }
 
-int duneos_vfs_list_mounts(const char **out, int max)
+int duneos_vfs_list_mounts(char (*out)[32], int max)
 {
     int n = s_mount_count < max ? s_mount_count : max;
-    for (int i = 0; i < n; i++) out[i] = s_mount_paths[i];
+    for (int i = 0; i < n; i++) {
+        strncpy(out[i], s_mount_paths[i], 31);
+        out[i][31] = '\0';
+    }
     return n;
 }
 

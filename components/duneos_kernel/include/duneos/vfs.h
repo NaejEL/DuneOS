@@ -30,10 +30,10 @@ bool duneos_vfs_sd_available(void);
 
 /*
  * List active VFS mount points (e.g. "/flash", "/sd", "/tmp", "/dev").
- * Writes up to `max` pointers into `out`; returns the count written.
- * Pointers remain valid for the lifetime of the kernel.
+ * Copies up to `max` mount paths into `out` (each slot is char[32]).
+ * Returns the count written.
  */
-int duneos_vfs_list_mounts(const char **out, int max);
+int duneos_vfs_list_mounts(char (*out)[32], int max);
 
 /*
  * Return the live sdmmc_card_t handle (or NULL if SD is not mounted).
