@@ -243,6 +243,13 @@ extern void drv_fb_st7789_register(void);
 #ifdef CONFIG_DUNEOS_DRV_RAW80211
 extern void drv_raw80211_register(void);
 #endif
+#ifdef CONFIG_DUNEOS_DRV_USB_MSC
+/* Phase 2 of USB init: MSC storage backend (TinyUSB already up from preinit). */
+extern void drv_usb_register(void);
+#endif
+#if defined(CONFIG_DUNEOS_DRV_USB_CDC) && !defined(CONFIG_ESP_CONSOLE_USB_CDC)
+extern void drv_usb_cdc_register(void);
+#endif
 
 /* ----- mount ------------------------------------------------------------- */
 
@@ -309,6 +316,17 @@ esp_err_t duneos_vfs_mount_dev(void)
 #endif
 #ifdef CONFIG_DUNEOS_DRV_RAW80211
     drv_raw80211_register();
+#endif
+
+#ifdef CONFIG_DUNEOS_DRV_USB_MSC
+    /* TinyUSB is already running (drv_usb_preinit in vfs.c); register the SD card
+     * as the MSC storage backend now that duneos_vfs_get_sd_card() is valid. */
+    drv_usb_register();
+#endif
+#if defined(CONFIG_DUNEOS_DRV_USB_CDC) && !defined(CONFIG_ESP_CONSOLE_USB_CDC)
+    /* Register /dev/ttyUSB0 as a standalone VFS path (not under /dev devfs).
+     * Skipped when the ESP console owns CDC I/O — it registers its own handler. */
+    drv_usb_cdc_register();
 #endif
 
     klog_i(TAG, "/dev ready (%d devices)", s_driver_count);

@@ -36,8 +36,9 @@ static bool          s_sd_mounted    = false;
  * Public availability queries
  * ---------------------------------------------------------------------- */
 
-bool duneos_vfs_flash_available(void) { return s_flash_mounted; }
-bool duneos_vfs_sd_available(void)    { return s_sd_mounted;    }
+bool          duneos_vfs_flash_available(void) { return s_flash_mounted; }
+bool          duneos_vfs_sd_available(void)    { return s_sd_mounted;    }
+sdmmc_card_t *duneos_vfs_get_sd_card(void)     { return s_card;          }
 
 /* -------------------------------------------------------------------------
  * Flash (LittleFS)
@@ -201,9 +202,21 @@ static void write_board_info(const char *path)
  * Top-level init / deinit
  * ---------------------------------------------------------------------- */
 
+#if defined(CONFIG_DUNEOS_DRV_USB_MSC) || defined(CONFIG_DUNEOS_DRV_USB_CDC)
+/* Declared in drv_usb.c — compiled only when USB drivers are enabled. */
+extern void drv_usb_preinit(void);
+#endif
+
 esp_err_t duneos_vfs_init(void)
 {
     if (s_initialized) return ESP_ERR_INVALID_STATE;
+
+#if defined(CONFIG_DUNEOS_DRV_USB_MSC) || defined(CONFIG_DUNEOS_DRV_USB_CDC)
+    /* Must be first: with CONFIG_ESP_CONSOLE_USB_CDC=y the _write() hook routes
+     * printf/klog through TinyUSB CDC.  TinyUSB must be up before the first
+     * console write or those bytes are silently dropped (pre-init) or crash. */
+    drv_usb_preinit();
+#endif
 
     /* Flash is the primary storage — required for boot */
     esp_err_t err = duneos_vfs_mount_flash();

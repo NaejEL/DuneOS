@@ -162,4 +162,26 @@ config DUNEOS_DRV_RAW80211
         duneos_wifi_init() called before open()).
         Analogous to AF_PACKET / monitor-mode sockets on Linux.
 
+config DUNEOS_DRV_USB_MSC
+    bool "USB Mass Storage device — expose SD card (/sd) to host"
+    default n
+    help
+        Enable USB MSC device using TinyUSB (espressif/esp_tinyusb).
+        Exposes the SD card as a removable USB drive.
+        When the host holds the storage the SD card is unmounted from /sd;
+        it is automatically remounted on host eject.
+        Requires an SD card to be inserted at boot.
+        NOTE: enabling USB OTG (TinyUSB) and USB-JTAG console simultaneously
+        is not supported. Set console: uart in board.yaml when using this option.
+
+config DUNEOS_DRV_USB_CDC
+    bool "USB CDC-ACM virtual serial port (/dev/ttyUSB0)"
+    default n
+    help
+        Enable USB CDC-ACM device using TinyUSB (espressif/esp_tinyusb).
+        Registers /dev/ttyUSB0 as a standard character device backed by the
+        USB virtual serial port. Frees the physical UART for app use.
+        The shell can use /dev/ttyUSB0 instead of /dev/uart0 for its console.
+        NOTE: same USB-JTAG conflict as DUNEOS_DRV_USB_MSC applies.
+
 endmenu

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esp_err.h"
+#include "sdmmc_cmd.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -26,6 +27,12 @@ esp_err_t duneos_vfs_mount_dev(void);
 /* Runtime availability queries */
 bool duneos_vfs_flash_available(void);
 bool duneos_vfs_sd_available(void);
+
+/*
+ * Return the live sdmmc_card_t handle (or NULL if SD is not mounted).
+ * Used by the USB MSC driver to hand raw sector access to TinyUSB.
+ */
+sdmmc_card_t *duneos_vfs_get_sd_card(void);
 
 /*
  * First-boot provisioning: copy embedded firmware blobs to /flash/bin/.

@@ -118,13 +118,13 @@ Vitesse et légèreté : fiabiliser l'ABI.
 
 ---
 
-### Phase 23 — The Flipper DX (USB Device Subsystem)
+### Phase 23 — The Flipper DX (USB Device Subsystem) ✅
 
 L'expérience Plug and Play ultime.
 
-- [ ] **TinyUSB** : Brancher la stack USB open-source sur la HAL DuneOS.
-- [ ] **USB MSC (Mass Storage)** : Exposer `/sd` ou `/flash` au PC. Glisser-déposer `.dap` comme sur une clé USB.
-- [ ] **USB CDC (Console)** : Exposer le shell sur un port série virtuel USB, libérant l'UART physique.
+- [x] **TinyUSB** : Brancher la stack USB open-source sur la HAL DuneOS.
+- [x] **USB MSC (Mass Storage)** : Exposer `/sd` ou `/flash` au PC. Glisser-déposer `.dap` comme sur une clé USB.
+- [x] **USB CDC (Console)** : Exposer le shell sur un port série virtuel USB, libérant l'UART physique.
 
 ---
 

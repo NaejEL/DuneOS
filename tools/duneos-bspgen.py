@@ -384,6 +384,28 @@ def generate(board: dict) -> str:
             "",
         ]
 
+    # ----- USB -----
+    usb = board.get("usb")
+    _usb_mode = (usb.get("mode", "") if usb else "").lower()
+    if _usb_mode in ("otg", "device"):
+        vid = usb.get("vid", 0x303A)
+        pid = usb.get("pid", 0x4DAE)
+        lines += [
+            "/* ---------- USB OTG (TinyUSB) ---------- */",
+            _define("DUNEOS_HAVE_USB_OTG", 1),
+            _define("DUNEOS_USB_VID", hex(vid) if isinstance(vid, int) else vid),
+            _define("DUNEOS_USB_PID", hex(pid) if isinstance(pid, int) else pid),
+        ]
+        if usb.get("msc"):
+            lines.append(_define("DUNEOS_USB_MSC_BACKEND",
+                                  f'"{usb["msc"].get("backend", "sd")}"'))
+        if usb.get("cdc", {}).get("enabled"):
+            lines.append(_define("DUNEOS_USB_CDC_ENABLED", 1))
+        lines.append("")
+    elif _usb_mode == "jtag":
+        lines += ["/* ---------- USB JTAG/Serial (built-in) ---------- */",
+                  _define("DUNEOS_HAVE_USB_JTAG", 1), ""]
+
     # ----- LEDs -----
     for led in board.get("leds", []):
         lid = led["id"].upper()
@@ -497,9 +519,39 @@ def generate_sdkconfig_board(board: dict) -> str:
     lines.append("")
 
     # ---- Console ----
-    console = board.get("console", "uart").lower()
+    # "console" controls the ESP-IDF early-boot serial console (CONFIG_ESP_CONSOLE_*).
+    # It is NOT the same as log output: DuneOS always redirects ESP_LOG* to whatever
+    # output device makes sense for the board (USB CDC, UART, …) at runtime via
+    # esp_log_set_vprintf — independently of this setting.
+    #
+    # Supported values:  uart | usb_jtag | usb_cdc | none
+    #   uart     → CONFIG_ESP_CONSOLE_UART_DEFAULT  (UART0, GPIO43/44 on ESP32-S3)
+    #   usb_jtag → CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+    #   usb_cdc  → CONFIG_ESP_CONSOLE_USB_CDC  (conflicts with TinyUSB — avoid)
+    #   none     → CONFIG_ESP_CONSOLE_NONE     (recommended when usb.mode=otg so
+    #              that UART0 stays free for application use)
+    #
+    # When usb.mode=otg the default is "none" (TinyUSB owns GPIO19/20, so JTAG is
+    # unavailable, and UART0 must not be claimed by the kernel for its own console).
+    # When usb.mode=jtag the console is forced to "usb_jtag" regardless of this field.
+    usb = board.get("usb")
+    usb_mode = (usb.get("mode", "") if usb else "").lower()
+    if usb_mode == "jtag":
+        console = "usb_jtag"
+    elif usb_mode in ("otg", "device"):
+        console = board.get("console", "none").lower()
+    else:
+        console = board.get("console", "uart").lower()
+
     if console == "usb_jtag":
         lines += ["# Console", "CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y", ""]
+    elif console == "usb_cdc":
+        lines += ["# Console", "CONFIG_ESP_CONSOLE_USB_CDC=y", ""]
+    elif console == "none":
+        lines += ["# Console — none (klog redirected to USB CDC via esp_log_set_vprintf)",
+                  "CONFIG_ESP_CONSOLE_NONE=y", ""]
+    else:
+        lines += ["# Console", "CONFIG_ESP_CONSOLE_UART_DEFAULT=y", ""]
 
     # ---- Memory protection (must be off for dynamic code loading) ----
     lines += ["# Dynamic app loading requires no MEMPROT",
@@ -546,6 +598,19 @@ def generate_sdkconfig_board(board: dict) -> str:
 
     if board.get("wifi", True):
         lines += ["CONFIG_DUNEOS_DRV_WIFI=y", ""]
+
+    # usb_mode already computed above for console selection
+    if usb_mode in ("otg", "device"):  # "device" is the legacy name for "otg"
+        lines += ["# USB OTG (TinyUSB — esp_tinyusb managed component)"]
+        if usb.get("msc"):
+            lines.append("CONFIG_DUNEOS_DRV_USB_MSC=y")
+            lines.append("CONFIG_TINYUSB_MSC_ENABLED=y")
+        if usb.get("cdc", {}).get("enabled"):
+            lines.append("CONFIG_DUNEOS_DRV_USB_CDC=y")
+            lines.append("CONFIG_TINYUSB_CDC_ENABLED=y")
+        lines.append("")
+    elif usb_mode == "jtag":
+        lines += ["# USB JTAG/Serial (built-in — no TinyUSB)", ""]
 
     # ---- Partition table ----
     lines += [

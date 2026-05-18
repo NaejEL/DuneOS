@@ -3,3 +3,5 @@ dependencies:
     version: "^1.7.19"
   joltwallet/littlefs:
     version: ">=1.21.1"
+  espressif/esp_tinyusb:
+    version: "^2.0.1~1"

@@ -127,27 +127,49 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
     char *buf = malloc(INIT_BUF_MAX);
     if (!buf) return ESP_ERR_NO_MEM;
 
+    cfg->count = 0;
+
+    /* Merge services from all init files (flash first, then SD).
+     * Duplicate paths are skipped so a service in both files runs once. */
     for (int i = 0; paths[i]; i++) {
         int fd = open(paths[i], O_RDONLY);
         if (fd < 0) continue;
 
-        cfg->count = 0;
         ssize_t n = read(fd, buf, INIT_BUF_MAX - 1);
         close(fd);
-
         if (n <= 0) continue;
         buf[n] = '\0';
 
-        esp_err_t ret = parse_yaml(buf, cfg);
-        if (ret == ESP_OK && cfg->count > 0) {
-            free(buf);
-            klog_i(TAG, "loaded %d service(s) from %s", cfg->count, paths[i]);
-            return ESP_OK;
+        duneos_init_config_t *tmp = calloc(1, sizeof(duneos_init_config_t));
+        if (!tmp) { klog_w(TAG, "init: OOM skipping %s", paths[i]); continue; }
+
+        if (parse_yaml(buf, tmp) != ESP_OK || tmp->count == 0) {
+            klog_w(TAG, "YAML parse error or empty services list in %s", paths[i]);
+            free(tmp);
+            continue;
         }
 
-        klog_w(TAG, "YAML parse error or empty services list in %s", paths[i]);
+        int added = 0;
+        for (int s = 0; s < tmp->count; s++) {
+            int dup = 0;
+            for (int j = 0; j < cfg->count; j++) {
+                if (strcmp(cfg->services[j].path, tmp->services[s].path) == 0) {
+                    dup = 1; break;
+                }
+            }
+            if (dup) continue;
+            if (cfg->count >= DUNEOS_MAX_SERVICES) {
+                klog_w(TAG, "init: max services (%d) reached, skipping %s",
+                       DUNEOS_MAX_SERVICES, tmp->services[s].path);
+                break;
+            }
+            cfg->services[cfg->count++] = tmp->services[s];
+            added++;
+        }
+        free(tmp);
+        klog_i(TAG, "loaded %d service(s) from %s", added, paths[i]);
     }
 
     free(buf);
-    return ESP_ERR_NOT_FOUND;
+    return cfg->count > 0 ? ESP_OK : ESP_ERR_NOT_FOUND;
 }

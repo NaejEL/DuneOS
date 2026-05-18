@@ -2,8 +2,10 @@
 #include <fcntl.h>
 
 #include "esp_err.h"
+#ifndef CONFIG_ESP_CONSOLE_USB_CDC
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
+#endif
 #include "duneos/klog.h"
 #include "duneos/abi.h"
 #include "duneos/task.h"
@@ -20,6 +22,12 @@ static void kernel_idle(void)
     while (1) duneos_task_delay_ms(5000);
 }
 
+/* console_init() wires stdin/stdout through the USB Serial/JTAG hardware
+ * peripheral (GPIO19/20 in JTAG mode).  Skip it when TinyUSB OTG is active
+ * — they share the same D+/D- pins and the JTAG driver would claim the mux
+ * before TinyUSB can enumerate.  With CONFIG_ESP_CONSOLE_USB_CDC=y the
+ * _write() hook already routes printf through TinyUSB CDC automatically. */
+#ifndef CONFIG_ESP_CONSOLE_USB_CDC
 static void console_init(void)
 {
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
@@ -34,6 +42,7 @@ static void console_init(void)
     fcntl(fileno(stdin),  F_SETFL, 0);
     fcntl(fileno(stdout), F_SETFL, 0);
 }
+#endif
 
 /* Launch all services defined in /sd/init.json.
  * Returns the number of services successfully started, or -1 on config error. */
@@ -96,14 +105,23 @@ static int launch_autoboot(void)
 
 void app_main(void)
 {
+#ifndef CONFIG_ESP_CONSOLE_USB_CDC
+    /* USB Serial/JTAG VFS: wires stdin/stdout to the JTAG peripheral.
+     * Skipped when TinyUSB OTG is the console — they share GPIO19/20 and
+     * the JTAG driver would claim the USB mux before TinyUSB can enumerate. */
     console_init();
-    klog_i(TAG, "DuneOS " DUNEOS_VERSION_STRING " (ABI v%d)", DUNEOS_ABI_VERSION);
+#endif
 
+    /* duneos_vfs_init() calls drv_usb_preinit() as its very first action,
+     * which brings up TinyUSB and CDC.  Log the banner after that so the
+     * message reliably reaches /dev/ttyACM0 in USB CDC console mode. */
     if (duneos_vfs_init() != ESP_OK) {
         klog_e(TAG, "VFS init failed — sysbin partition missing or corrupt");
         kernel_idle();
         return;
     }
+
+    klog_i(TAG, "DuneOS " DUNEOS_VERSION_STRING " (ABI v%d)", DUNEOS_ABI_VERSION);
 
     duneos_loader_init();
 

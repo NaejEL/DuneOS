@@ -27,7 +27,7 @@ static const char *TAG = "duneos/loader";
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
-#define MAX_SECTIONS 64
+#define MAX_SECTIONS 128
 
 struct duneos_app {
     duneos_app_manifest_t manifest;

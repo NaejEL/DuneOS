@@ -38,6 +38,7 @@ set(DUNEOS_KERNEL_SRCS
 
 set(DUNEOS_KERNEL_REQUIRES
     freertos
+    esp_ringbuf
     pthread
     driver
     esp_driver_uart
@@ -56,6 +57,7 @@ set(DUNEOS_KERNEL_REQUIRES
     esp_event
     joltwallet__littlefs
     xtensa
+    espressif__esp_tinyusb
 )
 
 # --- Conditional driver sources --------------------------------------------
@@ -124,6 +126,16 @@ if(CONFIG_DUNEOS_DRV_RAW80211)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/net/drv_raw80211.c")
 endif()
 
+# drv_usb.c is always compiled when either USB class is enabled (it owns the
+# TinyUSB driver install and descriptor tables).
+if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/usb/drv_usb.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_USB_CDC)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/usb/drv_usb_cdc.c")
+endif()
+
 # ---------------------------------------------------------------------------
 # First-boot provisioning blobs (optional).
 # Place pre-built .dap files under firmware/blobs/ to embed them in the
@@ -164,8 +176,9 @@ idf_component_register(
         "include"
         "${DUNEOS_BOARD_CONFIG_DIR}"
     PRIV_INCLUDE_DIRS
-        # Private headers shared between driver files (e.g. i2c_bus.h).
+        # Private headers shared between driver files (e.g. i2c_bus.h, drv_usb_cdc_priv.h).
         "src/drivers"
+        "src/drivers/usb"
     REQUIRES
         ${DUNEOS_KERNEL_REQUIRES}
     EMBED_FILES
