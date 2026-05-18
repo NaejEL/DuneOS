@@ -33,6 +33,31 @@ static bool          s_flash_mounted = false;
 static bool          s_sd_mounted    = false;
 
 /* -------------------------------------------------------------------------
+ * Mount registry — tracks all active VFS mount points for ls /
+ * ---------------------------------------------------------------------- */
+
+#define MOUNT_REGISTRY_MAX 8
+#define MOUNT_PATH_MAX     32
+
+static char s_mount_paths[MOUNT_REGISTRY_MAX][MOUNT_PATH_MAX];
+static int  s_mount_count = 0;
+
+static void register_mount(const char *path)
+{
+    if (s_mount_count >= MOUNT_REGISTRY_MAX) return;
+    strncpy(s_mount_paths[s_mount_count], path, MOUNT_PATH_MAX - 1);
+    s_mount_paths[s_mount_count][MOUNT_PATH_MAX - 1] = '\0';
+    s_mount_count++;
+}
+
+int duneos_vfs_list_mounts(const char **out, int max)
+{
+    int n = s_mount_count < max ? s_mount_count : max;
+    for (int i = 0; i < n; i++) out[i] = s_mount_paths[i];
+    return n;
+}
+
+/* -------------------------------------------------------------------------
  * Public availability queries
  * ---------------------------------------------------------------------- */
 
@@ -60,6 +85,7 @@ esp_err_t duneos_vfs_mount_flash(void)
     }
 
     s_flash_mounted = true;
+    register_mount(FLASH_MOUNT_POINT);
     klog_i(TAG, "LittleFS mounted at " FLASH_MOUNT_POINT);
     return ESP_OK;
 }
@@ -157,6 +183,7 @@ esp_err_t duneos_vfs_mount_sd(void)
     }
 
     s_sd_mounted = true;
+    register_mount(SD_MOUNT_POINT);
     klog_i(TAG, "SD mounted at %s — %s %.1f GB",
            SD_MOUNT_POINT,
            s_card->cid.name,
@@ -234,9 +261,11 @@ esp_err_t duneos_vfs_init(void)
 
     err = duneos_vfs_mount_tmp();
     if (err != ESP_OK) return err;
+    register_mount("/tmp");
 
     err = duneos_vfs_mount_dev();
     if (err != ESP_OK) return err;
+    register_mount("/dev");
 
     s_initialized = true;
 

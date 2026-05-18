@@ -7,6 +7,7 @@ build/
 
 sdkconfig
 sdkconfig.old
+*.lock
 
 # Board-change detection stamp (written by CMakeLists.txt at configure time)
 duneos_last_board.stamp

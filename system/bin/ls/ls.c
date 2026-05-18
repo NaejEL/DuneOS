@@ -9,6 +9,9 @@
 
 #include <duneos/bin_args.h>
 
+/* Kernel ABI: list active VFS mount points ("/flash", "/sd", "/tmp", "/dev"). */
+extern int duneos_vfs_list_mounts(const char **out, int max);
+
 static void out(const char *s)           { write(STDOUT_FILENO, s, strlen(s)); }
 static void outn(const char *s)          { out(s); out("\r\n"); }
 static void outf(const char *fmt, ...)
@@ -37,8 +40,16 @@ void app_main(void)
     duneos_bin_resolve(target, cwd, resolved, sizeof(resolved));
 
     if (strcmp(resolved, "/") == 0) {
-        outn(long_fmt ? "d        0  dev\r\nd        0  sd\r\nd        0  tmp"
-                      : "dev  sd  tmp");
+        const char *mounts[8];
+        int n = duneos_vfs_list_mounts(mounts, 8);
+        for (int i = 0; i < n; i++) {
+            const char *name = mounts[i] + 1; /* strip leading '/' */
+            if (long_fmt)
+                outf("d        0  %s\r\n", name);
+            else
+                outf("%s  ", name);
+        }
+        if (!long_fmt) out("\r\n");
         return;
     }
 
