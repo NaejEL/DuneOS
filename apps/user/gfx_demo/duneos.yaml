@@ -5,3 +5,5 @@ permissions: 0
 stack_size: 8192
 sources:
   - $SDK/display/gfx.c
+  - $SDK/display/libdisp.c
+  - $SDK/display/libst7789.c

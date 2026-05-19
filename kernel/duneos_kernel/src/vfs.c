@@ -206,7 +206,7 @@ static void write_board_info(const char *path)
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) return;
 
-    char buf[512];
+    char buf[768];
     int n = snprintf(buf, sizeof(buf),
         "board: " DUNEOS_BOARD_NAME "\n"
         "display: st7789\n"
@@ -222,6 +222,10 @@ static void write_board_info(const char *path)
         "display_bl: %d\n"
         "display_freq_hz: %u\n"
         "display_rotation: %u\n"
+        "display_madctl: %u\n"
+        "display_swap_xy: %u\n"
+        "display_col_offset: %u\n"
+        "display_row_offset: %u\n"
         "display_bus_shared: %s\n",
         (unsigned)DUNEOS_DISPLAY_WIDTH,
         (unsigned)DUNEOS_DISPLAY_HEIGHT,
@@ -239,6 +243,10 @@ static void write_board_info(const char *path)
         (int)DUNEOS_DISPLAY_BL_PIN,
         (unsigned)DUNEOS_DISPLAY_FREQ_HZ,
         (unsigned)DUNEOS_DISPLAY_ROTATION,
+        (unsigned)DUNEOS_DISPLAY_MADCTL,
+        (unsigned)DUNEOS_DISPLAY_SWAP_XY,
+        (unsigned)DUNEOS_DISPLAY_COL_OFFSET,
+        (unsigned)DUNEOS_DISPLAY_ROW_OFFSET,
 #if DUNEOS_DISPLAY_BUS_SHARED
         "true"
 #else
