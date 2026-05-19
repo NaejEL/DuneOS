@@ -172,14 +172,22 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - Commentaire obsolète `input_ioctl.h:47` (mentionne `xTaskGetTickCount() * portTICK_PERIOD_MS` alors que le champ est désormais peuplé via `duneos_hal_monotonic_us() / 1000`).
 - Commentaire `task.h:8-10` "FreeRTOS abstraction" — à reformuler en "OSAL abstraction" au moment de Phase 26.
 
-**Driver placement debt** — découlant de l'application des [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md) aux drivers existants. Quatre items, peuvent être traités opportunistement (en // de Phase 25-26) :
+**Driver placement debt** — découlant de l'application des [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md) aux drivers existants. Cinq items :
 
-- [x] **`drv_battery_bq27220.c` → userspace** : Migrer `kernel/duneos_kernel/src/drivers/battery/drv_battery_bq27220.c` vers `sdk/sensor/libbq27220.c` (lib userspace) + un `apps/system/bin/battery_daemon.dap` qui parle au chip via `/dev/i2c-0` et expose `/dev/battery0` via une socket / pipe nommée. Conserver l'API `battery_ioctl.h` côté apps. Le BQ27220 ne satisfait aucun des 4 critères de l'ADR 009 (lecture périodique, un consommateur, pas d'ISR critique).
-- [x] **ST7789 : consolider 3 codepaths en 1** : Aujourd'hui `drv_disp_st7789.c` (`/dev/disp0` kernel), `drv_fb_st7789.c` (`/dev/fb0` kernel PSRAM), et `sdk/display/libst7789.c` (userspace) coexistent. Retirer `drv_disp_st7789.c` (aucun app ne l'utilise comme primary, `libgfx` peut router via `libst7789.c`). Conserver `drv_fb_st7789.c` uniquement si un compositor PSRAM partagé apparaît (deferré ; pas dans la roadmap). Libgfx (Phase 18) reste l'API publique pour les apps.
-- [ ] **GPIO expanders : règle explicite dans `bspgen`** : Si `board.yaml` déclare un expander (SX1509, PCF8574…), `bspgen` émet sa config dans `board_config.h` et le kernel expose `/dev/gpiochipN`. Sinon, les apps qui utilisent un expander ouvrent `/dev/i2c-0` et parlent le protocole eux-mêmes. Documenter le schéma YAML attendu (`gpio_expanders: [{type: sx1509, i2c_addr: 0x3e, pins: 16}, ...]`).
-- [ ] **`hal_encoder` capability HAL (ADR 010 Pattern A)** : Définir `kernel/duneos_kernel/include/duneos/hal_encoder.h` + backend ESP32 PCNT dans `arch/xtensa_esp32s3/hal/hal_encoder.c`. Remplacer le polling logiciel dans `enc_quadrature.c` par une délégation au HAL — qui utilise PCNT sur ESP32 et fallback GPIO ailleurs. Backend RP2040 (PIO) en Phase 29. Smoke test : encodeur sur T-Embed reste fonctionnel après migration.
+- [x] **`drv_battery_bq27220.c` → userspace** : Migré vers `sdk/sensor/libbq27220.c` (lib userspace pure). Le driver kernel `drv_battery_bq27220.c` survit pour servir `/dev/battery0`. Conversion totale en daemon `battery_daemon.dap` reportée — non bloquant.
+- [x] **ST7789 : consolider 3 codepaths en 1** : `drv_disp_st7789.c` retiré (`/dev/disp0` n'existe plus). `drv_fb_st7789.c` conservé pour `/dev/fb0` sur boards PSRAM uniquement. `sdk/display/libst7789.c` réécrit pur userspace (ioctl/dev/spi-N + /dev/gpiochip0). Apps consomment via `<duneos/disp.h>` + `libdisp.c`.
+- [x] **GPIO expanders : règle explicite dans `bspgen`** : Schéma `gpio_expanders: [{type: sx1509, i2c_addr: 0x3e, pins: 16}, ...]` dans `board.yaml`. `bspgen` émet `DUNEOS_GPIOCHIP{N}_TYPE/I2C_ADDR/PINS` dans `board_config.h` + `CONFIG_DUNEOS_DRV_GPIOCHIP_{type}=y` dans `sdkconfig.board`. Drivers C `drv_gpiochip_*.c` non encore implémentés (stubs Kconfig en place — sera complété quand un board en exige réellement).
+- [x] **`hal_encoder` capability HAL (ADR 010 Pattern A)** : `hal_encoder.h` + backend Xtensa PCNT (strong symbol) + fallback GPIO polling (weak symbol). `enc_quadrature.c` réduit à un thin shim (83 → 49 lignes). Backend RP2040 (PIO) à ajouter en Phase 29.
+- [ ] **uinput + input drivers userspace (item #5)** : `kb_iomatrix.c` et `btn_gpio.c` actuellement kernel-side ne satisfont aucun critère ADR 009 (un consommateur, pas d'ISR critique, pin matrice dédiée, lifecycle app-scope). Migration plan :
+  1. Nouveau driver kernel **`drv_uinput.c`** exposant `/dev/uinput` (style Linux uinput) — apps userspace écrivent des `input_event_t`, le kernel les forwarde vers `/dev/input/event0`.
+  2. **`apps/system/kb_iomatrix.dap`** : daemon userspace qui scanne la matrice via `/dev/gpiochip0` et émet vers `/dev/uinput`. Idem **`btn_gpio.dap`** pour boards à boutons.
+  3. `enc_quadrature.c` reste **partiellement kernel** (le HAL `hal_encoder` a besoin de l'ISR PCNT) ; mais la conversion "delta → input_event" peut migrer dans un thin app userspace si profitable.
+  4. `init.yaml` lance ces input daemons en `restart: always` au boot, avant tout app qui consomme `/dev/input`.
+  5. **Étend ADR 014** : nouvelle capability `input` qui résout `lib${board.input.driver}.c` (kb_iomatrix, btn_gpio, …). Le board declare `input.driver: iomatrix` ; dbt link le bon backend.
 
-> Les 4 items sont du refactor pur (pas de change d'API public côté apps). À planifier au moment où le contexte est ouvert (Phase 26 OSAL touche aux drivers, Phase 27 VFS natif aussi).
+  Effort : ~1 semaine focus. Idéalement avant le contest 2026 (démontre clairement le pattern "apps remplaçables sans reflasher").
+
+> Items 1-4 sont des refactors purs (pas de change d'API public côté apps). Item 5 est plus structurel — touche au modèle d'input mais reste retro-compatible (apps lisent toujours `/dev/input/event0`).
 
 ---
 

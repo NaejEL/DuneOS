@@ -20,6 +20,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 | [011](011-threat-model.md) | Threat model: permissions are advisory, not enforced | Accepted 2026-05-19 | Phase 32 signing strategy; README security disclosure; any future "sandbox" claim |
 | [012](012-test-strategy.md) | Test strategy: host-side first, on-device smoke | Accepted 2026-05-19 | Phase 26+ refactor safety net; CI gating; `dbt test` subcommand |
 | [013](013-network-architecture.md) | Network architecture: POSIX sockets + vendored lwIP + per-medium HAL | Accepted 2026-05-19 | Phase 27 (VFS native + net rewrite), Phase 29 (RP2040 WiFi via CYW43); board.yaml `network:` section |
+| [014](014-capability-resolution.md) | Capability-based source resolution (dbt resolves chip backends) | Accepted 2026-05-20 | App manifests declare `capabilities: [display]`; dbt picks `lib${board.display.driver}.c` automatically. Extension to input/audio/sensor planned. |
 
 ## Reading order for new contributors
 
@@ -27,7 +28,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 2. [001](001-error-model.md), [005](005-path-conventions.md), [006](006-manifest-extensibility.md) — surface contracts (errors, paths, manifest).
 3. [002](002-osal-api.md), [003](003-memory-caps.md), [004](004-task-priorities.md) — kernel-internal contracts (OSAL).
 4. [008](008-memory-fragmentation.md) — the strategy that ties allocation decisions together.
-5. [009](009-driver-boundary.md), [010](010-arch-accelerators.md) — where drivers live and how arch-specific hardware is exposed.
+5. [009](009-driver-boundary.md), [010](010-arch-accelerators.md), [014](014-capability-resolution.md) — where drivers live, how arch-specific hardware is exposed, how userspace apps stay board-portable.
 6. [011](011-threat-model.md) — what DuneOS does and does not promise about security.
 7. [012](012-test-strategy.md), [007](007-multi-arch-smoke-test.md) — how we guard against regressions: tests and portability builds.
 8. [013](013-network-architecture.md) — how the network stack is layered and how new media (WiFi chips, Ethernet variants) plug in.

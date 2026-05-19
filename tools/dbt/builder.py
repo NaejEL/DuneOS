@@ -80,9 +80,20 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
 
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
 
+    # Capability resolution (ADR 014): apps declare needs, dbt picks the
+    # board-specific source files. Resolved sources are treated identically
+    # to manually-declared `sources:` entries below — they auto-pick up the
+    # adjacent include/ directory.
+    extra_includes = set()
+    from .capabilities import resolve as _resolve_caps
+    for p in _resolve_caps(manifest.get("capabilities", []), board_cfg, SDK_DIR):
+        sources.append(p)
+        sdk_inc = p.parent / "include"
+        if sdk_inc.is_dir():
+            extra_includes.add(sdk_inc)
+
     # Extra sources declared in duneos.yaml — supports $SDK/ prefix
     extra_sources = manifest.get("sources", [])
-    extra_includes = set()
     for entry in extra_sources:
         entry = str(entry)
         if entry.startswith("$SDK/"):

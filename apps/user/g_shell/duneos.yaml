@@ -3,6 +3,5 @@ version: "0.1.0"
 required_abi_version: 1
 permissions: 352
 stack_size: 8192
-sources:
-  - $SDK/display/libdisp.c
-  - $SDK/display/libst7789.c
+capabilities:
+  - display
