@@ -20,7 +20,7 @@ DuneOS is past the POC stage. The kernel boots from on-chip flash even without a
 | 22 — ABI v3 typed dispatch table + `libdune.a` + PicoLibc | ✅ |
 | 23 — USB device subsystem (TinyUSB MSC + CDC, `usb_shell`) | ✅ |
 | 24 — DHI (DuneOS Hardware Interface — HAL scope) | ✅ |
-| 24.5 — Design Decisions / ADR (`docs/adr/`) | ✅ (9 ADRs) |
+| 24.5 — Design Decisions / ADR (`docs/adr/`) | ✅ (11 ADRs) |
 | 25 — `dbt system` image recipes | pending |
 | 26 — OSAL + scheduler portability (incl. `task.h`+`supervisor.h` → `int`/-errno) | pending |
 | 27 — Native VFS + networking (incl. `vfs.h` → `int`/-errno) | pending |

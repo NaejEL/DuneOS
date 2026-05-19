@@ -171,11 +171,20 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - Commentaire obsolète `input_ioctl.h:47` (mentionne `xTaskGetTickCount() * portTICK_PERIOD_MS` alors que le champ est désormais peuplé via `duneos_hal_monotonic_us() / 1000`).
 - Commentaire `task.h:8-10` "FreeRTOS abstraction" — à reformuler en "OSAL abstraction" au moment de Phase 26.
 
+**Driver placement debt** — découlant de l'application des [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md) aux drivers existants. Quatre items, peuvent être traités opportunistement (en // de Phase 25-26) :
+
+- [ ] **`drv_battery_bq27220.c` → userspace** : Migrer `kernel/duneos_kernel/src/drivers/battery/drv_battery_bq27220.c` vers `sdk/sensor/libbq27220.c` (lib userspace) + un `system/bin/battery_daemon.dap` qui parle au chip via `/dev/i2c-0` et expose `/dev/battery0` via une socket / pipe nommée. Conserver l'API `battery_ioctl.h` côté apps. Le BQ27220 ne satisfait aucun des 4 critères de l'ADR 009 (lecture périodique, un consommateur, pas d'ISR critique).
+- [ ] **ST7789 : consolider 3 codepaths en 1** : Aujourd'hui `drv_disp_st7789.c` (`/dev/disp0` kernel), `drv_fb_st7789.c` (`/dev/fb0` kernel PSRAM), et `sdk/display/libst7789.c` (userspace) coexistent. Retirer `drv_disp_st7789.c` (aucun app ne l'utilise comme primary, `libgfx` peut router via `libst7789.c`). Conserver `drv_fb_st7789.c` uniquement si un compositor PSRAM partagé apparaît (deferré ; pas dans la roadmap). Libgfx (Phase 18) reste l'API publique pour les apps.
+- [ ] **GPIO expanders : règle explicite dans `bspgen`** : Si `board.yaml` déclare un expander (SX1509, PCF8574…), `bspgen` émet sa config dans `board_config.h` et le kernel expose `/dev/gpiochipN`. Sinon, les apps qui utilisent un expander ouvrent `/dev/i2c-0` et parlent le protocole eux-mêmes. Documenter le schéma YAML attendu (`gpio_expanders: [{type: sx1509, i2c_addr: 0x3e, pins: 16}, ...]`).
+- [ ] **`hal_encoder` capability HAL (ADR 010 Pattern A)** : Définir `kernel/duneos_kernel/include/duneos/hal_encoder.h` + backend ESP32 PCNT dans `arch/xtensa_esp32s3/hal/hal_encoder.c`. Remplacer le polling logiciel dans `enc_quadrature.c` par une délégation au HAL — qui utilise PCNT sur ESP32 et fallback GPIO ailleurs. Backend RP2040 (PIO) en Phase 29. Smoke test : encodeur sur T-Embed reste fonctionnel après migration.
+
+> Les 4 items sont du refactor pur (pas de change d'API public côté apps). À planifier au moment où le contexte est ouvert (Phase 26 OSAL touche aux drivers, Phase 27 VFS natif aussi).
+
 ---
 
 ### Phase 24.5 — Design Decisions / ADR ✅
 
-9 ADRs courts dans [`docs/adr/`](docs/adr/) (voir [README](docs/adr/README.md) pour l'index). Format Michael Nygard, 1 page max chacun, statut `Accepted · 2026-05-19`. Tous les choix consommés par les phases 25-29.
+11 ADRs courts dans [`docs/adr/`](docs/adr/) (voir [README](docs/adr/README.md) pour l'index). Format Michael Nygard, 1 page max chacun, statut `Accepted · 2026-05-19`. Tous les choix consommés par les phases 24 (debt) et 25-29.
 
 - [x] **ADR 000** — process des ADR
 - [x] **ADR 001** — error model `int`/-errno (consommé par 26-27)
@@ -186,6 +195,8 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - [x] **ADR 006** — manifest extensibility, champs inconnus ignorés (consommé par 25, loader)
 - [x] **ADR 007** — multi-arch smoke test (consommé par 26-28, prérequis 29)
 - [x] **ADR 008** — memory fragmentation strategy (consommé par 20 TLSF, kernel review policy)
+- [x] **ADR 009** — kernel/userspace boundary for drivers (consommé par Phase 24 debt, toute nouvelle PR driver)
+- [x] **ADR 010** — architecture-specific accelerators (consommé par Phase 24 debt hal_encoder, Phase 29 PIO)
 
 ---
 

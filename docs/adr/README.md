@@ -15,6 +15,8 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 | [006](006-manifest-extensibility.md) | Manifest extensibility: unknown fields ignored | Accepted 2026-05-19 | Loader, `dbt build` validation, Phase 25 (`dbt system check`) |
 | [007](007-multi-arch-smoke-test.md) | Multi-arch smoke test before Phase 29 | Accepted 2026-05-19 | CI infrastructure, Phases 26-28 portability discipline |
 | [008](008-memory-fragmentation.md) | Memory fragmentation strategy: design layer, not allocator | Accepted 2026-05-19 | Phase 20 (TLSF TODO), kernel PR review checklist, future allocation policy |
+| [009](009-driver-boundary.md) | Kernel/userspace boundary for drivers | Accepted 2026-05-19 | Driver placement decisions across all phases; 3 existing drifts tracked as Phase 24 debt |
+| [010](010-arch-accelerators.md) | Architecture-specific accelerators (PCNT, PIO, ULP, …) | Accepted 2026-05-19 | Phase 24 debt (hal_encoder for PCNT/PIO), Phase 29 (rp2040 PIO sdk lib) |
 
 ## Reading order for new contributors
 
@@ -22,7 +24,8 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 2. [001](001-error-model.md), [005](005-path-conventions.md), [006](006-manifest-extensibility.md) — surface contracts (errors, paths, manifest).
 3. [002](002-osal-api.md), [003](003-memory-caps.md), [004](004-task-priorities.md) — kernel-internal contracts (OSAL).
 4. [008](008-memory-fragmentation.md) — the strategy that ties allocation decisions together.
-5. [007](007-multi-arch-smoke-test.md) — how we guard against portability regressions.
+5. [009](009-driver-boundary.md), [010](010-arch-accelerators.md) — where drivers live and how arch-specific hardware is exposed.
+6. [007](007-multi-arch-smoke-test.md) — how we guard against portability regressions.
 
 ## Writing a new ADR
 
