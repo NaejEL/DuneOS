@@ -11,7 +11,7 @@ DuneOS is past the POC stage. The kernel boots from on-chip flash even without a
 | Phase | Status |
 | --- | --- |
 | 1–14 — Kernel, VFS, GPIO, I2C, SPI, input, display, WiFi, sockets | ✅ |
-| 16 — Shell built-ins vs PATH bins (`system/bin/`) | ✅ |
+| 16 — Shell built-ins vs PATH bins (`apps/system/bin/`) | ✅ |
 | 17 — Tooling DX (`dbt` package, TUI, `duneos.yaml`, `init.yaml`) | ✅ |
 | 18 — libgfx display abstraction (`sdk/display/gfx.c`) | ✅ |
 | 19 — Flash storage, boot without SD (`sysbin` LittleFS) | ✅ |
@@ -25,7 +25,9 @@ DuneOS is past the POC stage. The kernel boots from on-chip flash even without a
 | 25 — `dbt system` image recipes | pending |
 | 26 — OSAL + scheduler portability (incl. `task.h`+`supervisor.h` → `int`/-errno) | pending |
 | 27 — Native VFS + networking (incl. `vfs.h` → `int`/-errno) | pending |
-| 28–29 — RISC-V Espressif + first non-ESP-IDF port (RP2040) | pending |
+| 28 — RISC-V Espressif (ESP32-C6 + P4) | pending |
+| 28.5 — ESP-IDF de-coupling (entry point, build root, dbt) | pending |
+| 29 — First non-ESP-IDF port (RP2040) | pending |
 
 > **Note** : the 4 core public headers (`init.h`/`task.h`/`vfs.h`/`supervisor.h`) still return `esp_err_t` as of 2026-05. Their migration to POSIX-style `int` (-errno) is distributed across Phases 26-27 (each header migrates when its underlying API actually changes — avoids throwaway translation code).
 
@@ -164,11 +166,13 @@ DuneOS/
 ├── libdune/src/               libdune.a sources (ptr/fs/mem/thread/time/sys)
 ├── sdk/display/               Userspace display SDK (libst7789.c + gfx.c)
 ├── boards/<board>/            board.yaml + bspgen-generated headers/configs + init.yaml
-├── system/
-│   ├── shell_core/            Shared shell engine (VT100)
-│   ├── usb_shell/             USB CDC shell (system app)
-│   └── bin/                   System utilities (ls, cat, free, klog, gpio, ifconfig, ping, ...)
-├── apps/                      Developer apps (hello_world, gfx_demo, tcp_client, ...)
+├── apps/
+│   ├── system/                Apps shipped with DuneOS — maintained by the project
+│   │   ├── shell_core/        Shared shell engine (VT100)
+│   │   ├── usb_shell/         USB CDC shell
+│   │   ├── wifi_daemon/       WiFi STA daemon (connect, reconnect on backoff)
+│   │   └── bin/               System utilities (ls, cat, free, klog, gpio, ifconfig, ping, ...)
+│   └── user/                  Developer apps & demos (hello_world, gfx_demo, tcp_client, ...)
 ├── tools/
 │   ├── dbt/                   DuneBuild Tool (cli, builder, deploy, kernel, flashimg, tui, toolchain/)
 │   └── duneos-bspgen.py       BSP generator (board.yaml → headers + sdkconfig + partitions)

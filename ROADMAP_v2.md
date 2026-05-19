@@ -17,8 +17,8 @@ DuneOS n'est plus une simple idée — les fondations sont éprouvées sur ESP32
 - **Display** : `/dev/disp0` streaming driver (toutes boards) + `/dev/fb0` PSRAM back-buffer (T-Embed). `libgfx` (`sdk/display/gfx.c`) sélectionne dynamiquement le backend au runtime (`/dev/fb0` si dispo, fallback `/dev/disp0`).
 - **USB** : TinyUSB composite MSC + CDC sur boards OTG ; `/dev/ttyUSB0` exposé via `drv_usb_cdc.c` ; klog redirigé vers CDC à l'exécution.
 - **Userspace** : `libdune.a` (6 sources : ptr, fs, mem, thread, time, sys) — PicoLibc + dispatch ABI v3. Permet aux apps d'écrire du C POSIX standard.
-- **Écosystème** : Shell modulaire (`system/usb_shell/` + `system/shell_core/`, builtins + 14 commandes en `system/bin/`), tooling (`dbt` package + TUI Textual + plugins toolchain), init system (`boards/<board>/init.yaml` flashé en sysbin + `/sd/init.yaml` optionnel), politiques de restart.
-- **Réseau** : Daemon WiFi, `duneos_netif_wait_ip()`, injection de trames brutes 802.11 (`/dev/raw80211`), exports BSD socket complets, `system/bin/ifconfig` + `ping`.
+- **Écosystème** : Shell modulaire (`apps/system/usb_shell/` + `apps/system/shell_core/`, builtins + 14 commandes en `apps/system/bin/`), tooling (`dbt` package + TUI Textual + plugins toolchain), init system (`boards/<board>/init.yaml` flashé en sysbin + `/sd/init.yaml` optionnel), politiques de restart.
+- **Réseau** : Daemon WiFi, `duneos_netif_wait_ip()`, injection de trames brutes 802.11 (`/dev/raw80211`), exports BSD socket complets, `apps/system/bin/ifconfig` + `ping`.
 - **Hardening (Phase 20 partielle)** : per-app heap (heap_caps_malloc), Task WDT par slot, handler d'exception Xtensa par app (kill propre sans reboot kernel), validation pointeurs syscall (`check_user_ptr` + `check_app_writable_ptr`). Restent : stack canary, TLSF userspace.
 - **DHI (Phase 24)** : 6 headers HAL purs (`hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`, `hal_adc.h`, `hal_time.h`), implémentations Xtensa dans `arch/xtensa_esp32s3/hal/`, drivers HW délégant au HAL, `arch.cmake` self-selection. Périmètre HAL strict ; la purge des `esp_err_t` des 4 headers core (`init.h`/`task.h`/`vfs.h`/`supervisor.h`) est répartie sur Phases 26-27 (au moment où chaque .c sous-jacent change d'API).
 
@@ -30,8 +30,9 @@ DuneOS n'est plus une simple idée — les fondations sont éprouvées sur ESP32
 
 ```text
 DuneOS/
-├── apps/                 (Applications tierces .dap téléchargeables)
-├── system/               (Utilitaires système standard : shell, wifi_daemon)
+├── apps/
+│   ├── system/           (Apps qui shippent avec DuneOS : usb_shell, shell_core, wifi_daemon, bin/*)
+│   └── user/             (Apps tierces / templates de développeur)
 ├── tools/                (dbt/ modulaire, bspgen.py)
 └── kernel/               (Code source du noyau pur)
     ├── arch/             (Spécifique au CPU : context switch, MPU/PMP, exceptions)
@@ -79,7 +80,7 @@ Une app qui dessine doit compiler et tourner identiquement sur CardPuter (ST7789
 DuneOS doit booter et être utilisable même sans carte SD insérée.
 
 - [x] **Partition `sysbin` LittleFS** dans `partitions.csv` (~1 MB) ; monter sur `/flash` dans `vfs.c`.
-- [x] **Embed des apps vitales** (`shell.dap`, commandes `system/bin/`) en blobs firmware via `COMPONENT_EMBED_FILES`.
+- [x] **Embed des apps vitales** (`shell.dap`, commandes `apps/system/bin/`) en blobs firmware via `COMPONENT_EMBED_FILES`.
 - [x] **First-boot provisioning** : Le noyau copie les blobs manquants vers `/flash/bin/` au premier démarrage.
 - [x] **Cascade loader** : Chercher `/flash/bin/` → `/sd/bin/` → `/sd/apps/`.
 - [x] **BSP YAML** : Champ `has_sd: false` ; `vfs.c` skip le montage SD et lit `init.yaml` depuis `/flash`.
@@ -139,7 +140,7 @@ L'expérience Plug and Play ultime.
 
 - [x] **TinyUSB** : Composite MSC+CDC sur `espressif/esp_tinyusb ^2.0.1~1`. `drv_usb.c` initialise le device stack.
 - [x] **USB MSC (Mass Storage)** : `/sd` exposé en drag-and-drop. `duneos_vfs_get_sd_card()` passe le handle sdmmc au backend MSC.
-- [x] **USB CDC (Console)** : `drv_usb_cdc.c` — TX mutex-sérialisé (un seul `write_flush` non-bloquant, pas de collision), RX via ring buffer + sémaphore → `/dev/ttyUSB0`. `system/usb_shell/` + `system/shell_core/` remplacent `system/shell/`.
+- [x] **USB CDC (Console)** : `drv_usb_cdc.c` — TX mutex-sérialisé (un seul `write_flush` non-bloquant, pas de collision), RX via ring buffer + sémaphore → `/dev/ttyUSB0`. `apps/system/usb_shell/` + `apps/system/shell_core/` remplacent `system/shell/`.
 - [x] **`console: none`** : `bspgen.py` émet `CONFIG_ESP_CONSOLE_NONE=y` pour les boards OTG — UART0 reste libre pour les apps. Le klog est redirigé vers CDC à l'exécution via `esp_log_set_vprintf`.
 
 ---
@@ -173,7 +174,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 **Driver placement debt** — découlant de l'application des [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md) aux drivers existants. Quatre items, peuvent être traités opportunistement (en // de Phase 25-26) :
 
-- [ ] **`drv_battery_bq27220.c` → userspace** : Migrer `kernel/duneos_kernel/src/drivers/battery/drv_battery_bq27220.c` vers `sdk/sensor/libbq27220.c` (lib userspace) + un `system/bin/battery_daemon.dap` qui parle au chip via `/dev/i2c-0` et expose `/dev/battery0` via une socket / pipe nommée. Conserver l'API `battery_ioctl.h` côté apps. Le BQ27220 ne satisfait aucun des 4 critères de l'ADR 009 (lecture périodique, un consommateur, pas d'ISR critique).
+- [ ] **`drv_battery_bq27220.c` → userspace** : Migrer `kernel/duneos_kernel/src/drivers/battery/drv_battery_bq27220.c` vers `sdk/sensor/libbq27220.c` (lib userspace) + un `apps/system/bin/battery_daemon.dap` qui parle au chip via `/dev/i2c-0` et expose `/dev/battery0` via une socket / pipe nommée. Conserver l'API `battery_ioctl.h` côté apps. Le BQ27220 ne satisfait aucun des 4 critères de l'ADR 009 (lecture périodique, un consommateur, pas d'ISR critique).
 - [ ] **ST7789 : consolider 3 codepaths en 1** : Aujourd'hui `drv_disp_st7789.c` (`/dev/disp0` kernel), `drv_fb_st7789.c` (`/dev/fb0` kernel PSRAM), et `sdk/display/libst7789.c` (userspace) coexistent. Retirer `drv_disp_st7789.c` (aucun app ne l'utilise comme primary, `libgfx` peut router via `libst7789.c`). Conserver `drv_fb_st7789.c` uniquement si un compositor PSRAM partagé apparaît (deferré ; pas dans la roadmap). Libgfx (Phase 18) reste l'API publique pour les apps.
 - [ ] **GPIO expanders : règle explicite dans `bspgen`** : Si `board.yaml` déclare un expander (SX1509, PCF8574…), `bspgen` émet sa config dans `board_config.h` et le kernel expose `/dev/gpiochipN`. Sinon, les apps qui utilisent un expander ouvrent `/dev/i2c-0` et parlent le protocole eux-mêmes. Documenter le schéma YAML attendu (`gpio_expanders: [{type: sx1509, i2c_addr: 0x3e, pins: 16}, ...]`).
 - [ ] **`hal_encoder` capability HAL (ADR 010 Pattern A)** : Définir `kernel/duneos_kernel/include/duneos/hal_encoder.h` + backend ESP32 PCNT dans `arch/xtensa_esp32s3/hal/hal_encoder.c`. Remplacer le polling logiciel dans `enc_quadrature.c` par une délégation au HAL — qui utilise PCNT sur ESP32 et fallback GPIO ailleurs. Backend RP2040 (PIO) en Phase 29. Smoke test : encodeur sur T-Embed reste fonctionnel après migration.
@@ -325,6 +326,54 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 - [ ] **Smoke test** : `hello_world.dap` RISC-V sur C6 et P4. Le loader doit rejeter un `.dap` Xtensa avec un message clair.
 
 > **Ce que cette phase prouve** : Un chip RISC-V Espressif = uniquement `board.yaml` nouveau. L'`arch/riscv32/` couvre C3, C6, H2, P4 — pas de duplication.
+
+---
+
+### Phase 28.5 — ESP-IDF de-coupling de l'entry point, du build root, et de dbt
+
+**Pourquoi cette phase :** Phase 21 a sorti `build_kernel`/`flash_kernel`/`monitor` dans le plugin toolchain, mais cinq fronts ESP-IDF résiduels restent côté kernel et dbt. Aucun ne bloque Phase 28 (qui reste full ESP-IDF, juste un autre ISA). Tous bloquent Phase 29 (premier port hors ESP-IDF). Audit fait 2026-05-19.
+
+**Front 1 — Entry point split (`main/` → `kernel/` + `arch/`) :**
+
+- [ ] **Extraire la logique SDK-agnostic de `main/main.c`** vers `kernel/duneos_kernel/src/duneos_main.c` exposant `void duneos_main(void)` qui fait : `vfs_init` → `loader_init` → `supervisor_init` → `launch_from_init_yaml` → `wait_all` → `kernel_idle`. Pas d'`app_main`, pas de `console_init` USB JTAG.
+- [ ] **`arch/xtensa_esp32s3/entry/entry_esp_idf.c`** : implémente `void app_main(void)` qui appelle `duneos_main()`. Inclut le `console_init()` USB JTAG actuel (`driver/usb_serial_jtag.h`) — sous `#ifndef CONFIG_ESP_CONSOLE_USB_CDC`.
+- [ ] **`arch/<arch>/entry/entry_<sdk>.c`** pour les ports futurs : pico_sdk → `int main(void) { duneos_main(); return 0; }` ; stm32 → idem.
+- [ ] **Supprimer `main/`** : son `main.c` est vide après extraction, son `CMakeLists.txt` (`idf_component_register` + REQUIRES `esp_driver_usb_serial_jtag`) déménage vers `arch/xtensa_esp32s3/entry/`.
+
+**Front 2 — Build root SDK-agnostic :**
+
+- [ ] **`CMakeLists.txt` racine** : aujourd'hui appelle directement `include($ENV{IDF_PATH}/tools/cmake/project.cmake)`. Doit dispatcher selon `board.yaml`'s `sdk:` field. Pattern : lire `.duneos_board` → lire `boards/<board>/board.yaml` → `include(tools/dbt/toolchain/<sdk>/setup.cmake)` qui prend en charge l'orchestration SDK-spécifique (project.cmake pour ESP-IDF, pico_sdk_init pour pico-sdk, etc.).
+- [ ] **`sdkconfig.defaults` racine** : reste, mais documenté en tête comme "ESP-IDF Kconfig fragment — only consumed when sdk: esp-idf in board.yaml". Autres SDKs ont leur équivalent dans `tools/dbt/toolchain/<sdk>/defaults.{cmake,h,...}` selon ce qu'ils acceptent.
+
+**Front 3 — Audit dbt findings :**
+
+- [ ] **`tools/dbt/setup.py`** (61 refs ESP-IDF) : c'est un wizard d'install IDF (clone esp-idf, install.sh, export.sh, find_idf_root, build_idf_env, etc.). Toute la logique IDF-specific déménage en méthodes `plugin.setup_wizard()`, `plugin.find_toolchain_root()`, `plugin.build_env()`. `setup.py` devient un dispatcher qui appelle le plugin actif. La logique générique (`_BOARD_FILE`, `_PORT_FILE`, board/port pickers) reste.
+- [ ] **`tools/dbt/tui.py`** (51 refs) : labels hard-codés `"ESP-IDF v6.0.x"`, `"IDF v6"`, `"echo ~/esp/esp-idf > .duneos_idf"`. Remplacer par `f"{plugin.SDK} {plugin.version()}"`, `f"echo … > .duneos_{plugin.SDK_SLUG}"`. Tous les `find_idf_root()` → `plugin.find_toolchain_root()`. La fonction privée `_idf_env()` / `_idf_cmd()` deviennent `_sdk_env()` / `_sdk_cmd()` déléguant au plugin.
+- [ ] **`tools/dbt/flashimg.py`** (12 refs) : `_find_esptool()` + appel direct esptool pour flasher la partition sysbin. Sur RP2040 ce serait `picotool` ; le pattern est identique (image binary → partition offset → tool de flash). Déléguer : `plugin.flash_partition(image_path, partition_offset, partition_name, port)`. L'esp-idf plugin implémente avec esptool, le pico-sdk plugin avec picotool. `flashimg.py` reste générique : construit l'image LittleFS, lit l'offset depuis `partitions.csv`, appelle `plugin.flash_partition()`.
+- [ ] **`tools/dbt/kernel.py`** (4 refs) : usage propre via `plugin.find_toolchain_root()` mais écrit `.duneos_idf` en dur (`_IDF_FILE.write_text(...)`). Remplacer par `plugin.write_toolchain_path_marker(root)` qui sait quel fichier per-SDK utiliser (`.duneos_idf` pour ESP-IDF, `.duneos_pico_sdk` pour pico-sdk).
+- [ ] **`tools/dbt/cli.py`** (2 refs) : juste des help texts mentionnant `idf.py` et `idf_target.txt`. Mineurs ; à reformuler en termes SDK-agnostic.
+
+**Front 4 — Plugin interface étendue** :
+
+Ce que le plugin toolchain doit exposer après cette phase (en plus de ce qui existe déjà depuis Phase 21) :
+
+```python
+# Méthodes nouvelles exigées par les fronts 1-3
+SDK_SLUG: str                                  # "esp_idf", "pico_sdk" — pour les fichiers .duneos_<slug>
+def version() -> str: ...                      # "v6.0.1" — pour l'affichage TUI
+def setup_wizard(console) -> int: ...          # Phase 21 partial; généraliser
+def build_env() -> dict[str, str]: ...         # env vars pour appeler le build/flash subprocess
+def write_toolchain_path_marker(root): ...     # écrit .duneos_<slug>
+def flash_partition(image, offset, name, port) -> int: ...  # ce que flashimg.py délègue
+def setup_cmake() -> Path: ...                 # le fichier que CMakeLists.txt racine include()
+```
+
+**Front 5 — Smoke test** :
+
+- [ ] **`dbt flash kernel --build-only` reste vert** après les fronts 1-3 sur les 5 boards actuelles (CardPuter, T-Embed, DevKitC, ESP32-C3, ESP32-P4). Aucune régression.
+- [ ] **Le rebuild Phase 29 RP2040 peut démarrer** sans toucher au code du kernel core ni à dbt — uniquement ajouter `tools/dbt/toolchain/pico_sdk.py` + `arch/arm_cortex_m/`.
+
+> **Coût estimé** : 1 semaine de travail focus. Beaucoup de refactor mécanique (sed + grep), peu de design. La complexité réelle est dans le CMakeLists.txt racine dispatch (front 2) qui mélange deux build systems incompatibles.
 
 ---
 

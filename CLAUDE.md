@@ -30,17 +30,17 @@ python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml  # generates s
 # idf.py fullclean
 
 # Build the USB shell (system app, ships with DuneOS)
-cd system/usb_shell
-python ../../tools/dbt.py build
-python ../../tools/dbt.py deploy E:\   # E: = SD card drive
+cd apps/system/usb_shell
+python ../../../tools/dbt.py build
+python ../../../tools/dbt.py deploy E:\   # E: = SD card drive
 
 # Build a DuneOS app
-cd apps/test_exit
-python ../../tools/dbt.py build
-python ../../tools/dbt.py deploy E:\   # E: = SD card drive
+cd apps/user/test_exit
+python ../../../tools/dbt.py build
+python ../../../tools/dbt.py deploy E:\   # E: = SD card drive
 
 # Inspect built ELF
-python ../../tools/dbt.py info
+python ../../../tools/dbt.py info
 
 # BSP generator (legacy positional usage retained, but normal usage is the form on line 23)
 python tools/duneos-bspgen.py boards/esp32s3-devkitc/board.yaml
@@ -126,27 +126,29 @@ DuneOS/
 │   ├── lilygo-t-embed-cc1101/      # same layout — 16 MB flash, 8 MB OPI PSRAM, BQ27220 fuel gauge
 │   ├── esp32c3-devkitc/            # same layout — RISC-V, future Phase 28 target
 │   └── esp32p4-devkitm/            # same layout — RISC-V, future Phase 28 target
-├── system/
-│   ├── shell_core/
-│   │   └── shell_core.c            # Shared VT100 shell engine; #include'd by backends
-│   ├── usb_shell/                  # USB CDC shell — deploy on boards with CONFIG_DUNEOS_DRV_USB_CDC
-│   │   ├── usb_shell.c             # Opens /dev/ttyUSB0, calls shell_run()
-│   │   └── duneos.yaml
-│   └── bin/                        # System utilities (ls, cat, free, klog, gpio, …)
-│       └── <cmd>/
-│           ├── <cmd>.c
-│           └── duneos.yaml
 ├── apps/
-│   ├── g_shell/                    # Graphical shell — any board with display + keyboard
-│   │   ├── g_shell.c               # ST7789 terminal, evdev input, captured bin output
-│   │   ├── font8x8.h               # 8×8 pixel font
-│   │   └── duneos.yaml
-│   ├── gfx_demo/                   # GFX API demo (shapes, text) for boards with display
-│   ├── test_exit/                  # Minimal app: app_main calls duneos_exit(0)
-│   ├── test_hardening/             # Memory/WDT hardening test
-│   ├── hello_world/                # Writes "Hello World" to stdout then exits
-│   ├── uart_echo/                  # Echo loop on /dev/uart0, Ctrl-C to exit
-│   └── tcp_client/                 # TCP socket demo (requires wifi_daemon running)
+│   ├── system/                     # apps that ship with DuneOS — maintained by the project
+│   │   ├── shell_core/
+│   │   │   └── shell_core.c        # Shared VT100 shell engine; #include'd by backends
+│   │   ├── usb_shell/              # USB CDC shell — deploy on boards with CONFIG_DUNEOS_DRV_USB_CDC
+│   │   │   ├── usb_shell.c         # Opens /dev/ttyUSB0, calls shell_run()
+│   │   │   └── duneos.yaml
+│   │   ├── wifi_daemon/            # WiFi STA daemon — connects, holds the link, reconnects on backoff
+│   │   └── bin/                    # System utilities (ls, cat, free, klog, gpio, ifconfig, ping, …)
+│   │       └── <cmd>/
+│   │           ├── <cmd>.c
+│   │           └── duneos.yaml
+│   └── user/                       # third-party / developer demo apps (template for new apps)
+│       ├── g_shell/                # Graphical shell — any board with display + keyboard
+│       │   ├── g_shell.c           # ST7789 terminal, evdev input, captured bin output
+│       │   ├── font8x8.h           # 8×8 pixel font
+│       │   └── duneos.yaml
+│       ├── gfx_demo/               # GFX API demo (shapes, text) for boards with display
+│       ├── test_exit/              # Minimal app: app_main calls duneos_exit(0)
+│       ├── test_hardening/         # Memory/WDT hardening test
+│       ├── hello_world/            # Writes "Hello World" to stdout then exits
+│       ├── uart_echo/              # Echo loop on /dev/uart0, Ctrl-C to exit
+│       └── tcp_client/             # TCP socket demo (requires wifi_daemon running)
 ├── tools/
 │   ├── dbt.py                      # thin wrapper → tools/dbt/cli.py
 │   ├── dbt/                        # DuneBuild package: cli/builder/deploy/kernel/flashimg/bspgen/manifest/tui
@@ -361,19 +363,20 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 11 — SPI | **DONE** | `/dev/spi-1` (SPI3_HOST); per-fd `spi_bus_add_device`; `role: raw` in BSP YAML selects the raw bus; boards without a free SPI host omit the config flag |
 | Phase 12 — Input | **DONE** | `/dev/input/event0`; IOMatrix scan (CardPuter), GPIO buttons + quadrature encoder (T-Embed); 3-layer keymap (normal/shift/fn); `DUNEOS_PERM_INPUT`; shell `input` + `tail` commands |
 | Phase 13 — Framebuffer + display SDK | **DONE** | `/dev/disp0` streaming driver (all boards); `/dev/fb0` PSRAM back-buffer (T-Embed); `st7789_hw.c` shared HW module; `disp_ioctl.h` POSIX API; `g_shell` graphical terminal (30×16 8×8 font, stdout capture, PATH bin execution) |
-| Phase 14 — WiFi daemon + raw frame injection | **DONE** | `drv_wifi.c` kernel wrappers; `wifi_daemon.dap` (STA, backoff, reconnect); `duneos_netif_wait_ip()`; `/dev/raw80211` (`DUNEOS_PERM_NET_RAW`); `system/bin/ifconfig`; BSD socket exports |
+| Phase 14 — WiFi daemon + raw frame injection | **DONE** | `drv_wifi.c` kernel wrappers; `wifi_daemon.dap` (STA, backoff, reconnect); `duneos_netif_wait_ip()`; `/dev/raw80211` (`DUNEOS_PERM_NET_RAW`); `apps/system/bin/ifconfig`; BSD socket exports |
 | Phase 15 — Multi-target portability | Superseded by 18 | Merged into Phase 18 (libgfx + board.info). |
-| Phase 16 — Shell refactor: built-ins vs PATH | **DONE** | Shell stripped to 6 built-ins (`cd`, `pwd`, `echo`, `exit`, `help`, `run`). 14 commands moved to `system/bin/` as `.dap` files. Args via `/tmp/.exec_args` (`bin_args.h`). `dbt.py deploy --bin` copies to `/sd/bin/`. |
+| Phase 16 — Shell refactor: built-ins vs PATH | **DONE** | Shell stripped to 6 built-ins (`cd`, `pwd`, `echo`, `exit`, `help`, `run`). 14 commands moved to `apps/system/bin/` as `.dap` files. Args via `/tmp/.exec_args` (`bin_args.h`). `dbt.py deploy --bin` copies to `/sd/bin/`. |
 | Phase 17 — Tooling DX | **DONE** | `dbt.py` split into sub-modules (`cli`, `builder`, `deploy`, `toolchain`, `manifest`); `duneos.yaml` replaces `manifest.json`; `init.yaml` replaces `init.json`; `bspgen.py` purged of ESP-IDF dep. |
 | Phase 18 — libgfx (display portability) | **DONE** | `/flash/board.info` (+ `/sd/board.info`) written at boot; `libgfx` display-agnostic API with `gfx_st7789` and `gfx_fb` backends; `dbt.py` selects backend from `.duneos_board`. |
 | Phase 19 — Flash storage (boot sans SD) | **DONE** | `sysbin` LittleFS partition (1 MB) at `/flash`; boot order: flash → SD; `duneos_vfs_provision_flash()` copies firmware-embedded blobs to `/flash/bin/`; init.yaml cascade (`/flash` then `/sd`); loader cascade (`/flash/bin/` → `/sd/bin/` → `/sd/apps/`); `bspgen` generates per-board `partitions.csv` from `flash_size_mb`; `DUNEOS_HAS_SD` flag; `dbt.py flashimg` builds LittleFS image and flashes directly (port from `.duneos_port` / `--port` / `DUNEOS_PORT`). `boards/<board>/init.yaml` user-controlled per-board flash boot service list (replaces hardcoded `_BOOT_SERVICES`); init.c deduplication by app name (not path) so `/flash/bin/usb_shell.dap` and `/sd/bin/usb_shell.dap` resolve to the same service. |
 | Phase 20 — Memory hardening | **PARTIAL** | DONE: per-app heap caps (DRAM pool, `heap_caps_malloc`); software WDT per slot (`esp_task_wdt`); per-app Xtensa exception handler in `supervisor.c` (kill on crash, no kernel reboot); supervisor pointer validation (`check_user_ptr` for read buffers, `check_app_writable_ptr` for write buffers) used by `api.c` and `symbols.c`. TODO: stack canary per task; TLSF userspace allocator in `libdune.a` (today `malloc` calls kernel `heap_caps_malloc` via `__duneos_api_ptr->mem`). |
 | Phase 21 — dbt: multi-arch toolchain plugin model | **DONE** | `board.yaml` gains `arch:` + `sdk:` fields (all boards updated). `tools/dbt/toolchain/` package replaces `toolchain.py`: `__init__.py` exposes `load_plugin(sdk)` + `get_board_plugin()`; `esp_idf.py` is the first plugin (SDK/ARCH constants, `find_compiler`, `cflags`, `ldflags`, `build_kernel`, `flash_kernel`, `monitor`, `find_toolchain_root`). `builder.py`, `cli.py`, `flashimg.py`, `kernel.py` dispatch through `get_board_plugin()`. |
 | Phase 22 — Syscalls + PicoLibc migration | **DONE** | `duneos_api_t` typed dispatch table (ABI v3) in `duneos/api.h`; `api.c` owns the singleton. Loader injects `duneos_api_get()` into app's `__duneos_api_ptr` before `app_main` — O(1), no string search. Static stack alloc gives exact bounds for `check_app_writable_ptr`. cJSON manifest parser. `libdune.a` (6 sources) wraps POSIX + DuneOS calls; `dbt build` caches it per arch. |
-| Phase 23 — USB Device Subsystem | **DONE** | `espressif/esp_tinyusb ^2.0.1~1` managed component; `drv_usb.c` TinyUSB MSC+CDC composite device; `drv_usb_cdc.c` mutex-serialised TX (no concurrent flush collisions) + semaphore-gated RX → `/dev/ttyUSB0`; `system/usb_shell/` + `system/shell_core/` replace `system/shell/`; `bspgen.py` adds `console: none` → `CONFIG_ESP_CONSOLE_NONE=y` (default for OTG boards — keeps UART0 free for apps; klog redirected to CDC at runtime via `esp_log_set_vprintf`); `board.yaml` gains `usb:` section. |
+| Phase 23 — USB Device Subsystem | **DONE** | `espressif/esp_tinyusb ^2.0.1~1` managed component; `drv_usb.c` TinyUSB MSC+CDC composite device; `drv_usb_cdc.c` mutex-serialised TX (no concurrent flush collisions) + semaphore-gated RX → `/dev/ttyUSB0`; `apps/system/usb_shell/` + `apps/system/shell_core/` replace `system/shell/`; `bspgen.py` adds `console: none` → `CONFIG_ESP_CONSOLE_NONE=y` (default for OTG boards — keeps UART0 free for apps; klog redirected to CDC at runtime via `esp_log_set_vprintf`); `board.yaml` gains `usb:` section. |
 | Phase 24 — DHI (DuneOS Hardware Interface) | **DONE** (HAL scope) | 6 pure-C HAL headers (`hal_uart`/`gpio`/`i2c`/`spi`/`adc`/`time`.h), ESP-IDF impl in `arch/xtensa_esp32s3/hal/`, all HW driver backends + input drivers delegate to HAL, `dev_driver.h`+`i2c_bus.h` return `int`, `arch.cmake` self-selection via triple-guard, `arch` in manifest + cross-ISA rejection, numeric SPI host / ADC unit in BSP. **Scope restricted to HAL hardware headers**: the 4 core public headers (`init.h`, `task.h`, `vfs.h`, `supervisor.h`) still return `esp_err_t` but their migration is distributed to Phases 26-27 (each header migrated when its underlying API actually changes — avoids throwaway translation code). |
 | Phase 24.5 — Design Decisions (ADR) | **DONE** | `docs/adr/` — 13 short ADRs (1 page each, ~50 lines): process, error model (`int`/-errno), OSAL API (static-storage handles only), memory caps (`OSAL_MEM_*` with silent DRAM fallback), task priorities (5 symbolic levels), path conventions (`/flash` mandatory), manifest extensibility (unknown fields ignored), multi-arch smoke test, memory fragmentation (4 pillars + no compaction), driver kernel/userspace boundary (4-criterion test + matrix; 3 existing drifts tracked), architecture-specific accelerators (Pattern A capability HAL / B arch-only SDK / C partial-overlap), **threat model** (without MMU, permissions are advisory not enforced — provenance via Phase 32 signing, not runtime isolation), **test strategy** (Greatest header-only, host-side first via sim Linux, `dbt test` in Phase 26). All consumed by Phases 24 debt + 24.7 + 25-29. |
 | Phase 24.7 — Safe boot & recovery | Not started | Avoid bricking-by-bad-init.yaml. Circuit breaker in supervisor (N crashes in M sec → disable service), hold-key-at-boot fallback via `board.yaml` `recovery_pin`, guarantee USB MSC up before init.yaml services, `dbt flash sysbin --safe` for one-shot recovery. Prerequisite for Phase 25 (`dbt system deploy` could otherwise brick remote boards). |
+| Phase 28.5 — ESP-IDF de-coupling (entry + build root + dbt) | Not started | Split `main/main.c` into `kernel/duneos_kernel/src/duneos_main.c` (SDK-agnostic core) + `arch/<arch>/entry/entry_<sdk>.c` (per-SDK wrapper providing `app_main()` / `int main()`). Root `CMakeLists.txt` dispatches to per-SDK setup via `tools/dbt/toolchain/<sdk>/setup.cmake`. `sdkconfig.defaults` documented as ESP-IDF-only. dbt audit: extract IDF-specific code from `setup.py` (61 refs), `tui.py` (51 refs), `flashimg.py` (12 refs) into plugin methods (`setup_wizard`, `flash_partition`, `build_env`, `version`). Hard prerequisite for Phase 29 (first non-ESP-IDF port). |
 | Phase 25 — dbt system (Image Recipes) | Not started | `profile.yaml` (kernel feature selection), `system.yaml` (apps + profile), `capability_map.py` (`DUNEOS_PERM_*` ↔ `CONFIG_DUNEOS_DRV_*`). `dbt system check` validates app permissions against kernel profile before build. `dbt system build/deploy` orchestrates full image. |
 | Phase 26 — OSAL + scheduler portability **(was 27)** | Not started | `duneos_osal.h` abstracts FreeRTOS primitives (per ADR 002). Per ADRs 003-004: memory caps + priority scale. `freertos_osal.c` (ESP32-S3/C6/RP2040), `pthread_osal.c` (sim Linux). PicoLibc moved to `third_party/`. WiFi blob confinement behind `freertos_osal.c`. **Includes `task.h`+`supervisor.h` migration to `int`/-errno** (Phase 24 dette héritée). **Migrations: `loader.c`** (`heap_caps_malloc(MALLOC_CAP_SPIRAM/INTERNAL)` → `osal_mem_alloc`, `esp_rom_printf` → `osal_panic_print`, `soc/soc.h` → arch-provided memmap struct), `supervisor.c`, `task.c`, `symbols.c`, `klog.c`, `api.c`, `vfs_dev.c`, `vfs_tmp.c`, `drv_fb_st7789.c`. |
 | Phase 27 — VFS native + networking **(was 26)** | Not started | Native `duneos_vfs` replacing `esp_vfs`; `poll()`/`select()` support backed by `osal_sem` wait queues; `hal_net.h` then WiFi driver rewrite; Ethernet RMII + LwIP; BSD socket routing. **Includes `vfs.h` migration to `int`/-errno** (Phase 24 dette héritée). `vfs.c`+`st7789_hw.c` migrate from `driver/spi_master.h` to `hal_spi.h` here. |

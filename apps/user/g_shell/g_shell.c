@@ -97,6 +97,8 @@ static void sh_outln(const char *s) { out_text(s); out_push(""); }
 
 /* ----- include shared command dispatch ----------------------------------- */
 
+/* From apps/user/g_shell/, "../../" resolves to apps/, so this picks up
+ * apps/system/shell_core/shell_cmds.c (the shared shell command dispatch). */
 #include "../../system/shell_core/shell_cmds.c"
 
 /* ----- rendering --------------------------------------------------------- */

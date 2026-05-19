@@ -18,6 +18,7 @@ Items are grouped by impact, not by phase. Each line is one sentence — if it g
 - **Event bus / pub-sub** — current IPC is point-to-point via supervisor mailbox queues. Broadcast events (`battery_low`, `wifi_disconnected`, `usb_plugged`) would need a different mechanism. Defer until a concrete need emerges; not worth designing in the abstract.
 - **Time-of-day / NTP-SNTP** — `clock_gettime(CLOCK_MONOTONIC)` works (it's the hardware timer); `CLOCK_REALTIME` returns whatever happens to be in the kernel's notion of wall clock (probably epoch). `wifi_daemon` doesn't do SNTP. Trivial to add once it matters; not blocking anything.
 - **Kernel version exposure** — `DUNEOS_VERSION_STRING` is printed in klog at boot but isn't queryable at runtime. A `dbt info-device` that talks to the kernel over `/dev/ttyUSB0` would be useful for support ("what kernel are you running?"). Tiny scope; opportunistic.
+- **`cd apps/user/<name> && python ../../../tools/dbt.py build`** is awkward after the `apps/system,user` split (one extra `../`). Either `dbt build <app_path>` from the repo root, or a `dbt` wrapper that walks up to find the repo root, would be cleaner. Tiny DX win.
 
 ## Low impact / niche
 

@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * bin_args.h — argument passing for system/bin/ utility apps.
+ * bin_args.h — argument passing for apps/system/bin/ utility apps.
  *
  * Convention for /sd/bin/<cmd>.dap apps launched by the shell PATH fallback:
  *

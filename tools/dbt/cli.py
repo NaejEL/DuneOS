@@ -199,7 +199,7 @@ def cmd_buildall(args) -> None:
 
     apps = find_apps()
     if not apps:
-        sys.exit("ERROR: no apps found under system/ or apps/")
+        sys.exit("ERROR: no apps found under apps/system or apps/user")
 
     plugin, arch, cpu, board_cfg = get_board_plugin()
     tc = plugin.find_compiler(arch, cpu)
@@ -270,7 +270,7 @@ def cmd_flash_sd(args) -> None:
 
     apps = find_apps()
     if not apps:
-        sys.exit("ERROR: no apps found under system/ or apps/")
+        sys.exit("ERROR: no apps found under apps/system or apps/user")
 
     plugin, arch, cpu, board_cfg = get_board_plugin()
     tc = plugin.find_compiler(arch, cpu)

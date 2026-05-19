@@ -51,7 +51,7 @@ def validate_manifest(m: dict) -> None:
 
 
 def _is_bin_app(app_dir: Path) -> bool:
-    bin_root = DUNEOS_ROOT / "system" / "bin"
+    bin_root = DUNEOS_ROOT / "apps" / "system" / "bin"
     try:
         app_dir.relative_to(bin_root)
         return True
@@ -62,9 +62,9 @@ def _is_bin_app(app_dir: Path) -> bool:
 def find_apps() -> list[tuple[Path, bool]]:
     """
     Return [(app_dir, is_bin), ...] for all apps with a manifest.
-    Searches system/ and apps/ (examples/ merged into apps/).
+    Searches apps/system (DuneOS-maintained) and apps/user (third-party / demos).
     """
-    search_roots = [DUNEOS_ROOT / "system", DUNEOS_ROOT / "apps"]
+    search_roots = [DUNEOS_ROOT / "apps" / "system", DUNEOS_ROOT / "apps" / "user"]
 
     results = []
     for base in search_roots:

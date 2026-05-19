@@ -58,7 +58,7 @@ Default if none apply: **userspace** — driver lives as a library in `sdk/<cate
 
 **Three existing drifts to correct** (tracked as Phase 24 "Driver placement debt" in ROADMAP_v2):
 
-1. **`drv_battery_bq27220.c` is in the kernel** but fails criteria 1-4. It's a periodic I2C read. Move to `sdk/sensor/libbq27220.c` (userspace) + a `system/bin/battery.dap` daemon if board.yaml declares `battery: bq27220`. The `/dev/battery0` device node remains for compatibility, served by the daemon.
+1. **`drv_battery_bq27220.c` is in the kernel** but fails criteria 1-4. It's a periodic I2C read. Move to `sdk/sensor/libbq27220.c` (userspace) + a `apps/system/bin/battery.dap` daemon if board.yaml declares `battery: bq27220`. The `/dev/battery0` device node remains for compatibility, served by the daemon.
 
 2. **ST7789 has three codepaths** (`drv_disp_st7789.c` streaming `/dev/disp0` in kernel, `drv_fb_st7789.c` framebuffer `/dev/fb0` in kernel, `sdk/display/libst7789.c` userspace). Per the matrix, this should be one userspace lib. The framebuffer kernel path stays only as an optional compositor on PSRAM boards (no caller today; deferrable until a real compositor is built). `/dev/disp0` should be retired.
 
