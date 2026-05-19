@@ -29,6 +29,7 @@ int pthread_join(pthread_t t, void **ret)
 void pthread_exit(void *val)
 {
     __duneos_api_ptr->thread.pthread_exit(val);
+    __builtin_unreachable();
 }
 
 pthread_t pthread_self(void)
