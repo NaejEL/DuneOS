@@ -5,7 +5,7 @@
  * routes each call to the registered duneos_dev_driver_t for the open fd.
  *
  * No device-specific logic lives here.  Each device driver lives in
- * components/duneos_kernel/src/drivers/drv_*.c and registers itself via
+ * kernel/duneos_kernel/src/drivers/drv_*.c and registers itself via
  * duneos_dev_register() during duneos_vfs_mount_dev().
  */
 

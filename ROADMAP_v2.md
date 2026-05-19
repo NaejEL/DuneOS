@@ -119,9 +119,9 @@ Garantir qu'une application ne peut pas crasher le système. Purger la dette tec
 
 Vitesse et légèreté : fiabiliser l'ABI.
 
-- [x] **`duneos_api_t` — table d'API typée (ABI v3)** : `components/duneos_kernel/include/duneos/api.h` définit une struct de pointeurs de fonctions couvrant `fs`, `mem`, `thread`, `time`, `sys`. Le loader injecte l'adresse du singleton noyau dans le symbole `__duneos_api_ptr` de l'app avant d'appeler `app_main`. Résolution O(1), nul besoin de recherche par chaîne.
+- [x] **`duneos_api_t` — table d'API typée (ABI v3)** : `kernel/duneos_kernel/include/duneos/api.h` définit une struct de pointeurs de fonctions couvrant `fs`, `mem`, `thread`, `time`, `sys`. Le loader injecte l'adresse du singleton noyau dans le symbole `__duneos_api_ptr` de l'app avant d'appeler `app_main`. Résolution O(1), nul besoin de recherche par chaîne.
 - [x] **`DUNEOS_ABI_VERSION` → 3** : `abi.h` bumped ; compatibilité amont garantie (apps v1/v2 sans `__duneos_api_ptr` utilisent toujours la table de symboles `duneos_symbol_table_get()`).
-- [x] **`components/duneos_kernel/src/api.c`** : Instance statique `s_api` + `duneos_api_get()`. Wrappers minces pour `read` (check_app_writable_ptr), `write` (check_user_ptr), `dup`/`dup2`, `dprintf`, `opendir`/`readdir`/`closedir`, loader et IPC via `void *` (évite la dépendance circulaire noyau↔loader).
+- [x] **`kernel/duneos_kernel/src/api.c`** : Instance statique `s_api` + `duneos_api_get()`. Wrappers minces pour `read` (check_app_writable_ptr), `write` (check_user_ptr), `dup`/`dup2`, `dprintf`, `opendir`/`readdir`/`closedir`, loader et IPC via `void *` (évite la dépendance circulaire noyau↔loader).
 - [x] **Stack allouée statiquement (`xTaskCreateStaticPinnedToCore`)** : Bornes exactes `[stack_mem, stack_mem+stack_size)` connues → `check_app_writable_ptr` peut valider les pointeurs d'écriture noyau→app.
 - [x] **Validation pointeurs à deux niveaux** : `check_user_ptr` (permissive, pour les buffers sources) + `check_app_writable_ptr` (stricte, pour les buffers cibles). Rejette l'espace périphériques et IRAM.
 - [x] **Parser manifeste cJSON** : Remplace l'ancien `strstr`/`sscanf` par `cJSON` dans `loader.c`. Non-fatal sur JSON invalide (boot avec defaults).
@@ -249,7 +249,7 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 
 **HAL réseau** :
 
-- [ ] **`hal_net.h`** : Créer `components/duneos_kernel/include/duneos/hal_net.h` — interface pure C pour WiFi/Ethernet (`duneos_hal_net_sta_connect`, `duneos_hal_net_get_ip`, callbacks d'événements). Implémenter dans `arch/xtensa_esp32s3/hal/hal_net.c` avec `esp_wifi.h`, `esp_netif.h`, `esp_event.h`.
+- [ ] **`hal_net.h`** : Créer `kernel/duneos_kernel/include/duneos/hal_net.h` — interface pure C pour WiFi/Ethernet (`duneos_hal_net_sta_connect`, `duneos_hal_net_get_ip`, callbacks d'événements). Implémenter dans `arch/xtensa_esp32s3/hal/hal_net.c` avec `esp_wifi.h`, `esp_netif.h`, `esp_event.h`.
 - [ ] **`drv_wifi.c`, `drv_raw80211.c`** : Migrer de `esp_wifi.h` + `esp_netif.h` + `esp_event.h` directs vers `hal_net.h`.
 
 **VFS natif** :
@@ -274,12 +274,14 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 - [x] **Variable `DUNEOS_ARCH` introduite** : Le triple-guard (`CONFIG_IDF_TARGET_ARCH_XTENSA` + `IDF_TARGET_ARCH` + `DUNEOS_ARCH`) est déjà en place dans `arch/xtensa_esp32s3/arch.cmake`. La doc CLAUDE.md décrit le pattern à reproduire pour les nouvelles archs.
 - [ ] **Vérifier le guard hors ESP-IDF** : Tester qu'un plugin toolchain non-ESP-IDF (Phase 29) peut bien activer une arch en posant uniquement `DUNEOS_ARCH=<valeur>` avant le configure.
 
-**Prérequis : modulariser le loader (dette héritée Phase 24)** — bloquant avant d'ajouter une 2e arch, sinon on duplique la logique reloc :
+**Prérequis : modulariser le loader ET l'exception handler (dette héritée Phase 24)** — bloquant avant d'ajouter une 2e arch, sinon on duplique tout le code ISA-specific :
 
-- [ ] **`duneos_arch_ops_t` interface** : Définir dans `components/duneos_loader/include/duneos/arch_ops.h` une struct `{ int (*apply_reloc)(void *base, const Elf32_Rela *r, ...); const char *arch_name; }` que l'arch enregistre via `duneos_loader_register_arch_ops(&ops)`. Loader.c devient arch-agnostique.
+- [ ] **`duneos_arch_ops_t` interface** : Définir dans `kernel/duneos_loader/include/duneos/arch_ops.h` une struct `{ int (*apply_reloc)(void *base, const Elf32_Rela *r, ...); const char *arch_name; }` que l'arch enregistre via `duneos_loader_register_arch_ops(&ops)`. Loader.c devient arch-agnostique.
 - [ ] **Extraire la logique Xtensa de `loader.c`** vers `arch/xtensa_esp32s3/reloc/loader_reloc_xtensa.c` (le stub existe depuis Phase 24 mais n'a jamais été rempli — environ 150 lignes à déplacer : R_XTENSA_32, R_XTENSA_SLOT0_OP, R_XTENSA_ASM_EXPAND, R_XTENSA_DIFF8/16/32 + `apply_slot0_op` helper).
-- [ ] **Mettre à jour `arch/xtensa_esp32s3/arch.cmake`** : ajouter `loader_reloc_xtensa.c` à `DUNEOS_KERNEL_SRCS` (aujourd'hui il liste uniquement les HAL). Idem pour `arch/riscv32/arch.cmake` lors de son remplissage.
-- [ ] **Validation** : `dbt flash kernel --build-only` sur CardPuter passe avec la logique reloc dans le fichier arch, pas dans loader.c. Pas de régression de chargement `.dap`.
+- [ ] **`duneos_arch_exception_t` interface** : Définir dans `kernel/duneos_kernel/include/duneos/arch_exception.h` une struct `{ void (*install_handler)(int core_id, void (*on_crash)(int slot_id, uint32_t cause, uint32_t pc, uint32_t sp)); }`. Le supervisor pose son callback `on_crash` une fois ; l'arch s'occupe d'installer le vrai handler ISA-specific qui démêle l'XtExcFrame / `mcause` / Cortex-M Fault status.
+- [ ] **Extraire l'exception handler Xtensa de `supervisor.c`** vers `arch/xtensa_esp32s3/exception/exc_xtensa.c` : `xt_set_exception_handler`, `xt_exc_handler`, `XtExcFrame`, `EXCCAUSE_*`, `XCHAL_EXCCAUSE_NUM`, le helper `app_exception_handler` et son dispatch via PS.INTLEVEL. Supervisor.c garde uniquement la callback générique `on_crash` qui parle des slots (pas des frames CPU).
+- [ ] **Mettre à jour `arch/xtensa_esp32s3/arch.cmake`** : ajouter `loader_reloc_xtensa.c` + `exception/exc_xtensa.c` à `DUNEOS_KERNEL_SRCS`. Idem pour `arch/riscv32/arch.cmake` lors de son remplissage (`reloc/loader_reloc_riscv.c` + `exception/exc_riscv.c`).
+- [ ] **Validation** : `dbt flash kernel --build-only` sur CardPuter passe avec reloc + exception dans les fichiers arch, pas dans loader.c / supervisor.c. Test de crash (Phase 20 `test_hardening`) : l'app crash est toujours intercepté et le slot tué proprement.
 
 **ESP32-C6 (RISC-V, RV32IMC)** — l'arch RISC-V est ensuite triviale à ajouter parce que loader.c est neutralisé :
 

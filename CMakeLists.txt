@@ -63,5 +63,10 @@ elseif(NOT DEFINED IDF_TARGET)
     set(IDF_TARGET esp32s3)
 endif()
 
+# DuneOS kernel components live under kernel/ (renamed from components/).
+# The directory name reflects that these are not ESP-IDF components conceptually —
+# ESP-IDF is just the current backend. Same applies to future ports (RP2040, etc.).
+set(EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/kernel")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(duneos)

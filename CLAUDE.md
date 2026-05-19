@@ -58,7 +58,7 @@ python tools/dbt.py tui
 DuneOS/
 ├── main/
 │   └── main.c                      # Kernel entry: VFS init → supervisor init → launch → wait
-├── components/
+├── kernel/
 │   ├── duneos_kernel/
 │   │   ├── include/duneos/
 │   │   │   ├── abi.h               # ABI: DUNEOS_ABI_VERSION, duneos_symbol_t, duneos_app_manifest_t
@@ -107,7 +107,7 @@ DuneOS/
 │   ├── cjson/                      # DaveGamble/cJSON v1.7.19 — compiled directly into loader
 │   └── littlefs/                   # littlefs-project/littlefs v2.11.3 — compiled into kernel
 ├── libdune/                        # Userspace POSIX wrapper library (built by dbt — libdune.a)
-│   └── src/                        # NB: the public header lives in components/duneos_kernel/
+│   └── src/                        # NB: the public header lives in kernel/duneos_kernel/
 │       ├── libdune_ptr.c           # __duneos_api_ptr = (duneos_api_t *)0  → .data anchor
 │       ├── libdune_fs.c            # read/write/open/close/ioctl/dprintf + opendir/readdir
 │       ├── libdune_mem.c           # malloc/free/realloc/calloc → kernel api.mem
@@ -222,7 +222,7 @@ Kconfig). `duneos-bspgen.py` generates three artefacts from a board YAML:
 3. `sdkconfig.board` — Kconfig fragment with `CONFIG_DUNEOS_DRV_*=y` entries
 
 Driver selection uses `CONFIG_DUNEOS_DRV_*` Kconfig options (defined in
-`components/duneos_kernel/Kconfig`). Each driver lives in its own file under
+`kernel/duneos_kernel/Kconfig`). Each driver lives in its own file under
 `src/drivers/` and is compiled only when the matching option is set:
 
 ```text
@@ -243,8 +243,8 @@ whenever either `CONFIG_DUNEOS_DRV_I2C` or `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` i
 ### Adding a new kernel driver
 
 1. Create `src/drivers/<category>/drv_<name>.c` — implement `duneos_dev_driver_t` + export `drv_<name>_register()`
-2. Add `config DUNEOS_DRV_<NAME>` to `components/duneos_kernel/Kconfig`
-3. Add conditional `list(APPEND DUNEOS_KERNEL_SRCS ...)` to `components/duneos_kernel/CMakeLists.txt`
+2. Add `config DUNEOS_DRV_<NAME>` to `kernel/duneos_kernel/Kconfig`
+3. Add conditional `list(APPEND DUNEOS_KERNEL_SRCS ...)` to `kernel/duneos_kernel/CMakeLists.txt`
 4. Add `#ifdef CONFIG_DUNEOS_DRV_<NAME>` block to `vfs_dev.c` (forward decl + call in mount)
 5. Enable it for a board: edit `boards/<board>/board.yaml` (add the relevant section, e.g. `i2c:`, `battery:`) then re-run `python tools/duneos-bspgen.py boards/<board>/board.yaml`. Bspgen emits `CONFIG_DUNEOS_DRV_<NAME>=y` into the generated `sdkconfig.board`. Never hand-edit `sdkconfig.board` — it is overwritten by bspgen.
 6. Update `tools/duneos-bspgen.py` to emit the config entry when the matching YAML section is present
@@ -421,24 +421,31 @@ def find_toolchain_root() -> Path | None: ...       # locate SDK install (IDF ro
 
 `builder.py` and `cli.py` never import a specific plugin — they call `load_plugin(arch, sdk)` which discovers the module by name convention. Adding a new SDK = dropping one `.py` file.
 
-### Kernel side — `components/duneos_hal/`
+### Kernel side — architecture actually shipped (Phase 24)
+
+The HAL is **not** a separate kernel component as the V1 sketch suggested. It lives under `arch/<arch>/hal/` with one `.c` per peripheral, and the public headers (`hal_uart.h`, `hal_gpio.h`, …) sit in `kernel/duneos_kernel/include/duneos/`. The kernel component depends on the HAL headers and on `arch.cmake` which appends the right `.c` files to the build per active arch.
 
 ```
-components/
-  duneos_hal/
-    include/duneos/hal.h        # pure interface — no SDK headers
-  duneos_hal_esp32s3/           # implements duneos/hal.h using ESP-IDF (Phase 24)
-  duneos_hal_rp2040/            # implements duneos/hal.h using pico-sdk  (future)
-  duneos_kernel/                # depends only on duneos/hal.h (after Phase 24 refactor)
+kernel/
+  duneos_kernel/
+    include/duneos/
+      hal_uart.h, hal_gpio.h, hal_i2c.h, hal_spi.h, hal_adc.h, hal_time.h   # pure C, no SDK headers
+    src/                          # kernel core — uses HAL via duneos/hal_*.h
   duneos_loader/
-    src/
-      loader.c                  # arch-agnostic dispatch
-      loader_reloc_xtensa.c     # Xtensa RELA constants + apply()
-      loader_reloc_arm.c        # ARM RELA constants + apply()   (future)
-      loader_reloc_riscv.c      # RISC-V RELA constants + apply() (future)
+    src/loader.c                  # arch-agnostic dispatch — still has Xtensa reloc inline today;
+                                  # Phase 28 extracts it via duneos_arch_ops_t (see arch/*/reloc/)
+
+arch/
+  xtensa_esp32s3/
+    arch.cmake                    # self-selects on CONFIG_IDF_TARGET_ARCH_XTENSA / IDF_TARGET_ARCH / DUNEOS_ARCH
+    hal/hal_*.c                   # implements duneos/hal_*.h via ESP-IDF
+    reloc/loader_reloc_xtensa.c   # STUB — Phase 28 extraction target
+    exception/exc_xtensa.c        # PLANNED Phase 28 — extracted from supervisor.c
+  riscv32/                        # PLANNED Phase 28 (ESP32-C6, ESP32-P4)
+  arm_cortex_m/                   # PLANNED Phase 29 (RP2040 and beyond)
 ```
 
-`duneos/hal.h` exposes only what the kernel actually needs — roughly: uart write/read, i2c write_read, spi transfer, gpio set/get, flash read/write/erase, a monotonic tick, and task yield. It is **not** a full HAL reimplementation; boards with richer peripherals expose them through the normal `CONFIG_DUNEOS_DRV_*` Kconfig (ESP-IDF) or CMake option equivalent (other SDKs).
+The HAL exposes only what the kernel needs across architectures: uart write/read, i2c write_read, spi transfer, gpio set/get, monotonic tick, busy-wait. It is **not** a full HAL reimplementation; boards with richer peripherals expose them through `CONFIG_DUNEOS_DRV_*` Kconfig (ESP-IDF) or CMake option equivalent (other SDKs).
 
 ### What an external maintainer must do
 
@@ -450,9 +457,9 @@ components/
 **New SDK family** (e.g. RP2040):
 1. Add `boards/<name>/board.yaml` with `arch: arm-cortex-m0plus` and `sdk: pico-sdk`
 2. Add `tools/dbt/toolchain/pico_sdk.py` implementing the plugin interface
-3. Add `components/duneos_hal_rp2040/` implementing `duneos/hal.h`
-4. Add `components/duneos_loader/src/loader_reloc_arm.c`
-5. Done — core `duneos_kernel`, `duneos_loader`, and all existing toolchain plugins are untouched.
+3. Add `arch/arm_cortex_m/arch.cmake` + `arch/arm_cortex_m/hal/rp2040/hal_*.c` implementing `duneos/hal_*.h`
+4. Add `arch/arm_cortex_m/reloc/loader_reloc_arm.c` (registered via `duneos_arch_ops_t` once Phase 28 lands)
+5. Done — `kernel/duneos_kernel`, `kernel/duneos_loader`, and existing toolchain plugins are untouched.
 
 ### Toolchain source discovery
 

@@ -10,7 +10,7 @@
  * Each driver casts priv to its own struct — no heap allocation needed.
  *
  * Adding a new /dev device:
- *   1. Create components/duneos_kernel/src/drivers/drv_mydev.c
+ *   1. Create kernel/duneos_kernel/src/drivers/drv_mydev.c
  *   2. Define a static duneos_dev_driver_t with the required callbacks
  *   3. Export void drv_mydev_register(void) which calls duneos_dev_register()
  *   4. Call drv_mydev_register() from duneos_vfs_mount_dev() in vfs_dev.c

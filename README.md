@@ -152,7 +152,7 @@ Headline directories:
 ```text
 DuneOS/
 ├── main/                      Kernel entry (VFS init → supervisor → init.yaml)
-├── components/
+├── kernel/
 │   ├── duneos_kernel/         Kernel core (VFS, supervisor, klog, api, drivers/)
 │   └── duneos_loader/         ELF ET_REL loader (Xtensa relocations vendored)
 ├── arch/
