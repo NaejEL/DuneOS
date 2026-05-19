@@ -229,6 +229,37 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
+### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2)
+
+Élimine les paths device hardcodés (`/dev/disp0`, `/dev/spi-1`, etc.) dans les SDK libs et les apps. `dbt build` génère un header `_board.h` par app, depuis `board.yaml` + résolution des capabilities, contenant tous les defines nécessaires. Apps incluent `<duneos/board.h>` (alias résolu par `-I<build_dir>`).
+
+- [ ] **Générateur `tools/dbt/boardgen.py`** : lit `boards/<active>/board.yaml` + manifest `capabilities:` de l'app → produit `build/<app>/_board.h` avec les defines pertinents (DUNEOS_DISPLAY_DEV, DUNEOS_INPUT_DEV, DUNEOS_I2C_DEV, DUNEOS_HAS_SD, dimensions display, etc.).
+- [ ] **`builder.py`** : appelle boardgen avant la compile, ajoute `-I<build_dir>` aux include paths, dépendance CMake-style sur `board.yaml` (rebuild auto si la board change).
+- [ ] **Header alias `kernel/duneos_kernel/include/duneos/board.h`** : `#include "_board.h"` — résolu via les include paths de l'app. Apps font `#include <duneos/board.h>`.
+- [ ] **Migration `libdisp.c`** : `open(DUNEOS_DISPLAY_DEV, ...)` au lieu de `open("/dev/disp0", ...)`. Si demain la board met le display sur `/dev/spi-2` (Phase 24.6), `_board.h` aura `DUNEOS_DISPLAY_DEV "/dev/spi-2"` — libdisp s'adapte sans modif.
+- [ ] **Migration `libst7789.c`** : arrête de parser `/flash/board.info` au runtime — toutes les infos viennent de `_board.h`. Plus simple, plus rapide, debug-friendly.
+- [ ] **`/flash/board.info` reste** : utilisé pour introspection runtime (debug apps, `ifconfig`, apps sideloadées depuis SD qui n'ont pas été buildées contre cette board). N'est plus la source primaire.
+- [ ] **Validation** : changer `display.driver` dans `board.yaml` (hypothetiquement) → rebuild d'une app → vérifier que `_board.h` reflète + l'app utilise le bon device.
+
+> **Pourquoi avant 24.9 ?** Impact user-visible immédiat : permet de porter un app sur une 2e board sans toucher aux SDK libs. 24.9 est interne kernel — utile mais invisible côté apps.
+
+---
+
+### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1)
+
+Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init` via section ELF.
+
+- [ ] **Header `kernel/duneos_kernel/include/duneos/driver_init.h`** : macro `DUNEOS_DRIVER_REGISTER(fn)` qui place `fn` dans la section `.duneos_driver_init`.
+- [ ] **Linker script update** : `arch/xtensa_esp32s3/sections.ld.in` (ou équivalent ESP-IDF) définit `__duneos_drivers_start` / `__duneos_drivers_end` autour de la section. Patch à faire dans la chaîne ESP-IDF link.
+- [ ] **Migration drivers** : chaque `drv_*.c` ajoute `DUNEOS_DRIVER_REGISTER(drv_xxx_register);` après sa fonction `_register()`. Les `_register()` deviennent `static` (plus exportés).
+- [ ] **`vfs_dev.c` simplifié** : boucle `for (p = __duneos_drivers_start; p < __duneos_drivers_end; p++) (*p)();`. Plus aucun `extern`, plus aucun `#ifdef`. Reste juste l'init des 4 drivers "core" (null, zero, uart, klog) qui doivent être présents inconditionnellement.
+- [ ] **CMakeLists.txt** : les `if(CONFIG_DUNEOS_DRV_*) list(APPEND DUNEOS_KERNEL_SRCS ...)` restent (gate la compilation), mais ne reposent plus sur de la coordination avec vfs_dev.c. Drivers désactivés → section vide → boucle ne les voit pas.
+- [ ] **Smoke test** : kernel boot OK sur CardPuter + T-Embed, tous les `/dev/*` enregistrés comme avant. `dbt flash kernel --build-only` doit passer après chaque migration de driver.
+
+> **Ce que ça change concrètement** : ajouter un nouveau driver kernel = `git add drv_newchip.c` + 1 ligne `DUNEOS_DRIVER_REGISTER(...)` + 1 entrée Kconfig + 1 ligne CMakeLists. **Zero modif `vfs_dev.c`**. Aujourd'hui c'est 4 fichiers à toucher dont 2 sites différents dans vfs_dev.c.
+
+---
+
 > ### ⚡ Contest sprint 2026 — M5Stack Global Innovation Contest
 >
 > **Plan complet : [`docs/contest-2026.md`](docs/contest-2026.md).**
