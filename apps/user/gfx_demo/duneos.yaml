@@ -3,6 +3,10 @@ version: "0.1.0"
 required_abi_version: 1
 permissions: 0
 stack_size: 8192
+# Tier A (kernel /dev/disp0) allocates a width*height*2 back-buffer
+# in userspace. On the CardPuter (240x135) that's 63 KiB + libgfx state.
+# 80 KiB heap covers it plus headroom.
+heap_size: 81920
 capabilities:
   - display
 sources:

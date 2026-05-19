@@ -5,17 +5,31 @@
  *
  * gfx_open() selects the best available display backend at runtime:
  *   - Tier B: /dev/fb0  — kernel PSRAM framebuffer (CONFIG_DUNEOS_DRV_FB=y boards)
- *   - Tier A: libst7789 via /flash/board.info — direct SPI (no kernel driver, all boards)
+ *   - Tier A: /dev/disp0 — kernel streaming driver via libdisp (CONFIG_DUNEOS_DRV_DISP=y)
  *
  * All drawing goes into a userspace back-buffer; gfx_flush() pushes it to
- * the display in one shot.  This decouples drawing speed from SPI bandwidth.
+ * the display in one shot. This decouples drawing speed from SPI bandwidth.
+ *
+ * MEMORY COST — read this before deciding to use libgfx:
+ *   The back-buffer is width * height * 2 bytes (RGB565). On the CardPuter
+ *   (240x135) that's 63 KiB; on a 320x240 board, 150 KiB. The buffer lives
+ *   in the app's userspace heap, so the app's duneos.yaml MUST declare a
+ *   `heap_size:` at least that large plus ~16 KiB overhead.
+ *
+ *   Example for a 240x135 board:
+ *     stack_size: 8192
+ *     heap_size:  81920    # 64 KiB back-buffer + slack
+ *
+ *   If the back-buffer is too expensive for your app, skip libgfx and call
+ *   <duneos/disp.h> directly with a single-line buffer (see apps/user/g_shell
+ *   for an example — it draws line-by-line and uses only ~3 KiB total).
  *
  * Pixel format: RGB565, host byte order (little-endian on ESP32).
  * Convenience colour macros follow the same packing.
  *
  * Example:
  *   gfx_ctx_t *ctx = gfx_open();
- *   if (!ctx) { / no display / return; }
+ *   if (!ctx) { / no display, or heap_size too small / return; }
  *
  *   uint16_t w, h;
  *   gfx_get_info(ctx, &w, &h);
