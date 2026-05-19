@@ -1,26 +1,59 @@
 /*
- * libdisp dispatch layer — stable, never changes.
+ * libdisp — chip-agnostic display dispatch.
  *
- * All calls forward to duneos_disp_ops, which is defined by the chip library
- * linked alongside this file (libst7789.c, libssd1306.c, …).  Adding a new
- * display chip does not require touching this file.
+ * Today's implementation: opens /dev/disp0 (kernel-side streaming ST7789
+ * driver) and forwards writes through DISP_SET_WINDOW + write() with host-
+ * endian RGB565 pixels. The kernel byte-swaps before SPI DMA.
+ *
+ * The chip-vtable pattern (duneos_disp_ops in libst7789.c) is intentionally
+ * NOT used today: on CardPuter (the only no-PSRAM target so far), the
+ * display's SPI bus is owned by the kernel and not exposed as /dev/spi-N,
+ * so a userspace SPI driver cannot reach the chip. Once SPI3 is exposed
+ * (ROADMAP Phase 24 debt — see ADR 009 drift #2 reopened), this file gains
+ * a second branch that dispatches to libst7789's duneos_disp_ops when
+ * /dev/disp0 is absent.
+ *
+ * Apps include <duneos/disp.h> and never know which backend they hit.
  */
 
 #include "duneos/disp.h"
+#include "duneos/disp_ioctl.h"
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+struct disp_ctx_s {
+    int      fd;
+    uint16_t width;
+    uint16_t height;
+};
 
 disp_ctx_t *disp_open(void)
 {
-    return duneos_disp_ops.open();
+    int fd = open("/dev/disp0", O_WRONLY);
+    if (fd < 0) return NULL;
+
+    disp_info_t info;
+    if (ioctl(fd, DISP_GET_INFO, &info) != 0) { close(fd); return NULL; }
+
+    disp_ctx_t *ctx = malloc(sizeof(*ctx));
+    if (!ctx) { close(fd); return NULL; }
+    ctx->fd     = fd;
+    ctx->width  = info.width;
+    ctx->height = info.height;
+    return ctx;
 }
 
 uint16_t disp_width(const disp_ctx_t *ctx)
 {
-    return duneos_disp_ops.width(ctx);
+    return ctx ? ctx->width : 0;
 }
 
 uint16_t disp_height(const disp_ctx_t *ctx)
 {
-    return duneos_disp_ops.height(ctx);
+    return ctx ? ctx->height : 0;
 }
 
 void disp_write_area(disp_ctx_t *ctx,
@@ -28,10 +61,15 @@ void disp_write_area(disp_ctx_t *ctx,
                      uint16_t w, uint16_t h,
                      const uint16_t *pixels)
 {
-    duneos_disp_ops.write_area(ctx, x, y, w, h, pixels);
+    if (!ctx || !pixels || !w || !h) return;
+    disp_window_t win = { .x = x, .y = y, .w = w, .h = h };
+    if (ioctl(ctx->fd, DISP_SET_WINDOW, &win) != 0) return;
+    write(ctx->fd, pixels, (size_t)w * (size_t)h * 2);
 }
 
 void disp_close(disp_ctx_t *ctx)
 {
-    duneos_disp_ops.close(ctx);
+    if (!ctx) return;
+    if (ctx->fd >= 0) close(ctx->fd);
+    free(ctx);
 }

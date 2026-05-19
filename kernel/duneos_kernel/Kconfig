@@ -139,6 +139,19 @@ config DUNEOS_DRV_GPIOCHIP_MCP23017
         See DUNEOS_DRV_GPIOCHIP_SX1509 for the board_config.h convention.
         Driver stub only — full implementation pending Phase 8 expander support.
 
+config DUNEOS_DRV_DISP
+    bool "Streaming display device (/dev/disp0) — ST7789"
+    default n
+    help
+        Enable /dev/disp0 for direct streaming pixel writes to the ST7789.
+        Apps call ioctl(DISP_SET_WINDOW) then write() host-endian RGB565
+        pixels; the driver byte-swaps each pixel before SPI DMA.
+        No back-buffer required — works on boards without PSRAM (CardPuter).
+        Board must define DUNEOS_HAVE_DISPLAY and DUNEOS_DISPLAY_* pin
+        constants in board_config.h.
+        Do not enable simultaneously with CONFIG_DUNEOS_DRV_FB on the
+        same board — both drivers share the same SPI device handle.
+
 config DUNEOS_DRV_FB
     bool "Framebuffer device (/dev/fb0) — ST7789 kernel driver"
     default n
@@ -150,8 +163,7 @@ config DUNEOS_DRV_FB
         constants in board_config.h.
         Apps write host-endian RGB565 pixels via write(); the driver
         byte-swaps during ioctl(FB_FLUSH) DMA to the ST7789 display.
-        On boards without PSRAM, use libst7789 (userspace) via board.info
-        instead of this kernel driver.
+        Do not enable simultaneously with CONFIG_DUNEOS_DRV_DISP.
 
 config DUNEOS_DRV_WIFI
     bool "WiFi STA helper functions (duneos_wifi_* ABI symbols)"

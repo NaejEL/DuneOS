@@ -102,16 +102,20 @@ static int parse_board_info(st7789_cfg_t *cfg)
     if (read_board_info(buf, sizeof(buf)) < 0) return -ENOENT;
 
     long v;
-    if (kv_int(buf, "width",              &v) < 0) return -EINVAL; cfg->width  = (uint16_t)v;
-    if (kv_int(buf, "height",             &v) < 0) return -EINVAL; cfg->height = (uint16_t)v;
-    if (kv_int(buf, "display_spi_host",   &v) == 0) cfg->spi_host   = (int)v;
-    if (kv_int(buf, "display_mosi",       &v) == 0) cfg->mosi       = (int)v;
-    if (kv_int(buf, "display_clk",        &v) == 0) cfg->clk        = (int)v;
-    if (kv_int(buf, "display_cs",         &v) == 0) cfg->cs         = (int)v;
-    if (kv_int(buf, "display_dc",         &v) < 0)  return -EINVAL; cfg->dc = (int)v;
-    if (kv_int(buf, "display_rst",        &v) == 0) cfg->rst        = (int)v; else cfg->rst = -1;
-    if (kv_int(buf, "display_bl",         &v) == 0) cfg->bl         = (int)v; else cfg->bl  = -1;
-    if (kv_int(buf, "display_freq_hz",    &v) == 0) cfg->freq_hz    = (uint32_t)v; else cfg->freq_hz = 10000000;
+    if (kv_int(buf, "width",  &v) < 0) return -EINVAL;
+    cfg->width  = (uint16_t)v;
+    if (kv_int(buf, "height", &v) < 0) return -EINVAL;
+    cfg->height = (uint16_t)v;
+    if (kv_int(buf, "display_dc", &v) < 0) return -EINVAL;
+    cfg->dc = (int)v;
+
+    if (kv_int(buf, "display_spi_host",   &v) == 0) cfg->spi_host = (int)v;
+    if (kv_int(buf, "display_mosi",       &v) == 0) cfg->mosi     = (int)v;
+    if (kv_int(buf, "display_clk",        &v) == 0) cfg->clk      = (int)v;
+    if (kv_int(buf, "display_cs",         &v) == 0) cfg->cs       = (int)v;
+    if (kv_int(buf, "display_rst",        &v) == 0) cfg->rst      = (int)v; else cfg->rst = -1;
+    if (kv_int(buf, "display_bl",         &v) == 0) cfg->bl       = (int)v; else cfg->bl  = -1;
+    if (kv_int(buf, "display_freq_hz",    &v) == 0) cfg->freq_hz  = (uint32_t)v; else cfg->freq_hz = 10000000;
     if (kv_int(buf, "display_madctl",     &v) == 0) cfg->madctl     = (uint8_t)v;
     if (kv_int(buf, "display_swap_xy",    &v) == 0) cfg->swap_xy    = (uint8_t)v;
     if (kv_int(buf, "display_col_offset", &v) == 0) cfg->col_offset = (uint16_t)v;

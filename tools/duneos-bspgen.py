@@ -605,10 +605,14 @@ def generate_sdkconfig_board(board: dict) -> str:
 
     disp = board.get("display")
     if disp:
-        # Tier A (no PSRAM): userspace libst7789 reads board.info — no kernel driver needed.
+        # Tier A (no PSRAM): kernel /dev/disp0 (streaming SPI driver).
         # Tier B (PSRAM present): kernel /dev/fb0 with PSRAM back-buffer.
+        # The userspace libst7789 path (ADR 009 drift #2) is reopened until
+        # /dev/spi-3 is exposed to userspace — see ROADMAP Phase 24 debt.
         if psram_mb > 0:
             lines.append("CONFIG_DUNEOS_DRV_FB=y")
+        else:
+            lines.append("CONFIG_DUNEOS_DRV_DISP=y")
         lines.append("")
 
     has_input = board.get("keyboard_matrix") or board.get("buttons") or board.get("encoder")

@@ -133,10 +133,15 @@ if(CONFIG_DUNEOS_DRV_INPUT_ENCODER)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/input/hal_encoder_fallback.c")
 endif()
 
-# st7789_hw.c is used only by /dev/fb0 (PSRAM boards); Tier A (non-PSRAM) is
-# now served by userspace libst7789 via board.info, no kernel driver needed.
-if(CONFIG_DUNEOS_DRV_FB)
+# st7789_hw.c is shared by /dev/disp0 (streaming, non-PSRAM boards) and
+# /dev/fb0 (PSRAM back-buffer). The userspace libst7789 path is a future
+# option pending exposing SPI3 as /dev/spi-N — see ADR 009 drift #2.
+if(CONFIG_DUNEOS_DRV_DISP OR CONFIG_DUNEOS_DRV_FB)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/st7789_hw.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_DISP)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/drv_disp_st7789.c")
 endif()
 
 if(CONFIG_DUNEOS_DRV_FB)

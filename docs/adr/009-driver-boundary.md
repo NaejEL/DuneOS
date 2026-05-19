@@ -62,6 +62,8 @@ Default if none apply: **userspace** — driver lives as a library in `sdk/<cate
 
 2. **ST7789 has three codepaths** (`drv_disp_st7789.c` streaming `/dev/disp0` in kernel, `drv_fb_st7789.c` framebuffer `/dev/fb0` in kernel, `sdk/display/libst7789.c` userspace). Per the matrix, this should be one userspace lib. The framebuffer kernel path stays only as an optional compositor on PSRAM boards (no caller today; deferrable until a real compositor is built). `/dev/disp0` should be retired.
 
+> **2026-05-20 update — drift #2 reopened**: the userspace migration was attempted and reverted. The kernel currently does not expose the display's SPI host (SPI3 on CardPuter) as `/dev/spi-N`, so `libst7789.c` running in a `.dap` had no way to reach the chip. The driver fell back through `/dev/spi-1` (the SD card bus) and corrupted it on first write. `drv_disp_st7789.c` is restored as the kernel-side path for non-PSRAM boards; `libdisp.c` dispatches to `/dev/disp0` directly. The userspace `libst7789.c` stays in the SDK as a placeholder. Full resolution moved to **ROADMAP Phase 24 debt item #6 — Expose SPI3 as `/dev/spi-N`**.
+
 3. **GPIO expander policy was implicit.** Make it explicit: declared in `board.yaml` ⇒ kernel `/dev/gpiochipN`; otherwise userspace via `/dev/i2c-N` + chip lib. Update `bspgen.py` to emit the chip's I2C address and pin count into `board_config.h` when declared.
 
 **New driver requests must justify in their PR.** A PR adding a `kernel/duneos_kernel/src/drivers/drv_*.c` must cite which of the four criteria it satisfies. If none apply, the contributor is redirected to write a `sdk/<category>/lib*.c` instead. This is the kernel-side analogue of the [[ADR-008]] "no new hot-path allocation without justification" rule.
