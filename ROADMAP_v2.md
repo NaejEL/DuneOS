@@ -222,6 +222,8 @@ Abstraire FreeRTOS derrière une interface propre. **DuneOS ne réimplémente pa
 - [ ] **`esp_rom_printf` → `osal_panic_print()`** : Output de dernier recours (handlers exception/WDT/stack-overflow). Implémenté par `esp_rom_printf` sur ESP32, `fprintf(stderr,...)` sur le simulateur Linux. Pas de fallback `klog_e()` (risque de crash en contexte crashé).
 - [ ] **`vfs_dev.c`, `vfs_tmp.c`** : Remplacer `freertos/*.h` (ring buffers, semaphores) par `duneos_osal.h`. Note : `esp_vfs.h` reste, c'est Phase 27 qui le supprime.
 - [ ] **`drv_fb_st7789.c`** : Remplacer `esp_heap_caps.h` (allocation PSRAM) par `osal_mem_alloc(size, OSAL_MEM_EXTERNAL)`.
+- [ ] **`duneos_loader/src/loader.c`** : 3 sites de `heap_caps_malloc(MALLOC_CAP_SPIRAM \| MALLOC_CAP_8BIT)` / `MALLOC_CAP_INTERNAL` (allocation des sections de l'app : code, data, heap) → `osal_mem_alloc(size, OSAL_MEM_EXTERNAL)` / `osal_mem_alloc(size, 0)`. `esp_rom_printf` → `osal_panic_print()` (mêmes sites que `supervisor.c`).
+- [ ] **`loader.c` — `soc/soc.h`** : Constantes de memory map (utilisées par les checks de range internes). Décision : (a) exposer les ranges via une nouvelle struct `duneos_memmap_t` fournie par l'arch.cmake (préf.), (b) ou un mini-header `hal_memmap.h` arch-specific. À trancher en début de phase. Concerne uniquement `loader.c` aujourd'hui.
 - [ ] **Reformuler commentaire `task.h:8-10`** "FreeRTOS abstraction" → "OSAL abstraction".
 
 **Prérequis Libc — PicoLibc en `third_party/`** :
@@ -272,11 +274,18 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 - [x] **Variable `DUNEOS_ARCH` introduite** : Le triple-guard (`CONFIG_IDF_TARGET_ARCH_XTENSA` + `IDF_TARGET_ARCH` + `DUNEOS_ARCH`) est déjà en place dans `arch/xtensa_esp32s3/arch.cmake`. La doc CLAUDE.md décrit le pattern à reproduire pour les nouvelles archs.
 - [ ] **Vérifier le guard hors ESP-IDF** : Tester qu'un plugin toolchain non-ESP-IDF (Phase 29) peut bien activer une arch en posant uniquement `DUNEOS_ARCH=<valeur>` avant le configure.
 
-**ESP32-C6 (RISC-V, RV32IMC)** :
+**Prérequis : modulariser le loader (dette héritée Phase 24)** — bloquant avant d'ajouter une 2e arch, sinon on duplique la logique reloc :
 
-- [ ] **`arch/riscv32/arch.cmake`** : Remplir — `DUNEOS_KERNEL_SRCS` + `DUNEOS_KERNEL_REQUIRES` ESP-IDF RISC-V. Guard : `DUNEOS_ARCH STREQUAL "riscv32"`.
+- [ ] **`duneos_arch_ops_t` interface** : Définir dans `components/duneos_loader/include/duneos/arch_ops.h` une struct `{ int (*apply_reloc)(void *base, const Elf32_Rela *r, ...); const char *arch_name; }` que l'arch enregistre via `duneos_loader_register_arch_ops(&ops)`. Loader.c devient arch-agnostique.
+- [ ] **Extraire la logique Xtensa de `loader.c`** vers `arch/xtensa_esp32s3/reloc/loader_reloc_xtensa.c` (le stub existe depuis Phase 24 mais n'a jamais été rempli — environ 150 lignes à déplacer : R_XTENSA_32, R_XTENSA_SLOT0_OP, R_XTENSA_ASM_EXPAND, R_XTENSA_DIFF8/16/32 + `apply_slot0_op` helper).
+- [ ] **Mettre à jour `arch/xtensa_esp32s3/arch.cmake`** : ajouter `loader_reloc_xtensa.c` à `DUNEOS_KERNEL_SRCS` (aujourd'hui il liste uniquement les HAL). Idem pour `arch/riscv32/arch.cmake` lors de son remplissage.
+- [ ] **Validation** : `dbt flash kernel --build-only` sur CardPuter passe avec la logique reloc dans le fichier arch, pas dans loader.c. Pas de régression de chargement `.dap`.
+
+**ESP32-C6 (RISC-V, RV32IMC)** — l'arch RISC-V est ensuite triviale à ajouter parce que loader.c est neutralisé :
+
+- [ ] **`arch/riscv32/arch.cmake`** : Remplir — `DUNEOS_KERNEL_SRCS` (HAL + loader_reloc_riscv) + `DUNEOS_KERNEL_REQUIRES` ESP-IDF RISC-V. Guard : `DUNEOS_ARCH STREQUAL "riscv32"`.
 - [ ] **`arch/riscv32/hal/hal_*.c`** : 6 fichiers HAL ESP32-C6 via ESP-IDF. APIs souvent identiques à Xtensa sauf ADC (unit/channel différents sur C6).
-- [ ] **`arch/riscv32/reloc/loader_reloc_riscv.c`** : Relocations ELF RISC-V (`R_RISCV_32`, `R_RISCV_HI20`/`LO12`, `R_RISCV_CALL`). Exigé par le loader pour charger des `.dap` RISC-V.
+- [ ] **`arch/riscv32/reloc/loader_reloc_riscv.c`** : Relocations ELF RISC-V (`R_RISCV_32`, `R_RISCV_HI20`/`LO12`, `R_RISCV_CALL`, `R_RISCV_BRANCH`, `R_RISCV_JAL`). Implémente `duneos_arch_ops_t.apply_reloc`. Enregistré via `duneos_loader_register_arch_ops` au démarrage.
 - [ ] **`tools/dbt/toolchain/esp_idf.py`** : Gérer `arch: riscv32` — préfixe compilateur `riscv32-esp-elf-gcc`, CFLAGS (`-march=rv32imc_zicsr_zifencei`, `-mabi=ilp32`).
 - [ ] **`boards/esp32c6-devkitc/board.yaml`** + `bspgen` : Board RISC-V de référence.
 
