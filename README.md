@@ -20,7 +20,8 @@ DuneOS is past the POC stage. The kernel boots from on-chip flash even without a
 | 22 — ABI v3 typed dispatch table + `libdune.a` + PicoLibc | ✅ |
 | 23 — USB device subsystem (TinyUSB MSC + CDC, `usb_shell`) | ✅ |
 | 24 — DHI (DuneOS Hardware Interface — HAL scope) | ✅ |
-| 24.5 — Design Decisions / ADR (`docs/adr/`) | ✅ (11 ADRs) |
+| 24.5 — Design Decisions / ADR (`docs/adr/`) | ✅ (13 ADRs) |
+| 24.7 — Safe boot & recovery (circuit breaker, hold-key, `--safe` flash) | pending |
 | 25 — `dbt system` image recipes | pending |
 | 26 — OSAL + scheduler portability (incl. `task.h`+`supervisor.h` → `int`/-errno) | pending |
 | 27 — Native VFS + networking (incl. `vfs.h` → `int`/-errno) | pending |
@@ -123,6 +124,8 @@ sources:
 ```
 
 Permission bits: `GPIO=1` `UART=2` `SPI=4` `I2C=8` `NET=16` `FS_READ=32` `FS_WRITE=64` `INPUT=128` `NET_RAW=256`.
+
+> **Security note — permissions are advisory, not enforced.** DuneOS runs on microcontrollers without an MMU. The permission bitmask declares what an app *intends* to use; the loader binds or refuses kernel symbols accordingly. **A malicious or buggy app can bypass these checks by scanning memory and calling kernel functions directly.** Only run `.dap` files from sources you trust. See [ADR 011](docs/adr/011-threat-model.md) for the full threat model. Signature-based provenance (Ed25519) is planned for Phase 32.
 
 ## Init system (`init.yaml`)
 
