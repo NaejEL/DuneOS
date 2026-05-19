@@ -542,8 +542,9 @@ Each plugin's `find_toolchain_root()` searches in this priority order:
 
 ## References
 
-- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (13 ADRs as of 2026-05). Start at [`docs/adr/README.md`](docs/adr/README.md). Authoritative for design intent.
+- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (14 ADRs as of 2026-05). Start at [`docs/adr/README.md`](docs/adr/README.md). Authoritative for design intent.
 - **Unscheduled ideas** — [`docs/backlog.md`](docs/backlog.md). Things noticed during planning, not yet committed to a phase.
+- **Contest sprint 2026** — [`docs/contest-2026.md`](docs/contest-2026.md). M5Stack Global Innovation Contest 2026 submission plan: timeline, app portfolio, demo video arc, Hackster pitch draft. If active, freezes phases 26-29 until 2026-09.
 - Flipper Zero FAP loader: [flipperzero-firmware](https://github.com/flipperdevices/flipperzero-firmware)
 - ESP-IDF VFS: [ESP-IDF VFS docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/vfs.html)
 - Zephyr Device Tree: [Zephyr DTS intro](https://docs.zephyrproject.org/latest/build/dts/intro.html)

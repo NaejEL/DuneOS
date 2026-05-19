@@ -219,6 +219,16 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
+> ### ⚡ Contest sprint 2026 — M5Stack Global Innovation Contest
+>
+> **Plan complet : [`docs/contest-2026.md`](docs/contest-2026.md).**
+>
+> En cas de participation au [contest M5Stack 2026](https://m5stack.com/global-innovation-contest-2026) (deadline 7 août 2026), la roadmap **gèle après Phase 25 (minimum viable)** jusqu'au 31 août. Les Phases 26-29 reprennent au 1er septembre. Le sprint absorbe Phases 24.7 + 25-minimal et livre une killer-app demo : `i2cscope` + `lua` REPL + `snake` + `tetris` + launcher graphique avec icônes (nouveau champ `icon:` dans le manifest).
+>
+> **Non-bloquant pour la roadmap principale** si on ne participe pas — dans ce cas, Phase 25 attaque directement après Phase 24.7.
+
+---
+
 ### Phase 25 — dbt system (Image Recipes & Vérification)
 
 Un Yocto sans la complexité de Yocto. Trois fichiers YAML et trois commandes `dbt` pour construire un système complet et vérifié — du kernel aux apps.
