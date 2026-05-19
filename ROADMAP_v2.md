@@ -8,15 +8,19 @@ L'utilisateur ne doit jamais toucher à CMake ou aux internals du noyau. Un simp
 
 ---
 
-## 2. Héritage du POC (Phases 1 à 16 validées)
+## 2. Héritage du POC (Phases 1 à 24 validées, dette résiduelle adressée par 26-27)
 
-DuneOS n'est plus une simple idée — les fondations ont été prouvées sur le hardware (ESP32-S3, M5Stack, LilyGo T-Embed) :
+DuneOS n'est plus une simple idée — les fondations sont éprouvées sur ESP32-S3 (M5Stack CardPuter, LilyGo T-Embed CC1101, ESP32-S3-DevKitC) :
 
-- **Exécution et ABI** : Loader ELF (ET_REL) Xtensa/RISC-V fonctionnel, cycle de vie (load/run/unload), résolution POSIX par table de symboles.
-- **VFS et Périphériques** : Montage SD (FatFS), tmpfs en RAM, `/dev/uart0`, `/dev/gpiochip0`, `/dev/i2c-0`, `/dev/spi-1`, framebuffer `/dev/fb0`, events `/dev/input/event0`.
-- **Display** : `/dev/disp0` streaming driver + `/dev/fb0` PSRAM back-buffer (T-Embed); `libst7789.c` userspace SDK.
-- **Écosystème** : Shell interactif modulaire (`system/bin/`), tooling (`dbt.py`, `bspgen.py`), init system (`/sd/init.yaml`), politiques de restart.
-- **Réseau** : Démon WiFi, `duneos_netif_wait_ip()`, injection de trames brutes 802.11 (`/dev/raw80211`), exports BSD socket complets.
+- **Exécution et ABI** : Loader ELF (ET_REL) Xtensa fonctionnel (cycle load/run/unload, relocations Xtensa complètes). ABI v3 : table de dispatch typée `duneos_api_t` injectée dans `__duneos_api_ptr` par le loader — résolution O(1).
+- **VFS et Périphériques** : `/flash` (LittleFS, sysbin), `/sd` (FatFS optionnelle), `/tmp` (tmpfs), `/dev/uart0`, `/dev/klog`, `/dev/gpiochip0`, `/dev/i2c-0`, `/dev/spi-1`, `/dev/disp0`, `/dev/fb0` (boards PSRAM), `/dev/input/event0`, `/dev/raw80211`, `/dev/ttyUSB0`, `/dev/battery0`.
+- **Display** : `/dev/disp0` streaming driver (toutes boards) + `/dev/fb0` PSRAM back-buffer (T-Embed). `libgfx` (`sdk/display/gfx.c`) sélectionne dynamiquement le backend au runtime (`/dev/fb0` si dispo, fallback `/dev/disp0`).
+- **USB** : TinyUSB composite MSC + CDC sur boards OTG ; `/dev/ttyUSB0` exposé via `drv_usb_cdc.c` ; klog redirigé vers CDC à l'exécution.
+- **Userspace** : `libdune.a` (6 sources : ptr, fs, mem, thread, time, sys) — PicoLibc + dispatch ABI v3. Permet aux apps d'écrire du C POSIX standard.
+- **Écosystème** : Shell modulaire (`system/usb_shell/` + `system/shell_core/`, builtins + 14 commandes en `system/bin/`), tooling (`dbt` package + TUI Textual + plugins toolchain), init system (`boards/<board>/init.yaml` flashé en sysbin + `/sd/init.yaml` optionnel), politiques de restart.
+- **Réseau** : Daemon WiFi, `duneos_netif_wait_ip()`, injection de trames brutes 802.11 (`/dev/raw80211`), exports BSD socket complets, `system/bin/ifconfig` + `ping`.
+- **Hardening (Phase 20 partielle)** : per-app heap (heap_caps_malloc), Task WDT par slot, handler d'exception Xtensa par app (kill propre sans reboot kernel), validation pointeurs syscall (`check_user_ptr` + `check_app_writable_ptr`). Restent : stack canary, TLSF userspace.
+- **DHI (Phase 24)** : 6 headers HAL purs (`hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`, `hal_adc.h`, `hal_time.h`), implémentations Xtensa dans `arch/xtensa_esp32s3/hal/`, drivers HW délégant au HAL, `arch.cmake` self-selection. Périmètre HAL strict ; la purge des `esp_err_t` des 4 headers core (`init.h`/`task.h`/`vfs.h`/`supervisor.h`) est répartie sur Phases 26-27 (au moment où chaque .c sous-jacent change d'API).
 
 **Objectif V2** : Transformer ce POC fortement couplé à ESP-IDF/FreeRTOS en un véritable OS indépendant, sécurisé sans MMU, avec un outillage de classe mondiale.
 
@@ -62,11 +66,11 @@ Ne plus coder d'outils jetables. Préparer le terrain pour de multiples architec
 Une app qui dessine doit compiler et tourner identiquement sur CardPuter (ST7789, pas de PSRAM) et T-Embed (ST7789, PSRAM, `/dev/fb0`) sans `#ifdef` dans le code source.
 
 - [x] **`/flash/board.info`** (+ `/sd/board.info`) : Fichier YAML écrit par le noyau au boot depuis `board_config.h` (champs : `board`, `display`, `width`, `height`, `fb`).
-- [x] **`libgfx.h`** : API publique — `gfx_open/close/fill/pixel/text/flush/get_info`.
-- [x] **`gfx_st7789.c`** : Backend Tier A (SPI direct, wraps `libst7789.c`).
-- [x] **`gfx_fb.c`** : Backend Tier B (wraps `/dev/fb0`, boards PSRAM seulement).
-- [x] **`dbt.py build`** : Sélection automatique du backend `libgfx` depuis `.duneos_board`.
-- [x] **Demo app** `gfx_demo.dap` — dessine formes + texte, tourne sur toutes les boards sans recompilation du source.
+- [x] **`<duneos/gfx.h>`** : API publique — `gfx_open/close/fill/pixel/text/flush/get_info`. Pixel format RGB565 host byte order.
+- [x] **`sdk/display/gfx.c`** : Une seule implémentation, sélection **runtime** du backend dans `gfx_open()` — Tier B (`/dev/fb0`, kernel PSRAM framebuffer) si dispo, sinon Tier A (`/dev/disp0`, streaming SPI). Le drawing va dans un back-buffer userspace ; `gfx_flush()` pousse en un seul shot.
+- [x] **Demo app** `gfx_demo.dap` — dessine formes + texte, tourne sur toutes les boards avec un display sans recompilation du source.
+
+> **Note vs design original** : la roadmap mentionnait initialement deux fichiers backends séparés (`gfx_st7789.c` + `gfx_fb.c`) sélectionnés au build via `.duneos_board`. L'implémentation retenue est plus simple : une seule lib qui sniff `/dev/fb0` au runtime. Même résultat (portabilité source-level), moins de code dbt.
 
 ---
 
@@ -86,16 +90,16 @@ DuneOS doit booter et être utilisable même sans carte SD insérée.
 
 ---
 
-### Phase 20 — Hardening mémoire + Dette technique
+### Phase 20 — Hardening mémoire + Dette technique 🟡 PARTIEL
 
 Garantir qu'une application ne peut pas crasher le système. Purger la dette technique accumulée.
 
-- [ ] **Stack canary** par task applicative.
-- [x] **Per-app exception handler** : Intercepter le crash → logger dans `/dev/klog` → unload propre sans reboot du kernel.
+- [x] **Per-app exception handler** : Intercepter le crash → logger dans `/dev/klog` → unload propre sans reboot du kernel. (`supervisor.c` → `app_exception_handler`).
 - [x] **Task WDT** : Le supervisor nourrit le WDT pour l'app ; kick de l'app en cas de timeout.
-- [x] **Per-app heap** : Pool DRAM dédié par app via `heap_caps_malloc` (bloc contigu Code+Data+Heap). Bloc monolithique TLSF différé Phase 22.
-- [ ] **TLSF userspace allocator** : `libdune.a` gère son propre `malloc()` uniquement dans ce pool.
-- [ ] **Validation syscall** : Le noyau vérifie que les pointeurs d'arguments (read/write buffers) appartiennent à la zone mémoire autorisée de l'app.
+- [x] **Per-app heap** : Pool DRAM dédié par app via `heap_caps_malloc` (bloc contigu Code+Data+Heap). Bloc monolithique TLSF différé.
+- [x] **Validation syscall** : `duneos_supervisor_check_user_ptr` (permissif, buffers sources) + `duneos_supervisor_check_app_writable_ptr` (strict, buffers cibles). Utilisé par `api.c` (read/write) et `symbols.c`. Rejette espace périphériques et IRAM.
+- [ ] **Stack canary** par task applicative.
+- [ ] **TLSF userspace allocator** : `libdune.a` gère son propre `malloc()` uniquement dans ce pool — actuellement `malloc()` côté app appelle directement `heap_caps_malloc` du kernel via `__duneos_api_ptr->mem`.
 
 ---
 
@@ -140,24 +144,49 @@ L'expérience Plug and Play ultime.
 
 ---
 
-### Phase 24 — DHI (DuneOS Hardware Interface) ✅ DONE
+### Phase 24 — DHI (DuneOS Hardware Interface) ✅
 
-Isoler le noyau pour amorcer la sortie du framework Espressif. Objectif concret : aucun `esp_err_t` ni type propriétaire dans les headers publics des drivers.
+Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de cette phase = HAL hardware uniquement** : 6 headers HAL purs (UART/GPIO/I2C/SPI/ADC/time), implémentation Xtensa, migration des drivers HW, infrastructure multi-arch. La purge complète des autres types ESP-IDF (`esp_err_t` dans les headers core, FreeRTOS handles, `esp_*` réseau) se fait *au fur et à mesure* dans les phases qui touchent réellement à ces fichiers (26, 27).
 
-- [x] **Headers DHI** : `hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`, `hal_adc.h`, `hal_time.h` dans `components/duneos_kernel/include/duneos/` — types purs (`uint32_t`, `int`, callbacks C standards). Aucune dépendance ESP-IDF dans les headers publics.
-- [x] **Implémentations ESP-IDF** : `arch/xtensa_esp32s3/hal/hal_uart.c`, `hal_gpio.c`, `hal_i2c.c`, `hal_spi.c`, `hal_adc.c`, `hal_time.c` — ESP-IDF types **uniquement en interne** (jamais dans les headers). Compilés conditionnellement via `CONFIG_IDF_TARGET_ARCH_XTENSA` dans `CMakeLists.txt`.
-- [x] **Migration des backends** : `drv_uart.c`, `drv_gpio.c`, `drv_i2c.c`, `drv_spi.c`, `i2c_bus.c`, `drv_battery_adc_simple.c` réécrits pour déléguer au HAL. Drivers input (`btn_gpio.c`, `enc_quadrature.c`, `kb_iomatrix.c`) migrés de `driver/gpio.h` + `esp_rom_delay_us` vers `hal_gpio` + `hal_time`. `dev_driver.h` et `i2c_bus.h` purgés de `esp_err_t` (retours `int`). Tous les callbacks `init()` retournent `int`.
-- [x] **Abstraction des interruptions** : `duneos_hal_gpio_set_intr()` disponible pour usage kernel-interne. `GPIOCHIP_SET_IRQ` retourne `ENOSYS` — la livraison userspace via signal n'est pas encore conçue (Phase 26).
-- [x] **Arch dans le manifest** : Champ `arch[32]` dans `duneos_app_manifest_t` (`abi.h`). `loader.c` parse le champ JSON et rejette proprement les `.dap` cross-ISA avec un message klog. `dbt builder.py` injecte `arch` depuis le plugin toolchain. Ancien manifest sans `arch` accepté (rétrocompatibilité).
-- [x] **SPI host IDs numériques** : `bspgen.py` émet des valeurs entières (`spi_host_device_t` enum values) au lieu de noms ESP-IDF (`SPI2_HOST`). ADC unit IDs également numériques (1=ADC1, 2=ADC2). Tous les `board_config.h` régénérés.
+- [x] **Headers DHI hardware** : `hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`, `hal_adc.h`, `hal_time.h` — types purs (`uint32_t`, `int`, callbacks C standards). Zéro dépendance ESP-IDF.
+- [x] **Implémentations ESP-IDF** : `arch/xtensa_esp32s3/hal/hal_*.c` — ESP-IDF types **uniquement en interne**. Compilation conditionnelle via le triple-guard `arch.cmake`.
+- [x] **Migration des backends HW** : `drv_uart.c`, `drv_gpio.c`, `drv_i2c.c`, `drv_spi.c`, `i2c_bus.c`, `drv_battery_adc_simple.c` délèguent au HAL. Drivers input (`btn_gpio.c`, `enc_quadrature.c`, `kb_iomatrix.c`) migrés. `dev_driver.h` et `i2c_bus.h` retournent `int`.
+- [x] **Abstraction interruptions** : `duneos_hal_gpio_set_intr()` (usage kernel-interne). `GPIOCHIP_SET_IRQ` retourne `ENOSYS` — livraison userspace via signal repoussée (Phase 27 — VFS natif + `poll`).
+- [x] **Arch dans le manifest** : Champ `arch[32]` dans `duneos_app_manifest_t`. Loader rejette les `.dap` cross-ISA. `dbt builder.py` injecte `arch` depuis le plugin toolchain.
+- [x] **IDs numériques en BSP** : `bspgen.py` émet SPI host et ADC unit en entiers.
+- [x] **`arch.cmake` self-selection** : `file(GLOB arch/*/arch.cmake)` + triple-guard. Ajouter une arch = créer un seul fichier, zéro touche au kernel core.
 
-**Périmètre exact de la Phase 24** — L'objectif est : *aucun `esp_err_t` ni type propriétaire dans les **headers publics** (`include/duneos/`)*. Cela ne couvre PAS tout le code source. Les includes ESP-IDF dans les `.c` privés restent jusqu'à leur phase cible :
+**Dette `esp_err_t` dans les headers core — répartie par phase cible (pas par "Phase 24b" séparée)** :
 
-- `supervisor.c` utilise `esp_rom_printf` (pas `esp_rom_delay_us`) dans les handlers exception/WDT/stack-overflow — c'est un output de dernier recours qui fonctionne quand le VFS/UART est mort. **Ne pas remplacer par `klog_e()`** (risque de crash dans un contexte crashé). Phase 27 : `osal_panic_print()`.
-- `vfs.c`, `st7789_hw.c` : `driver/spi_master.h` → Phase 26 (VFS natif + hal_spi migration).
-- `supervisor.c`, `task.c`, `symbols.c`, `klog.c` : `freertos/*.h` → Phase 27 (OSAL).
+| Header public | Migration prévue | Justification |
+|---|---|---|
+| `init.h` (1 fn) | **Pré-25, micro-tâche** | N'appelle aucune API ESP-IDF en interne, juste POSIX. Migration triviale isolée. |
+| `task.h`, `supervisor.h` (4 fns + 2 typedefs) | **Phase 26 (OSAL)** | `xTaskCreate`/`xTaskNotify`/etc. disparaissent au profit de `osal_*` — le retour change naturellement. |
+| `vfs.h` (6 fns) | **Phase 27 (VFS natif)** | `esp_vfs_register`/`esp_vfs_fat_*`/`esp_vfs_littlefs_*` disparaissent au profit de `duneos_vfs_*` natif. |
 
-**Dette HAL connue** — adressée dans les phases suivantes (aucun include ESP-IDF "hardware" dans les headers publics, mais les implémentations restent à migrer) : `vfs.c` + `st7789_hw.c` (Phase 26), `drv_wifi.c` + `drv_raw80211.c` (Phase 26), `drv_fb_st7789.c` + noyau FreeRTOS (Phase 27). Voir les sections Phase 26 et Phase 27 pour le détail fichier par fichier.
+**Convention de retour décidée (ADR — voir Phase 24.5)** : `int` retournant **0** sur succès, **-errno** sur échec (`-ENOENT`, `-EIO`, `-ENOMEM`, `-EINVAL`, …). Pas d'enum `duneos_status_t` dédiée. Helper `esp_to_errno()` privé pendant la transition, supprimé quand son `.c` appelant migre.
+
+**Mini-correctif documentaire à inclure dans la micro-tâche init.h** :
+
+- Commentaire obsolète `input_ioctl.h:47` (mentionne `xTaskGetTickCount() * portTICK_PERIOD_MS` alors que le champ est désormais peuplé via `duneos_hal_monotonic_us() / 1000`).
+- Commentaire `task.h:8-10` "FreeRTOS abstraction" — à reformuler en "OSAL abstraction" au moment de Phase 26.
+
+---
+
+### Phase 24.5 — Design Decisions / ADR (pas de code)
+
+Avant d'attaquer 25-29, fixer les décisions architecturales par écrit. **Une décision écrite vaut dix discussions perdues.** Chaque ADR fait 1 page max, lit en 2 minutes, vit dans `docs/adr/`.
+
+- [ ] **`docs/adr/000-process.md`** : Format des ADR (titre, contexte, décision, conséquences, alternatives rejetées). Date + statut (Proposé / Acté / Remplacé par ADR-NNN).
+- [ ] **`docs/adr/001-error-model.md`** : Kernel et `libdune` retournent `int` style POSIX (-errno). Pas d'enum `duneos_status_t`. Helper de conversion `esp_to_errno()` toléré pendant la transition, jamais dans un header public.
+- [ ] **`docs/adr/002-osal-api.md`** : Interface `duneos_osal.h` — pas un copier-coller FreeRTOS, pas un sous-ensemble POSIX. Primitives : `osal_task_create/yield/sleep_ms`, `osal_mutex_*`, `osal_sem_*`, `osal_queue_*`, `osal_mem_alloc/free`, `osal_monotonic_us`, `osal_panic_print`. Pas de timer software-managed (lui-même bâti par-dessus).
+- [ ] **`docs/adr/003-memory-caps.md`** : `osal_mem_alloc(size, flags)` accepte `OSAL_MEM_DEFAULT` (0), `OSAL_MEM_EXTERNAL` (PSRAM si dispo, sinon fallback DRAM), `OSAL_MEM_DMA` (DMA-capable, fallback DRAM), `OSAL_MEM_FAST` (IRAM/TCM si dispo, sinon DRAM). Plateformes sans hiérarchie mémoire : tous les flags ignorés. Comportement de fallback garanti, jamais d'échec si DRAM disponible.
+- [ ] **`docs/adr/004-task-priorities.md`** : Échelle DuneOS abstraite (`OSAL_PRIO_IDLE` < `LOW` < `NORMAL` < `HIGH` < `RT`). Mapping vers FreeRTOS (0..configMAX) et pthreads (SCHED_OTHER / SCHED_RR) défini par l'implémentation OSAL. Apps n'utilisent que les noms symboliques.
+- [ ] **`docs/adr/005-path-conventions.md`** : `/flash` toujours présent (fatal si absent). `/sd`, `/dev`, `/tmp` optionnels selon board.yaml. `/proc` réservé futur. Apps ne doivent jamais supposer la présence de `/sd` — feature-detecter via `stat`.
+- [ ] **`docs/adr/006-manifest-extensibility.md`** : Champs JSON inconnus du manifest sont silencieusement ignorés (déjà le cas). Ajout de champ ⇒ pas de bump ABI. Retrait ou changement sémantique ⇒ bump ABI. Documenter chaque champ standard.
+- [ ] **`docs/adr/007-multi-arch-smoke-test.md`** : Avant Phase 29, mettre en place un CI smoke-test multi-target (`dbt build` pour ESP32-S3 + ESP32-C6 + sim Linux x86_64). Vérifie qu'une régression de portabilité est détectée tôt, pas en débuggant RP2040.
+
+Pas de code dans cette phase, juste les 7 documents. Coût estimé : 1 après-midi.
 
 ---
 
@@ -175,45 +204,62 @@ Un Yocto sans la complexité de Yocto. Trois fichiers YAML et trois commandes `d
 - [ ] **`dbt TUI`** : Doit s'intégrer proprement au TUI
 ---
 
-### Phase 26 — Refonte VFS et Stabilisation Réseau
+### Phase 26 — OSAL et Portabilité Scheduler
 
-Préparer la stack réseau avant d'affronter le découplage WiFi.
+**Inversée avec l'ex-Phase 26 (VFS natif).** Raison : OSAL = surface API plus petite, débloque `dbt sim` plus tôt, valide l'abstraction sur 2 archs Espressif (Phase 28) avant le rewrite VFS plus risqué, et fournit les primitives (mutex, sem) qu'utilisera le VFS natif en Phase 27.
 
-**Migrations DHI** — purge des includes ESP-IDF hardware restants (seuls `freertos/*.h` et `esp_vfs.h` sont reportés à Phase 27) :
+Abstraire FreeRTOS derrière une interface propre. **DuneOS ne réimplémente pas de scheduler** — FreeRTOS reste le scheduler sur toutes les targets qui le supportent. L'OSAL permet aux targets sans FreeRTOS natif (simulateur Linux, architectures futures) d'utiliser une implémentation alternative. **API gelée par ADR 002, 003, 004 — ne pas dévier sans nouvel ADR.**
 
-- [ ] **`vfs.c` init SD** : Remplacer `driver/spi_master.h` + `driver/gpio.h` (init bus SPI de la carte SD) par `hal_spi.h` + `hal_gpio.h` — les implémentations existent déjà, migration seule.
-- [ ] **`display/st7789_hw.c/.h`** : Remplacer `driver/spi_master.h` + `esp_err.h` par `hal_spi.h` — types `spi_device_handle_t` encapsulés dans l'implémentation, header public purgé.
-- [ ] **`hal_net.h`** : Créer `components/duneos_kernel/include/duneos/hal_net.h` — interface pure C pour WiFi/Ethernet (`duneos_hal_net_sta_connect`, `duneos_hal_net_get_ip`, callbacks d'événements). Implémenter dans `arch/xtensa_esp32s3/hal/hal_net.c` avec `esp_wifi.h`, `esp_netif.h`, `esp_event.h`.
-- [ ] **`drv_wifi.c`, `drv_raw80211.c`** : Migrer de `esp_wifi.h` + `esp_netif.h` + `esp_event.h` directs vers `hal_net.h`.
-- [ ] **VFS natif (`duneos_vfs`)** : Remplacer `esp_vfs.h` dans `vfs.c`, `vfs_dev.c`, `vfs_tmp.c` — nécessaire pour gérer nativement `poll()`, `select()` et les sockets. Libère la dépendance sur `esp_vfs_register` et `esp_vfs_fat_*`.
-- [ ] **Ethernet RMII Lab** : Intégrer LwIP (ou PicoTCP) nativement via RMII sans dépendre du blob WiFi. (implique l'ajout de l'arch esp32, le RMII n'étant pas disponible sur esp32s3)
-- [ ] **VFS Sockets** : Router les appels réseau BSD vers la nouvelle stack interne.
+- [ ] **`duneos_osal.h`** : Implémenter selon ADR 002. Primitives task, mutex, sem, queue, mem (avec flags ADR 003), monotonic_us, panic_print. Pas de timer software dans cette première version.
+- [ ] **`freertos_osal.c`** : Implémentation pour toutes les platforms FreeRTOS (ESP32-S3 Xtensa, ESP32-C6 RISC-V, RP2040 SMP). Un seul fichier réutilisé à travers les toolchain plugins.
+- [ ] **`pthread_osal.c`** : Implémentation via pthreads — permet `dbt sim` (simulateur natif Linux/macOS). Mapping ADR 004 vers `SCHED_OTHER` (priorités gérées par nice).
+- [ ] **Confinement du Blob WiFi** : Isoler la dépendance du blob WiFi Espressif derrière `freertos_osal.c` (callbacks et structs FreeRTOS attendus par le blob restent dans le `.c` OSAL ESP-IDF).
 
----
+**Migrations associées — purge des `freertos/*.h` et `esp_heap_caps.h` du cœur kernel** :
 
-### Phase 27 — OSAL et Portabilité Scheduler
-
-Abstraire FreeRTOS derrière une interface propre. **DuneOS ne réimplémente pas de scheduler** — FreeRTOS reste le scheduler sur toutes les targets qui le supportent. L'OSAL permet aux targets sans FreeRTOS natif (simulateur Linux, architectures futures) d'utiliser une implémentation alternative.
-
-- [ ] **`duneos_osal.h`** : Interface pure (`osal_task_create`, `osal_queue_send`, `osal_mutex_lock`, `osal_sem_post`, `osal_malloc`, `osal_free`…). Aucun type FreeRTOS dans les headers kernel publics après cette phase.
-- [ ] **`freertos_osal.c`** : Implémentation de `duneos_osal.h` pour toutes les platforms FreeRTOS (ESP32-S3 Xtensa, ESP32-C6 RISC-V, RP2040…). Un seul fichier réutilisé à travers les toolchain plugins.
-- [ ] **`pthread_osal.c`** : Implémentation de `duneos_osal.h` via pthreads — permet `dbt sim` (simulateur natif Linux/macOS). Prérequis : PicoLibc en `third_party/` (voir ci-dessous).
-- [ ] **Confinement du Blob WiFi** : Isoler la dépendance du blob WiFi Espressif derrière `freertos_osal.c`.
-
-**Migrations DHI** — dernière purge des includes framework dans le cœur du kernel :
-
-- [ ] **`supervisor.c`, `task.c`, `symbols.c`, `klog.c`, `api.c`** : Remplacer tous les `freertos/*.h` + `esp_heap_caps.h` + `esp_system.h` par les primitives `duneos_osal.h`. C'est la migration la plus large — couvre la création de tasks, les queues/mutexes/sémaphores, l'allocation mémoire interne.
-- [ ] **`esp_rom_printf` → `osal_panic_print()`** : `supervisor.c` utilise `esp_rom_printf` dans les handlers exception/WDT/stack-overflow (output de dernier recours quand le VFS est mort). Abstraire derrière `osal_panic_print()` — implémenté par `esp_rom_printf` sur ESP32, `fprintf(stderr,...)` sur le simulateur Linux.
-- [ ] **`vfs_dev.c`, `vfs_tmp.c`** : Remplacer `freertos/*.h` (ring buffers, semaphores) par `duneos_osal.h`. `esp_vfs.h` déjà supprimé en Phase 26.
-- [ ] **`drv_fb_st7789.c`** : Remplacer `esp_heap_caps.h` (allocation PSRAM) par `osal_mem_alloc_caps()` ou équivalent `duneos_osal.h` — nécessite que l'OSAL mémoire expose des capacités (SPIRAM, DMA-capable).
+- [ ] **`task.h`, `supervisor.h`** : Migration des signatures publiques `esp_err_t` → `int` (-errno). Dette héritée de Phase 24 ; se fait naturellement ici parce que les implémentations sous-jacentes changent.
+- [ ] **`supervisor.c`, `task.c`, `symbols.c`, `klog.c`, `api.c`** : Remplacer `freertos/*.h` + `esp_heap_caps.h` + `esp_system.h` par les primitives `duneos_osal.h`. Couvre création de tasks, queues/mutexes/sémaphores, allocation mémoire interne.
+- [ ] **`esp_rom_printf` → `osal_panic_print()`** : Output de dernier recours (handlers exception/WDT/stack-overflow). Implémenté par `esp_rom_printf` sur ESP32, `fprintf(stderr,...)` sur le simulateur Linux. Pas de fallback `klog_e()` (risque de crash en contexte crashé).
+- [ ] **`vfs_dev.c`, `vfs_tmp.c`** : Remplacer `freertos/*.h` (ring buffers, semaphores) par `duneos_osal.h`. Note : `esp_vfs.h` reste, c'est Phase 27 qui le supprime.
+- [ ] **`drv_fb_st7789.c`** : Remplacer `esp_heap_caps.h` (allocation PSRAM) par `osal_mem_alloc(size, OSAL_MEM_EXTERNAL)`.
+- [ ] **Reformuler commentaire `task.h:8-10`** "FreeRTOS abstraction" → "OSAL abstraction".
 
 **Prérequis Libc — PicoLibc en `third_party/`** :
 
 Jusqu'à cette phase, c'est `esp_libc` (composant ESP-IDF) qui fournit PicoLibc + ses stubs syscall. Dès que `pthread_osal.c` est implémenté pour le simulateur Linux, il n'y a plus d'ESP-IDF pour fournir la libc. C'est le **point de déclenchement obligatoire** pour bundler PicoLibc :
 
-- [ ] **`third_party/picolibc`** : Ajouter PicoLibc comme git submodule (même stratégie que cJSON/LittleFS). Compilé pour la target courante par le toolchain plugin.
+- [ ] **`third_party/picolibc`** : Git submodule (même stratégie que cJSON/LittleFS). Compilé pour la target courante par le toolchain plugin.
 - [ ] **`tools/dbt/toolchain/esp_idf.py`** : Retirer la dépendance implicite sur `esp_libc` — passer l'include path et le linker script PicoLibc explicitement via le plugin.
-- [ ] **Cohérence multi-SDK** : pico-sdk fournit newlib (pas PicoLibc) — comportements `stdio`/`errno` légèrement différents. Utiliser la PicoLibc bundled sur **toutes** les targets garantit un comportement stdlib identique. Décision à prendre au moment du premier port non-ESP-IDF (Phase 29).
+- [ ] **Cohérence multi-SDK** : pico-sdk fournit newlib (pas PicoLibc) — comportements `stdio`/`errno` légèrement différents. Utiliser la PicoLibc bundled sur **toutes** les targets (décision actée par cette phase, validée par Phase 29).
+
+---
+
+### Phase 27 — Refonte VFS et Stabilisation Réseau
+
+**Inversée avec l'ex-Phase 27 (OSAL).** Raison : voir Phase 26. VFS natif a besoin des primitives OSAL (mutex pour les structures globales du VFS, sem pour wait queues de `poll`/`select`), donc ne peut pas s'écrire avant.
+
+Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée par ADR 001 et 005 — codes -errno, conventions de path documentées.**
+
+**Migrations DHI hardware restantes** (les seules encore en `driver/spi_master.h` après Phase 24a) :
+
+- [ ] **`vfs.c` init SD** : Remplacer `driver/spi_master.h` + `driver/gpio.h` (init bus SPI de la carte SD) par `hal_spi.h` + `hal_gpio.h` — les implémentations existent déjà, migration seule.
+- [ ] **`display/st7789_hw.c/.h`** : Remplacer `driver/spi_master.h` par `hal_spi.h` — types `spi_device_handle_t` encapsulés dans l'implémentation, header public purgé d'`esp_err.h`.
+
+**HAL réseau** :
+
+- [ ] **`hal_net.h`** : Créer `components/duneos_kernel/include/duneos/hal_net.h` — interface pure C pour WiFi/Ethernet (`duneos_hal_net_sta_connect`, `duneos_hal_net_get_ip`, callbacks d'événements). Implémenter dans `arch/xtensa_esp32s3/hal/hal_net.c` avec `esp_wifi.h`, `esp_netif.h`, `esp_event.h`.
+- [ ] **`drv_wifi.c`, `drv_raw80211.c`** : Migrer de `esp_wifi.h` + `esp_netif.h` + `esp_event.h` directs vers `hal_net.h`.
+
+**VFS natif** :
+
+- [ ] **`vfs.h`** : Migration des 6 signatures publiques `esp_err_t` → `int` (-errno). Dette héritée de Phase 24 ; se fait naturellement ici parce que les implémentations sous-jacentes changent.
+- [ ] **`duneos_vfs` natif** : Remplacer `esp_vfs.h` dans `vfs.c`, `vfs_dev.c`, `vfs_tmp.c` — VFS natif gère nativement `poll()`, `select()` et les sockets via wait-queues bâties sur `osal_sem`. Libère la dépendance sur `esp_vfs_register` et `esp_vfs_fat_*`.
+- [ ] **VFS Sockets** : Router les appels réseau BSD vers la nouvelle stack interne.
+- [ ] **GPIO IRQ userspace** : `GPIOCHIP_SET_IRQ` (ENOSYS en Phase 24) devient livrable maintenant que `poll()` est dispo — events sur fd dédié.
+
+**Ethernet** :
+
+- [ ] **Ethernet RMII Lab** : Intégrer LwIP (ou PicoTCP) nativement via RMII sans dépendre du blob WiFi. Implique l'ajout d'un board ESP32 classique (RMII non dispo sur ESP32-S3).
 
 ---
 
@@ -221,10 +267,10 @@ Jusqu'à cette phase, c'est `esp_libc` (composant ESP-IDF) qui fournit PicoLibc 
 
 **Objectif : valider que `arch/*/arch.cmake` fonctionne réellement sur un second ISA.** ESP32-C6 et ESP32-P4 sont RISC-V mais restent sous ESP-IDF — même build system, nouvelle arch. Si quelque chose casse, c'est une lacune dans l'abstraction, pas dans le tooling.
 
-**Unification des guards `arch.cmake`** — problème design à corriger en premier :
+**Unification des guards `arch.cmake`** — fondations posées en Phase 24, reste l'usage hors ESP-IDF :
 
-- [ ] **Variable `DUNEOS_ARCH`** : Introduire `DUNEOS_ARCH` comme variable CMake définie par le toolchain plugin (ESP-IDF : depuis `CONFIG_IDF_TARGET_ARCH_*` ; non-ESP-IDF : passée explicitement par le SDK plugin). Chaque `arch.cmake` vérifie `DUNEOS_ARCH` **en plus** de la variable ESP-IDF. Exemple : `if(NOT CONFIG_IDF_TARGET_ARCH_XTENSA AND NOT DUNEOS_ARCH STREQUAL "xtensa_esp32s3") return() endif()`. Sans ce changement, les guards ne fonctionnent pas hors ESP-IDF.
-- [ ] **`arch/xtensa_esp32s3/arch.cmake`** : Mettre à jour le guard pour vérifier `DUNEOS_ARCH` en fallback.
+- [x] **Variable `DUNEOS_ARCH` introduite** : Le triple-guard (`CONFIG_IDF_TARGET_ARCH_XTENSA` + `IDF_TARGET_ARCH` + `DUNEOS_ARCH`) est déjà en place dans `arch/xtensa_esp32s3/arch.cmake`. La doc CLAUDE.md décrit le pattern à reproduire pour les nouvelles archs.
+- [ ] **Vérifier le guard hors ESP-IDF** : Tester qu'un plugin toolchain non-ESP-IDF (Phase 29) peut bien activer une arch en posant uniquement `DUNEOS_ARCH=<valeur>` avant le configure.
 
 **ESP32-C6 (RISC-V, RV32IMC)** :
 
@@ -245,7 +291,7 @@ Jusqu'à cette phase, c'est `esp_libc` (composant ESP-IDF) qui fournit PicoLibc 
 
 ### Phase 29 — Premier port non-ESP-IDF : ARM Cortex-M (RP2040, Pico W)
 
-**Objectif : valider que le kernel se construit sans ESP-IDF.** C'est le vrai test de portabilité du build system. Requiert Phase 27 (OSAL + PicoLibc en `third_party/`).
+**Objectif : valider que le kernel se construit sans ESP-IDF.** C'est le vrai test de portabilité du build system. Requiert Phase 26 (OSAL + PicoLibc en `third_party/`) et Phase 27 (VFS natif si l'app cible utilise des sockets ; sinon ESP-IDF socket layer absent et c'est ok pour un premier hello_world).
 
 **Décision architecture ARM Cortex-M** — à prendre avant de coder :
 
