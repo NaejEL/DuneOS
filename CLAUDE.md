@@ -539,6 +539,8 @@ Each plugin's `find_toolchain_root()` searches in this priority order:
 
 ## References
 
+- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (13 ADRs as of 2026-05). Start at [`docs/adr/README.md`](docs/adr/README.md). Authoritative for design intent.
+- **Unscheduled ideas** — [`docs/backlog.md`](docs/backlog.md). Things noticed during planning, not yet committed to a phase.
 - Flipper Zero FAP loader: [flipperzero-firmware](https://github.com/flipperdevices/flipperzero-firmware)
 - ESP-IDF VFS: [ESP-IDF VFS docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/vfs.html)
 - Zephyr Device Tree: [Zephyr DTS intro](https://docs.zephyrproject.org/latest/build/dts/intro.html)

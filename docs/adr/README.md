@@ -37,3 +37,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 3. One page max; cross-reference existing ADRs with `[NNN](NNN-slug.md)`.
 4. Add a row to the index above.
 5. Submit as a PR with status `Proposed`; flip to `Accepted · YYYY-MM-DD` once merged.
+
+## Related docs
+
+- [`../backlog.md`](../backlog.md) — unscheduled ideas and gaps surfaced during planning. Items get promoted to a real ADR or a ROADMAP_v2 entry as they earn scheduling.
