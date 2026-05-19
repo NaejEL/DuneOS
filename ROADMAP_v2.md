@@ -174,8 +174,8 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 **Driver placement debt** — découlant de l'application des [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md) aux drivers existants. Quatre items, peuvent être traités opportunistement (en // de Phase 25-26) :
 
-- [ ] **`drv_battery_bq27220.c` → userspace** : Migrer `kernel/duneos_kernel/src/drivers/battery/drv_battery_bq27220.c` vers `sdk/sensor/libbq27220.c` (lib userspace) + un `apps/system/bin/battery_daemon.dap` qui parle au chip via `/dev/i2c-0` et expose `/dev/battery0` via une socket / pipe nommée. Conserver l'API `battery_ioctl.h` côté apps. Le BQ27220 ne satisfait aucun des 4 critères de l'ADR 009 (lecture périodique, un consommateur, pas d'ISR critique).
-- [ ] **ST7789 : consolider 3 codepaths en 1** : Aujourd'hui `drv_disp_st7789.c` (`/dev/disp0` kernel), `drv_fb_st7789.c` (`/dev/fb0` kernel PSRAM), et `sdk/display/libst7789.c` (userspace) coexistent. Retirer `drv_disp_st7789.c` (aucun app ne l'utilise comme primary, `libgfx` peut router via `libst7789.c`). Conserver `drv_fb_st7789.c` uniquement si un compositor PSRAM partagé apparaît (deferré ; pas dans la roadmap). Libgfx (Phase 18) reste l'API publique pour les apps.
+- [x] **`drv_battery_bq27220.c` → userspace** : Migrer `kernel/duneos_kernel/src/drivers/battery/drv_battery_bq27220.c` vers `sdk/sensor/libbq27220.c` (lib userspace) + un `apps/system/bin/battery_daemon.dap` qui parle au chip via `/dev/i2c-0` et expose `/dev/battery0` via une socket / pipe nommée. Conserver l'API `battery_ioctl.h` côté apps. Le BQ27220 ne satisfait aucun des 4 critères de l'ADR 009 (lecture périodique, un consommateur, pas d'ISR critique).
+- [x] **ST7789 : consolider 3 codepaths en 1** : Aujourd'hui `drv_disp_st7789.c` (`/dev/disp0` kernel), `drv_fb_st7789.c` (`/dev/fb0` kernel PSRAM), et `sdk/display/libst7789.c` (userspace) coexistent. Retirer `drv_disp_st7789.c` (aucun app ne l'utilise comme primary, `libgfx` peut router via `libst7789.c`). Conserver `drv_fb_st7789.c` uniquement si un compositor PSRAM partagé apparaît (deferré ; pas dans la roadmap). Libgfx (Phase 18) reste l'API publique pour les apps.
 - [ ] **GPIO expanders : règle explicite dans `bspgen`** : Si `board.yaml` déclare un expander (SX1509, PCF8574…), `bspgen` émet sa config dans `board_config.h` et le kernel expose `/dev/gpiochipN`. Sinon, les apps qui utilisent un expander ouvrent `/dev/i2c-0` et parlent le protocole eux-mêmes. Documenter le schéma YAML attendu (`gpio_expanders: [{type: sx1509, i2c_addr: 0x3e, pins: 16}, ...]`).
 - [ ] **`hal_encoder` capability HAL (ADR 010 Pattern A)** : Définir `kernel/duneos_kernel/include/duneos/hal_encoder.h` + backend ESP32 PCNT dans `arch/xtensa_esp32s3/hal/hal_encoder.c`. Remplacer le polling logiciel dans `enc_quadrature.c` par une délégation au HAL — qui utilise PCNT sur ESP32 et fallback GPIO ailleurs. Backend RP2040 (PIO) en Phase 29. Smoke test : encodeur sur T-Embed reste fonctionnel après migration.
 
@@ -276,21 +276,41 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 - [ ] **`vfs.c` init SD** : Remplacer `driver/spi_master.h` + `driver/gpio.h` (init bus SPI de la carte SD) par `hal_spi.h` + `hal_gpio.h` — les implémentations existent déjà, migration seule.
 - [ ] **`display/st7789_hw.c/.h`** : Remplacer `driver/spi_master.h` par `hal_spi.h` — types `spi_device_handle_t` encapsulés dans l'implémentation, header public purgé d'`esp_err.h`.
 
-**HAL réseau** :
+**Architecture réseau** — gelée par [ADR 013](docs/adr/013-network-architecture.md) : sockets POSIX + lwIP vendored + per-medium HAL (`hal_wifi.h` ≠ `hal_eth.h`) + `struct netif` lwIP directement comme registre. Pas de wrapper `duneos_netif_t`. Pas d'`esp_netif`.
 
-- [ ] **`hal_net.h`** : Créer `kernel/duneos_kernel/include/duneos/hal_net.h` — interface pure C pour WiFi/Ethernet (`duneos_hal_net_sta_connect`, `duneos_hal_net_get_ip`, callbacks d'événements). Implémenter dans `arch/xtensa_esp32s3/hal/hal_net.c` avec `esp_wifi.h`, `esp_netif.h`, `esp_event.h`.
-- [ ] **`drv_wifi.c`, `drv_raw80211.c`** : Migrer de `esp_wifi.h` + `esp_netif.h` + `esp_event.h` directs vers `hal_net.h`.
+**Vendoring de lwIP** :
+
+- [ ] **`third_party/lwip` git submodule** : Cesser d'utiliser l'lwIP fourni par ESP-IDF. Compilé pour la target courante par le toolchain plugin. Décision actée par ADR 013 ; même stack partout = même comportement, même DNS resolver, même API. Prérequis pour Phase 29 (RP2040 a son propre lwIP via pico-sdk, à substituer).
+- [ ] **`tools/dbt/toolchain/esp_idf.py`** : Retirer la dépendance implicite sur `lwip` ESP-IDF component ; lier explicitement le `third_party/lwip` compilé.
+
+**HAL réseau (split par médium, ADR 013)** :
+
+- [ ] **`kernel/duneos_kernel/include/duneos/hal_wifi.h`** : Interface pure C — `hal_wifi_init/scan/connect_sta/disconnect/start_ap/get_rssi/set_event_cb` + `hal_wifi_tx_packet` + RX callback. Aucun type esp_wifi / cyw43.
+- [ ] **`kernel/duneos_kernel/include/duneos/hal_eth.h`** : MAC control — `hal_eth_init/tx/set_rx_cb/get_stats`.
+- [ ] **`kernel/duneos_kernel/include/duneos/hal_phy.h`** : MDIO abstraction — `hal_phy_read/write/get_link`. Permet support de plusieurs PHY (LAN8720, KSZ8081, RTL8201, …) avec un mini-fichier par chip sous `arch/<arch>/hal/phy/`.
+- [ ] **`arch/xtensa_esp32s3/hal/hal_wifi.c`** : Wrap esp_wifi + esp_event en backend ESP-IDF.
+
+**Drivers link layer** :
+
+- [ ] **`kernel/duneos_kernel/src/drivers/net/wifi_esp.c`** : Réécrire l'actuel `drv_wifi.c` — utilise `hal_wifi.h` (plus d'`esp_wifi` direct), enregistre `struct netif` lwIP avec `linkoutput` callback, fait le pont packet rx_cb → `netif->input()`.
+- [ ] **`drv_raw80211.c`** : Reste fonctionnellement identique (injection 802.11 bypass de la stack IP). Migration vers `hal_wifi.h` uniquement pour les bits de config initialisation partagés.
+- [ ] **Loopback `lo`** : créé en kernel init via lwIP natif. Utile pour tests sans hardware ([[ADR-012]]).
+
+**API de configuration network** (remplace le foutoir Linux ioctl/netlink) :
+
+- [ ] **`duneos_netif_set_ip/set_dns/get_status/list`** : Header `kernel/duneos_kernel/include/duneos/netif.h`. Apps + `apps/system/bin/ifconfig` consomment.
+- [ ] **`duneos_netif_wait_ip()`** : Réimplementation au-dessus de `struct netif` flags + `osal_sem`. Même symbol public.
 
 **VFS natif** :
 
-- [ ] **`vfs.h`** : Migration des 6 signatures publiques `esp_err_t` → `int` (-errno). Dette héritée de Phase 24 ; se fait naturellement ici parce que les implémentations sous-jacentes changent.
-- [ ] **`duneos_vfs` natif** : Remplacer `esp_vfs.h` dans `vfs.c`, `vfs_dev.c`, `vfs_tmp.c` — VFS natif gère nativement `poll()`, `select()` et les sockets via wait-queues bâties sur `osal_sem`. Libère la dépendance sur `esp_vfs_register` et `esp_vfs_fat_*`.
-- [ ] **VFS Sockets** : Router les appels réseau BSD vers la nouvelle stack interne.
+- [ ] **`vfs.h`** : Migration des 6 signatures publiques `esp_err_t` → `int` (-errno). Dette héritée de Phase 24.
+- [ ] **`duneos_vfs` natif** : Remplacer `esp_vfs.h` dans `vfs.c`, `vfs_dev.c`, `vfs_tmp.c` — gère nativement `poll()`/`select()` et les sockets via wait-queues bâties sur `osal_sem`.
+- [ ] **VFS Sockets** : Router les appels BSD vers lwIP via la nouvelle stack interne.
 - [ ] **GPIO IRQ userspace** : `GPIOCHIP_SET_IRQ` (ENOSYS en Phase 24) devient livrable maintenant que `poll()` est dispo — events sur fd dédié.
 
-**Ethernet** :
+**Ethernet RMII** (optionnel, dépend de la disponibilité d'un board cible) :
 
-- [ ] **Ethernet RMII Lab** : Intégrer LwIP (ou PicoTCP) nativement via RMII sans dépendre du blob WiFi. Implique l'ajout d'un board ESP32 classique (RMII non dispo sur ESP32-S3).
+- [ ] **MAC ESP32 (pas S3)** : board RMII de référence à ajouter si la phase démarre avant Phase 29. PHY = LAN8720 ou KSZ8081 ; `arch/xtensa_esp32/hal/phy/lan8720.c` ~50 lignes implémentant `hal_phy_*`.
 
 ---
 

@@ -19,6 +19,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 | [010](010-arch-accelerators.md) | Architecture-specific accelerators (PCNT, PIO, ULP, …) | Accepted 2026-05-19 | Phase 24 debt (hal_encoder for PCNT/PIO), Phase 29 (rp2040 PIO sdk lib) |
 | [011](011-threat-model.md) | Threat model: permissions are advisory, not enforced | Accepted 2026-05-19 | Phase 32 signing strategy; README security disclosure; any future "sandbox" claim |
 | [012](012-test-strategy.md) | Test strategy: host-side first, on-device smoke | Accepted 2026-05-19 | Phase 26+ refactor safety net; CI gating; `dbt test` subcommand |
+| [013](013-network-architecture.md) | Network architecture: POSIX sockets + vendored lwIP + per-medium HAL | Accepted 2026-05-19 | Phase 27 (VFS native + net rewrite), Phase 29 (RP2040 WiFi via CYW43); board.yaml `network:` section |
 
 ## Reading order for new contributors
 
@@ -29,6 +30,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 5. [009](009-driver-boundary.md), [010](010-arch-accelerators.md) — where drivers live and how arch-specific hardware is exposed.
 6. [011](011-threat-model.md) — what DuneOS does and does not promise about security.
 7. [012](012-test-strategy.md), [007](007-multi-arch-smoke-test.md) — how we guard against regressions: tests and portability builds.
+8. [013](013-network-architecture.md) — how the network stack is layered and how new media (WiFi chips, Ethernet variants) plug in.
 
 ## Writing a new ADR
 
