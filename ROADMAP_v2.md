@@ -173,20 +173,19 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.5 — Design Decisions / ADR (pas de code)
+### Phase 24.5 — Design Decisions / ADR ✅
 
-Avant d'attaquer 25-29, fixer les décisions architecturales par écrit. **Une décision écrite vaut dix discussions perdues.** Chaque ADR fait 1 page max, lit en 2 minutes, vit dans `docs/adr/`.
+9 ADRs courts dans [`docs/adr/`](docs/adr/) (voir [README](docs/adr/README.md) pour l'index). Format Michael Nygard, 1 page max chacun, statut `Accepted · 2026-05-19`. Tous les choix consommés par les phases 25-29.
 
-- [ ] **`docs/adr/000-process.md`** : Format des ADR (titre, contexte, décision, conséquences, alternatives rejetées). Date + statut (Proposé / Acté / Remplacé par ADR-NNN).
-- [ ] **`docs/adr/001-error-model.md`** : Kernel et `libdune` retournent `int` style POSIX (-errno). Pas d'enum `duneos_status_t`. Helper de conversion `esp_to_errno()` toléré pendant la transition, jamais dans un header public.
-- [ ] **`docs/adr/002-osal-api.md`** : Interface `duneos_osal.h` — pas un copier-coller FreeRTOS, pas un sous-ensemble POSIX. Primitives : `osal_task_create/yield/sleep_ms`, `osal_mutex_*`, `osal_sem_*`, `osal_queue_*`, `osal_mem_alloc/free`, `osal_monotonic_us`, `osal_panic_print`. Pas de timer software-managed (lui-même bâti par-dessus).
-- [ ] **`docs/adr/003-memory-caps.md`** : `osal_mem_alloc(size, flags)` accepte `OSAL_MEM_DEFAULT` (0), `OSAL_MEM_EXTERNAL` (PSRAM si dispo, sinon fallback DRAM), `OSAL_MEM_DMA` (DMA-capable, fallback DRAM), `OSAL_MEM_FAST` (IRAM/TCM si dispo, sinon DRAM). Plateformes sans hiérarchie mémoire : tous les flags ignorés. Comportement de fallback garanti, jamais d'échec si DRAM disponible.
-- [ ] **`docs/adr/004-task-priorities.md`** : Échelle DuneOS abstraite (`OSAL_PRIO_IDLE` < `LOW` < `NORMAL` < `HIGH` < `RT`). Mapping vers FreeRTOS (0..configMAX) et pthreads (SCHED_OTHER / SCHED_RR) défini par l'implémentation OSAL. Apps n'utilisent que les noms symboliques.
-- [ ] **`docs/adr/005-path-conventions.md`** : `/flash` toujours présent (fatal si absent). `/sd`, `/dev`, `/tmp` optionnels selon board.yaml. `/proc` réservé futur. Apps ne doivent jamais supposer la présence de `/sd` — feature-detecter via `stat`.
-- [ ] **`docs/adr/006-manifest-extensibility.md`** : Champs JSON inconnus du manifest sont silencieusement ignorés (déjà le cas). Ajout de champ ⇒ pas de bump ABI. Retrait ou changement sémantique ⇒ bump ABI. Documenter chaque champ standard.
-- [ ] **`docs/adr/007-multi-arch-smoke-test.md`** : Avant Phase 29, mettre en place un CI smoke-test multi-target (`dbt build` pour ESP32-S3 + ESP32-C6 + sim Linux x86_64). Vérifie qu'une régression de portabilité est détectée tôt, pas en débuggant RP2040.
-
-Pas de code dans cette phase, juste les 7 documents. Coût estimé : 1 après-midi.
+- [x] **ADR 000** — process des ADR
+- [x] **ADR 001** — error model `int`/-errno (consommé par 26-27)
+- [x] **ADR 002** — OSAL API, static-storage handles uniquement (consommé par 26)
+- [x] **ADR 003** — memory caps, fallback silencieux vers DRAM (consommé par 26)
+- [x] **ADR 004** — task priorities 5 niveaux symboliques (consommé par 26)
+- [x] **ADR 005** — path conventions, `/flash` mandatory (consommé par 25, kernel boot)
+- [x] **ADR 006** — manifest extensibility, champs inconnus ignorés (consommé par 25, loader)
+- [x] **ADR 007** — multi-arch smoke test (consommé par 26-28, prérequis 29)
+- [x] **ADR 008** — memory fragmentation strategy (consommé par 20 TLSF, kernel review policy)
 
 ---
 
