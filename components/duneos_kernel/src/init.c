@@ -1,6 +1,7 @@
 #include "duneos/init.h"
 #include "duneos/klog.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -43,7 +44,7 @@ static const char *ltrim(const char *s)
  *  - "key: value" pairs are parsed for "path" and "restart".
  *  - Indentation is not validated beyond detecting list items.
  */
-static esp_err_t parse_yaml(char *buf, duneos_init_config_t *cfg)
+static int parse_yaml(char *buf, duneos_init_config_t *cfg)
 {
     char *line = buf;
     duneos_service_desc_t *cur = NULL;
@@ -111,7 +112,7 @@ next_line:
         line = (*eol == '\n') ? eol + 1 : eol;
     }
 
-    return cfg->count > 0 ? ESP_OK : ESP_FAIL;
+    return cfg->count > 0 ? 0 : -EIO;
 }
 
 /* Extract app name from path: "/flash/bin/usb_shell.dap" → "usb_shell".
@@ -127,9 +128,9 @@ static void app_name_from_path(const char *path, char *out, size_t outsz)
     out[len] = '\0';
 }
 
-esp_err_t duneos_init_load(duneos_init_config_t *cfg)
+int duneos_init_load(duneos_init_config_t *cfg)
 {
-    if (!cfg) return ESP_ERR_INVALID_ARG;
+    if (!cfg) return -EINVAL;
 
     static const char *const paths[] = {
         DUNEOS_INIT_PATH_FLASH,
@@ -138,7 +139,7 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
     };
 
     char *buf = malloc(INIT_BUF_MAX);
-    if (!buf) return ESP_ERR_NO_MEM;
+    if (!buf) return -ENOMEM;
 
     cfg->count = 0;
 
@@ -158,7 +159,7 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
         duneos_init_config_t *tmp = calloc(1, sizeof(duneos_init_config_t));
         if (!tmp) { klog_w(TAG, "init: OOM skipping %s", paths[i]); continue; }
 
-        if (parse_yaml(buf, tmp) != ESP_OK || tmp->count == 0) {
+        if (parse_yaml(buf, tmp) != 0 || tmp->count == 0) {
             klog_w(TAG, "YAML parse error or empty services list in %s", paths[i]);
             free(tmp);
             continue;
@@ -192,5 +193,5 @@ esp_err_t duneos_init_load(duneos_init_config_t *cfg)
     }
 
     free(buf);
-    return cfg->count > 0 ? ESP_OK : ESP_ERR_NOT_FOUND;
+    return cfg->count > 0 ? 0 : -ENOENT;
 }

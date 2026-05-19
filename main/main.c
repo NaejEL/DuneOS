@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #include <fcntl.h>
 
 #include "esp_err.h"
@@ -44,23 +46,20 @@ static void console_init(void)
 }
 #endif
 
-/* Launch all services defined in /sd/init.json.
+/* Launch all services defined in /flash/init.yaml (and /sd/init.yaml).
  * Returns the number of services successfully started, or -1 on config error. */
-static int launch_from_init_json(void)
+static int launch_from_init_yaml(void)
 {
     duneos_init_config_t cfg;
-    esp_err_t err = duneos_init_load(&cfg);
+    int rc = duneos_init_load(&cfg);
 
-    if (err == ESP_ERR_NOT_FOUND) {
-        klog_i(TAG, "no init.json — using autoboot fallback");
+    if (rc == -ENOENT) {
+        klog_i(TAG, "no init.yaml — using autoboot fallback");
         return -1;
     }
-    if (err != ESP_OK) {
-        klog_w(TAG, "init.json parse error — using autoboot fallback");
-        return -1;
-    }
-    if (cfg.count == 0) {
-        klog_w(TAG, "init.json has no services — using autoboot fallback");
+    if (rc != 0) {
+        klog_w(TAG, "init.yaml load error: %s — using autoboot fallback",
+               strerror(-rc));
         return -1;
     }
 
@@ -68,8 +67,8 @@ static int launch_from_init_json(void)
     for (int i = 0; i < cfg.count; i++) {
         klog_i(TAG, "starting service '%s' (restart=%d)",
                cfg.services[i].path, (int)cfg.services[i].restart);
-        err = duneos_supervisor_launch_policy(cfg.services[i].path,
-                                               cfg.services[i].restart);
+        esp_err_t err = duneos_supervisor_launch_policy(cfg.services[i].path,
+                                                        cfg.services[i].restart);
         if (err != ESP_OK)
             klog_e(TAG, "failed to start '%s': %s",
                    cfg.services[i].path, esp_err_to_name(err));
@@ -131,9 +130,9 @@ void app_main(void)
         return;
     }
 
-    int launched = launch_from_init_json();
+    int launched = launch_from_init_yaml();
     if (launched < 0) {
-        /* init.json absent or empty — fall back to legacy autoboot */
+        /* init.yaml absent or unparseable — fall back to legacy autoboot */
         launched = launch_autoboot();
     }
 
