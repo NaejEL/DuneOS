@@ -141,6 +141,8 @@ These can be deferred until the matching app starts development:
 | Launcher visual underwhelming | Ship without animations first; add polish if time. Icon grid alone is the must-have. |
 | CardPuter crashes during demo recording | Phase 24.7 safe boot is mandatory before recording. The circuit breaker protects against a runaway service. |
 | Video recording quality | Coordinate with whoever has good lighting/camera. Record multiple takes. Caption the screen content if filming is grainy. |
+| **Memory budget on CardPuter (320 KiB DRAM)** | Tier-A libgfx allocates a 64 KiB userspace back-buffer per gfx app. Launcher + 1 active gfx app fits; launcher + 2 gfx apps coresident does not. **Phase 24.10 (libgfx streaming mode)** is the unlock — drop the back-buffer for apps that only draw sequentially (the launcher itself fits this profile). Schedule 24.10 before the launcher is written, or accept that the launcher exits when it spawns a gfx app and re-enters when the app returns. |
+| **Captured-app exit kills the shell** | Observed 2026-05-20: `duneos_exit(N)` from a captured app (e.g. gfx_demo failing to allocate) kills the shell task. **Phase 24.9.5 (ADR 016)** lands setjmp/longjmp in the loader so `duneos_exit` unwinds back to the shell instead. Schedule before any contest demo that uses the launcher to chain apps — without this, one buggy `.dap` ends the demo. |
 
 ## After 2026-08-31
 

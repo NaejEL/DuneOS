@@ -245,6 +245,37 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
+### Phase 24.9.5 — Captured-app exit semantics (ADR 016)
+
+**Pourquoi cette phase** : observation faite en flashant gfx_demo sur CardPuter. `duneos_exit(1)` depuis un app captured (bin lancé par le shell) faisait `vTaskDelete(NULL)` qui tue **la task du shell** (car captured = même task que le caller). Symptôme observé : "every time gfx_demo fails, my shell restarts". Footgun classique pour les apps écrites en assumant la sémantique POSIX `exit()`. Petite phase critique pour la stabilité, à faire avant le launcher contest (qui lancera plusieurs apps captured).
+
+- [ ] **Mécanisme `setjmp`/`longjmp`** : `loader_run_captured` installe un `jmp_buf` (`s_captured_jmp`) avant `app->entry()`, protégé par mutex pour interdire les captured runs imbriqués. `duneos_exit(N)` détecte `s_captured_jmp != NULL` et `longjmp()` au lieu de `vTaskDelete`. Le code de sortie est stocké dans `s_captured_code` et lu par le caller.
+- [ ] **Restauration stdout robuste** : `capture_restore_stdout` appelé sur les deux chemins (return normal ET longjmp). Pas de double-close.
+- [ ] **Hook anti-`pthread_create` en captured** : `libdune_thread.c` consulte `s_captured_jmp` ; si non-NULL, `pthread_create` retourne `-EPERM` avec un klog warning. Un thread spawné depuis captured continuerait à tourner après le longjmp et corromprait le shell.
+- [ ] **Doc dans `<duneos/libdune.h>`** : section "Captured app contract" qui liste les 3 contraintes (no pthread, free what you alloc, close fds).
+- [ ] **Test de régression** : `gfx_demo` sans `heap_size` doit échouer proprement (exit code 1) sans tuer `usb_shell`. Test d'acceptance manuel + futur test host-side ADR 012.
+- [ ] **CLAUDE.md Hard-Won Lessons** : ajouter "duneos_exit captured = longjmp, pas vTaskDelete" comme entrée explicite (déjà tipped la mère de tous les futurs bugs).
+
+> **Coût estimé** : ~1 jour. ~50 lignes de code total dans loader.c + supervisor.c + libdune_thread.c. Pas de change d'ABI.
+
+---
+
+### Phase 24.10 — libgfx streaming mode (mémoire frugale)
+
+**Pourquoi cette phase** : observation faite en debug Tier A — sur CardPuter sans PSRAM, le back-buffer userspace coûte 64 KiB par app gfx. Avec 320 KiB DRAM total et plusieurs apps gfx co-résidentes potentielles (launcher + game + ...), le budget mémoire devient critique. Une killer-app launcher (contest) doit pouvoir co-habiter avec une 2e app gfx active sans OOM.
+
+- [ ] **Nouveau mode dans `gfx_open()`** : `gfx_open_streaming()` (ou flag `GFX_MODE_STREAM`) qui dessine directement vers `/dev/disp0` ligne-par-ligne. Pas de back-buffer userspace. Allocation : ~1 ligne (~480 bytes pour 240px), pas 64 KiB.
+- [ ] **`gfx_pixel(x,y)` interdit en streaming mode** : access random impossible sans back-buffer. L'app doit dessiner séquentiellement (top-to-bottom). `gfx_pixel()` retourne `-ENOTSUP` ou bien on documente que c'est un no-op silencieux.
+- [ ] **Primitives compatibles streaming** : `gfx_fill_rect`, `gfx_text`, `gfx_hline`, `gfx_vline`. Chacune écrit sa zone via `disp_write_area` directe, sans passer par un buffer.
+- [ ] **`gfx_close_streaming()`** : fermeture propre.
+- [ ] **Choix au runtime** : `gfx_open(GFX_MODE_BUFFERED)` (défaut, comportement actuel) vs `gfx_open(GFX_MODE_STREAM)`. App déclare son mode.
+- [ ] **Migration apps de démo** : `g_shell` est déjà streaming-style (line buffer en .bss) — peut continuer avec son code custom OU passer à `gfx_open(GFX_MODE_STREAM)` selon ce qui est plus simple. `gfx_demo` reste BUFFERED (montre les capacités full random access).
+- [ ] **Doc gfx.h** : explique les deux modes + cas d'usage. La règle : un launcher graphique avec icônes + scroll utilise STREAM ; un jeu avec sprites random utilise BUFFERED + heap_size suffisant.
+
+> **Coût estimé** : ~2 jours. ~100 lignes de code dans gfx.c. Pas de change d'API (juste un mode flag + helpers). Permet d'avoir N apps gfx co-résidentes sans saturer la DRAM.
+
+---
+
 ### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1)
 
 Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init` via section ELF.
