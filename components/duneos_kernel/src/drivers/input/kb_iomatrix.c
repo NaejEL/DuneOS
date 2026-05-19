@@ -19,13 +19,13 @@
 #include "drv_input_priv.h"
 #include "duneos/input_ioctl.h"
 #include "duneos/klog.h"
+#include "duneos/hal_gpio.h"
+#include "duneos/hal_time.h"
 
 #include "board_config.h"
 
-#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_rom_sys.h"
 
 #include <string.h>
 
@@ -128,22 +128,22 @@ static void scan_task(void *arg)
 
     while (1) {
         for (int output = 0; output < 8; output++) {
-            gpio_set_level(s_row_pins[0], (output >> 0) & 1);
-            gpio_set_level(s_row_pins[1], (output >> 1) & 1);
-            gpio_set_level(s_row_pins[2], (output >> 2) & 1);
-            esp_rom_delay_us(50);
+            duneos_hal_gpio_set_level(s_row_pins[0], (output >> 0) & 1);
+            duneos_hal_gpio_set_level(s_row_pins[1], (output >> 1) & 1);
+            duneos_hal_gpio_set_level(s_row_pins[2], (output >> 2) & 1);
+            duneos_hal_delay_us(50);
 
             int row      = (output > 3) ? (7 - output) : (3 - output);
             int col_base = (output > 3) ? 0 : 1;
             for (int bit = 0; bit < DUNEOS_KB_NUM_COLS; bit++)
-                cur[row][col_base + bit * 2] = (gpio_get_level(s_col_pins[bit]) == 0);
+                cur[row][col_base + bit * 2] = (duneos_hal_gpio_get_level(s_col_pins[bit]) == 0);
         }
 
         /* Layer selection: Fn takes priority over Shift */
         int layer = cur[FN_ROW][FN_COL]    ? 2 :
                     cur[SHIFT_ROW][SHIFT_COL] ? 1 : 0;
 
-        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        uint32_t now = (uint32_t)(duneos_hal_monotonic_us() / 1000);
 
         for (int r = 0; r < DUNEOS_KB_MATRIX_ROWS; r++) {
             for (int c = 0; c < DUNEOS_KB_MATRIX_COLS; c++) {
@@ -172,26 +172,14 @@ static void scan_task(void *arg)
 void kb_iomatrix_init(void)
 {
     for (int i = 0; i < 3; i++) {
-        gpio_config_t cfg = {
-            .pin_bit_mask = (1ULL << s_row_pins[i]),
-            .mode         = GPIO_MODE_OUTPUT,
-            .pull_up_en   = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type    = GPIO_INTR_DISABLE,
-        };
-        gpio_config(&cfg);
-        gpio_set_level(s_row_pins[i], 0);
+        duneos_hal_gpio_set_dir(s_row_pins[i], DUNEOS_GPIO_DIR_OUTPUT);
+        duneos_hal_gpio_set_pull(s_row_pins[i], DUNEOS_GPIO_PULL_NONE);
+        duneos_hal_gpio_set_level(s_row_pins[i], 0);
     }
 
     for (int i = 0; i < DUNEOS_KB_NUM_COLS; i++) {
-        gpio_config_t cfg = {
-            .pin_bit_mask = (1ULL << s_col_pins[i]),
-            .mode         = GPIO_MODE_INPUT,
-            .pull_up_en   = GPIO_PULLUP_ENABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type    = GPIO_INTR_DISABLE,
-        };
-        gpio_config(&cfg);
+        duneos_hal_gpio_set_dir(s_col_pins[i], DUNEOS_GPIO_DIR_INPUT);
+        duneos_hal_gpio_set_pull(s_col_pins[i], DUNEOS_GPIO_PULL_UP);
     }
 
     memset(s_prev_state, 0, sizeof(s_prev_state));

@@ -37,6 +37,7 @@
 typedef struct {
     char     name[DUNEOS_APP_NAME_MAX];
     char     version[DUNEOS_APP_VERSION_MAX];
+    char     arch[32];              /* target ISA, e.g. "xtensa-esp32s3"       */
     uint32_t required_abi_version;
     uint32_t permissions;           /* bitmask — see DUNEOS_PERM_* below */
     uint32_t stack_size;            /* app task stack in bytes; 0 → default */

@@ -62,13 +62,13 @@ static void flush_rect(uint16_t rx, uint16_t ry, uint16_t rw, uint16_t rh)
 
 /* ---- driver callbacks ----------------------------------------------------- */
 
-static esp_err_t fb_init(void)
+static int fb_init(void)
 {
     size_t fb_bytes = (size_t)DUNEOS_DISPLAY_WIDTH * DUNEOS_DISPLAY_HEIGHT * 2;
     s_fb = heap_caps_malloc(fb_bytes, MALLOC_CAP_SPIRAM);
     if (!s_fb) {
         klog_e(TAG, "PSRAM alloc %u bytes failed", (unsigned)fb_bytes);
-        return ESP_ERR_NO_MEM;
+        return -1;
     }
     memset(s_fb, 0, fb_bytes);
 
@@ -78,19 +78,19 @@ static esp_err_t fb_init(void)
     s_lock = xSemaphoreCreateMutex();
     if (!s_lock) {
         heap_caps_free(s_fb); s_fb = NULL;
-        return ESP_ERR_NO_MEM;
+        return -1;
     }
 
     esp_err_t err = st7789_hw_init();
     if (err != ESP_OK) {
         heap_caps_free(s_fb); s_fb = NULL;
         vSemaphoreDelete(s_lock); s_lock = NULL;
-        return err;
+        return -1;
     }
 
     klog_i(TAG, "/dev/fb0 ready: %ux%u PSRAM back-buffer (%u bytes)",
            s_width, s_height, (unsigned)fb_bytes);
-    return ESP_OK;
+    return 0;
 }
 
 static int fb_open(duneos_devfd_t *fd, int flags)

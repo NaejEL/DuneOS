@@ -15,10 +15,11 @@
 #include "drv_input_priv.h"
 #include "duneos/input_ioctl.h"
 #include "duneos/klog.h"
+#include "duneos/hal_gpio.h"
+#include "duneos/hal_time.h"
 
 #include "board_config.h"
 
-#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -34,9 +35,9 @@ static void btn_scan_task(void *arg)
 {
     (void)arg;
     while (1) {
-        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        uint32_t now = (uint32_t)(duneos_hal_monotonic_us() / 1000);
         for (int i = 0; i < DUNEOS_BTN_GPIO_COUNT; i++) {
-            bool pressed = (gpio_get_level(s_pins[i]) == 0);
+            bool pressed = (duneos_hal_gpio_get_level(s_pins[i]) == 0);
             if (pressed == s_prev[i]) continue;
             s_prev[i] = pressed;
             input_event_t ev = {
@@ -54,14 +55,8 @@ static void btn_scan_task(void *arg)
 void btn_gpio_init(void)
 {
     for (int i = 0; i < DUNEOS_BTN_GPIO_COUNT; i++) {
-        gpio_config_t cfg = {
-            .pin_bit_mask = (1ULL << s_pins[i]),
-            .mode         = GPIO_MODE_INPUT,
-            .pull_up_en   = GPIO_PULLUP_ENABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type    = GPIO_INTR_DISABLE,
-        };
-        gpio_config(&cfg);
+        duneos_hal_gpio_set_dir(s_pins[i], DUNEOS_GPIO_DIR_INPUT);
+        duneos_hal_gpio_set_pull(s_pins[i], DUNEOS_GPIO_PULL_UP);
     }
     memset(s_prev, 0, sizeof(s_prev));
     xTaskCreate(btn_scan_task, "btn_scan", 1024, NULL, 5, NULL);

@@ -67,7 +67,7 @@ board:
   # CHRG pin of TP4057 is not wired to any GPIO.
   battery:
     type: adc_simple
-    adc_unit: ADC_UNIT_1
+    adc_unit: 1
     adc_channel: 9
     vdiv_factor: 2
     full_mv: 4200

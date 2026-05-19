@@ -104,6 +104,8 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
 
     # Embed manifest as JSON string in a dedicated ELF section
     manifest_c = build_dir / "_manifest.c"
+    # Inject the target arch so the kernel can reject cross-arch binaries.
+    manifest["arch"] = arch
     manifest_json = json.dumps(manifest, separators=(",", ":"))
     manifest_c.write_text(
         f'__attribute__((section("{MANIFEST_SECTION}"), used))\n'

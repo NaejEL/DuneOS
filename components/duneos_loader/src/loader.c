@@ -852,6 +852,10 @@ static esp_err_t extract_manifest(FILE               *f,
             cJSON_IsString(item) && item->valuestring)
             strlcpy(out->version, item->valuestring, sizeof(out->version));
 
+        if ((item = cJSON_GetObjectItemCaseSensitive(root, "arch")) &&
+            cJSON_IsString(item) && item->valuestring)
+            strlcpy(out->arch, item->valuestring, sizeof(out->arch));
+
         out->required_abi_version = json_u32(root, "required_abi_version", 1);
         out->permissions          = json_u32(root, "permissions",          0);
         out->stack_size           = json_u32(root, "stack_size",           0);
@@ -860,9 +864,9 @@ static esp_err_t extract_manifest(FILE               *f,
 
         cJSON_Delete(root);
 
-        klog_i(TAG, "manifest: '%s' v%s (ABI>=%lu perms=0x%lx"
+        klog_i(TAG, "manifest: '%s' v%s arch='%s' (ABI>=%lu perms=0x%lx"
                " stack=%lu heap=%lu wdt=%lu ms)",
-               out->name, out->version,
+               out->name, out->version, out->arch,
                (unsigned long)out->required_abi_version,
                (unsigned long)out->permissions,
                (unsigned long)out->stack_size,
@@ -1003,6 +1007,21 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
                  DUNEOS_ABI_VERSION);
         err = ESP_ERR_NOT_SUPPORTED;
         goto out;
+    }
+
+    /* Arch compatibility check — reject binaries for a different ISA. */
+    if (app->manifest.arch[0] != '\0') {
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+        static const char kernel_arch[] = "xtensa-esp32s3";
+#else
+        static const char kernel_arch[] = "riscv32";
+#endif
+        if (strcmp(app->manifest.arch, kernel_arch) != 0) {
+            klog_e(TAG, "arch mismatch: app='%s' kernel='%s'",
+                   app->manifest.arch, kernel_arch);
+            err = ESP_ERR_NOT_SUPPORTED;
+            goto out;
+        }
     }
 
     /* 7. Load sections */

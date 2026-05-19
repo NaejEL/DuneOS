@@ -40,3 +40,4 @@ boards/*/idf_target.txt
 
 # Root partitions.csv superseded by per-board generation
 partitions.csv
+.clangd

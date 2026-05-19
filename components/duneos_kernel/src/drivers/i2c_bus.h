@@ -10,15 +10,14 @@
  *
  * Both drv_i2c.c and drv_battery_bq27220.c link against this shared layer so
  * they share the same bus handle and serialisation mutex without duplicating
- * the ESP-IDF i2c_master init code.
+ * the HAL init code.
  */
 
-#include "esp_err.h"
 #include <stdint.h>
 
-esp_err_t i2c_bus_init(void);
+int i2c_bus_init(void);
 
-esp_err_t i2c_bus_write_read(int bus_id,
-                              uint16_t        addr,
-                              const uint8_t  *tx_buf, uint16_t tx_len,
-                                    uint8_t  *rx_buf, uint16_t rx_len);
+int i2c_bus_write_read(int bus_id,
+                       uint16_t        addr,
+                       const uint8_t  *tx_buf, uint16_t tx_len,
+                             uint8_t  *rx_buf, uint16_t rx_len);

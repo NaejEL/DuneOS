@@ -5,6 +5,7 @@ endif()
 # CMAKE_SOURCE_DIR is unreliable during the requirements phase — it may point
 # to the build directory. Navigate from the component's own directory instead.
 set(DUNEOS_BOARD_CONFIG_DIR "${CMAKE_CURRENT_LIST_DIR}/../../boards/${DUNEOS_BOARD}")
+set(DUNEOS_ROOT             "${CMAKE_CURRENT_LIST_DIR}/../..")
 
 if(NOT EXISTS "${DUNEOS_BOARD_CONFIG_DIR}/board_config.h")
     message(FATAL_ERROR
@@ -32,34 +33,58 @@ set(DUNEOS_KERNEL_SRCS
 )
 
 # --- REQUIRES ---------------------------------------------------------------
-# All ESP-IDF component deps are listed unconditionally so include paths are
-# resolved during the early component-graph phase (before CONFIG_* values are
-# guaranteed to be available as CMake variables).  Only SRCS is conditional on
-# CONFIG_DUNEOS_DRV_* — that's what actually controls binary size.
+# Grouped by removal phase to make the ESP-IDF decoupling roadmap visible.
+#
+# NOTE: CONFIG_DUNEOS_DRV_* Kconfig values are NOT available during the
+# component-graph resolution phase in ESP-IDF.  SRCS are conditional on them,
+# but REQUIRES entries for most platform deps must stay unconditional.
+# Exception: CONFIG_IDF_TARGET_ARCH_* IS available (derived from IDF_TARGET
+# before CMake runs), so arch-specific HAL deps can be gated on it.
 
+# ── Phase 27 (OSAL): replace with duneos_osal.h + freertos_osal.c ──────────
+# supervisor.c, task.c, symbols.c, klog.c, api.c, drv_input.c, input backends,
+# drv_fb_st7789.c, drv_usb_cdc.c
 set(DUNEOS_KERNEL_REQUIRES
     freertos
-    esp_ringbuf
+    esp_ringbuf         # klog.c ring buffer — replace with pure-C (Phase 27)
     pthread
-    driver
-    esp_driver_uart
-    esp_driver_gpio
-    esp_driver_i2c
-    esp_driver_spi
-    esp_driver_sdspi
-    esp_adc
-    esp_system
-    fatfs
-    vfs
-    esp_libc
-    nvs_flash
-    esp_wifi
-    esp_netif
-    esp_event
-    joltwallet__littlefs
-    xtensa
+    esp_system          # esp_restart, esp_get_free_heap_size → hal_sys.h (Phase 27)
+    esp_libc            # C library shims
+)
+
+# ── Phase 26 (VFS natif): replace esp_vfs with duneos_vfs ──────────────────
+# vfs.c, vfs_dev.c, vfs_tmp.c
+list(APPEND DUNEOS_KERNEL_REQUIRES
+    fatfs               # SD FatFS — stays until VFS native (Phase 26)
+    vfs                 # esp_vfs_register — duneos_vfs (Phase 26)
+    joltwallet__littlefs # /flash LittleFS — third_party/ copy exists; unify (Phase 26)
+)
+
+# ── Phase 26 (hal_net.h): replace with arch/*/hal/hal_net.c ────────────────
+# drv_wifi.c, drv_raw80211.c
+list(APPEND DUNEOS_KERNEL_REQUIRES
+    nvs_flash           # WiFi credentials — move to app layer (Phase 26)
+    esp_wifi            # drv_wifi.c → hal_net.h (Phase 26)
+    esp_netif           # drv_wifi.c → hal_net.h (Phase 26)
+    esp_event           # drv_wifi.c, drv_usb.c → hal_net.h (Phase 26)
+)
+
+# ── Permanent: TinyUSB is ESP-IDF-specific USB HW, abstracted by drv_usb.c ─
+list(APPEND DUNEOS_KERNEL_REQUIRES
     espressif__esp_tinyusb
 )
+
+# --- Arch discovery ----------------------------------------------------------
+# Each arch/*/arch.cmake self-selects via CONFIG_IDF_TARGET_ARCH_* and appends
+# its HAL sources + ESP-IDF component deps to DUNEOS_KERNEL_SRCS/REQUIRES.
+# Adding a new architecture = creating arch/<new_arch>/arch.cmake only.
+# Zero changes to this file.
+file(GLOB _DUNEOS_ARCH_MAKEFILES "${DUNEOS_ROOT}/arch/*/arch.cmake")
+foreach(_ARCH_CMAKE ${_DUNEOS_ARCH_MAKEFILES})
+    include("${_ARCH_CMAKE}")
+endforeach()
+unset(_DUNEOS_ARCH_MAKEFILES)
+unset(_ARCH_CMAKE)
 
 # --- Conditional driver sources --------------------------------------------
 # Each driver compiled only when CONFIG_DUNEOS_DRV_*=y is set in the board's

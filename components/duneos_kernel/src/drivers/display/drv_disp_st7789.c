@@ -16,13 +16,13 @@ static uint16_t s_chunk[CHUNK_PIXELS];
 
 /* ---- driver callbacks ----------------------------------------------------- */
 
-static esp_err_t disp_init(void)
+static int disp_init(void)
 {
     esp_err_t err = st7789_hw_init();
     if (err == ESP_OK)
         klog_i(TAG, "/dev/disp0 ready: %ux%u streaming",
                st7789_hw_width(), st7789_hw_height());
-    return err;
+    return (err == ESP_OK) ? 0 : -1;
 }
 
 static ssize_t disp_write(duneos_devfd_t *fd, const void *buf, size_t len)

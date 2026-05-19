@@ -21,7 +21,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <sys/types.h>
-#include "esp_err.h"
 
 /* Bytes available in duneos_devfd_t.priv for driver-private per-fd data.
  * Enough for: klog (size_t pos = 4B), i2c (uint16_t addr = 2B), gpio (1B). */
@@ -37,8 +36,9 @@ typedef struct {
     const char *name;
 
     /* One-time hardware initialisation called at registration time.
-     * NULL = no init required. Failure prevents the device from appearing. */
-    esp_err_t (*init)(void);
+     * NULL = no init required. Return 0 on success, -1 on failure.
+     * Failure prevents the device from appearing in /dev. */
+    int (*init)(void);
 
     /* VFS operations.  NULL pointer → default behaviour:
      *   open  → succeed (return 0)
@@ -64,6 +64,6 @@ typedef struct duneos_devfd {
 /*
  * Register a device driver.  Calls drv->init() if non-NULL.
  * Must be called before any app opens the device.
- * Returns ESP_OK on success; the device is skipped if init() fails.
+ * Returns 0 on success, -1 on failure (init() returned -1 or table full).
  */
-esp_err_t duneos_dev_register(const duneos_dev_driver_t *drv);
+int duneos_dev_register(const duneos_dev_driver_t *drv);

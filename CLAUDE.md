@@ -240,6 +240,55 @@ whenever either `CONFIG_DUNEOS_DRV_I2C` or `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` i
 5. Add `CONFIG_DUNEOS_DRV_<NAME>=y` to `boards/<board>/sdkconfig.defaults` for boards that use it
 6. Update `duneos-bspgen.py` to emit the config entry when the matching YAML section is present
 
+### Adding a new target architecture
+
+**Zero changes to `duneos_kernel/CMakeLists.txt`.**
+
+1. Create `arch/<new_arch>/arch.cmake` — self-selects via dual guard (see below)
+2. In `arch.cmake`: append HAL source files to `DUNEOS_KERNEL_SRCS` and SDK component deps to `DUNEOS_KERNEL_REQUIRES`
+3. Implement `arch/<new_arch>/hal/hal_uart.c`, `hal_gpio.c`, `hal_i2c.c`, `hal_spi.c`, `hal_adc.c`, `hal_time.c` — conforming to the pure-C headers in `include/duneos/`
+4. Add `arch/<new_arch>/reloc/loader_reloc_<arch>.c` — RELA `apply()` function for the loader
+5. Add `tools/dbt/toolchain/<sdk>.py` plugin for the new SDK/arch combination — must set `DUNEOS_ARCH` and `DUNEOS_BOARD_SOC` CMake variables before the build
+
+`duneos_kernel/CMakeLists.txt` discovers all `arch/*/arch.cmake` via `file(GLOB)` and `include()`s them. Each `arch.cmake` calls `return()` if its guard is not met. No arch names are hardcoded anywhere in the core kernel build.
+
+**`arch.cmake` guard pattern — always check all three:**
+
+```cmake
+# Three guards for three contexts:
+#   CONFIG_IDF_TARGET_ARCH_XTENSA — set from sdkconfig.cmake in normal ESP-IDF build phase
+#   IDF_TARGET_ARCH               — set via __build_write_properties in ESP-IDF requirements
+#                                   phase (sdkconfig.cmake is NOT loaded there, so CONFIG_*
+#                                   vars are empty — this is why a two-variable guard fails)
+#   DUNEOS_ARCH                   — set by non-ESP-IDF toolchain plugins (dbt, pico-sdk, …)
+if(NOT CONFIG_IDF_TARGET_ARCH_XTENSA
+   AND NOT IDF_TARGET_ARCH STREQUAL "xtensa"
+   AND NOT DUNEOS_ARCH STREQUAL "xtensa_esp32s3")
+    return()
+endif()
+```
+
+`DUNEOS_ARCH` must be set by the toolchain plugin via `-DDUNEOS_ARCH=<name>` before CMake configure. Without it, only ESP-IDF builds work.
+
+**Critical:** `IDF_TARGET_ARCH` (written to `build_properties.temp.cmake` by `__build_write_properties`) is the ONLY arch signal available during the ESP-IDF requirements phase. Without it in the guard, `list(APPEND DUNEOS_KERNEL_REQUIRES ...)` in arch.cmake is never executed during requirements resolution, and arch-specific component headers (e.g. `esp_timer.h`) are missing from the build.
+
+**ARM Cortex-M — unified arch directory:**
+
+M0+, M4, M4F, M7 share ARM Thumb-2 relocations. Use `arch/arm_cortex_m/` for all:
+
+```
+arch/arm_cortex_m/
+    arch.cmake                    # guard: DUNEOS_ARCH STREQUAL "arm_cortex_m"
+    reloc/loader_reloc_arm.c      # shared for all ARM Thumb-2
+    hal/
+        rp2040/                   # HAL via pico-sdk
+        stm32h7/                  # HAL via STM32CubeHAL
+        nrf52/                    # HAL via nRF5 SDK
+        samd51/                   # HAL via CMSIS/ASF4
+```
+
+`arch.cmake` uses `include("${CMAKE_CURRENT_LIST_DIR}/hal/${DUNEOS_BOARD_SOC}/hal_sources.cmake")` to select the SoC HAL. The toolchain plugin must also set `DUNEOS_BOARD_SOC`.
+
 ### Third-party library strategy
 
 DuneOS uses **two tiers** for external C libraries, chosen by portability need:
@@ -313,12 +362,12 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 21 — dbt: multi-arch toolchain plugin model | **DONE** | `board.yaml` gains `arch:` + `sdk:` fields (all boards updated). `tools/dbt/toolchain/` package replaces `toolchain.py`: `__init__.py` exposes `load_plugin(sdk)` + `get_board_plugin()`; `esp_idf.py` is the first plugin (SDK/ARCH constants, `find_compiler`, `cflags`, `ldflags`, `build_kernel`, `flash_kernel`, `monitor`, `find_toolchain_root`). `builder.py`, `cli.py`, `flashimg.py`, `kernel.py` dispatch through `get_board_plugin()`. |
 | Phase 22 — Syscalls + PicoLibc migration | **DONE** | `duneos_api_t` typed dispatch table (ABI v3) in `duneos/api.h`; `api.c` owns the singleton. Loader injects `duneos_api_get()` into app's `__duneos_api_ptr` before `app_main` — O(1), no string search. Static stack alloc gives exact bounds for `check_app_writable_ptr`. cJSON manifest parser. `libdune.a` (6 sources) wraps POSIX + DuneOS calls; `dbt build` caches it per arch. |
 | Phase 23 — USB Device Subsystem | **DONE** | `espressif/esp_tinyusb ^2.0.1~1` managed component; `drv_usb.c` TinyUSB MSC+CDC composite device; `drv_usb_cdc.c` mutex-serialised TX (no concurrent flush collisions) + semaphore-gated RX → `/dev/ttyUSB0`; `system/usb_shell/` + `system/shell_core/` replace `system/shell/`; `bspgen.py` adds `console: none` → `CONFIG_ESP_CONSOLE_NONE=y` (default for OTG boards — keeps UART0 free for apps; klog redirected to CDC at runtime via `esp_log_set_vprintf`); `board.yaml` gains `usb:` section. |
-| Phase 24 — DHI (DuneOS Hardware Interface) | Not started | Pure-C public headers (`hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`) — no `esp_err_t` or proprietary types in the public API. Driver backends use ESP-IDF types only internally. `arch` field added to manifest; loader rejects incompatible ISA gracefully. |
+| Phase 24 — DHI (DuneOS Hardware Interface) | **DONE** | Pure-C public headers (`hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`, `hal_adc.h`, `hal_time.h`) in `include/duneos/` — no `esp_err_t` or proprietary types in public API. ESP-IDF implementations in `arch/xtensa_esp32s3/hal/`. All driver backends (`drv_uart`, `drv_gpio`, `drv_i2c`, `drv_spi`, `i2c_bus`, `drv_battery_adc_simple`) rewritten to delegate to HAL. Input backends (`btn_gpio`, `enc_quadrature`, `kb_iomatrix`) migrated from `driver/gpio.h`+`esp_rom_delay_us` to `hal_gpio`+`hal_time`. `dev_driver.h` init callbacks return `int`. `arch` field in `duneos_app_manifest_t`; loader rejects incompatible ISA. `dbt` injects `arch` into manifest JSON. `bspgen` emits numeric SPI host and ADC unit values. **Remaining HAL debt** (no public-header leakage, but impl not yet migrated): `vfs.c`+`st7789_hw.c` (SPI/GPIO direct → Phase 26), WiFi drivers (Phase 26), FreeRTOS in kernel internals (Phase 27 OSAL). |
 | Phase 25 — dbt system (Image Recipes) | Not started | `profile.yaml` (kernel feature selection), `system.yaml` (apps + profile), `capability_map.py` (`DUNEOS_PERM_*` ↔ `CONFIG_DUNEOS_DRV_*`). `dbt system check` validates app permissions against kernel profile before build. `dbt system build/deploy` orchestrates full image. |
 | Phase 26 — VFS native + networking | Not started | Native `duneos_vfs` replacing `esp_vfs`; `poll()`/`select()` support; Ethernet RMII + LwIP; BSD socket routing. |
 | Phase 27 — OSAL + scheduler portability | Not started | `duneos_osal.h` abstracts FreeRTOS primitives. FreeRTOS stays the scheduler on all supported targets — OSAL enables targets without FreeRTOS (simulator via `pthread_osal.c`). WiFi blob confinement behind `freertos_osal.c`. No custom scheduler. |
 
-**Current state:** Phases 1–14, 16–23 implemented. The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. On the CardPuter, TinyUSB exposes the SD card as a drag-and-drop USB drive (MSC) and a virtual serial console (CDC `/dev/ttyUSB0`; `usb_shell.dap` runs on it). `console: none` in `board.yaml` emits `CONFIG_ESP_CONSOLE_NONE=y` — UART0 stays free for app use. Phase 22 (ABI v3, libdune.a) is done. Phases 24–27 (DHI, dbt system, VFS native, OSAL) are planned next per ROADMAP_v2.
+**Current state:** Phases 1–14, 16–24 implemented. The kernel boots from `/flash` (LittleFS) even without an SD card; SD is mounted as a secondary, non-fatal filesystem. `init.yaml` is read first from `/flash/init.yaml`, then `/sd/init.yaml`. Apps are scanned from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Each board has a generated `partitions.csv` sized to its `flash_size_mb`. `dbt flashimg` builds and flashes the sysbin LittleFS image in one command. On the CardPuter, TinyUSB exposes the SD card as a drag-and-drop USB drive (MSC) and a virtual serial console (CDC `/dev/ttyUSB0`; `usb_shell.dap` runs on it). `console: none` in `board.yaml` emits `CONFIG_ESP_CONSOLE_NONE=y` — UART0 stays free for app use. Phase 22 (ABI v3, libdune.a) is done. Phase 24 (DHI) is done: all hardware-peripheral ESP-IDF includes removed from public headers and driver files; remaining violations (VFS/display SPI, WiFi, FreeRTOS) tracked in ROADMAP_v2 Phases 26–27. Phases 25–27 (dbt system, VFS native, OSAL) are planned next per ROADMAP_v2.
 
 ## Multi-arch extensibility model
 
@@ -455,6 +504,12 @@ Each plugin's `find_toolchain_root()` searches in this priority order:
 - **`RINGBUF_TYPE_BYTEBUF` + counting semaphore is wrong for CDC RX** — `vRingbufferReturnItem` advances the read pointer by the size of the contiguous block it returned, not by the `maxSize` you passed to `xRingbufferReceiveUpTo`. With `maxSize=1`, bytes after the first in a multi-byte USB packet are silently dropped and their semaphore tokens become orphaned. Use `xStreamBufferCreate(size, 1)` + `xStreamBufferReceive`/`xStreamBufferSend` instead — single-producer/single-consumer byte stream, correct by construction.
 - **`static char buf[]` in bin apps breaks `api_read` pointer validation** — bin apps run captured (synchronously in the shell task). The app's static BSS data lives in its own heap-allocated pool, outside the shell slot's bounds. `check_app_writable_ptr` sees the shell slot and rejects the pointer (EFAULT), making `read()` return -1. Use stack-allocated buffers instead; they live on the shell task's stack which is within the shell slot's bounds.
 - **Two tasks reading the same `/dev/ttyUSB0` fd simultaneously cause interleaved character reads** — when `usb_shell` was launched from both `/flash/init.yaml` and `/sd/init.yaml`, two FreeRTOS tasks each calling `read(fd, &c, 1)` concurrently on the CDC RX stream buffer stole alternating bytes: typing "ls"+Enter produced "l: command not found" + "s: command not found". Fix: `init.c` deduplication must compare by app name (basename without `.dap`), not by exact path — `/flash/bin/usb_shell.dap` and `/sd/bin/usb_shell.dap` are the same service; the flash entry wins (loaded first).
+- **DHI phase boundary: FreeRTOS stays until Phase 27** — Phase 24 (DHI) removes hardware-peripheral ESP-IDF includes (`driver/gpio.h`, `esp_adc/`, `esp_rom_sys.h`, etc.) from driver files. FreeRTOS primitives (`vTaskDelay`, `xTaskCreate`, `xQueueCreate`, `freertos/*.h`) are **not** Phase 24 scope; they stay until Phase 27 (OSAL). Do not attempt to remove FreeRTOS calls from drivers or the supervisor while working on Phase 24.
+- **ADC unit ID convention: 1-based in HAL, 0-based in ESP-IDF** — `DUNEOS_BATTERY_ADC_UNIT` in `board_config.h` is `1` for ADC1, `2` for ADC2 (1-based). `hal_adc.c` converts with `(adc_unit_t)(cfg->unit_id - 1)` before passing to ESP-IDF. `bspgen.py` emits the integer directly from the YAML `adc_unit: 1`. Never store the ESP-IDF enum name (`ADC_UNIT_1`) in `board_config.h` — it leaks an ESP-IDF symbol into the public board config.
+- **`hal_time.h` delay vs OS delay** — `duneos_hal_delay_us()` is a hardware busy-wait (`esp_rom_delay_us`) with no OS yield. Use it only for short delays (µs-level scan timing in input drivers). For task-level delays, use `vTaskDelay()` (Phase 27: migrated to `duneos_osal_sleep_ms()`). Never use `duneos_hal_delay_us()` for delays > ~1 ms — it blocks the FreeRTOS scheduler.
+- **`esp_rom_printf` in exception/WDT handlers is NOT the same as `esp_rom_delay_us`** — `supervisor.c` uses `esp_rom_printf` (not `esp_rom_delay_us`) in its exception, stack-overflow, and WDT callbacks. `esp_rom_printf` is a last-resort panic output that bypasses the VFS/UART stack entirely — it works even when the allocator and task scheduler are dead. Do NOT replace it with `klog_e()` or `dprintf()` (those may crash in a crashed app context). It belongs to Phase 27 (OSAL): an `osal_panic_print()` abstraction backed by `esp_rom_printf` on ESP32. Phase 24 DHI scope is limited to public header types — `esp_rom_printf` in a private `.c` implementation is not a Phase 24 violation.
+- **`xTaskGetTickCount() * portTICK_PERIOD_MS` for event timestamps is wrong** — FreeRTOS tick count wraps, has coarse resolution, and is task-scheduler-dependent. Use `(uint32_t)(duneos_hal_monotonic_us() / 1000)` for event `time_ms` fields; it reads the hardware ESP timer directly and has µs precision.
+- **`arch.cmake` guard must check `IDF_TARGET_ARCH`, not just `CONFIG_IDF_TARGET_ARCH_XTENSA`** — ESP-IDF's `__component_get_requirements` runs each component's CMakeLists.txt in a separate `cmake -P` script to extract REQUIRES. That script loads build properties (including `IDF_TARGET_ARCH = "xtensa"`) but does NOT load `sdkconfig.cmake`, so all `CONFIG_*` variables are empty. An arch.cmake that only checks `CONFIG_IDF_TARGET_ARCH_XTENSA` will always `return()` during the requirements phase, silently skipping `list(APPEND DUNEOS_KERNEL_REQUIRES esp_timer ...)`. Result: arch-specific headers are missing at compile time even though the files are compiled. Fix: always use the three-variable guard (see arch.cmake guard pattern above).
 
 ## Code Style & Constraints
 

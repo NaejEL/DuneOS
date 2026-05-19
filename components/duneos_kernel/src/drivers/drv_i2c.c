@@ -25,10 +25,11 @@ static int i2c_ioctl_cb(duneos_devfd_t *fd, int cmd, void *arg)
         return 0;
     case I2C_RDWR: {
         i2c_rdwr_t *xfr = arg;
-        esp_err_t err = i2c_bus_write_read(0, p->addr,
-                                            xfr->tx_buf, xfr->tx_len,
-                                            xfr->rx_buf, xfr->rx_len);
-        if (err != ESP_OK) { errno = EIO; return -1; }
+        if (i2c_bus_write_read(0, p->addr,
+                               xfr->tx_buf, xfr->tx_len,
+                               xfr->rx_buf, xfr->rx_len) != 0) {
+            errno = EIO; return -1;
+        }
         return 0;
     }
     default:
@@ -40,20 +41,22 @@ static int i2c_ioctl_cb(duneos_devfd_t *fd, int cmd, void *arg)
 static ssize_t i2c_write_cb(duneos_devfd_t *fd, const void *buf, size_t len)
 {
     i2c_priv_t *p = (i2c_priv_t *)fd->priv;
-    esp_err_t err = i2c_bus_write_read(0, p->addr,
-                                        (const uint8_t *)buf, (uint16_t)len,
-                                        NULL, 0);
-    if (err != ESP_OK) { errno = EIO; return -1; }
+    if (i2c_bus_write_read(0, p->addr,
+                           (const uint8_t *)buf, (uint16_t)len,
+                           NULL, 0) != 0) {
+        errno = EIO; return -1;
+    }
     return (ssize_t)len;
 }
 
 static ssize_t i2c_read_cb(duneos_devfd_t *fd, void *buf, size_t len)
 {
     i2c_priv_t *p = (i2c_priv_t *)fd->priv;
-    esp_err_t err = i2c_bus_write_read(0, p->addr,
-                                        NULL, 0,
-                                        (uint8_t *)buf, (uint16_t)len);
-    if (err != ESP_OK) { errno = EIO; return -1; }
+    if (i2c_bus_write_read(0, p->addr,
+                           NULL, 0,
+                           (uint8_t *)buf, (uint16_t)len) != 0) {
+        errno = EIO; return -1;
+    }
     return (ssize_t)len;
 }
 

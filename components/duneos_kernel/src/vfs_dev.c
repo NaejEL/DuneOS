@@ -34,22 +34,21 @@ static const char *TAG = "duneos/devfs";
 static const duneos_dev_driver_t *s_drivers[DUNEOS_DEV_MAX_DRIVERS];
 static int                        s_driver_count = 0;
 
-esp_err_t duneos_dev_register(const duneos_dev_driver_t *drv)
+int duneos_dev_register(const duneos_dev_driver_t *drv)
 {
     if (s_driver_count >= DUNEOS_DEV_MAX_DRIVERS) {
         klog_e(TAG, "driver table full, cannot register '%s'", drv->name);
-        return ESP_ERR_NO_MEM;
+        return -1;
     }
     if (drv->init) {
-        esp_err_t err = drv->init();
-        if (err != ESP_OK) {
-            klog_e(TAG, "drv '%s' init failed: %s", drv->name, esp_err_to_name(err));
-            return err;
+        if (drv->init() != 0) {
+            klog_e(TAG, "drv '%s' init failed", drv->name);
+            return -1;
         }
     }
     s_drivers[s_driver_count++] = drv;
     klog_i(TAG, "/dev/%s registered", drv->name);
-    return ESP_OK;
+    return 0;
 }
 
 static const duneos_dev_driver_t *driver_find(const char *name)

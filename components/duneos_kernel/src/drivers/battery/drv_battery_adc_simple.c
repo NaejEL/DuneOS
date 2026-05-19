@@ -1,9 +1,9 @@
 #include "duneos/dev_driver.h"
 #include "duneos/battery_ioctl.h"
 #include "duneos/klog.h"
+#include "duneos/hal_adc.h"
+#include "duneos/hal_gpio.h"
 #include "board_config.h"
-
-#include "esp_adc/adc_oneshot.h"
 
 #include <errno.h>
 #include <string.h>
@@ -14,34 +14,26 @@ static const char *TAG = "duneos/drv_battery_adc";
 #define ADC_FULL_SCALE_MV  3100
 #define ADC_MAX_RAW        4095
 
-static adc_oneshot_unit_handle_t s_adc;
+static duneos_hal_adc_t *s_adc;
 
-static esp_err_t battery_init(void)
+static int battery_init(void)
 {
-    adc_oneshot_unit_init_cfg_t unit_cfg = {
-        .unit_id = DUNEOS_BATTERY_ADC_UNIT,
+    duneos_hal_adc_config_t cfg = {
+        .unit_id  = DUNEOS_BATTERY_ADC_UNIT,
+        .channel  = DUNEOS_BATTERY_ADC_CHANNEL,
+        .atten    = DUNEOS_ADC_ATTEN_12DB,
+        .bitwidth = 0,
     };
-    esp_err_t err = adc_oneshot_new_unit(&unit_cfg, &s_adc);
-    if (err != ESP_OK) {
-        klog_e(TAG, "adc_oneshot_new_unit: %s", esp_err_to_name(err));
-        return err;
+    s_adc = duneos_hal_adc_init(&cfg);
+    if (!s_adc) {
+        klog_e(TAG, "adc init failed");
+        return -1;
     }
-
-    adc_oneshot_chan_cfg_t ch_cfg = {
-        .atten    = ADC_ATTEN_DB_12,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-    };
-    err = adc_oneshot_config_channel(s_adc, DUNEOS_BATTERY_ADC_CHANNEL, &ch_cfg);
-    if (err != ESP_OK) {
-        klog_e(TAG, "adc_oneshot_config_channel: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    klog_i(TAG, "adc_simple battery: unit=%d ch=%d vdiv=%d full=%dmV empty=%dmV",
-           DUNEOS_BATTERY_ADC_UNIT, DUNEOS_BATTERY_ADC_CHANNEL,
+    klog_i(TAG, "adc_simple battery: unit=%u ch=%u vdiv=%d full=%dmV empty=%dmV",
+           (unsigned)DUNEOS_BATTERY_ADC_UNIT, (unsigned)DUNEOS_BATTERY_ADC_CHANNEL,
            DUNEOS_BATTERY_VDIV_FACTOR,
            DUNEOS_BATTERY_FULL_MV, DUNEOS_BATTERY_EMPTY_MV);
-    return ESP_OK;
+    return 0;
 }
 
 static int battery_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
@@ -53,7 +45,7 @@ static int battery_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
     memset(info, 0, sizeof(*info));
 
     int raw = 0;
-    adc_oneshot_read(s_adc, DUNEOS_BATTERY_ADC_CHANNEL, &raw);
+    duneos_hal_adc_read(s_adc, &raw);
 
     /* raw → pin voltage → cell voltage */
     uint32_t pin_mv = (uint32_t)raw * ADC_FULL_SCALE_MV / ADC_MAX_RAW;
@@ -71,7 +63,7 @@ static int battery_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
 
 #if DUNEOS_BATTERY_CHRG_GPIO >= 0
     /* CHRG output of TP4057: low = charging, high/float = not charging */
-    info->status = gpio_get_level(DUNEOS_BATTERY_CHRG_GPIO)
+    info->status = duneos_hal_gpio_get_level(DUNEOS_BATTERY_CHRG_GPIO)
                    ? BATTERY_DISCHARGING : BATTERY_CHARGING;
 #else
     info->status = BATTERY_DISCHARGING;

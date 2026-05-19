@@ -1,10 +1,8 @@
 #include "duneos/dev_driver.h"
+#include "duneos/hal_spi.h"
 #include "duneos/spi_ioctl.h"
 #include "duneos/klog.h"
 #include "board_config.h"
-
-#include "driver/spi_master.h"
-#include "esp_err.h"
 
 #include <errno.h>
 #include <string.h>
@@ -16,11 +14,8 @@ static const char *TAG = "duneos/spi";
  * mode, and speed; close() removes it.  Fits in DUNEOS_DEV_PRIV_SIZE (16 B).
  */
 typedef struct {
-    spi_device_handle_t handle;    /* 4 bytes */
-    int                 cs_gpio;   /* 4 bytes */
-    uint32_t            speed_hz;  /* 4 bytes */
-    uint8_t             mode;      /* 1 byte  */
-    uint8_t             _pad[3];
+    duneos_hal_spi_dev_t     *dev; /* 4 bytes (32-bit pointer) */
+    duneos_hal_spi_dev_config_t cfg; /* cs_pin(4)+freq_hz(4)+mode(1)+pad(3) = 12 B */
 } spi_priv_t;
 
 _Static_assert(sizeof(spi_priv_t) <= DUNEOS_DEV_PRIV_SIZE, "spi_priv_t too large");
@@ -28,39 +23,20 @@ _Static_assert(sizeof(spi_priv_t) <= DUNEOS_DEV_PRIV_SIZE, "spi_priv_t too large
 #define DEFAULT_SPEED_HZ  1000000u
 #define DEFAULT_MODE      0u
 
-static esp_err_t spi_dev_add(spi_priv_t *p)
-{
-    spi_device_interface_config_t cfg = {
-        .mode           = p->mode,
-        .clock_speed_hz = (int)p->speed_hz,
-        .spics_io_num   = p->cs_gpio,
-        .queue_size     = 1,
-    };
-    return spi_bus_add_device(DUNEOS_SPI1_HOST, &cfg, &p->handle);
-}
-
-/* Reconfigure an open device — remove and re-add with updated settings. */
-static esp_err_t spi_dev_reconfig(spi_priv_t *p)
-{
-    if (p->handle) {
-        spi_bus_remove_device(p->handle);
-        p->handle = NULL;
-    }
-    return spi_dev_add(p);
-}
+static duneos_hal_spi_t *s_bus = NULL;
 
 static int spi_open_cb(duneos_devfd_t *fd, int flags)
 {
     (void)flags;
     spi_priv_t *p = (spi_priv_t *)fd->priv;
     memset(p, 0, sizeof(*p));
-    p->cs_gpio  = -1;
-    p->speed_hz = DEFAULT_SPEED_HZ;
-    p->mode     = DEFAULT_MODE;
+    p->cfg.cs_pin  = -1;
+    p->cfg.freq_hz = DEFAULT_SPEED_HZ;
+    p->cfg.mode    = DEFAULT_MODE;
 
-    esp_err_t err = spi_dev_add(p);
-    if (err != ESP_OK) {
-        klog_e(TAG, "spi_bus_add_device: %s", esp_err_to_name(err));
+    p->dev = duneos_hal_spi_dev_add(s_bus, &p->cfg);
+    if (!p->dev) {
+        klog_e(TAG, "spi_dev_add failed");
         errno = EIO;
         return -1;
     }
@@ -70,10 +46,8 @@ static int spi_open_cb(duneos_devfd_t *fd, int flags)
 static int spi_close_cb(duneos_devfd_t *fd)
 {
     spi_priv_t *p = (spi_priv_t *)fd->priv;
-    if (p->handle) {
-        spi_bus_remove_device(p->handle);
-        p->handle = NULL;
-    }
+    duneos_hal_spi_dev_remove(p->dev);
+    p->dev = NULL;
     return 0;
 }
 
@@ -85,28 +59,25 @@ static int spi_ioctl_cb(duneos_devfd_t *fd, int cmd, void *arg)
     case SPI_SET_MODE: {
         uint8_t mode = *(uint8_t *)arg;
         if (mode > 3) { errno = EINVAL; return -1; }
-        p->mode = mode;
-        if (spi_dev_reconfig(p) != ESP_OK) { errno = EIO; return -1; }
+        p->cfg.mode = mode;
+        if (duneos_hal_spi_dev_reconfig(p->dev, &p->cfg) != 0) { errno = EIO; return -1; }
         return 0;
     }
     case SPI_SET_SPEED: {
-        p->speed_hz = *(uint32_t *)arg;
-        if (spi_dev_reconfig(p) != ESP_OK) { errno = EIO; return -1; }
+        p->cfg.freq_hz = *(uint32_t *)arg;
+        if (duneos_hal_spi_dev_reconfig(p->dev, &p->cfg) != 0) { errno = EIO; return -1; }
         return 0;
     }
     case SPI_SET_CS: {
-        p->cs_gpio = *(int *)arg;
-        if (spi_dev_reconfig(p) != ESP_OK) { errno = EIO; return -1; }
+        p->cfg.cs_pin = *(int *)arg;
+        if (duneos_hal_spi_dev_reconfig(p->dev, &p->cfg) != 0) { errno = EIO; return -1; }
         return 0;
     }
     case SPI_TRANSFER: {
         spi_xfer_t *xfr = (spi_xfer_t *)arg;
-        spi_transaction_t t = {
-            .length    = xfr->len * 8,
-            .tx_buffer = xfr->tx_buf,
-            .rx_buffer = xfr->rx_buf,
-        };
-        if (spi_device_transmit(p->handle, &t) != ESP_OK) { errno = EIO; return -1; }
+        if (duneos_hal_spi_transfer(p->dev, xfr->tx_buf, xfr->rx_buf, xfr->len) != 0) {
+            errno = EIO; return -1;
+        }
         return 0;
     }
     default:
@@ -118,24 +89,14 @@ static int spi_ioctl_cb(duneos_devfd_t *fd, int cmd, void *arg)
 static ssize_t spi_write_cb(duneos_devfd_t *fd, const void *buf, size_t len)
 {
     spi_priv_t *p = (spi_priv_t *)fd->priv;
-    spi_transaction_t t = {
-        .length    = len * 8,
-        .tx_buffer = buf,
-        .rx_buffer = NULL,
-    };
-    if (spi_device_transmit(p->handle, &t) != ESP_OK) { errno = EIO; return -1; }
+    if (duneos_hal_spi_transfer(p->dev, buf, NULL, len) != 0) { errno = EIO; return -1; }
     return (ssize_t)len;
 }
 
 static ssize_t spi_read_cb(duneos_devfd_t *fd, void *buf, size_t len)
 {
     spi_priv_t *p = (spi_priv_t *)fd->priv;
-    spi_transaction_t t = {
-        .length    = len * 8,
-        .tx_buffer = NULL,
-        .rx_buffer = buf,
-    };
-    if (spi_device_transmit(p->handle, &t) != ESP_OK) { errno = EIO; return -1; }
+    if (duneos_hal_spi_transfer(p->dev, NULL, buf, len) != 0) { errno = EIO; return -1; }
     return (ssize_t)len;
 }
 
@@ -152,21 +113,25 @@ void drv_spi_register(void)
 {
 #ifndef DUNEOS_SPI1_BUS_SHARED
     /* Bus is independent — initialise it here. */
-    spi_bus_config_t bus_cfg = {
-        .mosi_io_num     = DUNEOS_SPI1_MOSI_PIN,
-        .miso_io_num     = DUNEOS_SPI1_MISO_PIN,
-        .sclk_io_num     = DUNEOS_SPI1_CLK_PIN,
-        .quadwp_io_num   = -1,
-        .quadhd_io_num   = -1,
+    duneos_hal_spi_bus_config_t bus_cfg = {
+        .bus_id          = DUNEOS_SPI1_HOST,
+        .mosi_pin        = DUNEOS_SPI1_MOSI_PIN,
+        .miso_pin        = DUNEOS_SPI1_MISO_PIN,
+        .clk_pin         = DUNEOS_SPI1_CLK_PIN,
         .max_transfer_sz = 4096,
     };
-    esp_err_t err = spi_bus_initialize(DUNEOS_SPI1_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
-    if (err != ESP_OK) {
-        klog_e(TAG, "spi_bus_initialize: %s", esp_err_to_name(err));
+    s_bus = duneos_hal_spi_bus_init(&bus_cfg);
+    if (!s_bus) {
+        klog_e(TAG, "spi_bus_init failed");
+        return;
+    }
+#else
+    /* Bus was already initialised by vfs.c (SD card mount). Attach to it. */
+    s_bus = duneos_hal_spi_bus_attach(DUNEOS_SPI1_HOST);
+    if (!s_bus) {
+        klog_e(TAG, "spi_bus_attach failed");
         return;
     }
 #endif
-    /* When DUNEOS_SPI1_BUS_SHARED is set the bus was already initialised by
-     * vfs.c (SD card mount) — just add devices on top of it. */
     duneos_dev_register(&s_drv_spi);
 }

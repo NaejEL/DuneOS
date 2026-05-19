@@ -17,10 +17,11 @@
 #include "drv_input_priv.h"
 #include "duneos/input_ioctl.h"
 #include "duneos/klog.h"
+#include "duneos/hal_gpio.h"
+#include "duneos/hal_time.h"
 
 #include "board_config.h"
 
-#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -42,13 +43,13 @@ static const int8_t s_trans[16] = {
 static void enc_task(void *arg)
 {
     (void)arg;
-    uint8_t prev_ab = (uint8_t)((gpio_get_level(DUNEOS_ENCODER_A_PIN) << 1)
-                               | gpio_get_level(DUNEOS_ENCODER_B_PIN));
+    uint8_t prev_ab = (uint8_t)((duneos_hal_gpio_get_level(DUNEOS_ENCODER_A_PIN) << 1)
+                               | duneos_hal_gpio_get_level(DUNEOS_ENCODER_B_PIN));
     int accum = 0;
 
     while (1) {
-        uint8_t cur_ab = (uint8_t)((gpio_get_level(DUNEOS_ENCODER_A_PIN) << 1)
-                                  | gpio_get_level(DUNEOS_ENCODER_B_PIN));
+        uint8_t cur_ab = (uint8_t)((duneos_hal_gpio_get_level(DUNEOS_ENCODER_A_PIN) << 1)
+                                  | duneos_hal_gpio_get_level(DUNEOS_ENCODER_B_PIN));
 
         if (cur_ab != prev_ab) {
             accum += s_trans[(prev_ab << 2) | cur_ab];
@@ -57,7 +58,7 @@ static void enc_task(void *arg)
             /* Emit one step per full detent (4 transitions) */
             if (accum >= 4 || accum <= -4) {
                 input_event_t ev = {
-                    .time_ms = xTaskGetTickCount() * portTICK_PERIOD_MS,
+                    .time_ms = (uint32_t)(duneos_hal_monotonic_us() / 1000),
                     .type    = INPUT_EV_REL,
                     .code    = REL_WHEEL,
                     .value   = (accum > 0) ? 1 : -1,
@@ -74,14 +75,8 @@ void enc_quadrature_init(void)
 {
     const int pins[2] = { DUNEOS_ENCODER_A_PIN, DUNEOS_ENCODER_B_PIN };
     for (int i = 0; i < 2; i++) {
-        gpio_config_t cfg = {
-            .pin_bit_mask = (1ULL << pins[i]),
-            .mode         = GPIO_MODE_INPUT,
-            .pull_up_en   = GPIO_PULLUP_ENABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type    = GPIO_INTR_DISABLE,
-        };
-        gpio_config(&cfg);
+        duneos_hal_gpio_set_dir(pins[i], DUNEOS_GPIO_DIR_INPUT);
+        duneos_hal_gpio_set_pull(pins[i], DUNEOS_GPIO_PULL_UP);
     }
     xTaskCreate(enc_task, "enc_quad", 1024, NULL, 6, NULL);
     klog_i(TAG, "encoder A=%d B=%d ready", DUNEOS_ENCODER_A_PIN, DUNEOS_ENCODER_B_PIN);

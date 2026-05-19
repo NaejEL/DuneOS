@@ -79,10 +79,10 @@ static ssize_t input_read(duneos_devfd_t *fd, void *buf, size_t len)
 
 /* ----- driver init -------------------------------------------------------- */
 
-static esp_err_t input_init(void)
+static int input_init(void)
 {
     s_data_sem = xSemaphoreCreateBinary();
-    if (!s_data_sem) return ESP_ERR_NO_MEM;
+    if (!s_data_sem) return -1;
 #ifdef CONFIG_DUNEOS_DRV_INPUT_IOMATRIX
     kb_iomatrix_init();
 #endif
@@ -93,7 +93,7 @@ static esp_err_t input_init(void)
     enc_quadrature_init();
 #endif
     klog_i(TAG, "/dev/input/event0 ready");
-    return ESP_OK;
+    return 0;
 }
 
 static const duneos_dev_driver_t s_drv_input = {

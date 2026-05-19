@@ -58,7 +58,7 @@ YAML schema (all keys under the top-level 'board:' key):
       i2c_addr: 0xNN
   battery:
       type: adc_simple | ip5306 | max17043 | bq27220
-      adc_unit: ADC_UNIT_1   (adc_simple only, default ADC_UNIT_1)
+      adc_unit: 1             (adc_simple only — 1=ADC1, 2=ADC2; default 1)
       adc_channel: N         (adc_simple only — GPIO-to-channel mapping is chip-specific)
       full_mv: N             (adc_simple only, default 4200)
       empty_mv: N            (adc_simple only, default 3300)
@@ -141,6 +141,10 @@ def validate(board: dict, yaml_path: Path) -> None:
 
 SPI_HOST_NAMES = {2: "SPI2_HOST", 3: "SPI3_HOST", 1: "SPI1_HOST"}
 SPI_HOST_IDS   = {v: k for k, v in SPI_HOST_NAMES.items()}  # "SPI2_HOST" → 2
+# board.yaml spi_id (2=SPI2, 3=SPI3) → spi_host_device_t enum value (SPI2_HOST=1, SPI3_HOST=2)
+SPI_HOST_ENUM  = {1: 0, 2: 1, 3: 2}
+# board.yaml adc_unit (1=ADC1, 2=ADC2) → ESP-IDF adc_unit_t enum value (0-based)
+ADC_UNIT_MAP   = {"ADC_UNIT_1": 1, "ADC_UNIT_2": 2}  # accept legacy string values from old YAMLs
 
 
 def _define(name: str, value) -> str:
@@ -205,11 +209,10 @@ def generate(board: dict) -> str:
         cd_pin  = sd.get("cd_pin", -1)
         spi_bus = next((s for s in board.get("spi", []) if s.get("id") == spi_id), None)
         if spi_bus:
-            host_name = SPI_HOST_NAMES.get(spi_id, f"SPI{spi_id}_HOST")
             freq_khz  = spi_bus.get("max_freq_hz", 20_000_000) // 1000
             lines += [
                 "/* ---------- SPI SD card ---------- */",
-                _define("DUNEOS_SD_SPI_HOST",  host_name),
+                _define("DUNEOS_SD_SPI_HOST",  SPI_HOST_ENUM.get(spi_id, spi_id - 1)),
                 _define("DUNEOS_SD_MOSI_PIN",  spi_bus["mosi_pin"]),
                 _define("DUNEOS_SD_MISO_PIN",  spi_bus["miso_pin"]),
                 _define("DUNEOS_SD_CLK_PIN",   spi_bus["clk_pin"]),
@@ -226,11 +229,10 @@ def generate(board: dict) -> str:
         spi_id    = raw_spi["id"]
         sd_spi_id = board.get("sd_card", {}).get("spi_id")
         shared    = (spi_id == sd_spi_id)
-        host_name = SPI_HOST_NAMES.get(spi_id, f"SPI{spi_id}_HOST")
         lines += [
             "/* ---------- SPI raw bus (/dev/spi-1) ---------- */",
             _define("DUNEOS_HAVE_SPI",          1),
-            _define("DUNEOS_SPI1_HOST",         host_name),
+            _define("DUNEOS_SPI1_HOST",         SPI_HOST_ENUM.get(spi_id, spi_id - 1)),
             _define("DUNEOS_SPI1_MOSI_PIN",     raw_spi["mosi_pin"]),
             _define("DUNEOS_SPI1_MISO_PIN",     raw_spi.get("miso_pin", -1)),
             _define("DUNEOS_SPI1_CLK_PIN",      raw_spi["clk_pin"]),
@@ -265,7 +267,7 @@ def generate(board: dict) -> str:
         if btype == "adc_simple":
             lines += [
                 _define("DUNEOS_BATTERY_TYPE_ADC_SIMPLE", 1),
-                _define("DUNEOS_BATTERY_ADC_UNIT",        batt.get("adc_unit", "ADC_UNIT_1")),
+                _define("DUNEOS_BATTERY_ADC_UNIT",        ADC_UNIT_MAP.get(batt.get("adc_unit"), batt.get("adc_unit", 1))),
                 _define("DUNEOS_BATTERY_ADC_CHANNEL",     batt.get("adc_channel", 0)),
                 _define("DUNEOS_BATTERY_VDIV_FACTOR",     batt.get("vdiv_factor", 2)),
                 _define("DUNEOS_BATTERY_FULL_MV",         batt.get("full_mv", 4200)),
@@ -307,7 +309,7 @@ def generate(board: dict) -> str:
             _define("DUNEOS_HAVE_DISPLAY",       1),
             _define("DUNEOS_DISPLAY_WIDTH",      disp["width"]),
             _define("DUNEOS_DISPLAY_HEIGHT",     disp["height"]),
-            _define("DUNEOS_DISPLAY_SPI_HOST",   host_name),
+            _define("DUNEOS_DISPLAY_SPI_HOST",   SPI_HOST_ENUM.get(display_spi_id, display_spi_id - 1)),
             _define("DUNEOS_DISPLAY_MOSI_PIN",   disp["mosi_pin"]),
             _define("DUNEOS_DISPLAY_CLK_PIN",    disp["clk_pin"]),
             _define("DUNEOS_DISPLAY_CS_PIN",     disp["cs_pin"]),
