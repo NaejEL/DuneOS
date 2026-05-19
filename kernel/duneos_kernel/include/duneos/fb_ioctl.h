@@ -32,6 +32,9 @@
 
 #include <stdint.h>
 
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 /* ioctl commands */
 #define FB_GET_INFO    0x01  /* arg → fb_info_t *                          */
 #define FB_SET_POS     0x02  /* arg ← fb_pos_t  * (pixel coordinates)      */

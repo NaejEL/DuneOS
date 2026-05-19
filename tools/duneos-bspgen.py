@@ -377,6 +377,29 @@ def generate(board: dict) -> str:
             "",
         ]
 
+    # ----- GPIO expanders -----
+    # Schema: gpio_expanders: [{type: sx1509|pcf8574|mcp23017, i2c_addr: 0x.., pins: N}, ...]
+    # Each expander becomes /dev/gpiochipN (N = index + 1).
+    expanders = board.get("gpio_expanders", [])
+    if expanders:
+        lines += [
+            "/* ---------- GPIO expanders ---------- */",
+            _define("DUNEOS_GPIO_EXPANDER_COUNT", len(expanders)),
+            "",
+        ]
+        for idx, exp in enumerate(expanders):
+            chip_id = idx + 1   # gpiochip0 is the native chip
+            addr = exp["i2c_addr"]
+            addr_str = hex(addr) if isinstance(addr, int) else addr
+            lines += [
+                f"/* gpiochip{chip_id} — {exp['type']} */",
+                _define(f"DUNEOS_GPIOCHIP{chip_id}_TYPE",     f'"{exp["type"]}"'),
+                _define(f"DUNEOS_GPIOCHIP{chip_id}_I2C_ADDR", addr_str),
+                _define(f"DUNEOS_GPIOCHIP{chip_id}_PINS",     exp.get("pins", 16)),
+                "",
+            ]
+
+
     # ----- Keyboard (I2C expander, legacy key) -----
     kb = board.get("keyboard")
     if kb:
@@ -582,7 +605,8 @@ def generate_sdkconfig_board(board: dict) -> str:
 
     disp = board.get("display")
     if disp:
-        lines += ["CONFIG_DUNEOS_DRV_DISP=y"]
+        # Tier A (no PSRAM): userspace libst7789 reads board.info — no kernel driver needed.
+        # Tier B (PSRAM present): kernel /dev/fb0 with PSRAM back-buffer.
         if psram_mb > 0:
             lines.append("CONFIG_DUNEOS_DRV_FB=y")
         lines.append("")
@@ -597,6 +621,15 @@ def generate_sdkconfig_board(board: dict) -> str:
         if board.get("encoder"):
             lines.append("CONFIG_DUNEOS_DRV_INPUT_ENCODER=y")
         lines.append("")
+
+    for exp in board.get("gpio_expanders", []):
+        etype = exp.get("type", "").lower().replace("-", "_")
+        config_key = f"CONFIG_DUNEOS_DRV_GPIOCHIP_{etype.upper()}=y"
+        if config_key not in lines:
+            lines.append(config_key)
+    if board.get("gpio_expanders"):
+        lines.append("")
+
 
     if board.get("wifi", True):
         lines += ["CONFIG_DUNEOS_DRV_WIFI=y", ""]

@@ -28,6 +28,7 @@ list(APPEND DUNEOS_KERNEL_SRCS
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_spi.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_adc.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_time.c"
+    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_encoder.c"
 )
 
 # ESP-IDF component deps required by the HAL implementations above.
@@ -42,6 +43,7 @@ list(APPEND DUNEOS_KERNEL_REQUIRES
     esp_driver_i2c
     esp_driver_spi
     esp_driver_sdspi    # vfs.c SD SPI init — Phase 26 (VFS natif)
+    esp_driver_pcnt
     esp_adc
     esp_timer
 )

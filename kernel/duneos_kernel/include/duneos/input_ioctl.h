@@ -44,8 +44,8 @@
 #define INPUT_VAL_REPEAT    2
 
 typedef struct {
-    uint32_t time_ms;   /* xTaskGetTickCount() * portTICK_PERIOD_MS at event time */
-    uint8_t  type;      /* INPUT_EV_KEY or INPUT_EV_REL                           */
-    uint16_t code;      /* EV_KEY: ASCII / KEY_*;  EV_REL: REL_*                  */
-    int32_t  value;     /* EV_KEY: INPUT_VAL_*;    EV_REL: signed delta           */
+    uint32_t time_ms;   /* duneos_hal_monotonic_us() / 1000 at event time          */
+    uint8_t  type;      /* INPUT_EV_KEY or INPUT_EV_REL                            */
+    uint16_t code;      /* EV_KEY: ASCII / KEY_*;  EV_REL: REL_*                   */
+    int32_t  value;     /* EV_KEY: INPUT_VAL_*;    EV_REL: signed delta            */
 } input_event_t;

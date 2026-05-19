@@ -137,6 +137,7 @@ def cflags(board_cfg: dict, tc: dict | None = None) -> list[str]:
         picolibc = _find_picolibc_include(Path(str(tc["cc"])))
         if picolibc:
             flags = [f"-isystem{picolibc}"] + flags
+
     return flags
 
 

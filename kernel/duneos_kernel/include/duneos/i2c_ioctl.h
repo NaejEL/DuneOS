@@ -16,6 +16,9 @@
  *   close(fd);
  */
 
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 #define I2C_SET_ADDR   0x01   /* arg: uint16_t* — 7-bit slave address */
 #define I2C_SET_SPEED  0x02   /* arg: uint32_t* — bus speed in Hz (future use) */
 #define I2C_RDWR       0x03   /* arg: i2c_rdwr_t* — combined write-then-read */

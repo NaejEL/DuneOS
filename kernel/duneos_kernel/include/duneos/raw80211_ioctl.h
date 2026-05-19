@@ -30,6 +30,9 @@
 #define DUNEOS_WIFI_IF_STA   0   /* Station interface (default) */
 #define DUNEOS_WIFI_IF_AP    1   /* SoftAP interface — requires APSTA mode  */
 
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 /* ioctl commands */
 #define RAW80211_SET_IFACE   0x01  /* ← int*  set active interface (STA or AP) */
 #define RAW80211_GET_IFACE   0x02  /* → int*  get current interface            */

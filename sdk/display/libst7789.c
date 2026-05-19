@@ -6,8 +6,11 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 static const char *TAG = "libst7789";
 
@@ -248,3 +251,117 @@ void st7789_set_backlight(st7789_handle_t *h, bool on)
     if (!h || h->bl_pin < 0) return;
     gpio_set_level(h->bl_pin, on ? 1 : 0);
 }
+
+/* ---- board.info-aware open ---------------------------------------------- */
+
+/*
+ * Parse a single integer field from a board.info text buffer.
+ * Returns def if the key is not found.
+ */
+static int bi_int(const char *buf, size_t len, const char *key, int def)
+{
+    char pattern[64];
+    int plen = snprintf(pattern, sizeof(pattern), "%s: ", key);
+    const char *p = buf;
+    const char *end = buf + len;
+    while (p < end) {
+        if ((size_t)(end - p) > (size_t)plen && strncmp(p, pattern, plen) == 0)
+            return atoi(p + plen);
+        p = memchr(p, '\n', (size_t)(end - p));
+        if (!p) break;
+        p++;
+    }
+    return def;
+}
+
+st7789_handle_t *st7789_open_from_board_info(uint16_t *out_width, uint16_t *out_height)
+{
+    int fd = open("/flash/board.info", O_RDONLY);
+    if (fd < 0) return NULL;
+
+    char buf[512];
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (n <= 0) return NULL;
+    buf[n] = '\0';
+
+    st7789_config_t cfg = {
+        .spi_host         = (spi_host_device_t)bi_int(buf, (size_t)n, "display_spi_host", -1),
+        .mosi_pin         = bi_int(buf, (size_t)n, "display_mosi",       -1),
+        .clk_pin          = bi_int(buf, (size_t)n, "display_clk",        -1),
+        .cs_pin           = bi_int(buf, (size_t)n, "display_cs",         -1),
+        .dc_pin           = bi_int(buf, (size_t)n, "display_dc",         -1),
+        .rst_pin          = bi_int(buf, (size_t)n, "display_rst",        -1),
+        .bl_pin           = bi_int(buf, (size_t)n, "display_bl",         -1),
+        .freq_hz          = (uint32_t)bi_int(buf, (size_t)n, "display_freq_hz",   40000000),
+        .width            = (uint16_t)bi_int(buf, (size_t)n, "width",             240),
+        .height           = (uint16_t)bi_int(buf, (size_t)n, "height",            135),
+        .rotation         = (uint8_t)bi_int(buf, (size_t)n, "display_rotation",    0),
+        .bus_already_init = (bi_int(buf, (size_t)n, "display_bus_shared",  0) != 0),
+    };
+
+    if (cfg.spi_host < 0 || cfg.mosi_pin < 0 || cfg.clk_pin < 0
+        || cfg.cs_pin < 0 || cfg.dc_pin < 0) {
+        ESP_LOGE(TAG, "board.info missing required display fields");
+        return NULL;
+    }
+
+    st7789_handle_t *h = st7789_open(&cfg);
+    if (h && out_width)  *out_width  = cfg.width;
+    if (h && out_height) *out_height = cfg.height;
+    return h;
+}
+
+/* ---- libdisp ops table ---------------------------------------------------
+ *
+ * This block makes libst7789.c a self-contained libdisp backend.  Link it
+ * alongside libdisp.c and the linker resolves duneos_disp_ops here.
+ * A board using a different chip links a different lib that defines the same
+ * symbol — libdisp.c and every app remain untouched.
+ * -------------------------------------------------------------------------- */
+
+#include "duneos/disp.h"
+#include <stdlib.h>
+
+struct disp_ctx_s {
+    st7789_handle_t *hw;
+    uint16_t         width;
+    uint16_t         height;
+};
+
+static disp_ctx_t *_st7789_open(void)
+{
+    uint16_t w, h;
+    st7789_handle_t *hw = st7789_open_from_board_info(&w, &h);
+    if (!hw) return NULL;
+    disp_ctx_t *ctx = malloc(sizeof(*ctx));
+    if (!ctx) { st7789_close(hw); return NULL; }
+    ctx->hw = hw; ctx->width = w; ctx->height = h;
+    return ctx;
+}
+
+static uint16_t    _st7789_width(const disp_ctx_t *ctx)  { return ctx->width; }
+static uint16_t    _st7789_height(const disp_ctx_t *ctx) { return ctx->height; }
+
+static void _st7789_write_area(disp_ctx_t *ctx,
+                               uint16_t x, uint16_t y,
+                               uint16_t w, uint16_t h,
+                               const uint16_t *pixels)
+{
+    st7789_write_area(ctx->hw, x, y, w, h, pixels);
+}
+
+static void _st7789_close(disp_ctx_t *ctx)
+{
+    if (!ctx) return;
+    st7789_close(ctx->hw);
+    free(ctx);
+}
+
+const disp_backend_ops_t duneos_disp_ops = {
+    .open       = _st7789_open,
+    .width      = _st7789_width,
+    .height     = _st7789_height,
+    .write_area = _st7789_write_area,
+    .close      = _st7789_close,
+};

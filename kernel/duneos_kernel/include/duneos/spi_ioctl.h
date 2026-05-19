@@ -21,6 +21,9 @@
  * Use SPI_SET_CS(-1) to disable hardware CS (bit-bang CS in userspace).
  */
 
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 #define SPI_SET_MODE   0x01  /* arg: uint8_t*  — CPOL/CPHA mode 0–3 */
 #define SPI_SET_SPEED  0x02  /* arg: uint32_t* — clock frequency in Hz */
 #define SPI_SET_CS     0x03  /* arg: int*      — CS GPIO pin (-1 = none) */

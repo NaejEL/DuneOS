@@ -111,3 +111,14 @@ void st7789_write_area(st7789_handle_t *h,
 
 /* Turn backlight on or off (no-op if bl_pin == -1). */
 void st7789_set_backlight(st7789_handle_t *h, bool on);
+
+/*
+ * Discover display config from /flash/board.info and open the display.
+ * Equivalent to: read board.info → fill st7789_config_t → st7789_open().
+ * Returns NULL if board.info is absent or missing required display fields.
+ * If out_width / out_height are non-NULL they are filled with the display
+ * dimensions read from board.info.
+ * Do not call on boards where CONFIG_DUNEOS_DRV_FB=y — the kernel already
+ * owns the display SPI bus in that case.
+ */
+st7789_handle_t *st7789_open_from_board_info(uint16_t *out_width, uint16_t *out_height);

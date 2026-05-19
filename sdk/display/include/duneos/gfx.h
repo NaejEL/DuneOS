@@ -5,7 +5,7 @@
  *
  * gfx_open() selects the best available display backend at runtime:
  *   - Tier B: /dev/fb0  — kernel PSRAM framebuffer (CONFIG_DUNEOS_DRV_FB=y boards)
- *   - Tier A: /dev/disp0 — streaming pixel driver (all boards with a display)
+ *   - Tier A: libst7789 via /flash/board.info — direct SPI (no kernel driver, all boards)
  *
  * All drawing goes into a userspace back-buffer; gfx_flush() pushes it to
  * the display in one shot.  This decouples drawing speed from SPI bandwidth.
@@ -45,7 +45,7 @@ typedef struct gfx_ctx gfx_ctx_t;
 
 /*
  * Open the best available display backend.
- * Returns NULL if no display device is found (/dev/fb0 and /dev/disp0 both absent).
+ * Returns NULL if no display device is found (/dev/fb0 absent and board.info has no display).
  * Allocates a width×height RGB565 back-buffer with malloc().
  */
 gfx_ctx_t *gfx_open(void);
@@ -77,7 +77,7 @@ void gfx_text(gfx_ctx_t *ctx, int x, int y,
 /*
  * Push the back-buffer to the display hardware.
  *
- * For /dev/disp0 (Tier A): sends the full buffer via DISP_SET_WINDOW + write().
+ * For libst7789 (Tier A): calls st7789_write_area() with the full buffer.
  * For /dev/fb0   (Tier B): writes the buffer then calls ioctl(FB_FLUSH).
  *
  * Must be called after drawing to make changes visible.

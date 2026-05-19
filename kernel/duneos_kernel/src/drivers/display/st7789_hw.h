@@ -3,11 +3,14 @@
 /*
  * st7789_hw — shared low-level ST7789 hardware module.
  *
- * Internal to duneos_kernel.  Both drv_fb_st7789.c (PSRAM back-buffer)
- * and drv_disp_st7789.c (streaming /dev/disp0) share this singleton.
+ * Internal to duneos_kernel. Used by drv_fb_st7789.c (PSRAM back-buffer
+ * exposed as /dev/fb0). The streaming `/dev/disp0` driver was retired in
+ * the Phase 24 driver-placement cleanup (ADR 009 drift #2): non-PSRAM
+ * boards now use the userspace libst7789 library, driven from
+ * /flash/board.info, instead of a kernel driver.
  *
  * Reads pin assignments from board_config.h at compile time.
- * st7789_hw_init() is idempotent — safe to call from both drivers.
+ * st7789_hw_init() is idempotent — safe to call multiple times.
  */
 
 #include "esp_err.h"

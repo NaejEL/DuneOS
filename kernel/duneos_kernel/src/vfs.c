@@ -206,16 +206,40 @@ static void write_board_info(const char *path)
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) return;
 
-    char buf[256];
+    char buf[512];
     int n = snprintf(buf, sizeof(buf),
         "board: " DUNEOS_BOARD_NAME "\n"
         "display: st7789\n"
         "width: %u\n"
         "height: %u\n"
-        "fb: %s\n",
+        "fb: %s\n"
+        "display_spi_host: %d\n"
+        "display_mosi: %d\n"
+        "display_clk: %d\n"
+        "display_cs: %d\n"
+        "display_dc: %d\n"
+        "display_rst: %d\n"
+        "display_bl: %d\n"
+        "display_freq_hz: %u\n"
+        "display_rotation: %u\n"
+        "display_bus_shared: %s\n",
         (unsigned)DUNEOS_DISPLAY_WIDTH,
         (unsigned)DUNEOS_DISPLAY_HEIGHT,
 #ifdef CONFIG_DUNEOS_DRV_FB
+        "true",
+#else
+        "false",
+#endif
+        (int)DUNEOS_DISPLAY_SPI_HOST,
+        (int)DUNEOS_DISPLAY_MOSI_PIN,
+        (int)DUNEOS_DISPLAY_CLK_PIN,
+        (int)DUNEOS_DISPLAY_CS_PIN,
+        (int)DUNEOS_DISPLAY_DC_PIN,
+        (int)DUNEOS_DISPLAY_RST_PIN,
+        (int)DUNEOS_DISPLAY_BL_PIN,
+        (unsigned)DUNEOS_DISPLAY_FREQ_HZ,
+        (unsigned)DUNEOS_DISPLAY_ROTATION,
+#if DUNEOS_DISPLAY_BUS_SHARED
         "true"
 #else
         "false"

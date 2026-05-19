@@ -1,7 +1,8 @@
 /*
  * g_shell — DuneOS graphical shell.
  *
- * Requires /dev/disp0 (ST7789) and /dev/input/event0 (keyboard).
+ * Requires a display (config from /flash/board.info, any chip supported by
+ * libdisp) and /dev/input/event0 (keyboard).
  * Deploy on boards that have both; add to init.yaml to auto-start.
  *
  * Terminal layout (240×135, 8×8 font, 30 cols × 16 rows):
@@ -21,7 +22,7 @@
 #include <sys/stat.h>
 
 #include "duneos/input_ioctl.h"
-#include "duneos/disp_ioctl.h"
+#include "duneos/disp.h"
 #include "duneos/bin_args.h"
 #include "font8x8.h"
 
@@ -47,8 +48,8 @@ extern void duneos_exit(int code);
 
 /* ----- state ------------------------------------------------------------- */
 
-static int  s_disp  = -1;
-static int  s_input = -1;
+static disp_ctx_t *s_disp  = NULL;
+static int         s_input = -1;
 
 static char s_out[OUT_ROWS][COLS + 1];
 static int  s_out_used = 0;
@@ -118,9 +119,7 @@ static void render_row(int row, const char *text, int len,
                 s_px[r * 240 + col * 8 + x] = ((bits >> x) & 1) ? this_fg : this_bg;
         }
     }
-    disp_window_t win = { 0, (uint16_t)(row * 8), 240, 8 };
-    ioctl(s_disp, DISP_SET_WINDOW, &win);
-    write(s_disp, s_px, sizeof(s_px));
+    disp_write_area(s_disp, 0, (uint16_t)(row * 8), 240, 8, s_px);
 }
 
 static void draw_status(void)
@@ -164,11 +163,11 @@ static void full_redraw(void)
 
 void app_main(void)
 {
-    s_disp  = open("/dev/disp0",        O_WRONLY);
+    s_disp  = disp_open();
     s_input = open("/dev/input/event0", O_RDONLY);
 
-    if (s_disp < 0 || s_input < 0) {
-        if (s_disp  >= 0) close(s_disp);
+    if (!s_disp || s_input < 0) {
+        if (s_disp)        disp_close(s_disp);
         if (s_input >= 0) close(s_input);
         duneos_exit(1);
     }
@@ -211,7 +210,7 @@ void app_main(void)
         }
     }
 
-    close(s_disp);
+    disp_close(s_disp);
     close(s_input);
     duneos_exit(0);
 }

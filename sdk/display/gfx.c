@@ -1,78 +1,83 @@
 #include "duneos/gfx.h"
 #include "duneos/font8x8.h"
-#include "duneos/disp_ioctl.h"
 #include "duneos/fb_ioctl.h"
+#include "duneos/disp.h"
 
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { GFX_BACKEND_DISP0, GFX_BACKEND_FB0 } gfx_backend_t;
+typedef enum { GFX_BACKEND_DISP, GFX_BACKEND_FB0 } gfx_backend_t;
 
 struct gfx_ctx {
-    int           fd;
-    uint16_t      width;
-    uint16_t      height;
-    uint16_t     *buf;      /* back-buffer: width * height pixels, host-endian RGB565 */
-    gfx_backend_t backend;
+    gfx_backend_t  backend;
+    uint16_t       width;
+    uint16_t       height;
+    uint16_t      *buf;      /* back-buffer: width * height pixels, host-endian RGB565 */
+    union {
+        int          fd;    /* GFX_BACKEND_FB0 */
+        disp_ctx_t  *disp;  /* GFX_BACKEND_DISP — chip-agnostic SDK display */
+    };
 };
 
 /* ---- open / close -------------------------------------------------------- */
 
 gfx_ctx_t *gfx_open(void)
 {
-    int fd;
     uint16_t w, h;
     gfx_backend_t backend;
 
     /* Tier B: kernel PSRAM framebuffer */
-    fd = open("/dev/fb0", O_RDWR);
+    int fd = open("/dev/fb0", O_RDWR);
     if (fd >= 0) {
         fb_info_t info;
         if (ioctl(fd, FB_GET_INFO, &info) == 0) {
-            w = info.width;
-            h = info.height;
+            w       = info.width;
+            h       = info.height;
             backend = GFX_BACKEND_FB0;
-            goto alloc;
+
+            gfx_ctx_t *ctx = malloc(sizeof(*ctx));
+            if (!ctx) { close(fd); return NULL; }
+            ctx->buf = malloc((size_t)w * h * sizeof(uint16_t));
+            if (!ctx->buf) { free(ctx); close(fd); return NULL; }
+            ctx->fd      = fd;
+            ctx->width   = w;
+            ctx->height  = h;
+            ctx->backend = backend;
+            memset(ctx->buf, 0, (size_t)w * h * sizeof(uint16_t));
+            return ctx;
         }
         close(fd);
     }
 
-    /* Tier A: streaming display driver */
-    fd = open("/dev/disp0", O_WRONLY);
-    if (fd >= 0) {
-        disp_info_t info;
-        if (ioctl(fd, DISP_GET_INFO, &info) == 0) {
-            w = info.width;
-            h = info.height;
-            backend = GFX_BACKEND_DISP0;
-            goto alloc;
-        }
-        close(fd);
+    /* Tier A: chip-agnostic SDK display — backend selected from /flash/board.info */
+    disp_ctx_t *disp = disp_open();
+    if (disp) {
+        w = disp_width(disp);
+        h = disp_height(disp);
+        gfx_ctx_t *ctx = malloc(sizeof(*ctx));
+        if (!ctx) { disp_close(disp); return NULL; }
+        ctx->buf = malloc((size_t)w * h * sizeof(uint16_t));
+        if (!ctx->buf) { free(ctx); disp_close(disp); return NULL; }
+        ctx->disp    = disp;
+        ctx->width   = w;
+        ctx->height  = h;
+        ctx->backend = GFX_BACKEND_DISP;
+        memset(ctx->buf, 0, (size_t)w * h * sizeof(uint16_t));
+        return ctx;
     }
 
     return NULL;
-
-alloc:;
-    gfx_ctx_t *ctx = malloc(sizeof(*ctx));
-    if (!ctx) { close(fd); return NULL; }
-
-    ctx->buf = malloc((size_t)w * h * sizeof(uint16_t));
-    if (!ctx->buf) { free(ctx); close(fd); return NULL; }
-
-    ctx->fd      = fd;
-    ctx->width   = w;
-    ctx->height  = h;
-    ctx->backend = backend;
-    memset(ctx->buf, 0, (size_t)w * h * sizeof(uint16_t));
-    return ctx;
 }
 
 void gfx_close(gfx_ctx_t *ctx)
 {
     if (!ctx) return;
-    close(ctx->fd);
+    if (ctx->backend == GFX_BACKEND_FB0)
+        close(ctx->fd);
+    else
+        disp_close(ctx->disp);
     free(ctx->buf);
     free(ctx);
 }
@@ -157,12 +162,7 @@ void gfx_flush(gfx_ctx_t *ctx)
         write(ctx->fd, ctx->buf, total);
         ioctl(ctx->fd, FB_FLUSH, NULL);
     } else {
-        /* Tier A: set full-screen window and stream pixel data */
-        disp_window_t win = {
-            .x = 0, .y = 0,
-            .w = ctx->width, .h = ctx->height,
-        };
-        ioctl(ctx->fd, DISP_SET_WINDOW, &win);
-        write(ctx->fd, ctx->buf, total);
+        /* Tier A: chip-agnostic full-frame blit via libdisp */
+        disp_write_area(ctx->disp, 0, 0, ctx->width, ctx->height, ctx->buf);
     }
 }
