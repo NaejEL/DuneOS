@@ -313,34 +313,43 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.11 — drv_spi multi-owner sharing (refcount par CS)
+### Phase 24.11 — drv_spi multi-owner sharing (refcount par CS) ✅
 
 **Pourquoi cette phase** : régression hardware-visible introduite par Phase 24-debt #6+#2 (migration libst7789 userspace). Avant : `/dev/disp0` kernel était single-owner — multiple apps pouvaient écrire dessus, le driver kernel sérialisait gratuitement les transactions SPI. Après : chaque app `open("/dev/spi-N")` + `ioctl(SPI_SET_CS, N)` ajoute son propre `spi_device_handle_t` ESP-IDF. Deux apps avec le même CS pin (cas évident : g_shell + gfx_demo, tous deux CS=37 pour le display) trippent `"GPIO N is conflict with others and be overwritten"`, le GPIO matrix routing est écrasé pour la 2e device, et quand la 2e ferme son fd, le routing de la 1ère ne se restaure pas → la 1ère app perd ses transactions. Observed 2026-05-20 sur CardPuter : `gfx_demo` exit 1 (sans STREAM) ou g_shell devient gelé après que gfx_demo a tourné.
 
-**Statut** : code-attempted, **rolled back**.
+**Statut** : ✅ validé device 2026-05-20.
 
-- [x] **Design : pool de devices partagées keyé par CS pin** — `drv_spi.c` 2026-05-20 (commit `c74f234`). Chaque `spi_bus_slot_t` gagne `pool[MAX_DEVICES_PER_BUS]` ; le 1er fd à `SPI_SET_CS=N` crée le handle ESP-IDF, les suivants refcount++. Close décrémente, dernier user remove du bus. Last-writer-wins sur SET_MODE/SPEED (acceptable pour same-chip sharing). API publique inchangée, transparent pour les apps.
-- [ ] **Boot crash sur device — root cause inconnu** : le commit `c74f234` a cassé le boot CardPuter (lsusb plus rien, seul DFU répondait). Static analysis n'a rien trouvé (sizeof OK, alignement OK, ordre init OK, scheduler running, pas de deadlock évident). Reverté en `ed95012` pour débloquer.
-- [ ] **Prochaine attaque** : re-implémenter avec `klog_i` à chaque étape de `register_one_bus` + `spi_set_cs_locked` pour avoir un trace point qui survive le crash. User flash, on lit le dernier klog imprimé → on saura où ça part. Risque : re-broken boot, recovery DFU comme avant.
-- [ ] **Test device final** : g_shell.dap dans `init.yaml` + `gfx_demo` depuis CDC → pas de "GPIO N conflict" + g_shell continue à dessiner après que gfx_demo quitte.
-
-> **Coût estimé** : ~50 LoC kernel + ~30 min device debug. Le design est déjà écrit, garder le diff de `c74f234` pour référence.
-> **Avant 24.11 : workaround** = ne pas déclarer d'app display-using comme daemon dans `init.yaml`. Lancer interactivement depuis CDC ou g_shell. 24.10 STREAM réduit l'impact (moins de pression mémoire) mais le SPI conflict reste.
+- [x] **Design : pool de devices partagées keyé par CS pin** — chaque `spi_bus_slot_t` a un `pool[MAX_DEVICES_PER_BUS]` ; le 1er fd à `SPI_SET_CS=N` crée le handle ESP-IDF, les suivants refcount++. Close décrémente, dernier user remove du bus. Last-writer-wins sur SET_MODE/SPEED (acceptable pour same-chip sharing). API publique inchangée, transparent pour les apps.
+- [x] **1ère tentative `c74f234` cassait le boot** (root cause non identifié) → reverté `ed95012`.
+- [x] **2ème tentative `b19496b`** : mutex lazy (créé au 1er usage au lieu de `register_one_bus`) + klog tracing à chaque étape. Boot OK + multi-app SPI testé sur device — g_shell + gfx_demo concurrent sans GPIO conflict, plus de freeze g_shell après gfx_demo.
+- [x] **Test device final** : g_shell + gfx_demo concurrent OK 2026-05-20.
 
 ---
 
-### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1)
+### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1) ⏸ deferred
 
 Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init` via section ELF.
 
-- [ ] **Header `kernel/duneos_kernel/include/duneos/driver_init.h`** : macro `DUNEOS_DRIVER_REGISTER(fn)` qui place `fn` dans la section `.duneos_driver_init`.
-- [ ] **Linker script update** : `arch/xtensa_esp32s3/sections.ld.in` (ou équivalent ESP-IDF) définit `__duneos_drivers_start` / `__duneos_drivers_end` autour de la section. Patch à faire dans la chaîne ESP-IDF link.
-- [ ] **Migration drivers** : chaque `drv_*.c` ajoute `DUNEOS_DRIVER_REGISTER(drv_xxx_register);` après sa fonction `_register()`. Les `_register()` deviennent `static` (plus exportés).
-- [ ] **`vfs_dev.c` simplifié** : boucle `for (p = __duneos_drivers_start; p < __duneos_drivers_end; p++) (*p)();`. Plus aucun `extern`, plus aucun `#ifdef`. Reste juste l'init des 4 drivers "core" (null, zero, uart, klog) qui doivent être présents inconditionnellement.
-- [ ] **CMakeLists.txt** : les `if(CONFIG_DUNEOS_DRV_*) list(APPEND DUNEOS_KERNEL_SRCS ...)` restent (gate la compilation), mais ne reposent plus sur de la coordination avec vfs_dev.c. Drivers désactivés → section vide → boucle ne les voit pas.
-- [ ] **Smoke test** : kernel boot OK sur CardPuter + T-Embed, tous les `/dev/*` enregistrés comme avant. `dbt flash kernel --build-only` doit passer après chaque migration de driver.
+**Statut 2026-05-20 : tenté, deferré.** L'attempt a buté sur les contraintes du linker ESP-IDF v6 :
 
-> **Ce que ça change concrètement** : ajouter un nouveau driver kernel = `git add drv_newchip.c` + 1 ligne `DUNEOS_DRIVER_REGISTER(...)` + 1 entrée Kconfig + 1 ligne CMakeLists. **Zero modif `vfs_dev.c`**. Aujourd'hui c'est 4 fichiers à toucher dont 2 sites différents dans vfs_dev.c.
+1. La macro `DUNEOS_DRIVER_REGISTER` qui place une entrée dans une section custom `duneos_drivers` fonctionne au compile-time (GCC).
+2. ESP-IDF v6 enforce `--orphan-handling=error` au link → la section custom est rejetée comme "unplaced orphan" (gap entre `.flash.appdesc` et `.flash.rodata`).
+3. `WHOLE_ARCHIVE` (pour `idf_component_register`) résout le strip de section par `--gc-sections`, mais ne résout pas le placement orphelin.
+4. `--orphan-handling=place` permet le link mais le placement automatique tombe entre `.flash.appdesc` et `.flash.rodata` → ESP-IDF's `esp_app_format` check rejette ("gap must not exist").
+5. Le fix propre requiert un **linker fragment ESP-IDF** qui place explicitement `duneos_drivers` à l'intérieur de `.flash.rodata` ET déclare les symboles `__duneos_drivers_start`/`__duneos_drivers_end` autour. Le système `linker.lf` d'ESP-IDF v6 est mal documenté pour les sections custom (le `[sections:...]` syntax existe mais l'interaction avec les symboles auto-générés n'est pas claire).
+
+**Pour reprendre proprement** :
+- Solution A : écrire un linker fragment v6 minimaliste qui ajoute la section à `.flash.rodata` (recherche prouvée mais non triviale).
+- Solution B : utiliser le nom `.rodata.duneos_drivers` (auto-placé par les patterns `*.rodata.*` existants) + déclarer manuellement les symboles start/stop via inline asm ou un .ld file ad hoc.
+- Solution C : abandonner l'approche section + utiliser une constructor-style avec init différée (chaque driver enregistre via `__attribute__((constructor))` dans une liste static, vfs_dev.c itère après mount).
+
+Pas bloquant — l'approche actuelle (`#ifdef` + `extern` chains) fonctionne. La gêne est ergonomique : ajouter un driver kernel = 4 fichiers à toucher. Comparable à Linux pré-`module_init` macro.
+
+- [ ] Solution choisie : à définir (A/B/C)
+- [ ] Implementation
+- [ ] Smoke test sur CardPuter + T-Embed
+
+> **Quand reprendre** : quand un développeur (futur ou actuel) ajoute son 2e ou 3e driver et trouve l'ergonomique actuelle pénible, ou quand la roadmap après Phase 25 a du temps pour les questions de tooling.
 
 ---
 
