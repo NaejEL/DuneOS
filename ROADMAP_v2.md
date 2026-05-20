@@ -229,17 +229,19 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2)
+### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2) 🟡 MVP livré
 
 Élimine les paths device hardcodés (`/dev/disp0`, `/dev/spi-1`, etc.) dans les SDK libs et les apps. `dbt build` génère un header `_board.h` par app, depuis `board.yaml` + résolution des capabilities, contenant tous les defines nécessaires. Apps incluent `<duneos/board.h>` (alias résolu par `-I<build_dir>`).
 
-- [ ] **Générateur `tools/dbt/boardgen.py`** : lit `boards/<active>/board.yaml` + manifest `capabilities:` de l'app → produit `build/<app>/_board.h` avec les defines pertinents (DUNEOS_DISPLAY_DEV, DUNEOS_INPUT_DEV, DUNEOS_I2C_DEV, DUNEOS_HAS_SD, dimensions display, etc.).
-- [ ] **`builder.py`** : appelle boardgen avant la compile, ajoute `-I<build_dir>` aux include paths, dépendance CMake-style sur `board.yaml` (rebuild auto si la board change).
-- [ ] **Header alias `kernel/duneos_kernel/include/duneos/board.h`** : `#include "_board.h"` — résolu via les include paths de l'app. Apps font `#include <duneos/board.h>`.
-- [ ] **Migration `libdisp.c`** : `open(DUNEOS_DISPLAY_DEV, ...)` au lieu de `open("/dev/disp0", ...)`. Si demain la board met le display sur `/dev/spi-2` (Phase 24.6), `_board.h` aura `DUNEOS_DISPLAY_DEV "/dev/spi-2"` — libdisp s'adapte sans modif.
-- [ ] **Migration `libst7789.c`** : arrête de parser `/flash/board.info` au runtime — toutes les infos viennent de `_board.h`. Plus simple, plus rapide, debug-friendly.
-- [ ] **`/flash/board.info` reste** : utilisé pour introspection runtime (debug apps, `ifconfig`, apps sideloadées depuis SD qui n'ont pas été buildées contre cette board). N'est plus la source primaire.
-- [ ] **Validation** : changer `display.driver` dans `board.yaml` (hypothetiquement) → rebuild d'une app → vérifier que `_board.h` reflète + l'app utilise le bon device.
+- [x] **Générateur `tools/dbt/boardgen.py`** : lit `board.yaml` actif, émet `build/<app>/_board.h`. MVP livre 4 sections : storage (DUNEOS_HAS_SD, DUNEOS_FLASH_MOUNT, DUNEOS_SD_MOUNT), display (DUNEOS_DISPLAY_DEV "/dev/disp0" ou "/dev/fb0" selon PSRAM, DRIVER, WIDTH, HEIGHT), input (DUNEOS_INPUT_DEV), i2c (DUNEOS_I2C0_DEV, …). Filtrage par capabilities reporté quand la list grossit.
+- [x] **`builder.py`** : appelle `boardgen.write_to(build_dir, ...)` avant la compile, ajoute `-I<build_dir>` aux include paths.
+- [x] **Header alias `kernel/duneos_kernel/include/duneos/board.h`** : `#include "_board.h"` — résolu via les include paths app.
+- [x] **Migration `libdisp.c`** : utilise `DUNEOS_DISPLAY_DEV` au lieu de `"/dev/disp0"` hardcodé. Future bascule SPI userspace (Phase 24.6) transparente pour libdisp.
+- [ ] **Migration `libst7789.c`** : arrête de parser `/flash/board.info` au runtime. Reporté — libst7789 reste placeholder tant que Phase 24.6 (SPI3 userspace) n'est pas livrée. Pas bloquant.
+- [ ] **Dépendance rebuild sur `board.yaml`** : pas implémenté — un changement de `board.yaml` nécessite `dbt clean && dbt build` manuel pour l'instant. À ajouter quand on en ressent le besoin (mtime check ou un stamp file).
+- [x] **Validation pratique** : `apps/user/gfx_demo/build/_board.h` contient les bons defines pour CardPuter (DUNEOS_DISPLAY_DEV="/dev/disp0", WIDTH=240, HEIGHT=135, HAS_SD=1). libdisp.c compile et utilise ce define.
+
+> **Apps qui en bénéficient immédiatement** : libdisp.c (déjà migré). Apps futures qui font `open(DUNEOS_INPUT_DEV)`, `open(DUNEOS_I2C0_DEV)`, etc. au lieu d'hardcoder les paths.
 
 > **Pourquoi avant 24.9 ?** Impact user-visible immédiat : permet de porter un app sur une 2e board sans toucher aux SDK libs. 24.9 est interne kernel — utile mais invisible côté apps.
 

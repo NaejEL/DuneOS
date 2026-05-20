@@ -80,6 +80,15 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
 
     sources = sorted(app_dir.glob("*.c")) + sorted(app_dir.glob("src/*.c"))
 
+    # Board-aware header generation (ADR 015 Pattern 2). Generates
+    # <build_dir>/_board.h from the active board.yaml + this app's
+    # capabilities, and exposes it via `-I<build_dir>` so apps can
+    # `#include <duneos/board.h>` (which alias-includes _board.h).
+    from .boardgen import write_to as _boardgen_write
+    _boardgen_write(build_dir, board_cfg,
+                    board_cfg.get("board", {}).get("name", "unknown"),
+                    manifest.get("capabilities", []))
+
     # Capability resolution (ADR 014): apps declare needs, dbt picks the
     # board-specific source files. Resolved sources are treated identically
     # to manually-declared `sources:` entries below — they auto-pick up the
@@ -124,7 +133,7 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
     )
     sources = [manifest_c] + list(sources)
 
-    includes = [f"-I{SDK_INCLUDE}", f"-I{app_dir}"]
+    includes = [f"-I{SDK_INCLUDE}", f"-I{build_dir}", f"-I{app_dir}"]
     for inc in sorted(extra_includes):
         includes.append(f"-I{inc}")
 
