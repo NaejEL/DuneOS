@@ -54,16 +54,16 @@ Each capability is described by a dict with these keys:
 CAPABILITY_MAP: dict[str, CapabilitySpec] = {
     "display": {
         "board_key": ["display", "driver"],
-        # libdisp.c is the user-facing API. It currently dispatches to /dev/disp0
-        # (kernel streaming driver) and ignores the chip-vtable libst7789.c
-        # pattern — see comment in libdisp.c and ADR 009 drift #2 (reopened).
-        # When SPI3 gets exposed to userspace, lib{driver}.c will join the
-        # sources list again. The {driver} value from board.yaml is read here
-        # for completeness (build error if missing) but not yet consumed.
+        # libdisp.c is the chip-agnostic dispatcher; it forwards every call
+        # to `duneos_disp_ops`, defined by the chip backend (libst7789.c,
+        # libssd1306.c, …). Adding a new display chip = ship lib<chip>.c
+        # exporting duneos_disp_ops, and the board.yaml's display.driver
+        # field selects which one this app links against.
         "sources": [
             "{sdk}/display/libdisp.c",
+            "{sdk}/display/lib{driver}.c",
         ],
-        "description": "Graphical display (kernel /dev/disp0 today; userspace chip lib later)",
+        "description": "Graphical display via chip-specific userspace backend",
     },
     # Future capabilities (planned, not yet wired):
     #

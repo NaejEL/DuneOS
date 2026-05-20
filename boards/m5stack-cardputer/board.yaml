@@ -19,7 +19,10 @@ board:
       rx_pin: 44
       default_baud: 115200
 
-  # SPI2: SD card only. Display uses a dedicated SPI3 bus (not exposed as raw).
+  # Two SPI buses:
+  #   id=2 (SPI2_HOST) — SD card, kernel-internal, not user-exposed (role: master)
+  #   id=3 (SPI3_HOST) — dedicated to the ST7789 display, exposed as /dev/spi-1
+  #                       (first raw bus, indexed from 1) for userspace libst7789.
   spi:
     - id: 2
       mosi_pin: 14
@@ -29,27 +32,34 @@ board:
       role: master
       max_freq_hz: 20000000
 
+    - id: 3
+      mosi_pin: 35
+      clk_pin: 36
+      # No MISO line on the display side (write-only SPI). No board-level CS;
+      # the display device's CS is owned by libst7789 via ioctl(SPI_SET_CS).
+      role: raw
+      max_freq_hz: 40000000
+
   sd_card:
     interface: spi
     spi_id: 2
     cd_pin: -1
 
-  # Display: ST7789 240×135 on dedicated SPI3 bus.
-  # SPI3 is consumed by the display — not exposed as /dev/spi-1.
+  # Display: ST7789 240×135 served by userspace libst7789 over /dev/spi-1.
+  # Pins below are the device-specific GPIOs (CS/DC/RST/BL); the SPI bus
+  # itself is declared above under spi: id=3.
   display:
     driver: st7789
     width: 240
     height: 135
-    spi_host: SPI3_HOST
-    mosi_pin: 35
-    clk_pin: 36
+    spi_id: 3      # references the spi: entry with id=3 → /dev/spi-1
     cs_pin: 37
     dc_pin: 34
     rst_pin: 33
     bl_pin: 38
     freq_hz: 40000000
     rotation: 1     # 90° CW — panel is portrait; CardPuter uses landscape
-    col_offset: 53  # ST7789 CASET offset — 240×320 internal buffer, panel active area starts here
+    col_offset: 53  # ST7789 CASET offset — 240×320 internal buffer, active area starts here
     row_offset: 40  # ST7789 RASET offset
 
   # Keyboard: IOMatrix — 74HC138 decoder selects one of 8 rows via 3 GPIO

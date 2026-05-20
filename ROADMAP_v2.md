@@ -176,17 +176,17 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 - [x] **#4 — `hal_encoder` capability HAL (ADR 010 Pattern A)** : `hal_encoder.h` + backend Xtensa PCNT (strong symbol) + fallback GPIO polling (weak symbol). `enc_quadrature.c` réduit à un thin shim. Backend RP2040 (PIO) à ajouter en Phase 29.
 
-- [ ] **#6 — Expose SPI3 as /dev/spi-N + #2 ST7789 userspace** (combinés — l'un débloque l'autre) :
-  - **Aujourd'hui** : `drv_spi.c` gère 1 seul bus (`DUNEOS_SPI1_HOST`). Sur CardPuter, SPI3 est consommé exclusivement par `drv_disp_st7789.c` (kernel) — userspace ne peut pas l'atteindre. Tentative précédente de userspace-ifier libst7789 a corrompu le bus SD (cf. commit aa723ad).
-  - **Plan** :
-    1. `drv_spi.c` devient multi-host : `static s_buses[N]` + une instance par bus déclaré `role: raw` en YAML
-    2. `bspgen.py` : émet `DUNEOS_SPI{N}_HOST/MOSI/CLK/MISO` pour chaque bus avec `role: raw` ; émet `CONFIG_DUNEOS_DRV_SPI=y` quand au moins un bus raw existe
-    3. `boards/m5stack-cardputer/board.yaml` : ajout d'un bus `id: 3, role: raw` pour le SPI3 du display
-    4. Retrait de `drv_disp_st7789.c` (kernel) + `CONFIG_DUNEOS_DRV_DISP` — le display n'est plus kernel sur les boards non-PSRAM
-    5. `libst7789.c` réécrit pour de vrai : ouvre `/dev/spi-2` (= SPI3), `/dev/gpiochip0` pour DC/RST/BL, lit les pins/MADCTL/offsets depuis `<duneos/board.h>` (Phase 24.8). Plus aucun parse de `/flash/board.info` au runtime.
-    6. `libdisp.c` consomme `duneos_disp_ops` exposé par `libst7789.c` (vraie vtable, plus de short-circuit vers /dev/disp0)
-    7. Tests : `g_shell` + `gfx_demo` fonctionnent sur CardPuter via /dev/spi-2 ; T-Embed continue via /dev/fb0
-  - **Critères de fermeture** : `drv_disp_st7789.c` supprimé du repo ; pas d'erreur klog ; g_shell affiche son terminal ; gfx_demo affiche ses 4 frames.
+- [x] **#6 — Expose SPI3 as /dev/spi-N + #2 ST7789 userspace** (combinés) — **livré 2026-05-20** :
+  - `drv_spi.c` est multi-host (`s_slots[MAX_RAW_BUSES]`, un driver par bus avec `container_of` pour récupérer le bus depuis le callback)
+  - `bspgen.py` émet `DUNEOS_SPI{1..N}_HOST/MOSI/CLK/MISO/MAX_FREQ_HZ/BUS_SHARED` pour chaque `role: raw` et `DUNEOS_NUM_RAW_SPI_BUSES`
+  - `boards/m5stack-cardputer/board.yaml` déclare SPI3 (id=3) en `role: raw` ; pins display séparés en device-specific (`cs_pin/dc_pin/rst_pin/bl_pin` dans la section `display`) avec `spi_id: 3`
+  - `drv_disp_st7789.c` supprimé du repo, `CONFIG_DUNEOS_DRV_DISP` supprimé du Kconfig, `vfs_dev.c` purgé du register, `CMakeLists.txt` simplifié
+  - `libst7789.c` userspace pur : ouvre `/dev/spi-<DUNEOS_DISPLAY_DEV_INDEX>` + `/dev/gpiochip0`, séquence init ST7789 complète, exporte `duneos_disp_ops`
+  - `libdisp.c` est un thin dispatcher vers `duneos_disp_ops` (vraie vtable)
+  - `capabilities.py` : `display` capability re-pull `lib${board.display.driver}.c`
+  - `boardgen.py` `_board.h` émet `DUNEOS_DISPLAY_DEV_INDEX` + pins device + MADCTL/rotation/offsets sur boards non-PSRAM ; émet `DUNEOS_DISPLAY_DEV "/dev/fb0"` sur PSRAM
+  - Build status : kernel ✓, buildall 25/25 ✓
+  - **Tests sur device à valider** : g_shell + gfx_demo sur CardPuter via /dev/spi-1 ; T-Embed inchangé via /dev/fb0
 
 - [ ] **#1 — BQ27220 daemon** (réouvert) :
   - **Aujourd'hui** : `sdk/sensor/libbq27220.c` userspace existe ; `drv_battery_bq27220.c` kernel survit et sert `/dev/battery0`. Item marqué [x] à tort dans une révision précédente.

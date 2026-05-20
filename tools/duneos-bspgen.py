@@ -222,26 +222,36 @@ def generate(board: dict) -> str:
                 "",
             ]
 
-    # ----- Raw SPI bus (/dev/spi-1) -----
-    # Any spi entry with role: raw is exposed as the user-accessible SPI bus.
-    raw_spi = next((s for s in board.get("spi", []) if s.get("role") == "raw"), None)
-    if raw_spi:
-        spi_id    = raw_spi["id"]
+    # ----- Raw SPI buses (/dev/spi-1, /dev/spi-2, ...) -----
+    # Every spi entry with role: raw becomes a user-accessible bus, numbered
+    # in declaration order starting at 1. The yaml's `id` is the ESP-IDF host
+    # number (2 for SPI2_HOST, 3 for SPI3_HOST) — kept distinct from the
+    # /dev/spi-<n> userspace index to allow non-monotonic host assignments
+    # (a board can expose SPI3 as /dev/spi-1 without exposing SPI2).
+    raw_buses = [s for s in board.get("spi", []) if s.get("role") == "raw"]
+    if raw_buses:
         sd_spi_id = board.get("sd_card", {}).get("spi_id")
-        shared    = (spi_id == sd_spi_id)
         lines += [
-            "/* ---------- SPI raw bus (/dev/spi-1) ---------- */",
-            _define("DUNEOS_HAVE_SPI",          1),
-            _define("DUNEOS_SPI1_HOST",         SPI_HOST_ENUM.get(spi_id, spi_id - 1)),
-            _define("DUNEOS_SPI1_MOSI_PIN",     raw_spi["mosi_pin"]),
-            _define("DUNEOS_SPI1_MISO_PIN",     raw_spi.get("miso_pin", -1)),
-            _define("DUNEOS_SPI1_CLK_PIN",      raw_spi["clk_pin"]),
-            _define("DUNEOS_SPI1_MAX_FREQ_HZ",  raw_spi.get("max_freq_hz", 10_000_000)),
+            "/* ---------- SPI raw buses (userspace via /dev/spi-N) ---------- */",
+            _define("DUNEOS_HAVE_SPI",            1),
+            _define("DUNEOS_NUM_RAW_SPI_BUSES",   len(raw_buses)),
+            "",
         ]
-        if shared:
-            # Bus already initialised by vfs.c SD mount — drv_spi skips spi_bus_initialize().
-            lines.append(_define("DUNEOS_SPI1_BUS_SHARED", 1))
-        lines.append("")
+        for idx, bus in enumerate(raw_buses, start=1):
+            spi_id = bus["id"]
+            shared = (spi_id == sd_spi_id)
+            lines += [
+                f"/* /dev/spi-{idx} ← board.yaml spi[id={spi_id}] */",
+                _define(f"DUNEOS_SPI{idx}_HOST",         SPI_HOST_ENUM.get(spi_id, spi_id - 1)),
+                _define(f"DUNEOS_SPI{idx}_MOSI_PIN",     bus["mosi_pin"]),
+                _define(f"DUNEOS_SPI{idx}_MISO_PIN",     bus.get("miso_pin", -1)),
+                _define(f"DUNEOS_SPI{idx}_CLK_PIN",      bus["clk_pin"]),
+                _define(f"DUNEOS_SPI{idx}_MAX_FREQ_HZ",  bus.get("max_freq_hz", 10_000_000)),
+            ]
+            if shared:
+                # Bus already initialised by vfs.c SD mount — drv_spi attaches instead of init.
+                lines.append(_define(f"DUNEOS_SPI{idx}_BUS_SHARED", 1))
+            lines.append("")
 
     # ----- I2C -----
     i2c_buses = board.get("i2c", [])
@@ -294,24 +304,58 @@ def generate(board: dict) -> str:
     # ----- Display -----
     disp = board.get("display")
     if disp:
-        host_name       = disp.get("spi_host", "SPI3_HOST")
-        display_spi_id  = SPI_HOST_IDS.get(host_name, 3)
-        sd_spi_id       = board.get("sd_card", {}).get("spi_id", -1)
-        bus_shared      = (display_spi_id == sd_spi_id)
-        rotation        = disp.get("rotation", 0)
+        # SPI bus resolution.
+        #   Modern style: display.spi_id points at a spi[] entry; mosi/clk
+        #     come from that entry. Used by CardPuter (Phase 24-debt #6).
+        #   Legacy style: display.spi_host + display.mosi_pin/clk_pin inline.
+        #     Used by T-Embed (display on the SD-shared SPI2). Kept working
+        #     so existing boards don't need migrating until they need to.
+        if "spi_id" in disp:
+            spi_id_ref = disp["spi_id"]
+            matching = next((s for s in board.get("spi", []) if s.get("id") == spi_id_ref), None)
+            if not matching:
+                raise SystemExit(
+                    f"ERROR: board.yaml display.spi_id={spi_id_ref} "
+                    f"does not match any spi: entry"
+                )
+            display_spi_id = spi_id_ref
+            disp_mosi = matching["mosi_pin"]
+            disp_clk  = matching["clk_pin"]
+        else:
+            host_name      = disp.get("spi_host", "SPI3_HOST")
+            display_spi_id = SPI_HOST_IDS.get(host_name, 3)
+            disp_mosi      = disp["mosi_pin"]
+            disp_clk       = disp["clk_pin"]
+
+        sd_spi_id    = board.get("sd_card", {}).get("spi_id", -1)
+        bus_shared   = (display_spi_id == sd_spi_id)
+        rotation     = disp.get("rotation", 0)
         # ST7789 MADCTL byte: rotation 0=0x00, 1=0x60(MX+MV), 2=0xC0(MY+MX), 3=0xA0(MY+MV)
-        _madctl_table   = {0: 0x00, 1: 0x60, 2: 0xC0, 3: 0xA0}
-        madctl          = disp.get("madctl", _madctl_table.get(rotation, 0x00))
+        _madctl_table = {0: 0x00, 1: 0x60, 2: 0xC0, 3: 0xA0}
+        madctl        = disp.get("madctl", _madctl_table.get(rotation, 0x00))
         # MV bit (0x20) means row/column exchange → CASET/RASET axes are swapped vs portrait
-        swap_xy         = 1 if (madctl & 0x20) else 0
+        swap_xy       = 1 if (madctl & 0x20) else 0
+
+        # If the display's SPI host is one of the raw buses we exposed
+        # earlier, compute its /dev/spi-<N> index so libst7789 (userspace)
+        # can open the right device. Otherwise (no raw bus matches, e.g.
+        # T-Embed where the display SPI is the SD-shared bus consumed by
+        # the kernel), no DEV_INDEX is emitted and the kernel framebuffer
+        # path takes over.
+        raw_dev_index = None
+        for idx, b in enumerate(raw_buses, start=1):
+            if b.get("id") == display_spi_id:
+                raw_dev_index = idx
+                break
+
         lines += [
             "/* ---------- Display ---------- */",
             _define("DUNEOS_HAVE_DISPLAY",       1),
             _define("DUNEOS_DISPLAY_WIDTH",      disp["width"]),
             _define("DUNEOS_DISPLAY_HEIGHT",     disp["height"]),
             _define("DUNEOS_DISPLAY_SPI_HOST",   SPI_HOST_ENUM.get(display_spi_id, display_spi_id - 1)),
-            _define("DUNEOS_DISPLAY_MOSI_PIN",   disp["mosi_pin"]),
-            _define("DUNEOS_DISPLAY_CLK_PIN",    disp["clk_pin"]),
+            _define("DUNEOS_DISPLAY_MOSI_PIN",   disp_mosi),
+            _define("DUNEOS_DISPLAY_CLK_PIN",    disp_clk),
             _define("DUNEOS_DISPLAY_CS_PIN",     disp["cs_pin"]),
             _define("DUNEOS_DISPLAY_DC_PIN",     disp["dc_pin"]),
             _define("DUNEOS_DISPLAY_RST_PIN",    disp["rst_pin"]),
@@ -323,8 +367,10 @@ def generate(board: dict) -> str:
             _define("DUNEOS_DISPLAY_COL_OFFSET", disp.get("col_offset", 0)),
             _define("DUNEOS_DISPLAY_ROW_OFFSET", disp.get("row_offset", 0)),
             _define("DUNEOS_DISPLAY_BUS_SHARED", 1 if bus_shared else 0),
-            "",
         ]
+        if raw_dev_index is not None:
+            lines.append(_define("DUNEOS_DISPLAY_DEV_INDEX", raw_dev_index))
+        lines.append("")
 
     # ----- Keyboard matrix (IOMatrix) -----
     kb_matrix = board.get("keyboard_matrix")
@@ -590,8 +636,8 @@ def generate_sdkconfig_board(board: dict) -> str:
     if board.get("i2c"):
         lines += ["CONFIG_DUNEOS_DRV_I2C=y", ""]
 
-    raw_spi = next((s for s in board.get("spi", []) if s.get("role") == "raw"), None)
-    if raw_spi:
+    raw_buses = [s for s in board.get("spi", []) if s.get("role") == "raw"]
+    if raw_buses:
         lines += ["CONFIG_DUNEOS_DRV_SPI=y", ""]
 
     batt = board.get("battery")
@@ -605,14 +651,13 @@ def generate_sdkconfig_board(board: dict) -> str:
 
     disp = board.get("display")
     if disp:
-        # Tier A (no PSRAM): kernel /dev/disp0 (streaming SPI driver).
-        # Tier B (PSRAM present): kernel /dev/fb0 with PSRAM back-buffer.
-        # The userspace libst7789 path (ADR 009 drift #2) is reopened until
-        # /dev/spi-3 is exposed to userspace — see ROADMAP Phase 24 debt.
+        # Display backend selection:
+        #   PSRAM board → kernel /dev/fb0 (drv_fb_st7789).
+        #   No PSRAM, display SPI = one of the raw buses → userspace libst7789
+        #     opens /dev/spi-N. No kernel display driver needed.
+        # The drv_disp_st7789.c (/dev/disp0) path was retired in 24-debt #6+#2.
         if psram_mb > 0:
             lines.append("CONFIG_DUNEOS_DRV_FB=y")
-        else:
-            lines.append("CONFIG_DUNEOS_DRV_DISP=y")
         lines.append("")
 
     has_input = board.get("keyboard_matrix") or board.get("buttons") or board.get("encoder")

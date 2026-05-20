@@ -34,28 +34,55 @@ def _flatten(board_cfg: dict) -> dict:
 
 
 def _display_block(board: dict, lines: list[str]) -> None:
-    """Emit display-related defines.
+    """Emit display-related defines for the app.
 
-    The kernel runs `/dev/disp0` (streaming ST7789) on non-PSRAM boards and
-    `/dev/fb0` (PSRAM framebuffer) on PSRAM boards. Phase 24.6 will eventually
-    expose SPI3 as `/dev/spi-2` for true userspace display drivers; until
-    then, `DUNEOS_DISPLAY_DEV` always resolves to one of the two kernel paths.
+    Two paths:
+      * PSRAM board → kernel /dev/fb0 (libgfx Tier B opens it directly).
+        Emits DUNEOS_DISPLAY_DEV "/dev/fb0".
+      * Non-PSRAM board with display on a raw SPI bus → userspace libst7789
+        opens /dev/spi-<N>. Emits DUNEOS_DISPLAY_DEV_INDEX = N (so libst7789
+        builds "/dev/spi-<N>") plus the device pins (CS/DC/RST/BL), MADCTL,
+        rotation, and CASET/RASET offsets needed by the userspace init
+        sequence.
     """
     disp = board.get("display")
     if not isinstance(disp, dict):
         return
     psram = int(board.get("psram_size_mb", 0) or 0)
     lines.append("/* ----- display ----- */")
-    if psram > 0:
-        lines.append('#define DUNEOS_DISPLAY_DEV       "/dev/fb0"')
-    else:
-        lines.append('#define DUNEOS_DISPLAY_DEV       "/dev/disp0"')
     if "driver" in disp:
         lines.append(f'#define DUNEOS_DISPLAY_DRIVER    "{disp["driver"]}"')
     if "width" in disp:
         lines.append(f"#define DUNEOS_DISPLAY_WIDTH     {int(disp['width'])}")
     if "height" in disp:
         lines.append(f"#define DUNEOS_DISPLAY_HEIGHT    {int(disp['height'])}")
+    if psram > 0:
+        lines.append('#define DUNEOS_DISPLAY_DEV       "/dev/fb0"')
+    else:
+        # Resolve which /dev/spi-N the display lives on, if any.
+        spi_id_ref = disp.get("spi_id")
+        raw_buses = [s for s in board.get("spi", []) if s.get("role") == "raw"]
+        idx = None
+        for i, b in enumerate(raw_buses, start=1):
+            if b.get("id") == spi_id_ref:
+                idx = i; break
+        if idx is not None:
+            lines.append(f"#define DUNEOS_DISPLAY_DEV_INDEX {idx}")
+        # Device pins for libst7789
+        for k in ("cs_pin", "dc_pin", "rst_pin", "bl_pin"):
+            if k in disp:
+                lines.append(f"#define DUNEOS_DISPLAY_{k.upper()}     {int(disp[k])}")
+        if "freq_hz" in disp:
+            lines.append(f"#define DUNEOS_DISPLAY_FREQ_HZ   {int(disp['freq_hz'])}")
+        rotation = int(disp.get("rotation", 0))
+        _madctl_table = {0: 0x00, 1: 0x60, 2: 0xC0, 3: 0xA0}
+        madctl   = int(disp.get("madctl", _madctl_table.get(rotation, 0x00)))
+        swap_xy  = 1 if (madctl & 0x20) else 0
+        lines.append(f"#define DUNEOS_DISPLAY_ROTATION    {rotation}")
+        lines.append(f"#define DUNEOS_DISPLAY_MADCTL      {hex(madctl)}")
+        lines.append(f"#define DUNEOS_DISPLAY_SWAP_XY     {swap_xy}")
+        lines.append(f"#define DUNEOS_DISPLAY_COL_OFFSET  {int(disp.get('col_offset', 0))}")
+        lines.append(f"#define DUNEOS_DISPLAY_ROW_OFFSET  {int(disp.get('row_offset', 0))}")
     lines.append("")
 
 

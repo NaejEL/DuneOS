@@ -5,17 +5,35 @@
 #include "board_config.h"
 
 #include <errno.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 static const char *TAG = "duneos/spi";
 
 /*
- * Per-fd state.  Each open() adds a device to the bus with independent CS,
- * mode, and speed; close() removes it.  Fits in DUNEOS_DEV_PRIV_SIZE (16 B).
+ * Multi-host SPI bus driver.
+ *
+ * Every spi: entry in board.yaml with `role: raw` becomes a /dev/spi-<N>
+ * device, where N is the raw-bus index (1-based, in declaration order).
+ * bspgen emits DUNEOS_SPI<N>_HOST/MOSI/CLK/MISO/MAX_FREQ_HZ for each.
+ *
+ * The `duneos_dev_driver_t` interface doesn't carry per-instance context,
+ * so we attach the bus handle to the driver via container_of: the
+ * driver_t is embedded inside a spi_bus_slot_t alongside its hal bus
+ * pointer. From any open()/read()/write()/ioctl() callback we receive
+ * a `fd->drv` pointer, and container_of recovers the bus slot.
+ *
+ * Per-fd state stays small (16 B max — see DUNEOS_DEV_PRIV_SIZE).
  */
+
+#define container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
+
 typedef struct {
-    duneos_hal_spi_dev_t     *dev; /* 4 bytes (32-bit pointer) */
-    duneos_hal_spi_dev_config_t cfg; /* cs_pin(4)+freq_hz(4)+mode(1)+pad(3) = 12 B */
+    duneos_hal_spi_dev_t        *dev;
+    duneos_hal_spi_dev_config_t  cfg;
 } spi_priv_t;
 
 _Static_assert(sizeof(spi_priv_t) <= DUNEOS_DEV_PRIV_SIZE, "spi_priv_t too large");
@@ -23,20 +41,38 @@ _Static_assert(sizeof(spi_priv_t) <= DUNEOS_DEV_PRIV_SIZE, "spi_priv_t too large
 #define DEFAULT_SPEED_HZ  1000000u
 #define DEFAULT_MODE      0u
 
-static duneos_hal_spi_t *s_bus = NULL;
+typedef struct {
+    duneos_hal_spi_t   *bus;        /* NULL if init failed; ops then refuse to open. */
+    duneos_dev_driver_t drv;        /* registered with devfs — drv.name = "spi-<N>" */
+    char                name_buf[8];/* backing storage for drv.name */
+} spi_bus_slot_t;
+
+/* Max number of raw SPI buses a board can expose. Bumped if a board ever
+ * declares more than this; safe to keep small (compile-time constant). */
+#define MAX_RAW_BUSES 4
+static spi_bus_slot_t s_slots[MAX_RAW_BUSES];
+static int            s_num_slots = 0;
+
+static spi_bus_slot_t *slot_from_fd(const duneos_devfd_t *fd)
+{
+    return container_of(fd->drv, spi_bus_slot_t, drv);
+}
 
 static int spi_open_cb(duneos_devfd_t *fd, int flags)
 {
     (void)flags;
+    spi_bus_slot_t *slot = slot_from_fd(fd);
+    if (!slot->bus) { errno = ENODEV; return -1; }
+
     spi_priv_t *p = (spi_priv_t *)fd->priv;
     memset(p, 0, sizeof(*p));
     p->cfg.cs_pin  = -1;
     p->cfg.freq_hz = DEFAULT_SPEED_HZ;
     p->cfg.mode    = DEFAULT_MODE;
 
-    p->dev = duneos_hal_spi_dev_add(s_bus, &p->cfg);
+    p->dev = duneos_hal_spi_dev_add(slot->bus, &p->cfg);
     if (!p->dev) {
-        klog_e(TAG, "spi_dev_add failed");
+        klog_e(TAG, "%s: spi_dev_add failed", slot->drv.name);
         errno = EIO;
         return -1;
     }
@@ -100,38 +136,81 @@ static ssize_t spi_read_cb(duneos_devfd_t *fd, void *buf, size_t len)
     return (ssize_t)len;
 }
 
-static const duneos_dev_driver_t s_drv_spi = {
-    .name  = "spi-1",
-    .open  = spi_open_cb,
-    .close = spi_close_cb,
-    .read  = spi_read_cb,
-    .write = spi_write_cb,
-    .ioctl = spi_ioctl_cb,
-};
+/* Register one bus: claim a slot, init/attach the hal bus, fill the driver
+ * struct with the right name, hand it to devfs. */
+static void register_one_bus(int index,
+                             int host, int mosi, int miso, int clk,
+                             bool shared)
+{
+    if (s_num_slots >= MAX_RAW_BUSES) {
+        klog_e(TAG, "MAX_RAW_BUSES=%d reached, cannot register /dev/spi-%d",
+               MAX_RAW_BUSES, index);
+        return;
+    }
+    spi_bus_slot_t *slot = &s_slots[s_num_slots];
+    snprintf(slot->name_buf, sizeof(slot->name_buf), "spi-%d", index);
+    slot->drv.name  = slot->name_buf;
+    slot->drv.open  = spi_open_cb;
+    slot->drv.close = spi_close_cb;
+    slot->drv.read  = spi_read_cb;
+    slot->drv.write = spi_write_cb;
+    slot->drv.ioctl = spi_ioctl_cb;
+
+    if (shared) {
+        slot->bus = duneos_hal_spi_bus_attach(host);
+        if (!slot->bus) {
+            klog_e(TAG, "%s: bus_attach failed (host=%d)", slot->name_buf, host);
+            return;
+        }
+    } else {
+        duneos_hal_spi_bus_config_t bus_cfg = {
+            .bus_id          = host,
+            .mosi_pin        = mosi,
+            .miso_pin        = miso,
+            .clk_pin         = clk,
+            .max_transfer_sz = 4096,
+        };
+        slot->bus = duneos_hal_spi_bus_init(&bus_cfg);
+        if (!slot->bus) {
+            klog_e(TAG, "%s: bus_init failed (host=%d)", slot->name_buf, host);
+            return;
+        }
+    }
+
+    duneos_dev_register(&slot->drv);
+    s_num_slots++;
+}
 
 void drv_spi_register(void)
 {
-#ifndef DUNEOS_SPI1_BUS_SHARED
-    /* Bus is independent — initialise it here. */
-    duneos_hal_spi_bus_config_t bus_cfg = {
-        .bus_id          = DUNEOS_SPI1_HOST,
-        .mosi_pin        = DUNEOS_SPI1_MOSI_PIN,
-        .miso_pin        = DUNEOS_SPI1_MISO_PIN,
-        .clk_pin         = DUNEOS_SPI1_CLK_PIN,
-        .max_transfer_sz = 4096,
-    };
-    s_bus = duneos_hal_spi_bus_init(&bus_cfg);
-    if (!s_bus) {
-        klog_e(TAG, "spi_bus_init failed");
-        return;
-    }
-#else
-    /* Bus was already initialised by vfs.c (SD card mount). Attach to it. */
-    s_bus = duneos_hal_spi_bus_attach(DUNEOS_SPI1_HOST);
-    if (!s_bus) {
-        klog_e(TAG, "spi_bus_attach failed");
-        return;
-    }
+#ifdef DUNEOS_SPI1_HOST
+    register_one_bus(1, DUNEOS_SPI1_HOST,
+                     DUNEOS_SPI1_MOSI_PIN, DUNEOS_SPI1_MISO_PIN, DUNEOS_SPI1_CLK_PIN,
+#  ifdef DUNEOS_SPI1_BUS_SHARED
+                     true
+#  else
+                     false
+#  endif
+                     );
 #endif
-    duneos_dev_register(&s_drv_spi);
+#ifdef DUNEOS_SPI2_HOST
+    register_one_bus(2, DUNEOS_SPI2_HOST,
+                     DUNEOS_SPI2_MOSI_PIN, DUNEOS_SPI2_MISO_PIN, DUNEOS_SPI2_CLK_PIN,
+#  ifdef DUNEOS_SPI2_BUS_SHARED
+                     true
+#  else
+                     false
+#  endif
+                     );
+#endif
+#ifdef DUNEOS_SPI3_HOST
+    register_one_bus(3, DUNEOS_SPI3_HOST,
+                     DUNEOS_SPI3_MOSI_PIN, DUNEOS_SPI3_MISO_PIN, DUNEOS_SPI3_CLK_PIN,
+#  ifdef DUNEOS_SPI3_BUS_SHARED
+                     true
+#  else
+                     false
+#  endif
+                     );
+#endif
 }
