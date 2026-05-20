@@ -81,10 +81,37 @@ esp_err_t duneos_loader_run(duneos_app_t *app);
  * restored via dup2 afterwards, so kernel log output (which goes to the
  * hardware UART, not fd 1) is unaffected.
  *
- * Returns ESP_ERR_NOT_SUPPORTED if dup/dup2 are unavailable on this build.
+ * Captured-mode exit semantics (ADR 016): if the app calls duneos_exit(N)
+ * the loader installs a setjmp checkpoint and longjmps back here, so the
+ * shell task survives a captured-app exit. Use
+ * duneos_loader_get_captured_exit_code() right after this call to read
+ * the exit code (0 = clean / app returned without calling duneos_exit;
+ * non-zero = value passed to duneos_exit).
+ *
+ * Returns ESP_ERR_NOT_SUPPORTED if dup/dup2 are unavailable on this build,
+ * ESP_ERR_INVALID_STATE if called recursively from inside a captured app.
  */
 esp_err_t duneos_loader_run_captured(duneos_app_t *app,
                                       char **out_buf, size_t *out_len);
+
+/*
+ * ADR 016 captured-mode handshake — called by the kernel's duneos_exit()
+ * to detect a captured app and unwind via longjmp instead of deleting the
+ * calling task. Apps never call these directly.
+ *
+ *   duneos_loader_captured_active()        — true while a captured app is
+ *                                            running on the current task.
+ *   duneos_loader_captured_longjmp(code)   — unwind to the setjmp set by
+ *                                            duneos_loader_run_captured;
+ *                                            does not return.
+ *   duneos_loader_get_captured_exit_code() — last captured exit code,
+ *                                            valid right after
+ *                                            run_captured() returns.
+ */
+#include <stdbool.h>
+bool duneos_loader_captured_active(void);
+void duneos_loader_captured_longjmp(int code) __attribute__((noreturn));
+int  duneos_loader_get_captured_exit_code(void);
 
 /* Free all PSRAM sections and metadata. */
 void duneos_loader_unload(duneos_app_t *app);

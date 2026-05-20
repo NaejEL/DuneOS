@@ -68,13 +68,18 @@ typedef void      (*duneos_unload_fn_t)(duneos_app_t *app);
 typedef const duneos_app_manifest_t *(*duneos_get_manifest_fn_t)(const duneos_app_t *app);
 typedef void (*duneos_get_data_pool_fn_t)(const duneos_app_t *app,
                                           uintptr_t *base, size_t *size);
+/* ADR 016: callbacks for captured-app exit unwinding. */
+typedef bool      (*duneos_captured_active_fn_t)(void);
+typedef void      (*duneos_captured_longjmp_fn_t)(int code) __attribute__((noreturn));
 
 typedef struct {
-    duneos_load_fn_t          load;
-    duneos_run_fn_t           run;
-    duneos_unload_fn_t        unload;
-    duneos_get_manifest_fn_t  get_manifest;
-    duneos_get_data_pool_fn_t get_data_pool;
+    duneos_load_fn_t             load;
+    duneos_run_fn_t              run;
+    duneos_unload_fn_t           unload;
+    duneos_get_manifest_fn_t     get_manifest;
+    duneos_get_data_pool_fn_t    get_data_pool;
+    duneos_captured_active_fn_t  captured_active;   /* may be NULL */
+    duneos_captured_longjmp_fn_t captured_longjmp;  /* may be NULL */
 } duneos_loader_ops_t;
 
 /* Called by duneos_loader_init() before any supervisor_launch() */

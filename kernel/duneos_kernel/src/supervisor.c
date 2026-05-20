@@ -705,6 +705,16 @@ esp_err_t duneos_supervisor_launch(const char *path)
 
 void duneos_exit(int code)
 {
+    /* ADR 016: if the current task is running a captured app, unwind via
+     * longjmp back to duneos_loader_run_captured's setjmp checkpoint
+     * instead of deleting the task (which would kill the shell). The
+     * loader registers captured_active+captured_longjmp callbacks at
+     * init time; older builds without them fall through to the
+     * spawned-mode path harmlessly. */
+    if (s_loader_ops.captured_active && s_loader_ops.captured_active()) {
+        s_loader_ops.captured_longjmp(code);   /* does not return */
+    }
+
     duneos_supervisor_app_exited(code);
     /* duneos_supervisor_app_exited calls vTaskDelete(NULL) and never returns,
      * but the compiler cannot see that without the noreturn attribute on the

@@ -18,11 +18,67 @@
 #include "esp_rom_sys.h"
 #include "cJSON.h"
 
+#include <setjmp.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 #include "soc/soc.h"
 #endif
 
 static const char *TAG = "duneos/loader";
+
+/* -------------------------------------------------------------------------
+ * Captured-app exit handshake (ADR 016).
+ *
+ * loader_run_captured() runs the app's app_main as a regular function call
+ * in the caller's task. If the app calls duneos_exit(N) the supervisor's
+ * default path is vTaskDelete(NULL) — which would kill the caller (the
+ * shell). To unwind cleanly back to the loader, we install a setjmp
+ * checkpoint before app_main() and ask duneos_exit() to longjmp here
+ * instead of deleting the task.
+ *
+ * Single global because captured runs do not nest — the lock enforces
+ * that. A nested attempt fails fast rather than corrupting the jmp_buf.
+ * ---------------------------------------------------------------------- */
+static jmp_buf            *s_captured_jmp  = NULL;   /* protected by s_captured_mux */
+static int                 s_captured_code = 0;
+static portMUX_TYPE        s_captured_mux  = portMUX_INITIALIZER_UNLOCKED;
+static SemaphoreHandle_t   s_captured_lock = NULL;   /* one-captured-run-at-a-time */
+
+bool duneos_loader_captured_active(void)
+{
+    bool active;
+    portENTER_CRITICAL(&s_captured_mux);
+    active = (s_captured_jmp != NULL);
+    portEXIT_CRITICAL(&s_captured_mux);
+    return active;
+}
+
+void __attribute__((noreturn)) duneos_loader_captured_longjmp(int code)
+{
+    portENTER_CRITICAL(&s_captured_mux);
+    jmp_buf *env = s_captured_jmp;
+    s_captured_code = code;
+    portEXIT_CRITICAL(&s_captured_mux);
+
+    if (env) longjmp(*env, 1);
+
+    /* Reachable only on a programming error (active reported true, env
+     * cleared between then and now). Spin instead of returning so the
+     * caller (duneos_exit) can never resume into freed code. */
+    klog_e(TAG, "captured_longjmp: env vanished (code=%d)", code);
+    while (1) {}
+}
+
+int duneos_loader_get_captured_exit_code(void)
+{
+    int code;
+    portENTER_CRITICAL(&s_captured_mux);
+    code = s_captured_code;
+    portEXIT_CRITICAL(&s_captured_mux);
+    return code;
+}
 
 /* -------------------------------------------------------------------------
  * Internal app descriptor
@@ -904,11 +960,14 @@ void duneos_loader_init(void)
 #endif
 
     static const duneos_loader_ops_t ops = {
-        .load          = duneos_loader_load,
-        .run           = duneos_loader_run,
-        .unload        = duneos_loader_unload,
-        .get_manifest  = duneos_loader_get_manifest,
-        .get_data_pool = duneos_loader_get_data_pool,
+        .load             = duneos_loader_load,
+        .run              = duneos_loader_run,
+        .unload           = duneos_loader_unload,
+        .get_manifest     = duneos_loader_get_manifest,
+        .get_data_pool    = duneos_loader_get_data_pool,
+        /* ADR 016: captured-mode exit unwinding. */
+        .captured_active  = duneos_loader_captured_active,
+        .captured_longjmp = duneos_loader_captured_longjmp,
     };
     duneos_supervisor_register_loader(&ops);
 }
@@ -1283,6 +1342,19 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     *out_buf = NULL;
     *out_len = 0;
 
+    /* Lazy-init the nested-run lock. */
+    if (!s_captured_lock) {
+        s_captured_lock = xSemaphoreCreateMutex();
+        if (!s_captured_lock) return ESP_ERR_NO_MEM;
+    }
+    /* Refuse to nest. The single global s_captured_jmp would corrupt if
+     * an outer captured run set it and an inner one overwrote it before
+     * unwinding. ADR 016: nested captured runs are forbidden. */
+    if (xSemaphoreTake(s_captured_lock, 0) != pdTRUE) {
+        klog_w(TAG, "captured: refusing nested run");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     /* fcntl(F_DUPFD) is not supported by the USB-JTAG console VFS driver.
      * Instead: close fd 1 to free the slot, then immediately open the capture
      * file so it lands at fd 1 (lowest available fd).  The caller (g_shell)
@@ -1291,22 +1363,44 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     int capfd = open(CAPTURE_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (capfd < 0) {
         klog_e(TAG, "capture: open failed: errno %d", errno);
+        xSemaphoreGive(s_captured_lock);
         return ESP_FAIL;
     }
     if (capfd != STDOUT_FILENO) {
         close(capfd);
         klog_e(TAG, "capture: expected fd 1, got %d", capfd);
+        xSemaphoreGive(s_captured_lock);
         return ESP_ERR_NOT_SUPPORTED;
     }
 
     klog_d(TAG, "jumping to app_main @ %p (captured)", (void *)app->entry);
-    app->entry();
+
+    /* Install the setjmp checkpoint so duneos_exit() can unwind here
+     * instead of vTaskDelete(NULL)-ing our caller (the shell). */
+    jmp_buf env;
+    portENTER_CRITICAL(&s_captured_mux);
+    s_captured_jmp  = &env;
+    s_captured_code = 0;
+    portEXIT_CRITICAL(&s_captured_mux);
+
+    if (setjmp(env) == 0) {
+        /* First entry — normal app body. If app_main returns without
+         * calling duneos_exit, s_captured_code stays 0 (=clean exit). */
+        app->entry();
+    }
+    /* Both paths (normal return + longjmp from duneos_exit) land here.
+     * Clear the jmp_buf before unlocking so a subsequent caller in
+     * another task starts with a clean state. */
+    portENTER_CRITICAL(&s_captured_mux);
+    s_captured_jmp = NULL;
+    portEXIT_CRITICAL(&s_captured_mux);
 
     close(STDOUT_FILENO);
 
     int rfd = open(CAPTURE_PATH, O_RDONLY);
     if (rfd < 0) {
         klog_e(TAG, "capture: cannot read back " CAPTURE_PATH);
+        xSemaphoreGive(s_captured_lock);
         return ESP_FAIL;
     }
 
@@ -1317,6 +1411,7 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     char *buf = malloc(size + 1);
     if (!buf) {
         close(rfd);
+        xSemaphoreGive(s_captured_lock);
         return ESP_ERR_NO_MEM;
     }
 
@@ -1326,6 +1421,7 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
 
     if (n < 0) {
         free(buf);
+        xSemaphoreGive(s_captured_lock);
         return ESP_FAIL;
     }
 
@@ -1333,7 +1429,9 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     *out_buf = buf;
     *out_len = (size_t)n;
 
-    klog_d(TAG, "capture: %zu byte(s) captured", (size_t)n);
+    klog_d(TAG, "capture: %zu byte(s) captured (exit code %d)",
+           (size_t)n, s_captured_code);
+    xSemaphoreGive(s_captured_lock);
     return ESP_OK;
 }
 
