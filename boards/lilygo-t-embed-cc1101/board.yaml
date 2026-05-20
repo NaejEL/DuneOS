@@ -88,3 +88,14 @@ board:
   encoder:
     a_pin: 4
     b_pin: 5
+
+  # Phase 24.7 safe-boot — hold KEY_BTN (side key, GPIO6) at power-on to load
+  # /flash/init.yaml.safe (usb_shell only) instead of the normal init.yaml
+  # chain. GPIO6 is also wired to a regular button; the recovery check
+  # happens before the btn_gpio daemon configures the pin, and is
+  # non-destructive (input + pull-up, then daemon reconfigures identically).
+  # GPIO0 (KNOB_BTN) is NOT used because it is the ESP32-S3 strap pin —
+  # holding it at power-on enters the ROM bootloader.
+  recovery_pin:
+    pin: 6
+    active_low: true

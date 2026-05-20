@@ -16,9 +16,10 @@
  * "restart" values: "no" (default), "always", "on-failure"
  */
 
-#define DUNEOS_INIT_PATH_FLASH  "/flash/init.yaml"
-#define DUNEOS_INIT_PATH_SD     "/sd/init.yaml"
-#define DUNEOS_INIT_PATH        DUNEOS_INIT_PATH_SD  /* backward compat alias */
+#define DUNEOS_INIT_PATH_FLASH       "/flash/init.yaml"
+#define DUNEOS_INIT_PATH_FLASH_SAFE  "/flash/init.yaml.safe"
+#define DUNEOS_INIT_PATH_SD          "/sd/init.yaml"
+#define DUNEOS_INIT_PATH             DUNEOS_INIT_PATH_SD  /* backward compat alias */
 #define DUNEOS_MAX_SERVICES 8
 
 typedef struct {

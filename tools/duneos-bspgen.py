@@ -390,6 +390,29 @@ def generate(board: dict) -> str:
             "",
         ]
 
+    # ----- Recovery pin (Phase 24.7 safe-boot) -----
+    # If declared, the kernel checks this pin at boot and uses
+    # /flash/init.yaml.safe (usb_shell only) when it's held — escape hatch
+    # from a bricked init.yaml without re-flashing. The pin may overlap with
+    # a regular `buttons:` entry; the check happens before any userspace
+    # daemon configures the pin, and is non-destructive (input + pull-up).
+    rec = board.get("recovery_pin")
+    if rec is not None:
+        # Accept both shorthand `recovery_pin: 6` and dict
+        # `recovery_pin: {pin: 6, active_low: true}`.
+        if isinstance(rec, int):
+            rec_pin, rec_active_low = rec, True
+        else:
+            rec_pin        = int(rec["pin"])
+            rec_active_low = bool(rec.get("active_low", True))
+        lines += [
+            "/* ---------- Recovery / safe-boot pin ---------- */",
+            _define("DUNEOS_HAVE_RECOVERY_PIN",       1),
+            _define("DUNEOS_RECOVERY_PIN",            rec_pin),
+            _define("DUNEOS_RECOVERY_PIN_ACTIVE_LOW", 1 if rec_active_low else 0),
+            "",
+        ]
+
     # ----- GPIO expanders -----
     # Schema: gpio_expanders: [{type: sx1509|pcf8574|mcp23017, i2c_addr: 0x.., pins: N}, ...]
     # Each expander becomes /dev/gpiochipN (N = index + 1).

@@ -1,14 +1,47 @@
 #include "duneos/init.h"
 #include "duneos/klog.h"
+#include "board_config.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <ctype.h>
 
+#ifdef DUNEOS_HAVE_RECOVERY_PIN
+#include "duneos/hal_gpio.h"
+#include "duneos/hal_time.h"
+#endif
+
 static const char *TAG = "duneos/init";
+
+/* ----- recovery / safe-boot pin (Phase 24.7) ---------------------------- */
+
+/* Read the recovery pin once at boot. If held to its active level when
+ * duneos_init_load() runs, the kernel loads /flash/init.yaml.safe instead
+ * of /flash/init.yaml + /sd/init.yaml. Escape hatch from a bricked
+ * init.yaml without re-flashing. Returns false when the board doesn't
+ * declare a recovery_pin. Non-destructive (input + pull-up). */
+static bool recovery_pin_held(void)
+{
+#ifdef DUNEOS_HAVE_RECOVERY_PIN
+    duneos_hal_gpio_set_dir (DUNEOS_RECOVERY_PIN, DUNEOS_GPIO_DIR_INPUT);
+    duneos_hal_gpio_set_pull(DUNEOS_RECOVERY_PIN,
+                             DUNEOS_RECOVERY_PIN_ACTIVE_LOW
+                               ? DUNEOS_GPIO_PULL_UP
+                               : DUNEOS_GPIO_PULL_DOWN);
+    /* Settle the pull resistor before reading. */
+    duneos_hal_delay_us(1000);
+    int level = duneos_hal_gpio_get_level(DUNEOS_RECOVERY_PIN);
+    if (level < 0) return false;
+    bool active_low = DUNEOS_RECOVERY_PIN_ACTIVE_LOW;
+    return active_low ? (level == 0) : (level == 1);
+#else
+    return false;
+#endif
+}
 
 #define INIT_BUF_MAX 2048
 
@@ -132,11 +165,26 @@ int duneos_init_load(duneos_init_config_t *cfg)
 {
     if (!cfg) return -EINVAL;
 
-    static const char *const paths[] = {
+    /* Recovery / safe-boot path: if the board declares a recovery_pin and
+     * it's held at boot, load ONLY /flash/init.yaml.safe — skip the normal
+     * /flash/init.yaml + /sd/init.yaml chain. Lets the user escape from a
+     * crash-looping daemon by holding a button at power-on. */
+    bool safe = recovery_pin_held();
+    if (safe) {
+        klog_w(TAG, "recovery pin held — booting safe mode (%s)",
+               DUNEOS_INIT_PATH_FLASH_SAFE);
+    }
+
+    static const char *const paths_normal[] = {
         DUNEOS_INIT_PATH_FLASH,
         DUNEOS_INIT_PATH_SD,
         NULL,
     };
+    static const char *const paths_safe[] = {
+        DUNEOS_INIT_PATH_FLASH_SAFE,
+        NULL,
+    };
+    const char *const *paths = safe ? paths_safe : paths_normal;
 
     char *buf = malloc(INIT_BUF_MAX);
     if (!buf) return -ENOMEM;
