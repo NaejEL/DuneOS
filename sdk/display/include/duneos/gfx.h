@@ -58,10 +58,37 @@
 typedef struct gfx_ctx gfx_ctx_t;
 
 /*
+ * Drawing model. Pick at open time based on the app's memory budget:
+ *
+ * GFX_MODE_BUFFERED (default) — all drawing goes into a userspace RGB565
+ *   back-buffer; gfx_flush() pushes the whole frame to the display. Costs
+ *   width*height*2 bytes (e.g. 64 KiB on 240×135). Best for animation and
+ *   per-pixel work (gfx_pixel) — every change is cheap until the flush.
+ *
+ * GFX_MODE_STREAM — no back-buffer; each draw call writes directly to the
+ *   display through libdisp. Memory cost is tiny (~one row buffer on the
+ *   stack inside each call). gfx_flush() is a no-op. gfx_pixel() is
+ *   supported but slow (one SPI transaction per pixel) — use sparingly;
+ *   prefer gfx_rect / gfx_text / gfx_hline / gfx_vline / gfx_fill which
+ *   batch into row writes.
+ *
+ *   Required so the contest launcher + multiple gfx apps can coexist on
+ *   CardPuter's 320 KiB DRAM (Phase 24.10).
+ */
+typedef enum {
+    GFX_MODE_BUFFERED = 0,
+    GFX_MODE_STREAM   = 1,
+} gfx_mode_t;
+
+/*
  * Open the best available display backend.
  * Returns NULL if no display device is found (/dev/fb0 absent and board.info has no display).
- * Allocates a width×height RGB565 back-buffer with malloc().
+ * In BUFFERED mode allocates a width×height RGB565 back-buffer with malloc().
+ * In STREAM mode does not allocate a back-buffer.
  */
+gfx_ctx_t *gfx_open_mode(gfx_mode_t mode);
+
+/* Equivalent to gfx_open_mode(GFX_MODE_BUFFERED). */
 gfx_ctx_t *gfx_open(void);
 
 /*

@@ -5,12 +5,14 @@ extern int  usleep(unsigned int usec);
 
 void app_main(void)
 {
-    gfx_ctx_t *ctx = gfx_open();
+    /* STREAM mode (Phase 24.10): no 64 KiB back-buffer — each draw call
+     * writes directly through libdisp. Required so gfx_demo can coexist
+     * with g_shell + other apps on CardPuter's 320 KiB DRAM. */
+    gfx_ctx_t *ctx = gfx_open_mode(GFX_MODE_STREAM);
     if (!ctx) {
         /* Encode the gfx_open failure step in the exit code (10..16) so the
          * kernel's `app exited (code N)` message tells us which step broke
-         * without needing extra klog output. See gfx_last_error() in
-         * <duneos/gfx.h> for the code map (1..6 → exit 11..16). */
+         * without needing extra klog output. */
         duneos_exit(10 + gfx_last_error());
         return;
     }

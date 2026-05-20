@@ -296,19 +296,20 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.10 — libgfx streaming mode (mémoire frugale)
+### Phase 24.10 — libgfx streaming mode (mémoire frugale) ✅
 
-**Pourquoi cette phase** : observation faite en debug Tier A — sur CardPuter sans PSRAM, le back-buffer userspace coûte 64 KiB par app gfx. Avec 320 KiB DRAM total et plusieurs apps gfx co-résidentes potentielles (launcher + game + ...), le budget mémoire devient critique. Une killer-app launcher (contest) doit pouvoir co-habiter avec une 2e app gfx active sans OOM.
+**Pourquoi cette phase** : observation faite en debug Tier A — sur CardPuter sans PSRAM, le back-buffer userspace coûte 64 KiB par app gfx. Avec 320 KiB DRAM total et plusieurs apps gfx co-résidentes potentielles (launcher + game + ...), le budget mémoire devient critique.
 
-- [ ] **Nouveau mode dans `gfx_open()`** : `gfx_open_streaming()` (ou flag `GFX_MODE_STREAM`) qui dessine directement vers `/dev/disp0` ligne-par-ligne. Pas de back-buffer userspace. Allocation : ~1 ligne (~480 bytes pour 240px), pas 64 KiB.
-- [ ] **`gfx_pixel(x,y)` interdit en streaming mode** : access random impossible sans back-buffer. L'app doit dessiner séquentiellement (top-to-bottom). `gfx_pixel()` retourne `-ENOTSUP` ou bien on documente que c'est un no-op silencieux.
-- [ ] **Primitives compatibles streaming** : `gfx_fill_rect`, `gfx_text`, `gfx_hline`, `gfx_vline`. Chacune écrit sa zone via `disp_write_area` directe, sans passer par un buffer.
-- [ ] **`gfx_close_streaming()`** : fermeture propre.
-- [ ] **Choix au runtime** : `gfx_open(GFX_MODE_BUFFERED)` (défaut, comportement actuel) vs `gfx_open(GFX_MODE_STREAM)`. App déclare son mode.
-- [ ] **Migration apps de démo** : `g_shell` est déjà streaming-style (line buffer en .bss) — peut continuer avec son code custom OU passer à `gfx_open(GFX_MODE_STREAM)` selon ce qui est plus simple. `gfx_demo` reste BUFFERED (montre les capacités full random access).
-- [ ] **Doc gfx.h** : explique les deux modes + cas d'usage. La règle : un launcher graphique avec icônes + scroll utilise STREAM ; un jeu avec sprites random utilise BUFFERED + heap_size suffisant.
+- [x] **Nouveau mode dans `gfx_open()`** : `gfx_open_mode(GFX_MODE_STREAM)` ne malloc pas de back-buffer. `gfx_open()` reste backward-compat (= `gfx_open_mode(GFX_MODE_BUFFERED)`).
+- [x] **`gfx_pixel(x,y)` supporté en STREAM mais lent** : émission d'une zone 1×1 via `disp_write_area` (1 SPI tx par pixel — apps optimisent en passant à `gfx_rect`/`gfx_text` pour batched-row writes).
+- [x] **Primitives compatibles streaming** : `gfx_fill`, `gfx_rect`, `gfx_text` — chacune compose un row-buffer stack (≤640 octets pour 320px max) puis `stream_write_area` par row. Pas d'allocation heap.
+- [x] **`gfx_flush()` no-op en STREAM** : dessins déjà commis ; FB_FLUSH si backend FB0.
+- [x] **Choix au runtime** : `gfx_open_mode(mode)` ; mode stocké dans `gfx_ctx`. Toutes les draw ops branchent sur le mode.
+- [x] **Migration `gfx_demo`** : passe à `GFX_MODE_STREAM` + `heap_size: 4096` (au lieu de 81920). Test à valider sur device — doit cohabiter avec g_shell sans exit 16.
+- [x] **Doc gfx.h** : explique BUFFERED vs STREAM + cas d'usage.
 
-> **Coût estimé** : ~2 jours. ~100 lignes de code dans gfx.c. Pas de change d'API (juste un mode flag + helpers). Permet d'avoir N apps gfx co-résidentes sans saturer la DRAM.
+> **Coût réel** : ~100 LoC dans gfx.c. API ajoutée : `gfx_open_mode(mode)`. Apps existantes (g_shell, gfx_demo, futures) opt-in via le flag.
+> **Test device pending** : `dbt flash kernel` + `dbt flashimg` puis `gfx_demo` sur CardPuter avec g_shell en init.yaml ne doit plus exit 16. Le SPI conflict warning peut rester (séparé — voir backlog).
 
 ---
 
