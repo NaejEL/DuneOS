@@ -581,21 +581,30 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     }
 
     const duneos_app_manifest_t *m = s_loader_ops.get_manifest(app);
+
+    /* Phase 24.7 circuit breaker: PRESERVE state across automatic restarts of
+     * the same app, but RESET when the slot starts hosting a different app
+     * (manual launch of something new). Compare against the existing
+     * slot->name BEFORE we overwrite it. */
+    bool same_app_as_before = (slot->name[0] != '\0' &&
+                               strcmp(slot->name, m->name) == 0);
+
     strlcpy(slot->name, m->name, sizeof(slot->name));
     strlcpy(slot->restart_path, path, sizeof(slot->restart_path));
     slot->restart_policy = policy;
     slot->app = app;
 
-    /* Phase 24.7: reset circuit breaker state for this launch. A slot
-     * being reused after a previous trip starts fresh; manual relaunch
-     * clears the prior crash history. Manifest could override max/window
-     * in a future version — defaults used when both are 0.              */
-    slot->restart_count             = 0;
-    slot->breaker_window_start_ms   = 0;
-    slot->breaker_crashes_in_window = 0;
-    slot->breaker_max_crashes       = 0;   /* 0 = use DEFAULT_MAX */
-    slot->breaker_window_ms         = 0;   /* 0 = use DEFAULT_MS  */
-    slot->breaker_tripped           = false;
+    if (!same_app_as_before) {
+        slot->restart_count             = 0;
+        slot->breaker_window_start_ms   = 0;
+        slot->breaker_crashes_in_window = 0;
+        slot->breaker_max_crashes       = 0;   /* 0 = use DEFAULT_MAX */
+        slot->breaker_window_ms         = 0;   /* 0 = use DEFAULT_MS  */
+        slot->breaker_tripped           = false;
+    }
+    /* If it's the same app being restarted by the supervisor loop, leave the
+     * breaker fields alone — they're updated in supervisor_task on each exit,
+     * and that's the entire point of the breaker. */
 
     /* Phase 20: per-app heap pool */
     slot->heap_pool_buf  = NULL;

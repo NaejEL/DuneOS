@@ -163,13 +163,20 @@ static void full_redraw(void)
 
 void app_main(void)
 {
+    /* Diagnostic exit codes — distinct values identify which init step
+     * failed when the supervisor logs `'g_shell' exited (code N)`.
+     *   10 = disp_open() returned NULL
+     *   11 = open("/dev/input/event0") failed
+     *   12 = both above failed
+     *   1  = clean exit via the loop's exit path                      */
     s_disp  = disp_open();
     s_input = open("/dev/input/event0", O_RDONLY);
 
     if (!s_disp || s_input < 0) {
-        if (s_disp)        disp_close(s_disp);
+        int code = (!s_disp && s_input < 0) ? 12 : (!s_disp ? 10 : 11);
+        if (s_disp)       disp_close(s_disp);
         if (s_input >= 0) close(s_input);
-        duneos_exit(1);
+        duneos_exit(code);
     }
 
     full_redraw();
