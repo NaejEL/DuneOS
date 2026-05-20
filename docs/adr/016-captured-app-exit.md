@@ -80,6 +80,27 @@ void duneos_exit(int code)
 
 `s_captured_jmp` is a single global because **captured runs do not nest**: a captured app calling `duneos_loader_run_captured` from inside its `app_main` would corrupt the jmp_buf and is therefore explicitly forbidden by `s_captured_lock`. The mutex returns `EBUSY` to a nested attempt; the inner caller sees the error and reports it.
 
+### Shell auto-dispatch (spawned vs captured)
+
+A subtler form of the same footgun: an app with a non-trivial heap allocation runs in captured mode and crashes silently because captured runs *don't honour `heap_size:` in the manifest* — they have no per-slot heap. The malloc falls back to the global kernel heap, which on a 320 KiB DRAM board is too fragmented to satisfy a 64 KiB request.
+
+The shell's bin dispatch (`try_run_bin` in `apps/system/shell_core/shell_cmds.c`) therefore inspects the manifest after loading and **promotes the app to spawned mode if `manifest->heap_size > 0`**:
+
+```c
+const duneos_app_manifest_t *m = duneos_loader_get_manifest(app);
+if (m && m->heap_size > 0) {
+    duneos_loader_unload(app);
+    duneos_supervisor_launch(path);   // spawned mode honours heap_size
+    /* wait for the spawned app to exit */
+    return;
+}
+duneos_loader_run_captured(app, ...);  // captured fast-path
+```
+
+This makes `heap_size: 81920` in `gfx_demo`'s manifest the user-facing toggle that switches the app to spawned execution. Side effect: spawned apps don't capture stdout — which is fine for graphical apps that draw rather than print, and is implicit in the very fact that they declared they need a heap.
+
+The captured fast-path (no `heap_size`) keeps the cheap-and-fast model for shell utilities (`ls`, `cat`, `gpio`, …) that fit in the global heap.
+
 ### App-author contract
 
 Captured apps must respect three constraints because the implementation cannot enforce them safely:

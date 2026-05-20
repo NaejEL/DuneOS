@@ -28,15 +28,17 @@ static size_t sh_strlcpy(char *dst, const char *src, size_t n)
 
 /* ----- kernel ABI -------------------------------------------------------- */
 
+#include "duneos/abi.h"   /* duneos_app_t + duneos_app_manifest_t */
+
 extern void duneos_exit(int code);
 extern int  usleep(unsigned int useconds);
 
-typedef void duneos_app_t;
 extern int  duneos_loader_load(const char *path, duneos_app_t **out);
 extern int  duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t *out_len);
 extern void duneos_loader_unload(duneos_app_t *app);
 extern int  duneos_supervisor_launch(const char *path);
 extern int  duneos_supervisor_running_count(void);
+extern const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
 
 /* ----- configuration ----------------------------------------------------- */
 
@@ -169,6 +171,32 @@ static int try_run_bin(const char *cmd, int argc, char **argv)
         char msg[64];
         snprintf(msg, sizeof(msg), "%s: load failed", cmd);
         sh_outln(msg);
+        return 0;
+    }
+
+    /* Dispatch heuristic: an app that declares heap_size > 0 in its manifest
+     * is signalling "I need a dedicated heap pool". Captured mode runs in the
+     * caller's task with no per-app heap, so its malloc() falls back to the
+     * global kernel heap — which may be too small/fragmented to satisfy a
+     * 64 KiB allocation (e.g. libgfx back-buffer). In that case, unload the
+     * captured copy and re-dispatch through supervisor_launch (spawned mode),
+     * which honours heap_size and gives the app its own slot.
+     *
+     * Side effect: stdout is NOT captured for spawned apps. That's fine for
+     * gfx apps (they draw, they don't print) and for any future app that
+     * declares heap_size — it implicitly opts out of captured stdout.       */
+    const duneos_app_manifest_t *m = duneos_loader_get_manifest(app);
+    if (m && m->heap_size > 0) {
+        duneos_loader_unload(app);
+        int count_before = duneos_supervisor_running_count();
+        if (duneos_supervisor_launch(path) != 0) {
+            char msg[CWD_MAX + 32];
+            snprintf(msg, sizeof(msg), "%s: cannot launch", cmd);
+            sh_outln(msg);
+            return 0;
+        }
+        usleep(50000);
+        while (duneos_supervisor_running_count() > count_before) usleep(100000);
         return 0;
     }
 

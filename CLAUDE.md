@@ -506,6 +506,8 @@ Each plugin's `find_toolchain_root()` searches in this priority order:
 
 ## Hard-Won Lessons (do not repeat these mistakes)
 
+- **Captured apps don't get a per-app heap** — `manifest.heap_size` is consumed by `supervisor_launch` (spawned mode), not by `loader_run_captured`. A captured app's `malloc()` falls back to the global kernel heap (~50-80 KiB free on CardPuter 320 KiB DRAM). Large allocations (libgfx back-buffer = 64 KiB) silently fail. **Workaround in `try_run_bin` (apps/system/shell_core/shell_cmds.c)**: if the manifest declares `heap_size > 0`, the shell unload-and-spawns the app instead of capturing. This makes `heap_size:` the user-facing toggle for "I need a real heap". Full fix in Phase 24.9.5 (ADR 016).
+- **`duneos_exit()` from a captured app kills the caller's task** — `vTaskDelete(NULL)` in a captured context = "kill the current task" = "kill the shell that launched me". Symptom: any captured app that fails with `duneos_exit(1)` makes the shell restart. Fix in Phase 24.9.5 (ADR 016) via setjmp/longjmp. Until then: avoid letting captured apps call `duneos_exit(N != 0)` if you care about the shell; or use the heap_size > 0 trick to force spawned mode.
 - **`xtensa-esp-elf-gcc` defaults to big-endian Xtensa** — always use `xtensa-esp32s3-elf-gcc` for app builds. `dbt.py` now tries target-specific prefix first.
 - **`idf.cmakeAdditionalArgs: ["-DDUNEOS_BOARD=..."]` in VS Code silently overrides `.duneos_board`** — `CMakeLists.txt` now always reads `.duneos_board` and ignores cmake args. Keep `idf.cmakeAdditionalArgs` as `[]`.
 - **`sdkconfig` at project root caches board-specific settings** — must delete it when switching boards (Full Clean).
