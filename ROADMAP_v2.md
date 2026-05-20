@@ -309,7 +309,23 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - [x] **Doc gfx.h** : explique BUFFERED vs STREAM + cas d'usage.
 
 > **Coût réel** : ~100 LoC dans gfx.c. API ajoutée : `gfx_open_mode(mode)`. Apps existantes (g_shell, gfx_demo, futures) opt-in via le flag.
-> **Test device pending** : `dbt flash kernel` + `dbt flashimg` puis `gfx_demo` sur CardPuter avec g_shell en init.yaml ne doit plus exit 16. Le SPI conflict warning peut rester (séparé — voir backlog).
+> **Test device pending** : `dbt flash kernel` + `dbt flashimg` puis `gfx_demo` sur CardPuter avec g_shell en init.yaml ne doit plus exit 16. Le SPI conflict warning peut rester — c'est Phase 24.11.
+
+---
+
+### Phase 24.11 — drv_spi multi-owner sharing (refcount par CS)
+
+**Pourquoi cette phase** : régression hardware-visible introduite par Phase 24-debt #6+#2 (migration libst7789 userspace). Avant : `/dev/disp0` kernel était single-owner — multiple apps pouvaient écrire dessus, le driver kernel sérialisait gratuitement les transactions SPI. Après : chaque app `open("/dev/spi-N")` + `ioctl(SPI_SET_CS, N)` ajoute son propre `spi_device_handle_t` ESP-IDF. Deux apps avec le même CS pin (cas évident : g_shell + gfx_demo, tous deux CS=37 pour le display) trippent `"GPIO N is conflict with others and be overwritten"`, le GPIO matrix routing est écrasé pour la 2e device, et quand la 2e ferme son fd, le routing de la 1ère ne se restaure pas → la 1ère app perd ses transactions. Observed 2026-05-20 sur CardPuter : `gfx_demo` exit 1 (sans STREAM) ou g_shell devient gelé après que gfx_demo a tourné.
+
+**Statut** : code-attempted, **rolled back**.
+
+- [x] **Design : pool de devices partagées keyé par CS pin** — `drv_spi.c` 2026-05-20 (commit `c74f234`). Chaque `spi_bus_slot_t` gagne `pool[MAX_DEVICES_PER_BUS]` ; le 1er fd à `SPI_SET_CS=N` crée le handle ESP-IDF, les suivants refcount++. Close décrémente, dernier user remove du bus. Last-writer-wins sur SET_MODE/SPEED (acceptable pour same-chip sharing). API publique inchangée, transparent pour les apps.
+- [ ] **Boot crash sur device — root cause inconnu** : le commit `c74f234` a cassé le boot CardPuter (lsusb plus rien, seul DFU répondait). Static analysis n'a rien trouvé (sizeof OK, alignement OK, ordre init OK, scheduler running, pas de deadlock évident). Reverté en `ed95012` pour débloquer.
+- [ ] **Prochaine attaque** : re-implémenter avec `klog_i` à chaque étape de `register_one_bus` + `spi_set_cs_locked` pour avoir un trace point qui survive le crash. User flash, on lit le dernier klog imprimé → on saura où ça part. Risque : re-broken boot, recovery DFU comme avant.
+- [ ] **Test device final** : g_shell.dap dans `init.yaml` + `gfx_demo` depuis CDC → pas de "GPIO N conflict" + g_shell continue à dessiner après que gfx_demo quitte.
+
+> **Coût estimé** : ~50 LoC kernel + ~30 min device debug. Le design est déjà écrit, garder le diff de `c74f234` pour référence.
+> **Avant 24.11 : workaround** = ne pas déclarer d'app display-using comme daemon dans `init.yaml`. Lancer interactivement depuis CDC ou g_shell. 24.10 STREAM réduit l'impact (moins de pression mémoire) mais le SPI conflict reste.
 
 ---
 
