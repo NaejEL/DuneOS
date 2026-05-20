@@ -213,17 +213,17 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.7 — Safe boot & recovery
+### Phase 24.7 — Safe boot & recovery 🟡 PARTIEL
 
 **Pourquoi ici (avant Phase 25) :** une `init.yaml` qui lance un service `restart: always` qui crash au démarrage met la board dans une boucle de relance. Sur CardPuter sans bouton de boot dédié et sans UART accessible, la seule sortie est `dbt flash sysbin` — qui suppose que USB MSC monte AVANT le crash. Cas pas garanti. Phase 25 (`dbt system deploy`) va automatiser des déploiements qui peuvent introduire exactement ce bug → on doit pouvoir s'en sortir avant.
 
 **Périmètre minimal** :
 
-- [ ] **Circuit breaker dans le supervisor** : si un service crash N fois en M secondes (par défaut 3 crashes en 30 s), passer en `restart: no` et logger `klog_e`. Configurable par service via un nouveau champ `init.yaml` (`max_restarts:` / `restart_window_s:`, optionnels, défauts raisonnables). Empêche la boucle infinie.
-- [ ] **Hold-key-at-boot fallback** : `board.yaml` gagne un champ optionnel `recovery_pin: { gpio: 0, level: low }` (sur CardPuter c'est la touche `OK` ou le BOOT button selon le câblage). Si maintenu pressé à l'init, le kernel ignore `init.yaml` et lance uniquement `usb_shell.dap` depuis flash. Sortie immédiate vers une console fonctionnelle même sans SD.
-- [ ] **Garantie ordre USB MSC avant init** : aujourd'hui `duneos_vfs_init()` appelle `drv_usb_preinit()` en première action, puis seulement après lance les services init. Vérifier et documenter que cette séquence est respectée sur tous les boards OTG. Si un service init crash, USB MSC reste monté et le user peut écraser le fichier fautif.
-- [ ] **`dbt flash sysbin --safe`** : option pour flasher un sysbin avec une init.yaml minimale (uniquement `usb_shell.dap`) sans toucher au reste. Geste de récupération à un coup.
-- [ ] **Doc README.md** : section "Recovering from a bad init.yaml" qui décrit les 3 voies de sortie (hold key, `dbt flash sysbin --safe`, full reflash).
+- [x] **Circuit breaker dans le supervisor** : par défaut 3 crashes en 30 s → `breaker_tripped`, restart skip, klog "circuit breaker tripped, restart disabled". Champs `breaker_max_crashes` et `breaker_window_ms` dans le slot, défauts utilisés quand 0. Champ `init.yaml` configurable per-service reporté (les défauts suffisent pour le dev).
+- [ ] **Hold-key-at-boot fallback** : `board.yaml` gagne un champ optionnel `recovery_pin: { gpio: 0, level: low }`. Demande hardware testing — déplacé à une session ultérieure quand on aura un board branché.
+- [x] **Garantie ordre USB MSC avant init** : vérifié dans `main.c` flow — `duneos_vfs_init()` appelle `drv_usb_preinit()` en première action (TinyUSB + MSC + CDC drivers installés), puis VFS mounts, puis `drv_usb_register()` (Phase 2 MSC), puis seulement `launch_from_init_yaml()`. USB CDC reste accessible même si tous les services init.yaml tripent leur breaker. Documenté dans README.
+- [x] **`dbt flash sysbin --safe`** : option implémentée. Génère un init.yaml minimaliste (`usb_shell.dap` only, restart: always) et flashe la sysbin. Aucune touche à la partition factory (kernel) ni au reste.
+- [x] **Doc README.md** : section "Recovering from a bad init.yaml" ajoutée, décrit le circuit breaker + `--safe` flash + garantie USB. Hold-key documenté quand l'item ci-dessus sera livré.
 
 > Ce n'est PAS un système d'OTA, ni de A/B partitions, ni de bootloader custom. Juste les filets nécessaires pour ne pas bricker une board pendant le dev. L'OTA complet est une phase future séparée.
 

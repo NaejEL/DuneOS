@@ -370,6 +370,9 @@ def main() -> None:
     p_flash_sysbin.add_argument(
         "--baud", type=int, default=460800,
         help="Flash baud rate (default: 460800)")
+    p_flash_sysbin.add_argument(
+        "--safe", action="store_true",
+        help="Replace init.yaml with usb_shell-only (recovery mode)")
     p_flash_sysbin.set_defaults(func=cmd_flashimg)
 
     p_flash_sd = flash_sub.add_parser(
@@ -427,6 +430,8 @@ def main() -> None:
                             help="Serial port (overrides .duneos_port)")
     p_flashimg.add_argument("--baud", type=int, default=460800,
                             help="Flash baud rate (default: 460800)")
+    p_flashimg.add_argument("--safe", action="store_true",
+                            help="Replace init.yaml with usb_shell-only (recovery mode)")
     p_flashimg.set_defaults(func=cmd_flashimg)
 
     args = parser.parse_args()

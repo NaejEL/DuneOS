@@ -67,6 +67,16 @@ typedef struct {
     uint32_t                restart_count;
     bool                    force_restart;
 
+    /* Phase 24.7: circuit breaker — disable restart after too many crashes
+     * in a short window. Prevents a bad init.yaml from looping forever and
+     * blocking the user out (USB MSC may not enumerate during a restart
+     * storm). Defaults: 3 crashes in 30 s → restart disabled. */
+    uint32_t                breaker_window_start_ms;  /* tick of first crash in window */
+    uint32_t                breaker_crashes_in_window;
+    uint32_t                breaker_max_crashes;       /* 0 = use DUNEOS_BREAKER_DEFAULT_MAX */
+    uint32_t                breaker_window_ms;         /* 0 = use DUNEOS_BREAKER_DEFAULT_MS  */
+    bool                    breaker_tripped;           /* true once limit hit; restart skipped */
+
     /* Phase 20: per-app heap pool */
     uint8_t            *heap_pool_buf;   /* raw buffer for this app's heap */
     size_t              heap_pool_size;
@@ -116,6 +126,11 @@ static TimerHandle_t     s_wdt_timer;
 
 /* Minimum pool size accepted by multi_heap_register (internal requirement) */
 #define MULTI_HEAP_MIN_SIZE  64u
+
+/* Phase 24.7 circuit breaker defaults — used when init.yaml doesn't set
+ * per-service overrides. Stops a crashing service from looping forever. */
+#define DUNEOS_BREAKER_DEFAULT_MAX     3u      /* crashes allowed in window */
+#define DUNEOS_BREAKER_DEFAULT_MS  30000u      /* window length in ms */
 
 /* WDT check interval for the software timer */
 #define DUNEOS_WDT_CHECK_MS  500u
@@ -400,6 +415,34 @@ static void supervisor_task(void *arg)
                               (policy == DUNEOS_RESTART_ALWAYS) ||
                               (policy == DUNEOS_RESTART_ON_FAILURE && code != 0);
 
+        /* Phase 24.7 circuit breaker: if this service is restarting,
+         * count it against the recent-crashes window. Trip the breaker
+         * once it crosses the threshold; do not restart again until the
+         * service is manually re-launched.                              */
+        bool breaker_tripping = false;
+        if (should_restart) {
+            uint32_t now_ms   = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+            uint32_t max_c    = slot->breaker_max_crashes ? slot->breaker_max_crashes
+                                                          : DUNEOS_BREAKER_DEFAULT_MAX;
+            uint32_t window   = slot->breaker_window_ms   ? slot->breaker_window_ms
+                                                          : DUNEOS_BREAKER_DEFAULT_MS;
+
+            if (slot->breaker_crashes_in_window == 0 ||
+                (now_ms - slot->breaker_window_start_ms) > window) {
+                /* First crash, or last window expired → start a new window. */
+                slot->breaker_window_start_ms   = now_ms;
+                slot->breaker_crashes_in_window = 1;
+            } else {
+                slot->breaker_crashes_in_window++;
+            }
+
+            if (slot->breaker_crashes_in_window > max_c) {
+                slot->breaker_tripped = true;
+                should_restart        = false;
+                breaker_tripping      = true;
+            }
+        }
+
         /* Kill the task before releasing the lock so we stop its execution
          * before unloading its code. Only needed for forced exits (stack
          * overflow, WDT, external restart) — in the normal path the app task
@@ -422,7 +465,10 @@ static void supervisor_task(void *arg)
 
         /* klog_e is forwarded to ESP_LOGE → visible on serial console */
         klog_e(TAG, "'%s' exited (code %d)%s", name, code,
-               should_restart ? " — restarting" : "");
+               should_restart ? " — restarting"
+                              : (breaker_tripping
+                                    ? " — circuit breaker tripped, restart disabled"
+                                    : ""));
 
         s_loader_ops.unload(app);
         slot_heap_free(slot);           /* free per-app heap pool */
@@ -539,6 +585,17 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     strlcpy(slot->restart_path, path, sizeof(slot->restart_path));
     slot->restart_policy = policy;
     slot->app = app;
+
+    /* Phase 24.7: reset circuit breaker state for this launch. A slot
+     * being reused after a previous trip starts fresh; manual relaunch
+     * clears the prior crash history. Manifest could override max/window
+     * in a future version — defaults used when both are 0.              */
+    slot->restart_count             = 0;
+    slot->breaker_window_start_ms   = 0;
+    slot->breaker_crashes_in_window = 0;
+    slot->breaker_max_crashes       = 0;   /* 0 = use DEFAULT_MAX */
+    slot->breaker_window_ms         = 0;   /* 0 = use DEFAULT_MS  */
+    slot->breaker_tripped           = false;
 
     /* Phase 20: per-app heap pool */
     slot->heap_pool_buf  = NULL;
