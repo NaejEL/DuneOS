@@ -94,6 +94,18 @@ if(CONFIG_DUNEOS_DRV_GPIO)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/gpio/drv_gpio.c")
 endif()
 
+if(CONFIG_DUNEOS_DRV_GPIOCHIP_SX1509)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/gpio/drv_gpiochip_sx1509.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_GPIOCHIP_PCF8574)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/gpio/drv_gpiochip_pcf8574.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_GPIOCHIP_MCP23017)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/gpio/drv_gpiochip_mcp23017.c")
+endif()
+
 if(CONFIG_DUNEOS_DRV_I2C)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/i2c_bus.c")
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/drv_i2c.c")

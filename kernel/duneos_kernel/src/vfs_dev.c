@@ -218,6 +218,15 @@ extern void drv_klog_register(void);
 #ifdef CONFIG_DUNEOS_DRV_GPIO
 extern void drv_gpio_register(void);
 #endif
+#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_SX1509
+extern void drv_gpiochip_sx1509_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_PCF8574
+extern void drv_gpiochip_pcf8574_register(void);
+#endif
+#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_MCP23017
+extern void drv_gpiochip_mcp23017_register(void);
+#endif
 #ifdef CONFIG_DUNEOS_DRV_I2C
 extern void drv_i2c_register(void);
 #endif
@@ -288,6 +297,19 @@ esp_err_t duneos_vfs_mount_dev(void)
 #endif
 #ifdef CONFIG_DUNEOS_DRV_I2C
     drv_i2c_register();
+#endif
+    /* GPIO expanders register after drv_i2c_register() so i2c_bus_init() has
+     * been called. Each register fn iterates the declared expander slots and
+     * filters by type — only the slots whose DUNEOS_GPIOCHIPN_TYPE matches the
+     * driver register the corresponding /dev/gpiochipN node. */
+#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_SX1509
+    drv_gpiochip_sx1509_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_PCF8574
+    drv_gpiochip_pcf8574_register();
+#endif
+#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_MCP23017
+    drv_gpiochip_mcp23017_register();
 #endif
 #ifdef CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE
     drv_battery_adc_simple_register();

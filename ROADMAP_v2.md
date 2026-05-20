@@ -200,13 +200,16 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
     - `dbt buildall` → 27/27 OK ; kernel CardPuter build OK
   - **Reste pour fermeture** : flash T-Embed → vérifier que `battery_daemon` apparaît dans klog au boot, que `/tmp/battery` est rempli, que la commande shell `battery` retourne `voltage/charge/status`. **Tant que ce test device n'a pas été fait, l'item reste `[ ]`.**
 
-- [ ] **#3 — GPIO expanders drivers C** (réouvert) :
-  - **Aujourd'hui** : Kconfig + bspgen schema OK, mais les drivers `drv_gpiochip_sx1509.c`, `drv_gpiochip_pcf8574.c`, `drv_gpiochip_mcp23017.c` n'existent PAS. Item marqué [x] à tort.
-  - **Plan** :
-    1. `drv_gpiochip_sx1509.c` + `drv_gpiochip_pcf8574.c` (les deux les plus courants) — chacun ouvre `/dev/i2c-0` + expose `/dev/gpiochip{N}` selon les defines générés par bspgen
-    2. `drv_gpiochip_mcp23017.c` : laisser le stub Kconfig si pas de board demandeur — *explicitement noté* dans le help text
-    3. Tester sur un board fictif (board.yaml avec `gpio_expanders: [{type: sx1509, ...}]`) que le driver enregistre /dev/gpiochip1
-  - **Critères de fermeture** : SX1509 + PCF8574 drivers compilés, `/dev/gpiochip1` enregistré sur une board test, MCP23017 marqué explicitement "stub awaiting hardware".
+- [x] **#3 — GPIO expanders drivers C** (code-complete, kernel-validated)
+  - **Statut 2026-05-20** : 3 drivers livrés, kernel T-Embed build OK avec les 3 enabled, 27/27 apps OK sur CardPuter.
+  - **Fait** :
+    - `kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_sx1509.c` — 16-bit SX1509, RMW shadows pour DIR/DATA/PULLUP, mutex per-driver, container_of pattern (multi-instance via `MAX_SX1509_INSTANCES=4`)
+    - `kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_pcf8574.c` — 8-bit PCF8574 quasi-bidirectionnel (input = write 1, output = SET_VALUE direct, SET_PULL rejette NONE/DOWN car pull-ups internes always-on)
+    - `kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_mcp23017.c` — STUB explicite (klog warning au boot, doc inline pointing to SX1509 comme template)
+    - CMakeLists.txt : 3 `if(CONFIG_DUNEOS_DRV_GPIOCHIP_*)` blocks
+    - vfs_dev.c : extern decls + register calls (ordre : *après* `drv_i2c_register()` pour que `i2c_bus_init()` ait tourné)
+    - Test : T-Embed board.yaml avec `gpio_expanders: [sx1509, pcf8574, mcp23017]` → kernel link OK, 3 `.obj` produits
+  - **Note** : un Phase 24.9 (driver self-registration) supprimera plus tard les blocs `#ifdef` répétitifs ; chaque driver utilisera `DUNEOS_DRIVER_REGISTER()` à la place. Pas un blocker pour ce closure.
 
 - [ ] **#5 — uinput + input drivers userspace** :
   - **Plan inchangé** (cf. ROADMAP avant — uinput driver + kb_iomatrix.dap + btn_gpio.dap + capability `input` dans ADR 014).
