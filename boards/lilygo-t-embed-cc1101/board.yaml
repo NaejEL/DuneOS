@@ -57,6 +57,16 @@ board:
     col_offset: 0   # ST7789 CASET offset — 240×280 panel fills the frame, no offset
     row_offset: 0   # ST7789 RASET offset
 
+  lora:
+    type: cc1101
+    spi_id: 2
+    cs_pin: 12
+    gdo0_pin: 3
+    gdo2_pin: 38
+    sw1_pin: 47
+    sw2_pin: 48
+    pwr_enable_pin: 15
+
   battery:
     # BQ27220 gas gauge on I2C0 — reports voltage/SoC/charge status directly.
     # BQ25896 charger (0x6B) also present but status is read from BQ27220 FLAGS.
@@ -65,10 +75,19 @@ board:
     gauge_addr: 0x55
     charger_addr: 0x6B
 
+  rfid:
+    type: pn532
+    i2c_id: 0
+    irq_pin: 17
+    reset_pin: 45
+    addr: 0x24
+    pwr_enable_pin: 15
+
   leds:
     - id: status
-      pin: 48
+      pin: 14
       type: ws2812
+      size: 8
       active_high: true
 
   # Power switch (GPIO15): controls power rail for CC1101 and WS2812 LED.
