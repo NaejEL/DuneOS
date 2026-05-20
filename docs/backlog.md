@@ -19,6 +19,7 @@ Items are grouped by impact, not by phase. Each line is one sentence — if it g
 - **Time-of-day / NTP-SNTP** — `clock_gettime(CLOCK_MONOTONIC)` works (it's the hardware timer); `CLOCK_REALTIME` returns whatever happens to be in the kernel's notion of wall clock (probably epoch). `wifi_daemon` doesn't do SNTP. Trivial to add once it matters; not blocking anything.
 - **Kernel version exposure** — `DUNEOS_VERSION_STRING` is printed in klog at boot but isn't queryable at runtime. A `dbt info-device` that talks to the kernel over `/dev/ttyUSB0` would be useful for support ("what kernel are you running?"). Tiny scope; opportunistic.
 - **`cd apps/user/<name> && python ../../../tools/dbt.py build`** is awkward after the `apps/system,user` split (one extra `../`). Either `dbt build <app_path>` from the repo root, or a `dbt` wrapper that walks up to find the repo root, would be cleaner. Tiny DX win.
+- **Shell default cwd `/sd` is wrong when no SD is mounted** — `apps/system/shell_core/shell_core.c:31`, `shell_cmds.c:81` (`cd` no-arg), and `g_shell.c:56` all hardcode `/sd`. With SD absent, the user lands in a non-existent dir and `ls` returns ENOENT. Fix: at shell startup, `stat()` the mount points and fall back to `/flash` if `/sd` is missing — same logic for `cd` no-arg. Touches 3 files + a small helper.
 
 ## Low impact / niche
 
