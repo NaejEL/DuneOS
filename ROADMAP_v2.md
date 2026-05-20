@@ -326,30 +326,30 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1) ⏸ deferred
+### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1) 🟡 to-revisit
 
 Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init` via section ELF.
 
-**Statut 2026-05-20 : tenté, deferré.** L'attempt a buté sur les contraintes du linker ESP-IDF v6 :
+**Statut 2026-05-20 : 1ère attempt rolled back, à reprendre AVANT Phase 25.** L'attempt a buté sur les contraintes du linker ESP-IDF v6 :
 
 1. La macro `DUNEOS_DRIVER_REGISTER` qui place une entrée dans une section custom `duneos_drivers` fonctionne au compile-time (GCC).
-2. ESP-IDF v6 enforce `--orphan-handling=error` au link → la section custom est rejetée comme "unplaced orphan" (gap entre `.flash.appdesc` et `.flash.rodata`).
+2. ESP-IDF v6 enforce `--orphan-handling=error` au link → la section custom est rejetée comme "unplaced orphan".
 3. `WHOLE_ARCHIVE` (pour `idf_component_register`) résout le strip de section par `--gc-sections`, mais ne résout pas le placement orphelin.
 4. `--orphan-handling=place` permet le link mais le placement automatique tombe entre `.flash.appdesc` et `.flash.rodata` → ESP-IDF's `esp_app_format` check rejette ("gap must not exist").
-5. Le fix propre requiert un **linker fragment ESP-IDF** qui place explicitement `duneos_drivers` à l'intérieur de `.flash.rodata` ET déclare les symboles `__duneos_drivers_start`/`__duneos_drivers_end` autour. Le système `linker.lf` d'ESP-IDF v6 est mal documenté pour les sections custom (le `[sections:...]` syntax existe mais l'interaction avec les symboles auto-générés n'est pas claire).
+5. Le fix propre requiert un **linker fragment ESP-IDF** qui place explicitement `duneos_drivers` à l'intérieur de `.flash.rodata` ET déclare les symboles `__duneos_drivers_start`/`__duneos_drivers_end` autour.
 
-**Pour reprendre proprement** :
-- Solution A : écrire un linker fragment v6 minimaliste qui ajoute la section à `.flash.rodata` (recherche prouvée mais non triviale).
-- Solution B : utiliser le nom `.rodata.duneos_drivers` (auto-placé par les patterns `*.rodata.*` existants) + déclarer manuellement les symboles start/stop via inline asm ou un .ld file ad hoc.
-- Solution C : abandonner l'approche section + utiliser une constructor-style avec init différée (chaque driver enregistre via `__attribute__((constructor))` dans une liste static, vfs_dev.c itère après mount).
+**3 pistes d'investigation pour la reprise** :
+- **Solution A** : écrire un linker fragment v6 (`linker.lf`) qui ajoute la section à `.flash.rodata` via `[sections:...]` + `[scheme:...]` blocks. Recherche prouvée mais doc mince ; ~1-2h focus sur la syntaxe v6.
+- **Solution B** : utiliser le nom `.rodata.duneos_drivers` (auto-placé par les patterns `*.rodata.*` existants dans `.flash.rodata`) + déclarer manuellement les symboles start/stop via un `.ld` ad hoc inclus via `target_linker_script(... INTERFACE ... APPEND)`. Plus simple à câbler probablement.
+- **Solution C** : abandonner l'approche section + utiliser des constructors `__attribute__((constructor(N)))` qui s'enregistrent dans une liste static au boot ; `vfs_dev.c` itère après mount. Évite la friction linker. Cost : les constructors tournent AVANT VFS init donc l'enregistrement réel est différé via un buffer intermédiaire.
 
-Pas bloquant — l'approche actuelle (`#ifdef` + `extern` chains) fonctionne. La gêne est ergonomique : ajouter un driver kernel = 4 fichiers à toucher. Comparable à Linux pré-`module_init` macro.
+**À faire AVANT Phase 25** parce que Phase 25 (`dbt system` — Image Recipes) va ajouter des drivers conditionnels à profile et la friction "4 fichiers à toucher par driver" deviendra critique. 24.9 unlocks la modularité que Phase 25 amplifie.
 
-- [ ] Solution choisie : à définir (A/B/C)
+- [ ] Choisir solution (préférence B → C → A par effort croissant)
 - [ ] Implementation
 - [ ] Smoke test sur CardPuter + T-Embed
 
-> **Quand reprendre** : quand un développeur (futur ou actuel) ajoute son 2e ou 3e driver et trouve l'ergonomique actuelle pénible, ou quand la roadmap après Phase 25 a du temps pour les questions de tooling.
+> **Pas une dépendance technique stricte de Phase 25 — c'est l'ergonomie qui rend la fin de Phase 25 propre.** L'approche actuelle (`#ifdef` + `extern`) reste opérationnelle si on doit accélérer Phase 25.
 
 ---
 
