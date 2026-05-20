@@ -37,7 +37,7 @@ Five apps + a launcher. Each shipped as a `.dap` with an icon, sideloadable via 
 
 | App | What it does | Effort | Notes |
 |---|---|---|---|
-| **`i2cscope`** | I²C scanner, register read/write, hexdump. Inspired by flipperzero-i2ctools. | 1 week | Uses `/dev/i2c-0` (already exposed). Shows forensic/utility side. |
+| **`i2cscope`** | I²C scanner, sniffer, register read/write, hexdump. Inspired by flipperzero-i2ctools. | 1 week | Uses `/dev/i2c-0` (already exposed). Shows forensic/utility side. |
 | **`snake`** | Snake on 240×135 with libgfx. Score persisted to `/sd/snake.score`. | 3 days | Visual, universally appreciated. |
 | **`tetris`** | 10×20 grid, CardPuter keymap (←/→/↓/rotate). | 1 week | Second game shows the launcher's value (switch without reflash). |
 | **`lua`** | Lua REPL with bindings to GPIO, I²C, framebuffer. | 1-2 weeks | Choice of implementation pending (see "Open decisions" below). |
