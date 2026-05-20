@@ -168,6 +168,17 @@ static void app_task_entry(void *arg)
 {
     app_slot_t *slot = (app_slot_t *)arg;
 
+    /* Self-assign slot->task at the earliest point. The launcher used to
+     * write slot->task = handle AFTER xTaskCreate, but a fast-exiting app
+     * (e.g. test_exit calling duneos_exit(0) immediately) could race ahead
+     * and deliver its exit_msg to supervisor_task before the launcher's
+     * assignment ran. slot_by_task(msg.task) then returned NULL ("stale
+     * exit"), the supervisor skipped the decrement, s_active_count stayed
+     * inflated, and any waiter (e.g. shell's wait_for_completion) hung
+     * forever. Writing here closes the race because supervisor_task can
+     * only observe an exit_msg AFTER this task has run at least once. */
+    slot->task = xTaskGetCurrentTaskHandle();
+
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     /* Ensure exception handlers are installed on whichever core this task
      * landed on.  _xtos_set_exception_handler is per-core, so this must run
@@ -608,7 +619,11 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
         klog_e(TAG, "xTaskCreateStatic failed for '%s'", slot->name);
         return ESP_ERR_NO_MEM;
     }
-    slot->task = handle;
+    /* slot->task is now self-assigned by app_task_entry on its first
+     * instruction (see comment there). Assigning it here would create a
+     * race where a fast-exiting app delivers its exit_msg before this
+     * assignment runs, leaving slot_by_task() returning NULL.            */
+    (void)handle;
 
     klog_d(TAG, "launched '%s' (stack %lu B, heap %lu B, wdt %lu ms, restart=%d)",
            slot->name, (unsigned long)stack,
