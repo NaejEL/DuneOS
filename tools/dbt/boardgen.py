@@ -109,6 +109,25 @@ def _i2c_block(board: dict, lines: list[str]) -> None:
     lines.append("")
 
 
+def _battery_block(board: dict, lines: list[str]) -> None:
+    """Emit battery defines so the battery_daemon can talk to the gauge.
+
+    Only emitted when battery.type is an I2C gas gauge (today: bq27220). ADC-
+    backed batteries (e.g. CardPuter) stay in-kernel via /dev/battery0 and need
+    no userspace defines.
+    """
+    bat = board.get("battery")
+    if not isinstance(bat, dict):
+        return
+    if bat.get("type") != "bq27220":
+        return
+    lines.append("/* ----- battery (BQ27220 daemon) ----- */")
+    lines.append(f'#define DUNEOS_BATTERY_I2C_DEV       "/dev/i2c-{int(bat.get("i2c_id", 0))}"')
+    lines.append(f"#define DUNEOS_BATTERY_GAUGE_ADDR    {hex(int(bat.get('gauge_addr', 0x55)))}")
+    lines.append('#define DUNEOS_BATTERY_TMPFS_PATH    "/tmp/battery"')
+    lines.append("")
+
+
 def _storage_block(board: dict, lines: list[str]) -> None:
     has_sd = bool(board.get("sd_card"))
     lines.append("/* ----- storage ----- */")
@@ -140,6 +159,7 @@ def generate(board_cfg: dict, board_name: str, capabilities: list[str]) -> str:
     _display_block(b, lines)
     _input_block(b, lines)
     _i2c_block(b, lines)
+    _battery_block(b, lines)
     return "\n".join(lines)
 
 

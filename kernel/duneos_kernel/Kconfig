@@ -46,15 +46,6 @@ config DUNEOS_DRV_BATTERY_ADC_SIMPLE
         DUNEOS_BATTERY_VDIV_FACTOR, DUNEOS_BATTERY_FULL_MV, DUNEOS_BATTERY_EMPTY_MV
         in board_config.h. Suitable for M5Stack CardPuter (VBAT/2 on GPIO10).
 
-config DUNEOS_DRV_BATTERY_BQ27220
-    bool "Battery monitor — BQ27220 fuel gauge backend (/dev/battery0)"
-    default n
-    depends on DUNEOS_DRV_I2C
-    help
-        Enable /dev/battery0 using a TI BQ27220 coulomb-counter fuel gauge
-        connected to the I2C bus. Board must define DUNEOS_BATTERY_GAUGE_ADDR
-        in board_config.h. Suitable for LilyGo T-Embed CC1101.
-
 config DUNEOS_DRV_SPI
     bool "SPI master bus (/dev/spi-1)"
     default n

@@ -82,8 +82,10 @@ The tool also generates two additional files alongside board_config.h:
                             CONFIG_DUNEOS_DRV_UART=y
                             CONFIG_DUNEOS_DRV_GPIO=y
                             CONFIG_DUNEOS_DRV_I2C=y
-                            CONFIG_DUNEOS_DRV_BATTERY_BQ27220=y
+                            CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE=y
                             # etc.
+                          (BQ27220 is served by apps/system/battery_daemon now,
+                          not by a kernel driver — see 24-debt #1.)
 """
 
 import argparse
@@ -288,17 +290,10 @@ def generate(board: dict) -> str:
             lines += [_define("DUNEOS_BATTERY_TYPE_IP5306", 1)]
         elif btype == "max17043":
             lines += [_define("DUNEOS_BATTERY_TYPE_MAX17043", 1)]
-        elif btype == "bq27220":
-            gauge_addr   = batt.get("gauge_addr", 0x55)
-            charger_addr = batt.get("charger_addr")
-            lines += [
-                _define("DUNEOS_BATTERY_TYPE_BQ27220",  1),
-                _define("DUNEOS_BATTERY_GAUGE_ADDR",
-                        hex(gauge_addr) if isinstance(gauge_addr, int) else gauge_addr),
-            ]
-            if charger_addr is not None:
-                lines += [_define("DUNEOS_BATTERY_CHARGER_ADDR",
-                                  hex(charger_addr) if isinstance(charger_addr, int) else charger_addr)]
+        # bq27220 is served by apps/system/battery_daemon (userspace). The
+        # gauge address + I2C device path are emitted into the per-app
+        # <duneos/board.h> by tools/dbt/boardgen.py — no kernel-side
+        # board_config.h define needed.
         lines.append("")
 
     # ----- Display -----
@@ -645,9 +640,8 @@ def generate_sdkconfig_board(board: dict) -> str:
         btype = batt.get("type", "adc_simple")
         if btype == "adc_simple":
             lines.append("CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE=y")
-        elif btype == "bq27220":
-            lines.append("CONFIG_DUNEOS_DRV_BATTERY_BQ27220=y")
-        lines.append("")
+            lines.append("")
+        # bq27220 has no kernel driver — apps/system/battery_daemon handles it.
 
     disp = board.get("display")
     if disp:

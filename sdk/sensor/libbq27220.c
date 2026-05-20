@@ -5,7 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
+/* ioctl() prototype is provided by duneos/i2c_ioctl.h (included above). */
 
 /* BQ27220 standard register map (16-bit little-endian reads). */
 #define BQ27220_REG_VOLTAGE  0x04   /* mV — raw cell voltage            */

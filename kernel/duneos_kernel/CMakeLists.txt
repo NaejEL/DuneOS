@@ -94,21 +94,13 @@ if(CONFIG_DUNEOS_DRV_GPIO)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/gpio/drv_gpio.c")
 endif()
 
-# i2c_bus.c is shared by drv_i2c.c and drv_battery_bq27220.c.
-if(CONFIG_DUNEOS_DRV_I2C OR CONFIG_DUNEOS_DRV_BATTERY_BQ27220)
-    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/i2c_bus.c")
-endif()
-
 if(CONFIG_DUNEOS_DRV_I2C)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/i2c_bus.c")
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/drv_i2c.c")
 endif()
 
 if(CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/battery/drv_battery_adc_simple.c")
-endif()
-
-if(CONFIG_DUNEOS_DRV_BATTERY_BQ27220)
-    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/battery/drv_battery_bq27220.c")
 endif()
 
 if(CONFIG_DUNEOS_DRV_SPI)
