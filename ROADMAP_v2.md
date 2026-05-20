@@ -172,24 +172,46 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - Commentaire obsolète `input_ioctl.h:47` (mentionne `xTaskGetTickCount() * portTICK_PERIOD_MS` alors que le champ est désormais peuplé via `duneos_hal_monotonic_us() / 1000`).
 - Commentaire `task.h:8-10` "FreeRTOS abstraction" — à reformuler en "OSAL abstraction" au moment de Phase 26.
 
-**Driver placement debt** — découlant de l'application des [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md) aux drivers existants. Cinq items :
+**Driver placement debt** — découlant de [ADR 009](docs/adr/009-driver-boundary.md) (kernel/userspace boundary) et [ADR 010](docs/adr/010-arch-accelerators.md). Six items. Cette liste reflète l'**état honnête** (révision 2026-05-20) : on ne marque un item `[x]` que quand il est *complètement* fermé (kernel propre + apps migrées + tests passants).
 
-- [x] **`drv_battery_bq27220.c` → userspace** : Migré vers `sdk/sensor/libbq27220.c` (lib userspace pure). Le driver kernel `drv_battery_bq27220.c` survit pour servir `/dev/battery0`. Conversion totale en daemon `battery_daemon.dap` reportée — non bloquant.
-- [~] **ST7789 : consolider 3 codepaths en 1** — **partiellement résolu, drift réouvert** : `drv_fb_st7789.c` conservé pour `/dev/fb0` sur boards PSRAM (T-Embed). `drv_disp_st7789.c` **réintroduit** pour boards non-PSRAM (CardPuter) suite à régression : le SPI3 du display n'est PAS exposé en `/dev/spi-N` par le kernel, donc la version userspace pure `libst7789.c` ouvrait `/dev/spi-1` (= bus SD) et écrivait dessus → crash kernel. `libdisp.c` parle à `/dev/disp0` aujourd'hui. `libst7789.c` reste dans le SDK comme placeholder, sera réactivé en **Phase 24 debt item #6 — Expose SPI3 as /dev/spi-N** (le kernel init le bus SPI3 sans le consommer, l'expose userspace, libdisp peut alors choisir entre /dev/disp0 et libst7789 selon ce qui est dispo).
-- [x] **GPIO expanders : règle explicite dans `bspgen`** : Schéma `gpio_expanders: [{type: sx1509, i2c_addr: 0x3e, pins: 16}, ...]` dans `board.yaml`. `bspgen` émet `DUNEOS_GPIOCHIP{N}_TYPE/I2C_ADDR/PINS` dans `board_config.h` + `CONFIG_DUNEOS_DRV_GPIOCHIP_{type}=y` dans `sdkconfig.board`. Drivers C `drv_gpiochip_*.c` non encore implémentés (stubs Kconfig en place — sera complété quand un board en exige réellement).
-- [x] **`hal_encoder` capability HAL (ADR 010 Pattern A)** : `hal_encoder.h` + backend Xtensa PCNT (strong symbol) + fallback GPIO polling (weak symbol). `enc_quadrature.c` réduit à un thin shim (83 → 49 lignes). Backend RP2040 (PIO) à ajouter en Phase 29.
-- [ ] **Expose SPI3 as /dev/spi-N (item #6)** : sur les boards où le display utilise un SPI host non consommé par le kernel (ex: SPI3 sur CardPuter, dédié au ST7789), le bus n'est pas accessible userspace aujourd'hui. Plan : `bspgen` détecte un display SPI host non-FB et émet un nouveau `DUNEOS_SPI2_*` (ou indexé) à exposer en `/dev/spi-2` ; `drv_spi.c` apprend à multi-host (gérer plusieurs `s_bus`) ; libdisp gagne la dispatch tier-A2 (libst7789 via /dev/spi-N) en fallback de `/dev/disp0`. Permet la vraie fermeture de drift #2 et active la portabilité display source-level promise par ADR 014.
+- [x] **#4 — `hal_encoder` capability HAL (ADR 010 Pattern A)** : `hal_encoder.h` + backend Xtensa PCNT (strong symbol) + fallback GPIO polling (weak symbol). `enc_quadrature.c` réduit à un thin shim. Backend RP2040 (PIO) à ajouter en Phase 29.
 
-- [ ] **uinput + input drivers userspace (item #5)** : `kb_iomatrix.c` et `btn_gpio.c` actuellement kernel-side ne satisfont aucun critère ADR 009 (un consommateur, pas d'ISR critique, pin matrice dédiée, lifecycle app-scope). Migration plan :
-  1. Nouveau driver kernel **`drv_uinput.c`** exposant `/dev/uinput` (style Linux uinput) — apps userspace écrivent des `input_event_t`, le kernel les forwarde vers `/dev/input/event0`.
-  2. **`apps/system/kb_iomatrix.dap`** : daemon userspace qui scanne la matrice via `/dev/gpiochip0` et émet vers `/dev/uinput`. Idem **`btn_gpio.dap`** pour boards à boutons.
-  3. `enc_quadrature.c` reste **partiellement kernel** (le HAL `hal_encoder` a besoin de l'ISR PCNT) ; mais la conversion "delta → input_event" peut migrer dans un thin app userspace si profitable.
-  4. `init.yaml` lance ces input daemons en `restart: always` au boot, avant tout app qui consomme `/dev/input`.
-  5. **Étend ADR 014** : nouvelle capability `input` qui résout `lib${board.input.driver}.c` (kb_iomatrix, btn_gpio, …). Le board declare `input.driver: iomatrix` ; dbt link le bon backend.
+- [ ] **#6 — Expose SPI3 as /dev/spi-N + #2 ST7789 userspace** (combinés — l'un débloque l'autre) :
+  - **Aujourd'hui** : `drv_spi.c` gère 1 seul bus (`DUNEOS_SPI1_HOST`). Sur CardPuter, SPI3 est consommé exclusivement par `drv_disp_st7789.c` (kernel) — userspace ne peut pas l'atteindre. Tentative précédente de userspace-ifier libst7789 a corrompu le bus SD (cf. commit aa723ad).
+  - **Plan** :
+    1. `drv_spi.c` devient multi-host : `static s_buses[N]` + une instance par bus déclaré `role: raw` en YAML
+    2. `bspgen.py` : émet `DUNEOS_SPI{N}_HOST/MOSI/CLK/MISO` pour chaque bus avec `role: raw` ; émet `CONFIG_DUNEOS_DRV_SPI=y` quand au moins un bus raw existe
+    3. `boards/m5stack-cardputer/board.yaml` : ajout d'un bus `id: 3, role: raw` pour le SPI3 du display
+    4. Retrait de `drv_disp_st7789.c` (kernel) + `CONFIG_DUNEOS_DRV_DISP` — le display n'est plus kernel sur les boards non-PSRAM
+    5. `libst7789.c` réécrit pour de vrai : ouvre `/dev/spi-2` (= SPI3), `/dev/gpiochip0` pour DC/RST/BL, lit les pins/MADCTL/offsets depuis `<duneos/board.h>` (Phase 24.8). Plus aucun parse de `/flash/board.info` au runtime.
+    6. `libdisp.c` consomme `duneos_disp_ops` exposé par `libst7789.c` (vraie vtable, plus de short-circuit vers /dev/disp0)
+    7. Tests : `g_shell` + `gfx_demo` fonctionnent sur CardPuter via /dev/spi-2 ; T-Embed continue via /dev/fb0
+  - **Critères de fermeture** : `drv_disp_st7789.c` supprimé du repo ; pas d'erreur klog ; g_shell affiche son terminal ; gfx_demo affiche ses 4 frames.
 
-  Effort : ~1 semaine focus. Idéalement avant le contest 2026 (démontre clairement le pattern "apps remplaçables sans reflasher").
+- [ ] **#1 — BQ27220 daemon** (réouvert) :
+  - **Aujourd'hui** : `sdk/sensor/libbq27220.c` userspace existe ; `drv_battery_bq27220.c` kernel survit et sert `/dev/battery0`. Item marqué [x] à tort dans une révision précédente.
+  - **Plan** :
+    1. Créer `apps/system/battery_daemon/battery_daemon.c` qui ouvre `/dev/i2c-0` via libbq27220 + expose un FIFO `/tmp/battery.fifo` (ou un autre mécanisme) pour fournir les lectures aux clients
+    2. Décider du mécanisme d'IPC : pipe nommée, socket UNIX-like, ou nouveau driver `drv_named_pipe.c` kernel
+    3. Retirer `drv_battery_bq27220.c` + `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` du kernel
+    4. `apps/system/bin/battery.dap` consomme le FIFO au lieu de `/dev/battery0`
+    5. `init.yaml` T-Embed ajoute `battery_daemon.dap`
+  - **Critères de fermeture** : `drv_battery_bq27220.c` supprimé du repo ; `battery` shell command marche toujours sur T-Embed.
 
-> Items 1-4 sont des refactors purs (pas de change d'API public côté apps). Item 5 est plus structurel — touche au modèle d'input mais reste retro-compatible (apps lisent toujours `/dev/input/event0`).
+- [ ] **#3 — GPIO expanders drivers C** (réouvert) :
+  - **Aujourd'hui** : Kconfig + bspgen schema OK, mais les drivers `drv_gpiochip_sx1509.c`, `drv_gpiochip_pcf8574.c`, `drv_gpiochip_mcp23017.c` n'existent PAS. Item marqué [x] à tort.
+  - **Plan** :
+    1. `drv_gpiochip_sx1509.c` + `drv_gpiochip_pcf8574.c` (les deux les plus courants) — chacun ouvre `/dev/i2c-0` + expose `/dev/gpiochip{N}` selon les defines générés par bspgen
+    2. `drv_gpiochip_mcp23017.c` : laisser le stub Kconfig si pas de board demandeur — *explicitement noté* dans le help text
+    3. Tester sur un board fictif (board.yaml avec `gpio_expanders: [{type: sx1509, ...}]`) que le driver enregistre /dev/gpiochip1
+  - **Critères de fermeture** : SX1509 + PCF8574 drivers compilés, `/dev/gpiochip1` enregistré sur une board test, MCP23017 marqué explicitement "stub awaiting hardware".
+
+- [ ] **#5 — uinput + input drivers userspace** :
+  - **Plan inchangé** (cf. ROADMAP avant — uinput driver + kb_iomatrix.dap + btn_gpio.dap + capability `input` dans ADR 014).
+  - **Effort estimé** : ~1 semaine focus.
+  - **Critères de fermeture** : `kb_iomatrix.c` + `btn_gpio.c` supprimés du kernel ; `apps/system/kb_iomatrix.dap` + `apps/system/btn_gpio.dap` opérationnels ; `g_shell` reçoit toujours ses events via `/dev/input/event0`.
+
+> Aucun item n'est marqué `[x]` tant que **le kernel n'a plus le code obsolète** + **les apps migrées passent les tests**. Pas de "MVP/PARTIAL" en cours d'implémentation — chaque item est en `[ ]` ou en `[x]`, jamais entre les deux. Cette discipline acte le **process de fermeture à 100%** établi 2026-05-20.
 
 ---
 
@@ -213,7 +235,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.7 — Safe boot & recovery 🟡 PARTIEL
+### Phase 24.7 — Safe boot & recovery (not finished — see hold-key item)
 
 **Pourquoi ici (avant Phase 25) :** une `init.yaml` qui lance un service `restart: always` qui crash au démarrage met la board dans une boucle de relance. Sur CardPuter sans bouton de boot dédié et sans UART accessible, la seule sortie est `dbt flash sysbin` — qui suppose que USB MSC monte AVANT le crash. Cas pas garanti. Phase 25 (`dbt system deploy`) va automatiser des déploiements qui peuvent introduire exactement ce bug → on doit pouvoir s'en sortir avant.
 
@@ -229,7 +251,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2) 🟡 MVP livré
+### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2) (not finished)
 
 Élimine les paths device hardcodés (`/dev/disp0`, `/dev/spi-1`, etc.) dans les SDK libs et les apps. `dbt build` génère un header `_board.h` par app, depuis `board.yaml` + résolution des capabilities, contenant tous les defines nécessaires. Apps incluent `<duneos/board.h>` (alias résolu par `-I<build_dir>`).
 
