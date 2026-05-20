@@ -23,6 +23,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 | [014](014-capability-resolution.md) | Capability-based source resolution (dbt resolves chip backends) | Accepted 2026-05-20 | App manifests declare `capabilities: [display]`; dbt picks `lib${board.display.driver}.c` automatically. Extension to input/audio/sensor planned. |
 | [015](015-declarative-driven-architecture.md) | Declarative-driven kernel/userspace (driver self-registration + userspace board.h + drivers-as-apps north star) | Accepted 2026-05-20 | Phase 24.8 (auto-generated `<duneos/board.h>` from board.yaml), Phase 24.9 (kernel driver self-registration via ELF section), long-term drivers-as-userspace-apps. Eliminates hardcoded device paths + hand-maintained driver registry. |
 | [016](016-captured-app-exit.md) | Captured-app exit semantics (`duneos_exit` longjmps to loader, doesn't kill shell) | Accepted 2026-05-20 | Phase 24.9.5 (implementation). Fixes the gfx_demo footgun: captured-app `duneos_exit` killing the parent shell. setjmp/longjmp + app-author contract (no pthread from captured, free fds/heap). |
+| [017](017-multi-function-device.md) | Multi-Function Device handling (chip-core + per-feature sub-drivers, extracted on 2nd sub-feature) | Accepted 2026-05-20 | Future MFD chips (SX1509 PWM/keyboard scanner, TPS65217 PMIC, all-in-one sensors). Today dormant — SX1509 stays single-feature; ADR formalises the pattern before drift sets in. |
 
 ## Reading order for new contributors
 
@@ -30,7 +31,7 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 2. [001](001-error-model.md), [005](005-path-conventions.md), [006](006-manifest-extensibility.md) — surface contracts (errors, paths, manifest).
 3. [002](002-osal-api.md), [003](003-memory-caps.md), [004](004-task-priorities.md) — kernel-internal contracts (OSAL).
 4. [008](008-memory-fragmentation.md) — the strategy that ties allocation decisions together.
-5. [009](009-driver-boundary.md), [010](010-arch-accelerators.md), [014](014-capability-resolution.md), [015](015-declarative-driven-architecture.md), [016](016-captured-app-exit.md) — where drivers live, how arch-specific hardware is exposed, how userspace apps stay board-portable, how the whole pipeline becomes declarative-driven, and how captured apps exit safely.
+5. [009](009-driver-boundary.md), [010](010-arch-accelerators.md), [014](014-capability-resolution.md), [015](015-declarative-driven-architecture.md), [016](016-captured-app-exit.md), [017](017-multi-function-device.md) — where drivers live, how arch-specific hardware is exposed, how userspace apps stay board-portable, how the whole pipeline becomes declarative-driven, how captured apps exit safely, and how multi-function chips are structured.
 6. [011](011-threat-model.md) — what DuneOS does and does not promise about security.
 7. [012](012-test-strategy.md), [007](007-multi-arch-smoke-test.md) — how we guard against regressions: tests and portability builds.
 8. [013](013-network-architecture.md) — how the network stack is layered and how new media (WiFi chips, Ethernet variants) plug in.
