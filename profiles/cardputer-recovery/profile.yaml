@@ -1,0 +1,19 @@
+# DuneOS image profile — M5Stack CardPuter recovery image.
+#
+# Minimal flash payload: just usb_shell. Use when you want the device to
+# come up to the CDC console with nothing else running — e.g. after a
+# bricking series of crashing daemons. Equivalent to `dbt flashimg --safe`
+# but expressed as a profile so it's reproducible and inspectable.
+
+name: cardputer-recovery
+board: m5stack-cardputer
+description: "CardPuter recovery — usb_shell only, no daemons"
+
+apps_flash:
+  - usb_shell
+
+init_flash:
+  - { path: /flash/bin/usb_shell.dap, restart: always }
+
+apps_sd: []
+init_sd: []

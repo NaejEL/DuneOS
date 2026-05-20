@@ -5,6 +5,7 @@ build/
 .duneos_port
 .duneos_idf
 .duneos_sd
+.duneos_profile
 
 sdkconfig
 sdkconfig.old

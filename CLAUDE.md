@@ -150,9 +150,14 @@ DuneOS/
 │       ├── hello_world/            # Writes "Hello World" to stdout then exits
 │       ├── uart_echo/              # Echo loop on /dev/uart0, Ctrl-C to exit
 │       └── tcp_client/             # TCP socket demo (requires wifi_daemon running)
+├── profiles/                       # Image recipes — Phase 25 (Yocto-like)
+│   ├── cardputer-default/profile.yaml   # daily-driver CardPuter
+│   ├── cardputer-recovery/profile.yaml  # usb_shell only (safe-mode equivalent)
+│   ├── t-embed-default/profile.yaml     # daily-driver T-Embed
+│   └── t-embed-recovery/profile.yaml
 ├── tools/
 │   ├── dbt.py                      # thin wrapper → tools/dbt/cli.py
-│   ├── dbt/                        # DuneBuild package: cli/builder/deploy/kernel/flashimg/bspgen/manifest/tui
+│   ├── dbt/                        # DuneBuild package: cli/builder/deploy/kernel/flashimg/bspgen/manifest/tui/system
 │   │   ├── cli.py                  # entry point (commands: build, deploy, info, flashimg, monitor, tui …)
 │   │   ├── tui.py                  # Textual TUI (board/port picker, init config, build/flash actions)
 │   │   ├── toolchain/              # SDK plugins — esp_idf.py today; pico_sdk.py etc. future

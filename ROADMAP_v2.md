@@ -357,16 +357,24 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ### Phase 25 — dbt system (Image Recipes & Vérification)
 
-Un Yocto sans la complexité de Yocto. Trois fichiers YAML et trois commandes `dbt` pour construire un système complet et vérifié — du kernel aux apps.
+Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : un fichier YAML dans `profiles/<name>/profile.yaml` qui déclare board + apps_flash + init_flash + apps_sd + init_sd. Un repo a beaucoup de profiles (comme il a beaucoup de boards et beaucoup d'apps). L'utilisateur choisit lequel via `dbt system use <name>` ou flag `--profile` par commande.
 
-- [ ] **`profile.yaml`** : Profil kernel — liste les drivers à inclure, les options (max_apps, flash_only…). Surcharge `sdkconfig.board` généré par bspgen. Un même board peut avoir plusieurs profils (full, minimal, production).
-- [ ] **`system.yaml`** : Recette système — référence un profil + déclare les apps avec leur politique de restart. Remplace la gestion manuelle de `init.yaml`.
-- [ ] **`tools/dbt/capability_map.py`** : Table de correspondance `DUNEOS_PERM_*` ↔ `CONFIG_DUNEOS_DRV_*`. Codifie le mapping implicite de `vfs_dev.c`.
-- [ ] **`dbt profile build`** : Construit le kernel avec le profil donné.
-- [ ] **`dbt system check`** : Lit le manifest ELF de chaque `.dap` déclaré, croise les permissions requises contre les features du profil — rapport des incompatibilités avant le build. Exemple : `wifi_daemon.dap requires DUNEOS_PERM_NET → MANQUANT`.
-- [ ] **`dbt system build`** : Orchestre kernel + apps + image flash en une commande.
-- [ ] **`dbt system deploy`** : Build + flash + déploiement des `.dap` sur SD/flash.
-- [ ] **`dbt TUI`** : Doit s'intégrer proprement au TUI
+**Sous-phases** :
+
+- [x] **25.1 — Foundation** (shipped 2026-05-21)
+  - `profiles/<name>/profile.yaml` schema (name, board, description, apps_flash, init_flash, apps_sd, init_sd)
+  - `tools/dbt/capability_map.py` : table `DUNEOS_PERM_*` ↔ `CONFIG_DUNEOS_DRV_*` (parsée depuis `boards/<board>/sdkconfig.board`)
+  - `tools/dbt/system.py` : parser + résolveur active-profile + check/build/flash logic
+  - `dbt system list` : liste les profiles disponibles, marque l'actif
+  - `dbt system use <name>` : écrit `.duneos_profile` (gitignored) + aligne `.duneos_board`
+  - `dbt system check [--profile X]` : valide références apps + init_flash/sd cohérents + warnings sur perms vs CONFIG kernel
+  - `dbt system build [--profile X]` : compile seulement les apps du profile (apps_flash + apps_sd unique)
+  - `dbt system flash [--profile X]` : stage seulement apps_flash + render init_flash → flash sysbin (réutilise `cmd_flashimg` avec profile attaché)
+  - `dbt system deploy <sd> [--profile X]` : copie apps_sd vers SD (réutilise `deploy_single`)
+  - 4 profiles d'exemple livrés : `cardputer-default`, `cardputer-recovery`, `t-embed-default`, `t-embed-recovery`
+- [ ] **25.2 — TUI refactor** : layout 2 colonnes flash/SD, apps picker (cocher quelles apps stager), éditeur init.yaml SD parallèle au flash existant, taille sysbin live preview
+- [ ] **25.3 — Polish** : `dbt system diff` (compare actif vs précédent), `dbt system size` (preview sysbin), inline warnings dans le TUI
+- [ ] **25.4 — Branding** : champ `icon:` dans duneos.yaml (pour launcher contest), splash TUI logo
 ---
 
 ### Phase 26 — OSAL et Portabilité Scheduler

@@ -27,7 +27,7 @@ DuneOS is past the POC stage. The kernel boots from on-chip flash even without a
 | 24.9.5 — Captured-app exit semantics (`duneos_exit` longjmps, doesn't kill shell) | ✅ shipped (device-test pending) |
 | 24.10 — libgfx streaming mode (no userspace back-buffer; saves 64 KiB per gfx app) | ✅ device-validated |
 | 24.11 — drv_spi multi-owner sharing (refcounted device handles per CS) | ✅ device-validated |
-| 25 — `dbt system` image recipes | pending — to start after 24.9 closure |
+| 25 — `dbt system` image recipes | 🟡 25.1 shipped (profiles + CLI); 25.2 TUI / 25.3 polish / 25.4 branding pending |
 | 26 — OSAL + scheduler portability (incl. `task.h`+`supervisor.h` → `int`/-errno) | pending |
 | 27 — Native VFS + networking (incl. `vfs.h` → `int`/-errno) | pending |
 | 28 — RISC-V Espressif (ESP32-C6 + P4) | pending |
@@ -73,6 +73,19 @@ python tools/dbt.py flashimg
 ```
 
 This packs `boards/<board>/init.yaml` + every embedded `.dap` into a LittleFS image and writes it to the `sysbin` partition. The kernel mounts it at `/flash` at boot.
+
+**Or use a profile recipe (Phase 25)** to ship only a curated subset of apps:
+
+```bash
+python tools/dbt.py system list           # see available profiles in profiles/
+python tools/dbt.py system use cardputer-default
+python tools/dbt.py system check          # validate refs + permissions
+python tools/dbt.py system build          # compile just the profile's apps
+python tools/dbt.py system flash          # stage + flash sysbin (profile-driven)
+python tools/dbt.py system deploy /sd     # copy profile.apps_sd to SD
+```
+
+A profile is a YAML in `profiles/<name>/profile.yaml`. Copy an existing one, adjust the `apps_flash` / `apps_sd` lists to match the image you want, and `dbt system check` will tell you if anything's missing before you spend time on a build.
 
 ### 4. (Optional) Build & deploy an app to SD
 

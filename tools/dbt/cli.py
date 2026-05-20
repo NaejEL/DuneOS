@@ -297,6 +297,128 @@ def cmd_flash_sd(args) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Phase 25 — `dbt system <verb>` (image recipes)
+# ---------------------------------------------------------------------------
+
+def cmd_system_list(args) -> None:
+    from .system import list_profiles, load_profile, active_profile_name
+    active = active_profile_name()
+    profiles = list_profiles()
+    if not profiles:
+        print("No profiles found. Create profiles/<name>/profile.yaml to get started.")
+        return
+    print(f"Profiles in {Path('profiles').as_posix()}/:")
+    for p in profiles:
+        name = p.parent.name
+        try:
+            cfg  = load_profile(name)
+        except SystemExit as e:
+            print(f"  ✗ {name:<30}  {e}")
+            continue
+        marker = "*" if active == name else " "
+        desc   = cfg.get("description", "")
+        board  = cfg.get("board", "?")
+        print(f"  {marker} {name:<30}  board={board:<24}  {desc}")
+    if active:
+        print(f"\nActive profile: {active}  (`.duneos_profile`)")
+    else:
+        print("\nNo active profile set. Run `dbt system use <name>` or pass `--profile`.")
+
+
+def cmd_system_use(args) -> None:
+    from .system import load_profile, ACTIVE_PROFILE_FILE
+    # Validate the profile exists before pinning it.
+    load_profile(args.name)
+    ACTIVE_PROFILE_FILE.write_text(args.name + "\n")
+    # Also align .duneos_board so the rest of dbt sees the right board.
+    cfg = load_profile(args.name)
+    board_file = DUNEOS_ROOT / ".duneos_board"
+    if not board_file.exists() or board_file.read_text().strip() != cfg["board"]:
+        board_file.write_text(cfg["board"] + "\n")
+        print(f"  .duneos_board updated to '{cfg['board']}'")
+    print(f"Active profile: {args.name}  (board: {cfg['board']})")
+
+
+def cmd_system_check(args) -> None:
+    from .system import resolve_profile, check_profile
+    _, profile = resolve_profile(getattr(args, "profile", None))
+    rc = check_profile(profile)
+    sys.exit(rc)
+
+
+def cmd_system_build(args) -> None:
+    from .system import resolve_profile, build_profile
+    name, profile = resolve_profile(getattr(args, "profile", None))
+    # Sync .duneos_board with the profile so existing build helpers pick up
+    # the right toolchain.
+    board_file = DUNEOS_ROOT / ".duneos_board"
+    if not board_file.exists() or board_file.read_text().strip() != profile["board"]:
+        sys.exit(
+            f"ERROR: profile '{name}' targets board '{profile['board']}' but "
+            f".duneos_board is '{board_file.read_text().strip() if board_file.exists() else '(unset)'}'.\n"
+            f"  Run `dbt system use {name}` first."
+        )
+    plugin, arch, cpu, board_cfg = get_board_plugin()
+    tc = plugin.find_compiler(arch, cpu)
+    rc = build_profile(profile, plugin, arch, cpu, board_cfg, tc)
+    sys.exit(rc)
+
+
+def cmd_system_flash(args) -> None:
+    """Stage profile.apps_flash + profile.init_flash and flash the sysbin partition."""
+    from .system import resolve_profile
+    from .flashimg import cmd_flashimg
+    name, profile = resolve_profile(getattr(args, "profile", None))
+    board_file = DUNEOS_ROOT / ".duneos_board"
+    if not board_file.exists() or board_file.read_text().strip() != profile["board"]:
+        sys.exit(
+            f"ERROR: profile '{name}' targets '{profile['board']}' but "
+            f".duneos_board is '{board_file.read_text().strip() if board_file.exists() else '(unset)'}'.\n"
+            f"  Run `dbt system use {name}` first."
+        )
+    print(f"`dbt system flash` — profile '{name}' (board: {profile['board']})\n")
+    # Delegate to cmd_flashimg with the profile attached.
+    class _A: pass
+    a = _A()
+    a.build   = False
+    a.port    = getattr(args, "port", None)
+    a.baud    = getattr(args, "baud", 460800)
+    a.safe    = False
+    a.profile = profile
+    cmd_flashimg(a)
+
+
+def cmd_system_deploy(args) -> None:
+    """Build (if needed) and deploy the profile.apps_sd onto an SD mount."""
+    from .system import resolve_profile, _app_map
+    name, profile = resolve_profile(getattr(args, "profile", None))
+    sd_path = Path(args.sd_path)
+    if not sd_path.exists():
+        sys.exit(f"ERROR: SD path does not exist: {sd_path}")
+
+    app_map = _app_map()
+    targets = profile.get("apps_sd", [])
+    if not targets:
+        print(f"Profile '{name}' has no apps_sd — nothing to deploy.")
+        return
+    print(f"Deploying {len(targets)} app(s) from profile '{name}' → {sd_path}\n")
+    n_ok, n_fail = 0, 0
+    for app_name in targets:
+        if app_name not in app_map:
+            print(f"  ✗ '{app_name}' missing — skipping")
+            n_fail += 1
+            continue
+        app_dir = app_map[app_name]
+        is_bin  = _is_bin_app(app_dir)
+        if not deploy_single(app_dir, sd_path, is_bin):
+            n_fail += 1
+        else:
+            n_ok += 1
+    print(f"\n{n_ok}/{len(targets)} deployed" + (f"  {n_fail} FAILED" if n_fail else ""))
+    sys.exit(1 if n_fail else 0)
+
+
+# ---------------------------------------------------------------------------
 # main entry point
 # ---------------------------------------------------------------------------
 
@@ -433,6 +555,45 @@ def main() -> None:
     p_flashimg.add_argument("--safe", action="store_true",
                             help="Replace init.yaml with usb_shell-only (recovery mode)")
     p_flashimg.set_defaults(func=cmd_flashimg)
+
+    # --- system <verb> (Phase 25 — declarative image recipes) ---
+    p_system = sub.add_parser(
+        "system",
+        help="Compose, validate and flash an image from a profile recipe",
+    )
+    sys_sub = p_system.add_subparsers(dest="system_cmd", required=True)
+
+    p_sys_list = sys_sub.add_parser("list", help="List available profiles in profiles/")
+    p_sys_list.set_defaults(func=cmd_system_list)
+
+    p_sys_use = sys_sub.add_parser("use", help="Set the active profile (writes .duneos_profile)")
+    p_sys_use.add_argument("name", help="Profile name (directory under profiles/)")
+    p_sys_use.set_defaults(func=cmd_system_use)
+
+    p_sys_check = sys_sub.add_parser("check", help="Validate profile vs board + app permissions")
+    p_sys_check.add_argument("--profile", help="Profile name (default: active from .duneos_profile)")
+    p_sys_check.set_defaults(func=cmd_system_check)
+
+    p_sys_build = sys_sub.add_parser("build", help="Build every app declared in the profile")
+    p_sys_build.add_argument("--profile", help="Profile name (default: active)")
+    p_sys_build.set_defaults(func=cmd_system_build)
+
+    p_sys_flash = sys_sub.add_parser(
+        "flash",
+        help="Stage the profile's apps_flash + init_flash and flash the sysbin partition",
+    )
+    p_sys_flash.add_argument("--profile", help="Profile name (default: active)")
+    p_sys_flash.add_argument("--port", help="Serial port (overrides .duneos_port)")
+    p_sys_flash.add_argument("--baud", type=int, default=460800)
+    p_sys_flash.set_defaults(func=cmd_system_flash)
+
+    p_sys_deploy = sys_sub.add_parser(
+        "deploy",
+        help="Copy the profile's apps_sd onto the SD card mount point",
+    )
+    p_sys_deploy.add_argument("sd_path", help="SD card mount point (e.g. /run/media/.../SD)")
+    p_sys_deploy.add_argument("--profile", help="Profile name (default: active)")
+    p_sys_deploy.set_defaults(func=cmd_system_deploy)
 
     args = parser.parse_args()
     args.func(args)

@@ -1,0 +1,42 @@
+# DuneOS image profile — LilyGo T-Embed CC1101, daily-driver setup.
+
+name: t-embed-default
+board: lilygo-t-embed-cc1101
+description: "T-Embed daily-driver — USB shell, battery daemon, side button"
+
+# Apps in /flash/bin/. T-Embed has 16 MB flash + 8 MB PSRAM, plenty of room.
+apps_flash:
+  - usb_shell
+  - btn_gpio          # KEY_BTN side button via /dev/input/event0
+  - battery_daemon    # BQ27220 fuel gauge → /tmp/battery
+  - hello_world
+  - test_exit
+
+init_flash:
+  - { path: /flash/bin/usb_shell.dap,      restart: always }
+  - { path: /flash/bin/btn_gpio.dap,       restart: always }
+  - { path: /flash/bin/battery_daemon.dap, restart: always }
+
+apps_sd:
+  - g_shell
+  - gfx_demo
+  - uart_echo
+  - tcp_client
+  - cat
+  - ls
+  - free
+  - klog
+  - gpio
+  - input
+  - ifconfig
+  - ping
+  - tail
+  - reboot
+  - restart
+  - services
+  - mkdir
+  - mv
+  - rm
+  - battery
+
+init_sd: []
