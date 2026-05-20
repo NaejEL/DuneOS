@@ -188,15 +188,17 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
   - Build status : kernel ✓, buildall 25/25 ✓
   - **Tests sur device à valider** : g_shell + gfx_demo sur CardPuter via /dev/spi-1 ; T-Embed inchangé via /dev/fb0
 
-- [ ] **#1 — BQ27220 daemon** (réouvert) :
-  - **Aujourd'hui** : `sdk/sensor/libbq27220.c` userspace existe ; `drv_battery_bq27220.c` kernel survit et sert `/dev/battery0`. Item marqué [x] à tort dans une révision précédente.
-  - **Plan** :
-    1. Créer `apps/system/battery_daemon/battery_daemon.c` qui ouvre `/dev/i2c-0` via libbq27220 + expose un FIFO `/tmp/battery.fifo` (ou un autre mécanisme) pour fournir les lectures aux clients
-    2. Décider du mécanisme d'IPC : pipe nommée, socket UNIX-like, ou nouveau driver `drv_named_pipe.c` kernel
-    3. Retirer `drv_battery_bq27220.c` + `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` du kernel
-    4. `apps/system/bin/battery.dap` consomme le FIFO au lieu de `/dev/battery0`
-    5. `init.yaml` T-Embed ajoute `battery_daemon.dap`
-  - **Critères de fermeture** : `drv_battery_bq27220.c` supprimé du repo ; `battery` shell command marche toujours sur T-Embed.
+- [ ] **#1 — BQ27220 daemon** (code-complete CardPuter, T-Embed device-validation pending) :
+  - **Statut 2026-05-20** : implémentation faite (commit `022bec6`). Mécanisme IPC retenu = fichier `/tmp/battery` (binary `battery_info_t`) réécrit toutes les 2 s par le daemon ; client `read()` puis `close()`. Pas de pipe nommée, pas de driver kernel — simplicité maximale grâce à `/tmp` tmpfs existant.
+  - **Fait** :
+    - `apps/system/battery_daemon/battery_daemon.c` — guard `#ifdef DUNEOS_BATTERY_GAUGE_ADDR` (stub `exit(0)` sur boards sans BQ27220) → daemon buildable partout sans capability filtering
+    - `apps/system/bin/battery/battery.c` — fallback `/tmp/battery` → `/dev/battery0` (couvre T-Embed BQ27220 *et* CardPuter ADC)
+    - `tools/dbt/boardgen.py` — nouveau `_battery_block()` émet `DUNEOS_BATTERY_I2C_DEV`/`_GAUGE_ADDR`/`_TMPFS_PATH` dans `_board.h`
+    - Kernel purgé : `drv_battery_bq27220.c` supprimé, `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` retiré (Kconfig + CMakeLists + vfs_dev.c), `DUNEOS_BATTERY_GAUGE_ADDR` retiré de `board_config.h`
+    - `boards/lilygo-t-embed-cc1101/init.yaml` ajoute `/flash/bin/battery_daemon.dap restart: always`
+    - `sdk/sensor/libbq27220.c` — drop `<sys/ioctl.h>` (header inexistant dans `xtensa-esp-elf`)
+    - `dbt buildall` → 27/27 OK ; kernel CardPuter build OK
+  - **Reste pour fermeture** : flash T-Embed → vérifier que `battery_daemon` apparaît dans klog au boot, que `/tmp/battery` est rempli, que la commande shell `battery` retourne `voltage/charge/status`. **Tant que ce test device n'a pas été fait, l'item reste `[ ]`.**
 
 - [ ] **#3 — GPIO expanders drivers C** (réouvert) :
   - **Aujourd'hui** : Kconfig + bspgen schema OK, mais les drivers `drv_gpiochip_sx1509.c`, `drv_gpiochip_pcf8574.c`, `drv_gpiochip_mcp23017.c` n'existent PAS. Item marqué [x] à tort.
