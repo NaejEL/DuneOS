@@ -372,7 +372,14 @@ Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : u
   - `dbt system flash [--profile X]` : stage seulement apps_flash + render init_flash → flash sysbin (réutilise `cmd_flashimg` avec profile attaché)
   - `dbt system deploy <sd> [--profile X]` : copie apps_sd vers SD (réutilise `deploy_single`)
   - 4 profiles d'exemple livrés : `cardputer-default`, `cardputer-recovery`, `t-embed-default`, `t-embed-recovery`
-- [ ] **25.2 — TUI refactor** : layout 2 colonnes flash/SD, apps picker (cocher quelles apps stager), éditeur init.yaml SD parallèle au flash existant, taille sysbin live preview
+- [x] **25.2 — TUI refactor** (shipped 2026-05-21)
+  - `ProfilePickScreen` : sélecteur de profile (similaire à BoardPickScreen), Enter écrit `.duneos_profile` + aligne `.duneos_board`
+  - `ProfileEditorScreen` : éditeur deux colonnes flash/SD côte à côte, navigation `←→` entre colonnes, `↑↓` cursor, `Space` cycle (□/☑/☑+init), `R` cycle restart policy, `S` save → `profiles/<active>/profile.yaml`
+  - Sérialisation YAML round-trip (`yaml.safe_dump` block-style, ordre des clés préservé)
+  - Menu réorganisé en sections : Image composition (profile edit/pick/check) / Flash device (kernel/sysbin/monitor) / SD / Build / Legacy / Settings
+  - 3 nouveaux handlers `DbtApp` : `_run_profile_edit`, `_run_profile_pick`, `_run_system_check` (capture stdout du check_profile pour afficher dans le RichLog)
+  - Legacy `InitCfgScreen` (boards/<board>/init.yaml) **gardé** pour les boards sans profile — labellé "Init Config (board legacy)"
+- [ ] **25.3 — Polish** : `dbt system diff` (compare actif vs précédent), `dbt system size` (preview sysbin), inline warnings dans le TUI, taille sysbin live preview dans l'éditeur
 - [ ] **25.3 — Polish** : `dbt system diff` (compare actif vs précédent), `dbt system size` (preview sysbin), inline warnings dans le TUI
 - [ ] **25.4 — Branding** : champ `icon:` dans duneos.yaml (pour launcher contest), splash TUI logo
 ---

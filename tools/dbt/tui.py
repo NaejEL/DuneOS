@@ -188,6 +188,55 @@ AppSelectScreen {
     dock: bottom;
 }
 
+/* ── profile editor: two columns (flash / SD) side-by-side ── */
+#profileheader {
+    height: auto;
+    background: #161b22;
+    color: #58a6ff;
+    border: tall #1f6feb;
+    border-title-color: #58a6ff;
+    border-title-style: bold;
+    padding: 0 2;
+    margin: 1 4 0 4;
+}
+
+#profile2col {
+    height: 1fr;
+    margin: 0 4 0 4;
+}
+
+.profilecolumn {
+    width: 1fr;
+    border: solid #30363d;
+    border-title-color: #58a6ff;
+    border-title-style: bold;
+    padding: 0;
+    margin: 1 1 0 1;
+}
+
+.profilecolumn:focus-within {
+    border: solid #1f6feb;
+}
+
+.profilelist {
+    height: 1fr;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+.profilelist > .option-list--option {
+    padding: 0 1;
+    height: 1;
+    color: #c9d1d9;
+}
+
+.profilelist > .option-list--option-highlighted {
+    background: #1f6feb;
+    color: #ffffff;
+    text-style: bold;
+}
+
 /* ── modal shared box ── */
 #errbox {
     width: 64;
@@ -512,6 +561,289 @@ def _parse_init_yaml(path: Path) -> dict[str, str]:
     return result
 
 
+class ProfilePickScreen(Screen):
+    """OptionList of profiles/<name>/profile.yaml — Enter sets the active profile."""
+
+    BINDINGS = [Binding("escape", "dismiss(None)", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        from .system import list_profiles, load_profile, active_profile_name
+        cur = active_profile_name()
+        opts = []
+        for p in list_profiles():
+            name = p.parent.name
+            t    = Text()
+            t.append(f" {name:<30}", style="bold #c9d1d9")
+            try:
+                cfg = load_profile(name)
+                t.append(f"{cfg.get('board','?'):<24}", style="#58a6ff")
+                desc = cfg.get("description", "")
+                if desc:
+                    t.append(desc, style="#6e7681")
+            except SystemExit as e:
+                t.append(f"  [load failed: {e}]", style="#f85149")
+            if name == cur:
+                t.append("  [active]", style="#3fb950")
+            opts.append(Option(t, id=name))
+        with Vertical(id="apppanel") as v:
+            v.border_title = "  Select Profile  "
+            if not opts:
+                yield Static(
+                    "  No profiles yet. Create profiles/<name>/profile.yaml — see\n"
+                    "  profiles/cardputer-default/ for a template.",
+                    id="applist",
+                )
+            else:
+                yield OptionList(*opts, id="applist")
+        yield Static(
+            "  ↑↓ nav   Enter set active   Esc cancel",
+            id="apphint",
+        )
+
+    @on(OptionList.OptionSelected, "#applist")
+    def _pick(self, event: OptionList.OptionSelected) -> None:
+        from .system import ACTIVE_PROFILE_FILE, load_profile
+        name = event.option_id
+        ACTIVE_PROFILE_FILE.write_text(name + "\n")
+        # Align .duneos_board so the rest of dbt picks up the same target.
+        cfg = load_profile(name)
+        board_file = DUNEOS_ROOT / ".duneos_board"
+        if not board_file.exists() or board_file.read_text().strip() != cfg["board"]:
+            board_file.write_text(cfg["board"] + "\n")
+        self.dismiss(name)
+
+
+def _is_bin(app_dir: Path) -> bool:
+    """Returns True if the app lives under apps/system/bin/ (→ /sd/bin/)."""
+    bin_root = DUNEOS_ROOT / "apps" / "system" / "bin"
+    try:
+        app_dir.relative_to(bin_root)
+        return True
+    except ValueError:
+        return False
+
+
+class ProfileEditorScreen(Screen):
+    """Two-column flash/SD profile editor.
+
+    Each column lists every available app. Per-app state cycles through:
+      □  not staged
+      ☑  staged in apps_<flash|sd>
+      ☑  staged AND in init_<flash|sd>  with restart policy (always/on-failure/no)
+
+    Keys:
+      ←/→     switch active column
+      ↑/↓     move cursor in the active column
+      Space   cycle state for the highlighted app
+      R       cycle restart policy (only when the app is in init)
+      S       save → profiles/<active>/profile.yaml
+      Esc     discard
+    """
+
+    BINDINGS = [
+        Binding("escape", "discard",       "Discard"),
+        Binding("s",      "save",          "Save"),
+        Binding("space",  "cycle_state",   "Cycle state"),
+        Binding("enter",  "cycle_state",   "Cycle state", show=False),
+        Binding("r",      "cycle_restart", "Restart policy"),
+        Binding("left",   "focus_col('flash')", "Flash col"),
+        Binding("right",  "focus_col('sd')",    "SD col"),
+        Binding("tab",    "switch_col",    "Switch col", show=False),
+    ]
+
+    def __init__(self, profile_name: str) -> None:
+        super().__init__()
+        from .system import load_profile
+        self._name    = profile_name
+        self._profile = load_profile(profile_name)
+        self._board   = self._profile["board"]
+
+        # Build the union of all known apps; per app, store (staged?, restart?).
+        # `restart=None` means the app is in apps_<col> but not in init_<col>.
+        self._apps:  list[tuple[str, bool]] = []   # (name, is_bin)
+        self._state: dict[str, dict] = {
+            # name → {"flash": (staged, restart|None), "sd": (staged, restart|None)}
+        }
+        self._cursor: dict[str, int] = {"flash": 0, "sd": 0}
+        self._col: str = "flash"
+
+    def _load_apps(self) -> None:
+        from .manifest import load_manifest
+        flash_set = set(self._profile.get("apps_flash", []))
+        sd_set    = set(self._profile.get("apps_sd",    []))
+        init_flash = {self._app_from_path(e.get("path","")): e.get("restart","always")
+                      for e in self._profile.get("init_flash", [])}
+        init_sd    = {self._app_from_path(e.get("path","")): e.get("restart","always")
+                      for e in self._profile.get("init_sd",    [])}
+        seen = set()
+        for app_dir, _ in find_apps():
+            try:
+                name = load_manifest(app_dir)["name"]
+            except Exception:
+                name = app_dir.name
+            if name in seen:
+                continue
+            seen.add(name)
+            self._apps.append((name, _is_bin(app_dir)))
+            self._state[name] = {
+                "flash": (name in flash_set, init_flash.get(name)),
+                "sd":    (name in sd_set,    init_sd.get(name)),
+            }
+
+    @staticmethod
+    def _app_from_path(path: str) -> str:
+        """Extract app name from /flash/bin/X.dap or /sd/{bin,apps}/X.dap."""
+        if path.endswith(".dap"):
+            return path.rsplit("/", 1)[-1][:-len(".dap")]
+        return ""
+
+    def compose(self) -> ComposeResult:
+        self._load_apps()
+        desc = self._profile.get("description", "")
+        with Vertical(id="profileheader") as h:
+            h.border_title = (
+                f"  Profile: {self._name}  (board: {self._board})  "
+            )
+            if desc:
+                yield Static(desc)
+        with Horizontal(id="profile2col"):
+            with Vertical(classes="profilecolumn", id="flashcol") as fc:
+                fc.border_title = "  /flash  (sysbin LittleFS, ~1 MB)  "
+                yield OptionList(*self._make_opts("flash"),
+                                 id="flashlist", classes="profilelist")
+            with Vertical(classes="profilecolumn", id="sdcol") as sc:
+                sc.border_title = "  /sd  (deploy)  "
+                yield OptionList(*self._make_opts("sd"),
+                                 id="sdlist", classes="profilelist")
+        yield Static(
+            "  ←→ col   ↑↓ nav   Space cycle (□/☑/☑+init)   R restart   S save   Esc discard",
+            id="apphint",
+        )
+
+    def on_mount(self) -> None:
+        # Pre-position cursors at 0 of each list; focus flash column initially.
+        try:
+            self.query_one("#flashlist", OptionList).focus()
+        except Exception:
+            pass
+
+    def _make_opts(self, col: str) -> list[Option]:
+        opts = []
+        for name, _is_bin_ in self._apps:
+            staged, restart = self._state[name][col]
+            t = Text()
+            if staged:
+                if restart is not None:
+                    t.append(" ☑ ", style="bold #3fb950")
+                    t.append(f"{name:<26}", style="bold #c9d1d9")
+                    t.append(f"restart: {restart}", style="#58a6ff")
+                else:
+                    t.append(" ☑ ", style="bold #3fb950")
+                    t.append(name, style="#c9d1d9")
+            else:
+                t.append(" ☐ ", style="#6e7681")
+                t.append(name, style="#6e7681")
+            opts.append(Option(t, id=name))
+        return opts
+
+    def _refresh(self) -> None:
+        for col, list_id in (("flash", "#flashlist"), ("sd", "#sdlist")):
+            ol = self.query_one(list_id, OptionList)
+            cur = self._cursor[col]
+            ol.clear_options()
+            for opt in self._make_opts(col):
+                ol.add_option(opt)
+            try:
+                ol.highlighted = cur
+            except Exception:
+                pass
+
+    @on(OptionList.OptionHighlighted, "#flashlist")
+    def _hi_flash(self, ev: OptionList.OptionHighlighted) -> None:
+        self._cursor["flash"] = ev.option_index
+        self._col = "flash"
+
+    @on(OptionList.OptionHighlighted, "#sdlist")
+    def _hi_sd(self, ev: OptionList.OptionHighlighted) -> None:
+        self._cursor["sd"] = ev.option_index
+        self._col = "sd"
+
+    def action_focus_col(self, which: str) -> None:
+        self._col = which
+        self.query_one("#flashlist" if which == "flash" else "#sdlist", OptionList).focus()
+
+    def action_switch_col(self) -> None:
+        self.action_focus_col("sd" if self._col == "flash" else "flash")
+
+    def action_cycle_state(self) -> None:
+        idx = self._cursor[self._col]
+        if not (0 <= idx < len(self._apps)):
+            return
+        name = self._apps[idx][0]
+        staged, restart = self._state[name][self._col]
+        # □ → ☑(no init) → ☑(init+always) → □
+        if not staged:
+            self._state[name][self._col] = (True, None)
+        elif restart is None:
+            self._state[name][self._col] = (True, "always")
+        else:
+            self._state[name][self._col] = (False, None)
+        self._refresh()
+
+    def action_cycle_restart(self) -> None:
+        idx = self._cursor[self._col]
+        if not (0 <= idx < len(self._apps)):
+            return
+        name = self._apps[idx][0]
+        staged, restart = self._state[name][self._col]
+        if not staged or restart is None:
+            return  # only when already in init
+        idx_r = _RESTART_CYCLE.index(restart) if restart in _RESTART_CYCLE else -1
+        self._state[name][self._col] = (True, _RESTART_CYCLE[(idx_r + 1) % len(_RESTART_CYCLE)])
+        self._refresh()
+
+    def action_save(self) -> None:
+        """Re-render profiles/<name>/profile.yaml from the in-memory state."""
+        from .system import PROFILES_DIR
+        flash_apps = [n for n, _ in self._apps if self._state[n]["flash"][0]]
+        sd_apps    = [n for n, _ in self._apps if self._state[n]["sd"][0]]
+
+        init_flash = []
+        for n, _ in self._apps:
+            staged, restart = self._state[n]["flash"]
+            if staged and restart is not None:
+                init_flash.append({"path": f"/flash/bin/{n}.dap", "restart": restart})
+
+        init_sd = []
+        is_bin = {n: b for n, b in self._apps}
+        for n, _ in self._apps:
+            staged, restart = self._state[n]["sd"]
+            if staged and restart is not None:
+                base = "/sd/bin" if is_bin[n] else "/sd/apps"
+                init_sd.append({"path": f"{base}/{n}.dap", "restart": restart})
+
+        new_profile = {
+            "name":        self._profile.get("name", self._name),
+            "board":       self._board,
+            "description": self._profile.get("description", ""),
+            "apps_flash":  flash_apps,
+            "init_flash":  init_flash,
+            "apps_sd":     sd_apps,
+            "init_sd":     init_sd,
+        }
+        try:
+            import yaml as _yaml
+        except ImportError:
+            self.dismiss(False)
+            return
+        out = PROFILES_DIR / self._name / "profile.yaml"
+        out.write_text(_yaml.safe_dump(new_profile, sort_keys=False, default_flow_style=False))
+        self.dismiss(True)
+
+    def action_discard(self) -> None:
+        self.dismiss(False)
+
+
 class InitCfgScreen(Screen):
     """Interactive editor for boards/<board>/init.yaml.
 
@@ -629,17 +961,28 @@ class InitCfgScreen(Screen):
 # ---------------------------------------------------------------------------
 
 _MENU: list[tuple[str, str, str] | None] = [
+    # -- Image composition (Phase 25 profile-driven workflow) ----
+    ("profile-edit", "e", "Edit Profile…"),
+    ("profile-pick", "P", "Switch Profile…"),
+    ("system-check", "k", "Check Profile"),
+    None,
+    # -- Flash actions (the device) ----
     ("flash-kernel", "f", "Flash Kernel"),
-    ("flash-sysbin", "s", "Flash Sysbin"),
+    ("flash-sysbin", "s", "Flash Sysbin (/flash)"),
     ("monitor",      "m", "Monitor"),
     None,
+    # -- SD actions ----
+    ("flash-sd",     "d", "Deploy to SD…"),
+    None,
+    # -- Build (independent) ----
     ("build-all",    "b", "Build All"),
     ("build-app",    "a", "Build App…"),
-    ("flash-sd",     "d", "Flash SD…"),
     None,
-    ("init-cfg",     "i", "Init Config…"),
+    # -- Legacy / advanced ----
+    ("init-cfg",     "i", "Init Config (board legacy)…"),
     ("bspgen",       "g", "BSP Gen…"),
     None,
+    # -- Settings ----
     ("board",        "c", "Board…"),
     ("port",         "p", "Port…"),
     ("quit",         "q", "Quit"),
@@ -653,17 +996,20 @@ class DbtApp(App):
     ANIMATIONS = False
 
     BINDINGS = [
+        Binding("e", "do('profile-edit')", "Edit Profile"),
+        Binding("P", "do('profile-pick')", "Switch Profile"),
+        Binding("k", "do('system-check')", "Check Profile"),
         Binding("f", "do('flash-kernel')", "Flash Kernel"),
         Binding("s", "do('flash-sysbin')", "Flash Sysbin"),
         Binding("m", "do('monitor')",      "Monitor"),
+        Binding("d", "do('flash-sd')",     "Deploy SD"),
         Binding("b", "do('build-all')",    "Build All"),
         Binding("a", "do('build-app')",    "Build App"),
-        Binding("d", "do('flash-sd')",     "Flash SD"),
         Binding("i", "do('init-cfg')",     "Init Config"),
-        Binding("g", "do('bspgen')",         "BSP Gen"),
-        Binding("c", "do('board')",          "Board"),
-        Binding("p", "do('port')",           "Port"),
-        Binding("q", "quit",                 "Quit"),
+        Binding("g", "do('bspgen')",       "BSP Gen"),
+        Binding("c", "do('board')",        "Board"),
+        Binding("p", "do('port')",         "Port"),
+        Binding("q", "quit",               "Quit"),
     ]
 
     # -- Compose / mount ─────────────────────────────────────────────────────
@@ -711,6 +1057,9 @@ class DbtApp(App):
 
     def action_do(self, action_id: str) -> None:
         dispatch = {
+            "profile-edit": self._run_profile_edit,
+            "profile-pick": self._run_profile_pick,
+            "system-check": self._run_system_check,
             "flash-kernel": self._run_flash_kernel,
             "flash-sysbin": self._run_flash_sysbin,
             "monitor":      self._run_monitor,
@@ -811,6 +1160,56 @@ class DbtApp(App):
                 "Press c — run ./install.sh in the IDF directory to create the Python env.")
             return False
         return True
+
+    # -- Profile (Phase 25) ──────────────────────────────────────────────────
+
+    def _run_profile_pick(self) -> None:
+        """Switch active profile (writes .duneos_profile + aligns .duneos_board)."""
+        def _done(name: str | None) -> None:
+            if name:
+                self._log(f"[#3fb950]✓[/#3fb950]  active profile: [bold]{name}[/bold]")
+            else:
+                self._log("[dim]  profile pick: cancelled[/dim]")
+        self.push_screen(ProfilePickScreen(), _done)
+
+    def _run_profile_edit(self) -> None:
+        """Edit the active profile's apps_flash / apps_sd / init_flash / init_sd."""
+        from .system import active_profile_name
+        name = active_profile_name()
+        if not name:
+            def _picked(picked: str | None) -> None:
+                if picked:
+                    self._open_profile_editor(picked)
+            self._log("[#d29922]![/#d29922]  no active profile — pick one first")
+            self.push_screen(ProfilePickScreen(), _picked)
+            return
+        self._open_profile_editor(name)
+
+    def _open_profile_editor(self, name: str) -> None:
+        def _done(saved: bool | None) -> None:
+            if saved:
+                self._log(f"[#3fb950]✓[/#3fb950]  profiles/{name}/profile.yaml saved")
+            else:
+                self._log("[dim]  profile edit: discarded[/dim]")
+        self.push_screen(ProfileEditorScreen(name), _done)
+
+    def _run_system_check(self) -> None:
+        """Run `dbt system check` on the active profile, log results."""
+        from .system import resolve_profile, check_profile
+        try:
+            name, profile = resolve_profile(None)
+        except SystemExit as e:
+            self._err("No active profile", str(e))
+            return
+        self._log(f"[bold]Profile:[/bold] {name}")
+        # Capture stdout from check_profile.
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = check_profile(profile)
+        for line in buf.getvalue().splitlines():
+            self._log(f"  {line}")
+        self._log(f"  [{'#3fb950' if rc == 0 else '#f85149'}]→ exit {rc}[/]")
 
     # -- Init Config ─────────────────────────────────────────────────────────
 

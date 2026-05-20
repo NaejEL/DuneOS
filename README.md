@@ -27,7 +27,7 @@ DuneOS is past the POC stage. The kernel boots from on-chip flash even without a
 | 24.9.5 — Captured-app exit semantics (`duneos_exit` longjmps, doesn't kill shell) | ✅ shipped (device-test pending) |
 | 24.10 — libgfx streaming mode (no userspace back-buffer; saves 64 KiB per gfx app) | ✅ device-validated |
 | 24.11 — drv_spi multi-owner sharing (refcounted device handles per CS) | ✅ device-validated |
-| 25 — `dbt system` image recipes | 🟡 25.1 shipped (profiles + CLI); 25.2 TUI / 25.3 polish / 25.4 branding pending |
+| 25 — `dbt system` image recipes | 🟡 25.1 + 25.2 shipped (profiles + CLI + TUI editor); 25.3 polish / 25.4 branding pending |
 | 26 — OSAL + scheduler portability (incl. `task.h`+`supervisor.h` → `int`/-errno) | pending |
 | 27 — Native VFS + networking (incl. `vfs.h` → `int`/-errno) | pending |
 | 28 — RISC-V Espressif (ESP32-C6 + P4) | pending |
