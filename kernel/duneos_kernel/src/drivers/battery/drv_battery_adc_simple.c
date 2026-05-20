@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/battery_ioctl.h"
 #include "duneos/klog.h"
 #include "duneos/hal_adc.h"
@@ -82,3 +83,5 @@ void drv_battery_adc_simple_register(void)
 {
     duneos_dev_register(&s_drv_battery_adc);
 }
+
+DUNEOS_DRIVER_REGISTER(5, drv_battery_adc_simple_register);

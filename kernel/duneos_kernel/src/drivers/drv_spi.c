@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/hal_spi.h"
 #include "duneos/spi_ioctl.h"
 #include "duneos/klog.h"
@@ -349,3 +350,5 @@ void drv_spi_register(void)
 #endif
     klog_i(TAG, "drv_spi_register: done (%d slots)", s_num_slots);
 }
+
+DUNEOS_DRIVER_REGISTER(1, drv_spi_register);

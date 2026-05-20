@@ -204,49 +204,76 @@ static int devfs_closedir(DIR *pdir)
     return 0;
 }
 
-/* ----- driver forward declarations --------------------------------------- */
+/* ----- driver auto-registration (Phase 24.9) ------------------------------ */
+/*
+ * Each driver file drops one DUNEOS_DRIVER_REGISTER(prio, fn) at file scope.
+ * The macro emits a GCC constructor that records (prio, fn, name) into the
+ * static registry below before app_main() runs. At mount time we sort by
+ * priority and call each init.
+ *
+ * USB MSC + USB CDC are NOT in the registry — they have a different init
+ * phase (drv_usb_preinit runs BEFORE the VFS mounts, from vfs.c). They
+ * stay manually wired below.
+ */
+#include "duneos/driver_init.h"
 
-#ifdef CONFIG_DUNEOS_DRV_NULL
-extern void drv_null_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_UART
-extern void drv_uart_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_KLOG
-extern void drv_klog_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIO
-extern void drv_gpio_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_SX1509
-extern void drv_gpiochip_sx1509_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_PCF8574
-extern void drv_gpiochip_pcf8574_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_MCP23017
-extern void drv_gpiochip_mcp23017_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_I2C
-extern void drv_i2c_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE
-extern void drv_battery_adc_simple_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_SPI
-extern void drv_spi_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_INPUT
-extern void drv_input_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_FB
-extern void drv_fb_st7789_register(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_RAW80211
-extern void drv_raw80211_register(void);
-#endif
+#define DUNEOS_MAX_REGISTERED_DRIVERS 32
+
+typedef struct {
+    int                   prio;
+    duneos_driver_init_fn init;
+    const char           *name;
+} driver_record_t;
+
+static driver_record_t s_registry[DUNEOS_MAX_REGISTERED_DRIVERS];
+static int             s_registry_count = 0;
+
+void _duneos_driver_record(int prio, duneos_driver_init_fn init, const char *name)
+{
+    /* Runs from a constructor, before app_main. No FreeRTOS primitives
+     * used — pure static array append. Single-threaded at this stage. */
+    if (s_registry_count >= DUNEOS_MAX_REGISTERED_DRIVERS) {
+        /* No klog here — klog isn't initialised at constructor time. The
+         * runtime check at run_init() time will flag it. */
+        return;
+    }
+    s_registry[s_registry_count].prio = prio;
+    s_registry[s_registry_count].init = init;
+    s_registry[s_registry_count].name = name;
+    s_registry_count++;
+}
+
+void duneos_drivers_run_init(void)
+{
+    if (s_registry_count == 0) {
+        klog_w(TAG, "driver registry is empty");
+        return;
+    }
+    if (s_registry_count >= DUNEOS_MAX_REGISTERED_DRIVERS) {
+        klog_e(TAG, "driver registry overflowed (>=%d) — some drivers may be missing",
+               DUNEOS_MAX_REGISTERED_DRIVERS);
+    }
+
+    /* Insertion sort by priority — stable, in-place, O(n²) but n < 32. */
+    for (int i = 1; i < s_registry_count; i++) {
+        driver_record_t key = s_registry[i];
+        int j = i - 1;
+        while (j >= 0 && s_registry[j].prio > key.prio) {
+            s_registry[j + 1] = s_registry[j];
+            j--;
+        }
+        s_registry[j + 1] = key;
+    }
+
+    klog_i(TAG, "registering %d driver(s)", s_registry_count);
+    for (int i = 0; i < s_registry_count; i++) {
+        klog_d(TAG, "  [prio %d] %s", s_registry[i].prio, s_registry[i].name);
+        s_registry[i].init();
+    }
+}
+
+/* USB stays manually wired — different init phase from the registry above. */
 #ifdef CONFIG_DUNEOS_DRV_USB_MSC
-/* Phase 2 of USB init: MSC storage backend (TinyUSB already up from preinit). */
 extern void drv_usb_register(void);
 #endif
 #if defined(CONFIG_DUNEOS_DRV_USB_CDC) && !defined(CONFIG_ESP_CONSOLE_USB_CDC)
@@ -282,50 +309,10 @@ esp_err_t duneos_vfs_mount_dev(void)
         return err;
     }
 
-    /* Register drivers — order determines ls /dev listing order. */
-#ifdef CONFIG_DUNEOS_DRV_NULL
-    drv_null_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_UART
-    drv_uart_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_KLOG
-    drv_klog_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIO
-    drv_gpio_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_I2C
-    drv_i2c_register();
-#endif
-    /* GPIO expanders register after drv_i2c_register() so i2c_bus_init() has
-     * been called. Each register fn iterates the declared expander slots and
-     * filters by type — only the slots whose DUNEOS_GPIOCHIPN_TYPE matches the
-     * driver register the corresponding /dev/gpiochipN node. */
-#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_SX1509
-    drv_gpiochip_sx1509_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_PCF8574
-    drv_gpiochip_pcf8574_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_GPIOCHIP_MCP23017
-    drv_gpiochip_mcp23017_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE
-    drv_battery_adc_simple_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_SPI
-    drv_spi_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_INPUT
-    drv_input_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_FB
-    drv_fb_st7789_register();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_RAW80211
-    drv_raw80211_register();
-#endif
+    /* Phase 24.9: walk the registry built by GCC constructors at boot.
+     * Each driver's DUNEOS_DRIVER_REGISTER macro put itself in the list;
+     * we sort by priority and call each init. */
+    duneos_drivers_run_init();
 
 #ifdef CONFIG_DUNEOS_DRV_USB_MSC
     /* TinyUSB is already running (drv_usb_preinit in vfs.c); register the SD card

@@ -203,6 +203,12 @@ idf_component_register(
         ${DUNEOS_KERNEL_REQUIRES}
     EMBED_FILES
         ${DUNEOS_FIRMWARE_BLOBS}
+    # Phase 24.9: WHOLE_ARCHIVE forces every kernel .o to be linked,
+    # even ones whose only contribution is a GCC constructor from
+    # DUNEOS_DRIVER_REGISTER. Without this, drivers whose register
+    # function isn't externally referenced (because vfs_dev.c no longer
+    # imports them by name) would be skipped from the static archive.
+    WHOLE_ARCHIVE
 )
 
 # ieee80211_raw_frame_sanity_check in drv_raw80211.c shadows the symbol from

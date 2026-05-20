@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include <string.h>
 
 static ssize_t null_write(duneos_devfd_t *fd, const void *buf, size_t len)
@@ -29,3 +30,5 @@ void drv_null_register(void)
     duneos_dev_register(&s_drv_null);
     duneos_dev_register(&s_drv_zero);
 }
+
+DUNEOS_DRIVER_REGISTER(5, drv_null_register);

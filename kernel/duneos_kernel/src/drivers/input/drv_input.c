@@ -7,6 +7,7 @@
  */
 
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/input_ioctl.h"
 #include "duneos/klog.h"
 #include "drv_input_priv.h"
@@ -115,3 +116,5 @@ void drv_input_register(void)
 {
     duneos_dev_register(&s_drv_input);
 }
+
+DUNEOS_DRIVER_REGISTER(5, drv_input_register);

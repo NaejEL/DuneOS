@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/fb_ioctl.h"
 #include "duneos/klog.h"
 #include "board_config.h"
@@ -168,3 +169,5 @@ void drv_fb_st7789_register(void)
 {
     duneos_dev_register(&s_drv_fb);
 }
+
+DUNEOS_DRIVER_REGISTER(5, drv_fb_st7789_register);

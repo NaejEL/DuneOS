@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/i2c_ioctl.h"
 #include "duneos/klog.h"
 #include "i2c_bus.h"
@@ -72,3 +73,5 @@ void drv_i2c_register(void)
     i2c_bus_init();
     duneos_dev_register(&s_drv_i2c);
 }
+
+DUNEOS_DRIVER_REGISTER(1, drv_i2c_register);

@@ -248,12 +248,23 @@ that implements `duneos_battery_ops`. See "Adding a battery backend" below.
 
 ### Adding a new kernel driver
 
-1. Create `src/drivers/<category>/drv_<name>.c` — implement `duneos_dev_driver_t` + export `drv_<name>_register()`
+Since Phase 24.9, drivers self-register via a GCC constructor — no edits to `vfs_dev.c` needed.
+
+1. Create `src/drivers/<category>/drv_<name>.c` — implement `duneos_dev_driver_t` callbacks + a `drv_<name>_register()` function that calls `duneos_dev_register(&...)`. Add `#include "duneos/driver_init.h"` and drop one line at file scope:
+   ```c
+   DUNEOS_DRIVER_REGISTER(<prio>, drv_<name>_register);
+   ```
+   Priority guide:
+   - `1` = bus controllers (i2c, spi) — others depend on them
+   - `2` = native peripherals (gpio chip)
+   - `5` = standard drivers (default for most drivers)
+   - `8` = bus consumers (gpio expanders, i2c sensors) — need bus init done first
 2. Add `config DUNEOS_DRV_<NAME>` to `kernel/duneos_kernel/Kconfig`
 3. Add conditional `list(APPEND DUNEOS_KERNEL_SRCS ...)` to `kernel/duneos_kernel/CMakeLists.txt`
-4. Add `#ifdef CONFIG_DUNEOS_DRV_<NAME>` block to `vfs_dev.c` (forward decl + call in mount)
-5. Enable it for a board: edit `boards/<board>/board.yaml` (add the relevant section, e.g. `i2c:`, `battery:`) then re-run `python tools/duneos-bspgen.py boards/<board>/board.yaml`. Bspgen emits `CONFIG_DUNEOS_DRV_<NAME>=y` into the generated `sdkconfig.board`. Never hand-edit `sdkconfig.board` — it is overwritten by bspgen.
-6. Update `tools/duneos-bspgen.py` to emit the config entry when the matching YAML section is present
+4. Enable it for a board: edit `boards/<board>/board.yaml` (add the relevant section, e.g. `i2c:`, `battery:`) then re-run `python tools/duneos-bspgen.py boards/<board>/board.yaml`. Bspgen emits `CONFIG_DUNEOS_DRV_<NAME>=y` into the generated `sdkconfig.board`. Never hand-edit `sdkconfig.board` — it is overwritten by bspgen.
+5. Update `tools/duneos-bspgen.py` to emit the config entry when the matching YAML section is present
+
+USB MSC + USB CDC remain manually wired in `vfs_dev.c` — they have a different init phase (`drv_usb_preinit` runs from `vfs.c` BEFORE the VFS mounts, then `drv_usb_register` runs after the SD card is available). They intentionally do NOT use `DUNEOS_DRIVER_REGISTER`.
 
 ### Adding a battery backend (userspace, I2C/SPI fuel gauges)
 

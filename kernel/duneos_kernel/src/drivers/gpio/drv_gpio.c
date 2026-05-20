@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/hal_gpio.h"
 #include "duneos/gpio_ioctl.h"
 
@@ -54,3 +55,5 @@ void drv_gpio_register(void)
 {
     duneos_dev_register(&s_drv_gpio);
 }
+
+DUNEOS_DRIVER_REGISTER(2, drv_gpio_register);

@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/hal_uart.h"
 #include "duneos/klog.h"
 #include "board_config.h"
@@ -44,3 +45,5 @@ void drv_uart_register(void)
 {
     duneos_dev_register(&s_drv_uart0);
 }
+
+DUNEOS_DRIVER_REGISTER(5, drv_uart_register);

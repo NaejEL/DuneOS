@@ -1,4 +1,5 @@
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/klog.h"
 #include <stddef.h>
 
@@ -33,3 +34,5 @@ void drv_klog_register(void)
 {
     duneos_dev_register(&s_drv_klog);
 }
+
+DUNEOS_DRIVER_REGISTER(5, drv_klog_register);

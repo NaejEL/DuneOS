@@ -326,30 +326,22 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1) 🟡 to-revisit
+### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1) ✅
 
-Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init` via section ELF.
+Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init`, **réalisé via constructors GCC plutôt qu'ELF section** (esquive la friction linker ESP-IDF v6).
 
-**Statut 2026-05-20 : 1ère attempt rolled back, à reprendre AVANT Phase 25.** L'attempt a buté sur les contraintes du linker ESP-IDF v6 :
+**Statut 2026-05-21 : shipped.** Solution C (constructor-based) retenue après que la solution section-ELF custom ait buté sur `--orphan-handling=error` d'ESP-IDF v6 (les sections custom créent un gap entre `.flash.appdesc` et `.flash.rodata` qu'`esp_app_format` rejette).
 
-1. La macro `DUNEOS_DRIVER_REGISTER` qui place une entrée dans une section custom `duneos_drivers` fonctionne au compile-time (GCC).
-2. ESP-IDF v6 enforce `--orphan-handling=error` au link → la section custom est rejetée comme "unplaced orphan".
-3. `WHOLE_ARCHIVE` (pour `idf_component_register`) résout le strip de section par `--gc-sections`, mais ne résout pas le placement orphelin.
-4. `--orphan-handling=place` permet le link mais le placement automatique tombe entre `.flash.appdesc` et `.flash.rodata` → ESP-IDF's `esp_app_format` check rejette ("gap must not exist").
-5. Le fix propre requiert un **linker fragment ESP-IDF** qui place explicitement `duneos_drivers` à l'intérieur de `.flash.rodata` ET déclare les symboles `__duneos_drivers_start`/`__duneos_drivers_end` autour.
+- [x] **Header `kernel/duneos_kernel/include/duneos/driver_init.h`** : macro `DUNEOS_DRIVER_REGISTER(prio, fn)` qui émet un constructor GCC `__attribute__((constructor(101)))`. À l'exécution, le constructor appelle `_duneos_driver_record(prio, fn, name)` qui append dans une liste static. La constructor execution priority 101 garantit qu'on tourne après `esp_libc_init` (klog/malloc déjà OK).
+- [x] **Registry dans `vfs_dev.c`** : `s_registry[DUNEOS_MAX_REGISTERED_DRIVERS=32]`, `_duneos_driver_record()` (append simple, single-threaded au constructor time), `duneos_drivers_run_init()` qui insertion-sort par prio puis appelle chaque init.
+- [x] **`vfs_dev.c` simplifié** : le bloc #ifdef extern + le bloc #ifdef d'appels remplacés par un seul `duneos_drivers_run_init()`. ~50 lignes supprimées, ~30 ajoutées (registry + iterator). USB MSC/CDC restent manuels (init phase différente — `drv_usb_preinit` court AVANT le mount, depuis `vfs.c`).
+- [x] **CMakeLists.txt — `WHOLE_ARCHIVE`** : ajouté à `idf_component_register`. Sans, les .o de drivers sans référence externe (le `register` fn n'est plus appelé par `vfs_dev.c`) seraient skip de l'archive statique. Pas d'overhead binary perceptible (les drivers étaient déjà tous link via les externs).
+- [x] **Migration 13 drivers** : `drv_null`/`uart`/`klog` (prio 5), `drv_gpio` (prio 2 — fournit gpiochip0), `drv_i2c`/`spi` (prio 1 — bus controllers), `drv_battery_adc_simple`/`input`/`fb_st7789`/`raw80211` (prio 5), `drv_gpiochip_sx1509`/`pcf8574`/`mcp23017` (prio 8 — bus consumers). Chacun : `#include <duneos/driver_init.h>` + une ligne `DUNEOS_DRIVER_REGISTER(prio, drv_X_register);` à la fin du fichier.
+- [x] **Smoke test** : `dbt flash kernel --build-only` OK sur CardPuter ET T-Embed (les deux configs Kconfig). `dbt buildall` → 29/29 OK.
 
-**3 pistes d'investigation pour la reprise** :
-- **Solution A** : écrire un linker fragment v6 (`linker.lf`) qui ajoute la section à `.flash.rodata` via `[sections:...]` + `[scheme:...]` blocks. Recherche prouvée mais doc mince ; ~1-2h focus sur la syntaxe v6.
-- **Solution B** : utiliser le nom `.rodata.duneos_drivers` (auto-placé par les patterns `*.rodata.*` existants dans `.flash.rodata`) + déclarer manuellement les symboles start/stop via un `.ld` ad hoc inclus via `target_linker_script(... INTERFACE ... APPEND)`. Plus simple à câbler probablement.
-- **Solution C** : abandonner l'approche section + utiliser des constructors `__attribute__((constructor(N)))` qui s'enregistrent dans une liste static au boot ; `vfs_dev.c` itère après mount. Évite la friction linker. Cost : les constructors tournent AVANT VFS init donc l'enregistrement réel est différé via un buffer intermédiaire.
+> **Ce que ça change concrètement** : ajouter un nouveau driver kernel = créer `drv_newchip.c`, ajouter 1 ligne `DUNEOS_DRIVER_REGISTER(prio, drv_newchip_register);` au bout du fichier, 1 entrée Kconfig, 1 ligne CMakeLists. **Zero modif `vfs_dev.c`**. Adding a driver now matches the Linux `module_init` UX. Avant : 4 fichiers à toucher dont 2 sites dans vfs_dev.c.
 
-**À faire AVANT Phase 25** parce que Phase 25 (`dbt system` — Image Recipes) va ajouter des drivers conditionnels à profile et la friction "4 fichiers à toucher par driver" deviendra critique. 24.9 unlocks la modularité que Phase 25 amplifie.
-
-- [ ] Choisir solution (préférence B → C → A par effort croissant)
-- [ ] Implementation
-- [ ] Smoke test sur CardPuter + T-Embed
-
-> **Pas une dépendance technique stricte de Phase 25 — c'est l'ergonomie qui rend la fin de Phase 25 propre.** L'approche actuelle (`#ifdef` + `extern`) reste opérationnelle si on doit accélérer Phase 25.
+> **Pourquoi constructors plutôt qu'ELF section ?** ESP-IDF v6 `--orphan-handling=error` + check `esp_app_format` rendent les sections ELF custom non-triviales sans linker fragment dédié (mal documenté pour v6). Les constructors GCC vont dans `.init_array`, section connue d'ESP-IDF, zéro friction. Bonus : portable arch/toolchain (futur RP2040, STM32).
 
 ---
 

@@ -19,6 +19,7 @@
  *   - replace this stub with the working implementation.
  */
 
+#include "duneos/driver_init.h"
 #include "duneos/klog.h"
 
 #define TAG "duneos/gpiochip-mcp23017"
@@ -29,3 +30,5 @@ void drv_gpiochip_mcp23017_register(void)
                 "Enable only if you intend to write the driver — "
                 "see drv_gpiochip_mcp23017.c for the recipe.");
 }
+
+DUNEOS_DRIVER_REGISTER(8, drv_gpiochip_mcp23017_register);

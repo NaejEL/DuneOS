@@ -19,6 +19,7 @@
  */
 
 #include "duneos/dev_driver.h"
+#include "duneos/driver_init.h"
 #include "duneos/gpio_ioctl.h"
 #include "duneos/klog.h"
 #include "board_config.h"
@@ -232,3 +233,5 @@ void drv_gpiochip_sx1509_register(void)
         register_instance(4, DUNEOS_GPIOCHIP4_I2C_ADDR, DUNEOS_GPIOCHIP4_PINS);
 #endif
 }
+
+DUNEOS_DRIVER_REGISTER(8, drv_gpiochip_sx1509_register);
