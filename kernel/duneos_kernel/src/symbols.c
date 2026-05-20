@@ -225,6 +225,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_run",                          duneos_supervisor_launch              ),
     SYM("duneos_supervisor_launch",            duneos_supervisor_launch              ),
     SYM("duneos_supervisor_running_count",     duneos_supervisor_running_count       ),
+    SYM("duneos_supervisor_wait_for_completion", duneos_supervisor_wait_for_completion ),
     SYM("duneos_send",                         duneos_send                           ),
     SYM("duneos_recv",                         duneos_recv                           ),
     SYM("duneos_service_ready",                duneos_service_ready                  ),

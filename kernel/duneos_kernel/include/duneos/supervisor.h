@@ -99,6 +99,13 @@ void duneos_supervisor_wait_all(void);
 /* Current number of live app tasks */
 int duneos_supervisor_running_count(void);
 
+/* Block until s_active_count drops to <= target_count. Uses a counting
+ * semaphore signalled once per processed exit — no busy-wait, no missed
+ * events. Typical caller: a shell that just launched an app and wants
+ * to wait until that app (and only that app) exits. Pass the pre-launch
+ * running count as target_count.                                         */
+void duneos_supervisor_wait_for_completion(int target_count);
+
 /*
  * Snapshot of one supervisor slot — safe to read after the call returns.
  * active=false means the slot is empty; name/policy/restart_count are zeroed.

@@ -38,6 +38,7 @@ extern int  duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t
 extern void duneos_loader_unload(duneos_app_t *app);
 extern int  duneos_supervisor_launch(const char *path);
 extern int  duneos_supervisor_running_count(void);
+extern void duneos_supervisor_wait_for_completion(int target_count);
 extern const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
 
 /* ----- configuration ----------------------------------------------------- */
@@ -133,8 +134,7 @@ static void cmd_run(int argc, char **argv)
         sh_outln(msg);
         return;
     }
-    usleep(50000);
-    while (duneos_supervisor_running_count() > count_before) usleep(100000);
+    duneos_supervisor_wait_for_completion(count_before);
 }
 
 static void cmd_help(void)

@@ -92,10 +92,11 @@ typedef struct {
     uint32_t                restart_count;
 } duneos_slot_info_t;
 
-int duneos_supervisor_launch(const char *path);
-int duneos_supervisor_running_count(void);
-int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
-int duneos_supervisor_restart_by_name(const char *name);
+int  duneos_supervisor_launch(const char *path);
+int  duneos_supervisor_running_count(void);
+void duneos_supervisor_wait_for_completion(int target_count);
+int  duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+int  duneos_supervisor_restart_by_name(const char *name);
 
 /* -------------------------------------------------------------------------
  * VFS queries

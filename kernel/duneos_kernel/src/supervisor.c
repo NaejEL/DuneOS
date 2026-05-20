@@ -104,6 +104,10 @@ typedef struct {
 static app_slot_t        s_slots[DUNEOS_MAX_RUNNING_APPS];
 static QueueHandle_t     s_exit_queue;
 static SemaphoreHandle_t s_all_done;
+/* Counting semaphore — signalled once per app exit handled by supervisor_task.
+ * Lets callers block on "an app has exited" without spinning on running_count.
+ * Used by duneos_supervisor_wait_for_completion(). */
+static SemaphoreHandle_t s_exit_event;
 static SemaphoreHandle_t s_lock;
 static int               s_active_count = 0;
 /* Counts slots in the unload→relaunch window to prevent spurious all_done */
@@ -434,6 +438,8 @@ static void supervisor_task(void *arg)
         }
 
         maybe_signal_all_done();
+        /* Signal callers waiting for any app to exit (e.g. shell `run`). */
+        xSemaphoreGive(s_exit_event);
     }
 }
 
@@ -453,6 +459,11 @@ esp_err_t duneos_supervisor_init(void)
     /* Binary semaphore: taken by wait_all, given by supervisor when count→0 */
     s_all_done = xSemaphoreCreateBinary();
     if (!s_all_done) return ESP_ERR_NO_MEM;
+
+    /* Counting semaphore: one give() per app exit handled by supervisor_task.
+     * Capacity sized to absorb back-to-back exits without dropping events. */
+    s_exit_event = xSemaphoreCreateCounting(DUNEOS_MAX_RUNNING_APPS * 4, 0);
+    if (!s_exit_event) return ESP_ERR_NO_MEM;
 
     /* 16 KB: supervisor calls duneos_loader_load on restart, which chains
      * fopen → FatFS → SPI DMA — a very deep call stack.  4 KB overflows
@@ -662,6 +673,26 @@ int duneos_supervisor_running_count(void)
     int n = s_active_count;
     xSemaphoreGive(s_lock);
     return n;
+}
+
+/* Block until s_active_count drops to <= target_count.
+ *
+ * Replaces the historical busy-wait pattern
+ *   while (duneos_supervisor_running_count() > target) usleep(100000);
+ * which hung intermittently — the shell task at app priority shared CPU
+ * with the spawned app at the same priority, and the supervisor's exit
+ * processing could be starved long enough that the shell never observed
+ * the count drop within its polling window.
+ *
+ * This version blocks on a counting semaphore signalled exactly once per
+ * processed exit. Each wake-up rechecks the count; if still above target,
+ * it sleeps again. No busy-wait, no missed events.                       */
+void duneos_supervisor_wait_for_completion(int target_count)
+{
+    for (;;) {
+        if (duneos_supervisor_running_count() <= target_count) return;
+        xSemaphoreTake(s_exit_event, portMAX_DELAY);
+    }
 }
 
 int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count)
