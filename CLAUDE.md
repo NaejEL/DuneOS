@@ -82,12 +82,13 @@ DuneOS/
 │   │           ├── drv_uart.c      # /dev/uart0
 │   │           ├── drv_klog.c      # /dev/klog (ring buffer reader)
 │   │           ├── drv_i2c.c       # /dev/i2c-0 (raw I2C master)
-│   │           ├── i2c_bus.c/h     # Shared I2C bus handle (used by drv_i2c + bq27220)
+│   │           ├── i2c_bus.c/h     # Shared I2C bus handle (drv_i2c.c)
 │   │           ├── gpio/
 │   │           │   └── drv_gpio.c  # /dev/gpiochip0
 │   │           └── battery/
-│   │               ├── drv_battery_adc_simple.c  # /dev/battery0 — ADC voltage divider
-│   │               └── drv_battery_bq27220.c     # /dev/battery0 — BQ27220 I2C fuel gauge
+│   │               └── drv_battery_adc_simple.c  # /dev/battery0 — ADC voltage divider
+│   │                                              # I2C fuel gauges live in userspace —
+│   │                                              # see apps/system/battery_daemon
 │   └── duneos_loader/
 │       ├── include/duneos/
 │       │   ├── loader.h            # scan/select/load/run/unload/run_captured API
@@ -235,12 +236,15 @@ src/drivers/
   gpio/drv_gpio.c                 CONFIG_DUNEOS_DRV_GPIO=y
   i2c_bus.c, drv_i2c.c           CONFIG_DUNEOS_DRV_I2C=y
   battery/drv_battery_adc_simple.c  CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE=y
-  battery/drv_battery_bq27220.c     CONFIG_DUNEOS_DRV_BATTERY_BQ27220=y
 ```
 
+I2C/SPI fuel gauges (BQ27220, MAX17043, IP5306) live in userspace as
+`apps/system/battery_daemon` + a chip backend under `sdk/sensor/lib<chip>.c`
+that implements `duneos_battery_ops`. See "Adding a battery backend" below.
+
 `i2c_bus.c` is a shared internal module (not a driver itself) providing a mutex-protected
-`i2c_bus_write_read()` used by both `drv_i2c.c` and `drv_battery_bq27220.c`. It is compiled
-whenever either `CONFIG_DUNEOS_DRV_I2C` or `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` is set.
+`i2c_bus_write_read()` used by `drv_i2c.c`. It is compiled whenever
+`CONFIG_DUNEOS_DRV_I2C` is set.
 
 ### Adding a new kernel driver
 
@@ -250,6 +254,40 @@ whenever either `CONFIG_DUNEOS_DRV_I2C` or `CONFIG_DUNEOS_DRV_BATTERY_BQ27220` i
 4. Add `#ifdef CONFIG_DUNEOS_DRV_<NAME>` block to `vfs_dev.c` (forward decl + call in mount)
 5. Enable it for a board: edit `boards/<board>/board.yaml` (add the relevant section, e.g. `i2c:`, `battery:`) then re-run `python tools/duneos-bspgen.py boards/<board>/board.yaml`. Bspgen emits `CONFIG_DUNEOS_DRV_<NAME>=y` into the generated `sdkconfig.board`. Never hand-edit `sdkconfig.board` — it is overwritten by bspgen.
 6. Update `tools/duneos-bspgen.py` to emit the config entry when the matching YAML section is present
+
+### Adding a battery backend (userspace, I2C/SPI fuel gauges)
+
+I2C and SPI fuel gauges (BQ27220, MAX17043, IP5306, …) live in **userspace** —
+they are per-chip register protocols on a shared bus (ADR 009). The
+`apps/system/battery_daemon` is chip-agnostic; the active board's chip backend
+is linked in at build time by the capability resolver. Adding a new gauge chip
+requires **zero kernel edits, zero daemon edits**.
+
+To add chip `<chip>`:
+
+1. Create `sdk/sensor/lib<chip>.c` — implement the three `battery_backend_ops_t`
+   slots (`open`, `read`, `close`) defined in `<duneos/battery.h>` and export
+   them as `const battery_backend_ops_t duneos_battery_ops`. Read the chip's
+   I2C device path + 7-bit address from `<duneos/board.h>` (defines
+   `DUNEOS_BATTERY_I2C_DEV`, `DUNEOS_BATTERY_GAUGE_ADDR`). Use `libbq27220.c`
+   as the reference.
+2. Declare it on a board: `board.yaml` →
+   ```yaml
+   battery:
+     type: <chip>           # name of your lib<chip>.c (no "lib" prefix, no ".c")
+     i2c_id: 0
+     gauge_addr: 0xNN
+   ```
+3. Re-run `python tools/duneos-bspgen.py boards/<board>/board.yaml`.
+4. Add `/flash/bin/battery_daemon.dap` to `boards/<board>/init.yaml` with
+   `restart: always`.
+
+That's it. The capability resolver (`tools/dbt/capabilities.py "battery"`)
+pulls `lib<chip>.c` automatically; `boardgen.py` emits the I2C device path and
+address into the per-app `<duneos/board.h>`; the daemon links against
+`libbattery.c` (dispatcher) + your `lib<chip>.c`. On boards that have
+`battery.type: adc_simple` (kernel-served ADC backend), `dbt buildall` skips
+the daemon gracefully with a clear message — no error.
 
 ### Adding a new target architecture
 
@@ -359,7 +397,7 @@ display-agnostic API with pluggable backends to restore source-level portability
 | Phase 7 — App SDK & DX | **DONE** | `dbt.py info` footprint, `dbt.py deploy` → `.dap`, `hello_world`, `uart_echo` demos |
 | Phase 8 — GPIO | **DONE** (native) | `/dev/gpiochip0` via `esp_driver_gpio`; `gpio_ioctl.h` SDK header; shell `gpio` command; expander support pending |
 | Phase 9 — Init system | **DONE** | `/sd/init.json` (cJSON), supervisor restart policies (`no`/`always`/`on-failure`), `duneos_service_ready()`; autoboot fallback retained |
-| Phase 10 — I2C + battery | **DONE** | `/dev/i2c-0`, `/dev/battery0` (adc_simple for CardPuter, bq27220 for T-Embed CC1101) |
+| Phase 10 — I2C + battery | **DONE** | `/dev/i2c-0`; `/dev/battery0` for ADC-divider boards (CardPuter `adc_simple`); I2C/SPI fuel gauges (BQ27220 T-Embed, …) migrated to userspace `apps/system/battery_daemon` + `sdk/sensor/lib<chip>.c` (Phase 24-debt #1). |
 | Phase 11 — SPI | **DONE** | `/dev/spi-1` (SPI3_HOST); per-fd `spi_bus_add_device`; `role: raw` in BSP YAML selects the raw bus; boards without a free SPI host omit the config flag |
 | Phase 12 — Input | **DONE** | `/dev/input/event0`; IOMatrix scan (CardPuter), GPIO buttons + quadrature encoder (T-Embed); 3-layer keymap (normal/shift/fn); `DUNEOS_PERM_INPUT`; shell `input` + `tail` commands |
 | Phase 13 — Framebuffer + display SDK | **DONE** | `/dev/disp0` streaming driver (all boards); `/dev/fb0` PSRAM back-buffer (T-Embed); `st7789_hw.c` shared HW module; `disp_ioctl.h` POSIX API; `g_shell` graphical terminal (30×16 8×8 font, stdout capture, PATH bin execution) |

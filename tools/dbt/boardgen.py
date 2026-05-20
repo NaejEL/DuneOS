@@ -109,19 +109,33 @@ def _i2c_block(board: dict, lines: list[str]) -> None:
     lines.append("")
 
 
-def _battery_block(board: dict, lines: list[str]) -> None:
-    """Emit battery defines so the battery_daemon can talk to the gauge.
+# Battery chip types that the kernel serves directly via /dev/battery0
+# (no userspace lib exists for them). Mirrored in capabilities.py
+# CAPABILITY_MAP["battery"]["kernel_served"]. Keep both in sync.
+KERNEL_SERVED_BATTERY = {"adc_simple"}
 
-    Only emitted when battery.type is an I2C gas gauge (today: bq27220). ADC-
-    backed batteries (e.g. CardPuter) stay in-kernel via /dev/battery0 and need
-    no userspace defines.
+
+def _battery_block(board: dict, lines: list[str]) -> None:
+    """Emit battery defines for the userspace battery_daemon + libbattery.
+
+    Emitted for any I2C/SPI gauge chip declared in board.yaml `battery:`
+    (bq27220, max17043, ip5306, …). ADC-backed batteries (CardPuter
+    `adc_simple`) stay kernel-served via /dev/battery0 and need no
+    userspace defines.
+
+    Adding a new gauge chip = ship sdk/sensor/lib<chip>.c that exports
+    `duneos_battery_ops`, declare it in board.yaml as
+    `battery: {type: <chip>, i2c_id: N, gauge_addr: 0xNN}`, and the
+    capability resolver pulls the right backend.
     """
     bat = board.get("battery")
     if not isinstance(bat, dict):
         return
-    if bat.get("type") != "bq27220":
+    btype = bat.get("type")
+    if not btype or btype in KERNEL_SERVED_BATTERY:
         return
-    lines.append("/* ----- battery (BQ27220 daemon) ----- */")
+    lines.append(f"/* ----- battery ({btype}, userspace daemon) ----- */")
+    lines.append(f'#define DUNEOS_BATTERY_DRIVER        "{btype}"')
     lines.append(f'#define DUNEOS_BATTERY_I2C_DEV       "/dev/i2c-{int(bat.get("i2c_id", 0))}"')
     lines.append(f"#define DUNEOS_BATTERY_GAUGE_ADDR    {hex(int(bat.get('gauge_addr', 0x55)))}")
     lines.append('#define DUNEOS_BATTERY_TMPFS_PATH    "/tmp/battery"')

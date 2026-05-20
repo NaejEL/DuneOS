@@ -94,8 +94,19 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
     # to manually-declared `sources:` entries below — they auto-pick up the
     # adjacent include/ directory.
     extra_includes = set()
-    from .capabilities import resolve as _resolve_caps
-    for p in _resolve_caps(manifest.get("capabilities", []), board_cfg, SDK_DIR):
+    from .capabilities import resolve as _resolve_caps, CapabilityNotApplicable
+    try:
+        resolved = _resolve_caps(manifest.get("capabilities", []), board_cfg, SDK_DIR)
+    except CapabilityNotApplicable as e:
+        # The app needs a capability whose backend is served by the kernel
+        # on this board — there is nothing to build in userspace. Treat as
+        # a benign skip (clear any stale app.elf so flashimg won't ship it).
+        stale = build_dir / "app.elf"
+        if stale.exists():
+            stale.unlink()
+        print(f"  SKIP {e}")
+        return True
+    for p in resolved:
         sources.append(p)
         sdk_inc = p.parent / "include"
         if sdk_inc.is_dir():

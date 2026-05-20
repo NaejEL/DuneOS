@@ -46,9 +46,24 @@ Each capability is described by a dict with these keys:
         {sdk}     — replaced by str(DUNEOS_ROOT/"sdk")
         {driver}  — replaced by the board.yaml driver value
 
+  kernel_served: set[str]   (optional)
+      Driver values that the kernel already serves directly (no userspace
+      lib exists for them). When the board declares such a driver,
+      resolve() raises CapabilityNotApplicable so the caller can skip
+      building this app instead of failing — typical for daemons that are
+      only relevant on boards whose chip needs userspace dispatch.
+
   description: str
       One-line human-readable, shown in error messages.
 """
+
+
+class CapabilityNotApplicable(Exception):
+    """Raised when a capability is technically declared by the active board
+    but is served by the kernel (no userspace backend file exists). The caller
+    (typically dbt builder) should treat this as a benign skip rather than a
+    build failure.
+    """
 
 
 CAPABILITY_MAP: dict[str, CapabilitySpec] = {
@@ -65,6 +80,24 @@ CAPABILITY_MAP: dict[str, CapabilitySpec] = {
         ],
         "description": "Graphical display via chip-specific userspace backend",
     },
+    "battery": {
+        "board_key": ["battery", "type"],
+        # libbattery.c forwards every battery_open/_read/_close call through
+        # `duneos_battery_ops`, defined by the chip backend (libbq27220.c,
+        # libmax17043.c, libip5306.c, …). Adding a new gauge chip = ship
+        # sdk/sensor/lib<chip>.c that exports duneos_battery_ops, and the
+        # board.yaml's battery.type field selects which one is linked here.
+        "sources": [
+            "{sdk}/sensor/libbattery.c",
+            "{sdk}/sensor/lib{driver}.c",
+        ],
+        # ADC voltage-divider batteries are served by the kernel directly
+        # (/dev/battery0 via drv_battery_adc_simple.c) — there is no
+        # userspace backend to pull in. Apps that declare `capabilities:
+        # [battery]` and end up on such a board are skipped gracefully.
+        "kernel_served": {"adc_simple"},
+        "description": "Battery monitor — userspace backend for I2C/SPI gas gauges",
+    },
     # Future capabilities (planned, not yet wired):
     #
     #   "input": {
@@ -75,17 +108,6 @@ CAPABILITY_MAP: dict[str, CapabilitySpec] = {
     #       ],
     #       "description": "User input device (keyboard, buttons, encoder)",
     #   },
-    #
-    #   "sensor:battery": {
-    #       "board_key": ["battery", "chip"],
-    #       "sources": [
-    #           "{sdk}/sensor/libbq{driver}.c",
-    #       ],
-    #       "description": "Battery fuel gauge sensor",
-    #   },
-    #
-    # Pattern: same nesting; the board's yaml declares what chip is present,
-    # the app declares it needs that capability, dbt links the right backend.
 }
 
 
@@ -149,6 +171,12 @@ def resolve(capabilities: list[str],
                 f"  does not declare it. Expected board.yaml to set:\n"
                 f"      {board_path}: <driver-name>\n"
                 f"  Capability description: {spec['description']}"
+            )
+
+        if driver in spec.get("kernel_served", set()):
+            raise CapabilityNotApplicable(
+                f"capability '{cap}' is kernel-served on this board "
+                f"(driver={driver}); no userspace backend to link"
             )
 
         for tmpl in spec["sources"]:
