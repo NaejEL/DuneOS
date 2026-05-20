@@ -37,14 +37,20 @@ CapabilitySpec = dict
 """
 Each capability is described by a dict with these keys:
 
-  board_key: list[str]
+  board_key: list[str]   (optional — omit for marker-only capabilities)
       Path into board.yaml to find the chip/driver name.
       e.g. ["display", "driver"] reads board_cfg["display"]["driver"].
+      When absent (or empty), the capability acts as a pure marker:
+      no driver dispatch happens, no sources are pulled. Used by
+      Phase 24.8 to gate <duneos/board.h> emission in boardgen.py
+      for capabilities that don't need a chip-specific backend
+      (today: "input" — the daemons ARE the implementation).
 
   sources: list[str]
       Source path templates relative to the repo root. Tokens:
         {sdk}     — replaced by str(DUNEOS_ROOT/"sdk")
         {driver}  — replaced by the board.yaml driver value
+      May be empty for marker-only capabilities.
 
   kernel_served: set[str]   (optional)
       Driver values that the kernel already serves directly (no userspace
@@ -79,6 +85,17 @@ CAPABILITY_MAP: dict[str, CapabilitySpec] = {
             "{sdk}/display/lib{driver}.c",
         ],
         "description": "Graphical display via chip-specific userspace backend",
+    },
+    "input": {
+        # Marker-only: no driver dispatch, no SDK lib to pull. The daemons
+        # (apps/system/kb_iomatrix.dap, apps/system/btn_gpio.dap) ARE the
+        # implementation; this capability exists so boardgen.py can gate
+        # the kb/btn pin defines in <duneos/board.h> to apps that ask
+        # for them. Apps that only READ from /dev/input/event0 (g_shell,
+        # …) get DUNEOS_INPUT_DEV unconditionally — declaring this
+        # capability is for the producer side.
+        "sources": [],
+        "description": "Hardware input source (keyboard matrix, GPIO buttons) — producer side",
     },
     "battery": {
         "board_key": ["battery", "type"],
@@ -162,6 +179,12 @@ def resolve(capabilities: list[str],
                 f"  Known capabilities: {', '.join(sorted(CAPABILITY_MAP))}\n"
                 f"  See docs/adr/014-capability-resolution.md for how to add one."
             )
+
+        # Marker-only capability (no board_key) → no sources, no checks.
+        # Used to gate boardgen.py block emission without dispatching a
+        # chip-specific source file.
+        if not spec.get("board_key"):
+            continue
 
         driver = _board_key_get(spec["board_key"])
         if not driver:

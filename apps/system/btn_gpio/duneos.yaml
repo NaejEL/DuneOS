@@ -4,3 +4,5 @@ required_abi_version: 1
 # GPIO (1) + FS_READ (32) + FS_WRITE (64) + INPUT (256) = 353
 permissions: 353
 stack_size: 2048
+capabilities:
+  - input

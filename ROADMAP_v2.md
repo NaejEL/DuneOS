@@ -261,7 +261,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2) (not finished)
+### Phase 24.8 — `<duneos/board.h>` auto-généré par dbt (ADR 015 Pattern 2) ✅
 
 Élimine les paths device hardcodés (`/dev/disp0`, `/dev/spi-1`, etc.) dans les SDK libs et les apps. `dbt build` génère un header `_board.h` par app, depuis `board.yaml` + résolution des capabilities, contenant tous les defines nécessaires. Apps incluent `<duneos/board.h>` (alias résolu par `-I<build_dir>`).
 
@@ -269,9 +269,10 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - [x] **`builder.py`** : appelle `boardgen.write_to(build_dir, ...)` avant la compile, ajoute `-I<build_dir>` aux include paths.
 - [x] **Header alias `kernel/duneos_kernel/include/duneos/board.h`** : `#include "_board.h"` — résolu via les include paths app.
 - [x] **Migration `libdisp.c`** : utilise `DUNEOS_DISPLAY_DEV` au lieu de `"/dev/disp0"` hardcodé. Future bascule SPI userspace (Phase 24.6) transparente pour libdisp.
-- [ ] **Migration `libst7789.c`** : arrête de parser `/flash/board.info` au runtime. Reporté — libst7789 reste placeholder tant que Phase 24.6 (SPI3 userspace) n'est pas livrée. Pas bloquant.
-- [ ] **Dépendance rebuild sur `board.yaml`** : pas implémenté — un changement de `board.yaml` nécessite `dbt clean && dbt build` manuel pour l'instant. À ajouter quand on en ressent le besoin (mtime check ou un stamp file).
-- [x] **Validation pratique** : `apps/user/gfx_demo/build/_board.h` contient les bons defines pour CardPuter (DUNEOS_DISPLAY_DEV="/dev/disp0", WIDTH=240, HEIGHT=135, HAS_SD=1). libdisp.c compile et utilise ce define.
+- [x] **Migration `libst7789.c`** : livrée dans Phase 24-debt #6+#2 (commit `109d53c`). lit `DUNEOS_DISPLAY_DEV_INDEX` + pins device de `<duneos/board.h>` — ouvre `/dev/spi-N` selon le board, plus de `/flash/board.info` parsing.
+- [x] **Dépendance rebuild sur `board.yaml`** : implicite — `boardgen.write_text()` réécrit `_board.h` à chaque `dbt build`, donc mtime fresh → gcc recompile les .c qui l'incluent. Pas besoin de stamp file dédié.
+- [x] **Filtrage par capabilities** (commit Phase 24.8) : `boardgen.py` `CAPABILITY_TO_BLOCKS` mappe `display→_display_block`, `input→_input_block`, `battery→_battery_block`. Apps déclarant `capabilities: [...]` ne reçoivent que les blocks correspondants. Apps sans `capabilities:` gardent tous les blocks (back-compat). `capabilities.py` accepte les marker-only capabilities (board_key absent → pas de driver dispatch, pas de sources). Daemons input (kb_iomatrix, btn_gpio) déclarent `capabilities: [input]`. Validation : g_shell (`capabilities: [display]`) ne reçoit plus les `DUNEOS_KB_*` mais garde `DUNEOS_INPUT_DEV` (always-on pour les consumers).
+- [x] **Validation pratique** : `dbt buildall` → 29/29 OK avec filtering. g_shell, gfx_demo, battery_daemon, kb_iomatrix, btn_gpio testés.
 
 > **Apps qui en bénéficient immédiatement** : libdisp.c (déjà migré). Apps futures qui font `open(DUNEOS_INPUT_DEV)`, `open(DUNEOS_I2C0_DEV)`, etc. au lieu d'hardcoder les paths.
 
