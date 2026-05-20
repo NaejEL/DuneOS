@@ -47,13 +47,20 @@ void app_main(void)
     gfx_flush(ctx);
     usleep(2000000);
 
-    /* --- frame 3: pixel art gradient --- */
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            uint8_t r = (uint8_t)(x * 255 / w);
+    /* --- frame 3: pixel art gradient ---
+     * Compose one row at a time on the stack and gfx_blit it. In STREAM
+     * mode this is H SPI transactions instead of W*H gfx_pixel calls
+     * (each of which would be its own SPI transaction). */
+    {
+        uint16_t row[240];   /* widest CardPuter row; bump if needed */
+        for (int y = 0; y < h; y++) {
             uint8_t g = (uint8_t)(y * 255 / h);
             uint8_t b = 128;
-            gfx_pixel(ctx, x, y, GFX_RGB(r, g, b));
+            for (int x = 0; x < w; x++) {
+                uint8_t r = (uint8_t)(x * 255 / w);
+                row[x] = GFX_RGB(r, g, b);
+            }
+            gfx_blit(ctx, 0, y, w, 1, row);
         }
     }
     gfx_text(ctx, 4, 4, "RGB gradient", GFX_WHITE, GFX_BLACK);

@@ -172,7 +172,7 @@ void gfx_rect(gfx_ctx_t *ctx, int x, int y, int w, int h, uint16_t color)
     int x2 = x + w > ctx->width  ? ctx->width  : x + w;
     int y2 = y + h > ctx->height ? ctx->height : y + h;
     if (x1 >= x2 || y1 >= y2) return;
-    int rw = x2 - x1, rh = y2 - y1;
+    int rw = x2 - x1;
 
     if (ctx->mode == GFX_MODE_BUFFERED) {
         for (int row = y1; row < y2; row++)
@@ -251,6 +251,42 @@ void gfx_text(gfx_ctx_t *ctx, int x, int y,
         }
         cx += 8;
         if (cx + 8 > ctx->width) { cx = x; cy += 8; }
+    }
+}
+
+void gfx_blit(gfx_ctx_t *ctx, int x, int y, int w, int h,
+              const uint16_t *pixels)
+{
+    if (!ctx || !pixels || w <= 0 || h <= 0) return;
+    /* Clip to display bounds. */
+    int x1 = x < 0 ? 0 : x;
+    int y1 = y < 0 ? 0 : y;
+    int x2 = x + w > ctx->width  ? ctx->width  : x + w;
+    int y2 = y + h > ctx->height ? ctx->height : y + h;
+    if (x1 >= x2 || y1 >= y2) return;
+    int cw = x2 - x1, ch = y2 - y1;
+    int src_off_x = x1 - x;
+    int src_off_y = y1 - y;
+
+    if (ctx->mode == GFX_MODE_BUFFERED) {
+        for (int row = 0; row < ch; row++) {
+            const uint16_t *src = pixels + (src_off_y + row) * w + src_off_x;
+            uint16_t *dst = ctx->buf + (size_t)(y1 + row) * ctx->width + x1;
+            memcpy(dst, src, (size_t)cw * sizeof(uint16_t));
+        }
+        return;
+    }
+    /* STREAM: one SPI transaction for the whole clipped rect. If the source
+     * is unclipped (cw == w && ch == h), pass the buffer through directly.
+     * Otherwise we'd have to allocate a contiguous clipped copy — instead
+     * write row by row to avoid heap allocation in STREAM. */
+    if (cw == w && ch == h) {
+        stream_write_area(ctx, x1, y1, cw, ch, pixels);
+    } else {
+        for (int row = 0; row < ch; row++) {
+            const uint16_t *src = pixels + (src_off_y + row) * w + src_off_x;
+            stream_write_area(ctx, x1, y1 + row, cw, 1, src);
+        }
     }
 }
 

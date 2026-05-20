@@ -138,3 +138,19 @@ void gfx_text(gfx_ctx_t *ctx, int x, int y,
  * Must be called after drawing to make changes visible.
  */
 void gfx_flush(gfx_ctx_t *ctx);
+
+/*
+ * Blit an arbitrary RGB565 buffer at (x, y). The caller composes the pixel
+ * data — useful for images, sprites, and run-length-encoded patterns. In
+ * BUFFERED mode the pixels go into the back-buffer; in STREAM mode they
+ * go straight to the display in one SPI transaction. The buffer must hold
+ * exactly w*h host-endian RGB565 pixels.
+ *
+ * Why this exists (Phase 24.10 follow-up): STREAM-mode apps doing per-pixel
+ * effects (gradients, image decode) should compose one row at a time on
+ * the stack and blit, instead of calling gfx_pixel which costs one SPI
+ * transaction per pixel. Same idea for BUFFERED — gfx_blit is just a fast
+ * memcpy into the back-buffer.
+ */
+void gfx_blit(gfx_ctx_t *ctx, int x, int y, int w, int h,
+              const uint16_t *pixels);

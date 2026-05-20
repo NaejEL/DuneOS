@@ -227,7 +227,11 @@ static void st7789_backend_write_area(disp_ctx_t *c,
 static void st7789_backend_close(disp_ctx_t *c)
 {
     if (!c) return;
-    if (c->bl     >= 0) gpio_write(c->gpio_fd, c->bl, 0);
+    /* Do NOT turn the backlight off on close. The display is a shared
+     * resource — another app (e.g. g_shell running concurrently) may
+     * still be using it. The BL pin is board-level, not per-fd.
+     * Apps that want a power-off path should write the BL pin directly
+     * via /dev/gpiochip0. */
     if (c->spi_fd  >= 0) close(c->spi_fd);
     if (c->gpio_fd >= 0) close(c->gpio_fd);
     free(c);
