@@ -200,7 +200,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
     - `dbt buildall` → 27/27 OK ; kernel CardPuter build OK
   - **Reste pour fermeture** : flash T-Embed → vérifier que `battery_daemon` apparaît dans klog au boot, que `/tmp/battery` est rempli, que la commande shell `battery` retourne `voltage/charge/status`. **Tant que ce test device n'a pas été fait, l'item reste `[ ]`.**
 
-- [x] **#3 — GPIO expanders drivers C** (code-complete, kernel-validated)
+- [ ] **#3 — GPIO expanders drivers C** (code-complete, hardware-validation pending — no expander board owned today)
   - **Statut 2026-05-20** : 3 drivers livrés, kernel T-Embed build OK avec les 3 enabled, 27/27 apps OK sur CardPuter.
   - **Fait** :
     - `kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_sx1509.c` — 16-bit SX1509, RMW shadows pour DIR/DATA/PULLUP, mutex per-driver, container_of pattern (multi-instance via `MAX_SX1509_INSTANCES=4`)
