@@ -11,12 +11,6 @@
 #include "duneos/klog.h"
 #include "drv_input_priv.h"
 
-#ifdef CONFIG_DUNEOS_DRV_INPUT_IOMATRIX
-extern void kb_iomatrix_init(void);
-#endif
-#ifdef CONFIG_DUNEOS_DRV_INPUT_BTNGPIO
-extern void btn_gpio_init(void);
-#endif
 #ifdef CONFIG_DUNEOS_DRV_INPUT_ENCODER
 extern void enc_quadrature_init(void);
 #endif
@@ -77,18 +71,32 @@ static ssize_t input_read(duneos_devfd_t *fd, void *buf, size_t len)
     return (ssize_t)(count * sizeof(input_event_t));
 }
 
+/* ----- ioctl: userspace event injection ---------------------------------- */
+/* Polling-based input sources (keyboard matrix scanners, GPIO buttons) live in
+ * userspace daemons since 24-debt #5. They open /dev/input/event0 and call
+ * ioctl(INPUT_INJECT_EVENT, &ev) to feed the same ring buffer. Encoder stays
+ * kernel-side (ISR path) and calls drv_input_push_event() directly. */
+static int input_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
+{
+    (void)fd;
+    switch (cmd) {
+    case INPUT_INJECT_EVENT: {
+        if (!arg) { errno = EINVAL; return -1; }
+        drv_input_push_event((const input_event_t *)arg);
+        return 0;
+    }
+    default:
+        errno = ENOTTY;
+        return -1;
+    }
+}
+
 /* ----- driver init -------------------------------------------------------- */
 
 static int input_init(void)
 {
     s_data_sem = xSemaphoreCreateBinary();
     if (!s_data_sem) return -1;
-#ifdef CONFIG_DUNEOS_DRV_INPUT_IOMATRIX
-    kb_iomatrix_init();
-#endif
-#ifdef CONFIG_DUNEOS_DRV_INPUT_BTNGPIO
-    btn_gpio_init();
-#endif
 #ifdef CONFIG_DUNEOS_DRV_INPUT_ENCODER
     enc_quadrature_init();
 #endif
@@ -97,9 +105,10 @@ static int input_init(void)
 }
 
 static const duneos_dev_driver_t s_drv_input = {
-    .name = "input/event0",
-    .init = input_init,
-    .read = input_read,
+    .name  = "input/event0",
+    .init  = input_init,
+    .read  = input_read,
+    .ioctl = input_ioctl,
 };
 
 void drv_input_register(void)

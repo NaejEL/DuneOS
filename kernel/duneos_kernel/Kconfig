@@ -63,31 +63,11 @@ config DUNEOS_DRV_INPUT
     help
         Enable /dev/input/event0. read() blocks until at least one
         input_event_t is available, then returns one or more events.
-        This option only provides the ring buffer and VFS device node.
-        At least one backend (DUNEOS_DRV_INPUT_IOMATRIX, …) must also
-        be enabled to produce events.
-
-config DUNEOS_DRV_INPUT_IOMATRIX
-    bool "Input backend — IOMatrix keyboard (M5Stack CardPuter)"
-    default n
-    depends on DUNEOS_DRV_INPUT
-    help
-        Enable the IOMatrix keyboard scanner for boards that wire a 74HC138
-        row decoder + GPIO column inputs directly to the ESP32.
-        Board must define DUNEOS_KB_ROW_A0/A1/A2_PIN, DUNEOS_KB_COL_PINS,
-        DUNEOS_KB_NUM_COLS, DUNEOS_KB_MATRIX_ROWS, DUNEOS_KB_MATRIX_COLS
-        in board_config.h.  Runs a FreeRTOS scan task at ~100 Hz.
-
-config DUNEOS_DRV_INPUT_BTNGPIO
-    bool "Input backend — simple GPIO buttons"
-    default n
-    depends on DUNEOS_DRV_INPUT
-    help
-        Enable polling for simple active-LOW GPIO buttons.
-        Board must define DUNEOS_HAVE_BTN_GPIO, DUNEOS_BTN_GPIO_COUNT,
-        DUNEOS_BTN_GPIO_PINS and DUNEOS_BTN_GPIO_CODES in board_config.h.
-        Each button emits INPUT_EV_KEY press/release events.
-        10 ms poll period provides contact debounce.
+        Polling-based event sources (keyboard matrix scanners, GPIO buttons)
+        live in userspace daemons (apps/system/kb_iomatrix.dap,
+        apps/system/btn_gpio.dap) which inject events via
+        ioctl(INPUT_INJECT_EVENT). Encoder backends with HW counter/ISR stay
+        kernel-side (DUNEOS_DRV_INPUT_ENCODER).
 
 config DUNEOS_DRV_INPUT_ENCODER
     bool "Input backend — quadrature rotary encoder"

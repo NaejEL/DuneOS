@@ -87,10 +87,52 @@ def _display_block(board: dict, lines: list[str]) -> None:
 
 
 def _input_block(board: dict, lines: list[str]) -> None:
-    if board.get("keyboard_matrix") or board.get("buttons") or board.get("encoder"):
-        lines.append("/* ----- input ----- */")
-        lines.append('#define DUNEOS_INPUT_DEV         "/dev/input/event0"')
-        lines.append("")
+    """Emit input subsystem defines for the per-app <duneos/board.h>.
+
+    - DUNEOS_INPUT_DEV is the kernel-side ring buffer (/dev/input/event0),
+      consumed by apps that READ events (g_shell, future apps).
+    - DUNEOS_KB_* are consumed by the userspace `kb_iomatrix.dap` daemon
+      to drive the keyboard matrix scan.
+    - DUNEOS_BTN_GPIO_* are consumed by the userspace `btn_gpio.dap` daemon.
+    Encoder pins stay in the kernel's board_config.h (the encoder backend
+    lives in the kernel — see ADR 010 / Phase 24 hal_encoder).
+    """
+    kb   = board.get("keyboard_matrix")
+    btns = board.get("buttons")
+    enc  = board.get("encoder")
+    if not (kb or btns or enc):
+        return
+
+    lines.append("/* ----- input ----- */")
+    lines.append('#define DUNEOS_INPUT_DEV         "/dev/input/event0"')
+
+    if isinstance(kb, dict):
+        lines.append("/* keyboard_matrix → apps/system/kb_iomatrix daemon */")
+        row_pins = kb.get("row_select_pins", [])
+        col_pins = kb.get("col_pins", [])
+        # 74HC138-style: exactly 3 row select pins for 8 outputs (3-bit address).
+        if len(row_pins) >= 3:
+            lines.append(f"#define DUNEOS_KB_ROW_A0_PIN     {int(row_pins[0])}")
+            lines.append(f"#define DUNEOS_KB_ROW_A1_PIN     {int(row_pins[1])}")
+            lines.append(f"#define DUNEOS_KB_ROW_A2_PIN     {int(row_pins[2])}")
+        lines.append(f"#define DUNEOS_KB_NUM_COLS       {len(col_pins)}")
+        if col_pins:
+            cols_init = "{ " + ", ".join(str(int(p)) for p in col_pins) + " }"
+            lines.append(f"#define DUNEOS_KB_COL_PINS       {cols_init}")
+        lines.append(f"#define DUNEOS_KB_MATRIX_ROWS    {int(kb.get('matrix_rows', 4))}")
+        lines.append(f"#define DUNEOS_KB_MATRIX_COLS    {int(kb.get('matrix_cols', 14))}")
+
+    if isinstance(btns, list) and btns:
+        lines.append("/* buttons → apps/system/btn_gpio daemon */")
+        lines.append(f"#define DUNEOS_BTN_GPIO_COUNT    {len(btns)}")
+        pins_init  = "{ " + ", ".join(str(int(b["pin"])) for b in btns) + " }"
+        # `code` values come from <duneos/input_ioctl.h> (KEY_*) — emit as
+        # bare identifiers so the C preprocessor substitutes them.
+        codes_init = "{ " + ", ".join(str(b["code"]) for b in btns) + " }"
+        lines.append(f"#define DUNEOS_BTN_GPIO_PINS     {pins_init}")
+        lines.append(f"#define DUNEOS_BTN_GPIO_CODES    {codes_init}")
+
+    lines.append("")
 
 
 def _i2c_block(board: dict, lines: list[str]) -> None:

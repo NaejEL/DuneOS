@@ -211,10 +211,15 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
     - Test : T-Embed board.yaml avec `gpio_expanders: [sx1509, pcf8574, mcp23017]` → kernel link OK, 3 `.obj` produits
   - **Note** : un Phase 24.9 (driver self-registration) supprimera plus tard les blocs `#ifdef` répétitifs ; chaque driver utilisera `DUNEOS_DRIVER_REGISTER()` à la place. Pas un blocker pour ce closure.
 
-- [ ] **#5 — uinput + input drivers userspace** :
-  - **Plan inchangé** (cf. ROADMAP avant — uinput driver + kb_iomatrix.dap + btn_gpio.dap + capability `input` dans ADR 014).
-  - **Effort estimé** : ~1 semaine focus.
-  - **Critères de fermeture** : `kb_iomatrix.c` + `btn_gpio.c` supprimés du kernel ; `apps/system/kb_iomatrix.dap` + `apps/system/btn_gpio.dap` opérationnels ; `g_shell` reçoit toujours ses events via `/dev/input/event0`.
+- [x] **#5 — uinput + input drivers userspace** (validated on device 2026-05-20)
+  - **Statut 2026-05-20** : implémentation faite ; kernel CardPuter + T-Embed build OK avec daemons enabled ; 29/29 apps OK sur les deux boards. **Keyboard testé sur CardPuter device — kb_iomatrix.dap injecte les events, shell et g_shell reçoivent toujours les frappes.**
+  - **Fait** :
+    - Kernel : `kb_iomatrix.c` + `btn_gpio.c` supprimés. `drv_input.c` gagne l'ioctl `INPUT_INJECT_EVENT` (handler unique pour l'injection userspace ; reste `drv_input_push_event()` interne pour le path ISR encoder). Kconfig purgé des `DUNEOS_DRV_INPUT_IOMATRIX/BTNGPIO` (encoder reste).
+    - Userspace : `apps/system/kb_iomatrix/` + `apps/system/btn_gpio/` (daemons polling 10ms, ouvrent `/dev/gpiochip0` + `/dev/input/event0`, guard `#ifdef` pour build-as-stub sur boards sans la feature)
+    - `boardgen.py` : nouveau `_input_block` émet `DUNEOS_KB_*` + `DUNEOS_BTN_GPIO_*` + `DUNEOS_INPUT_DEV` dans `<duneos/board.h>` (per-app) ; `duneos-bspgen.py` ne les émet plus dans `board_config.h` (kernel) puisque le kernel ne les consomme plus
+    - `init.yaml` CardPuter : ajoute `/flash/bin/kb_iomatrix.dap restart: always`. T-Embed : ajoute `/flash/bin/btn_gpio.dap`.
+  - **Reste pour fermeture** : valider sur device (CardPuter) que `g_shell` reçoit toujours ses events après le boot. Strict-process — `[ ]` pending observation hardware.
+  - **Note architecture** : la latence de scan augmente (chaque ioctl est appel de fonction, mais multiplie 8 row selects × 7 col reads = ~56 ioctl par scan). Sur CardPuter sans MMU et avec api dispatch table, c'est µs-level — devrait rester << 1ms par scan. À mesurer si frappe rapide ressentie comme moins fluide.
 
 > Aucun item n'est marqué `[x]` tant que **le kernel n'a plus le code obsolète** + **les apps migrées passent les tests**. Pas de "MVP/PARTIAL" en cours d'implémentation — chaque item est en `[ ]` ou en `[x]`, jamais entre les deux. Cette discipline acte le **process de fermeture à 100%** établi 2026-05-20.
 

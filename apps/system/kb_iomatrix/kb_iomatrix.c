@@ -1,43 +1,49 @@
 /*
- * IOMatrix keyboard backend — M5Stack CardPuter.
+ * kb_iomatrix — userspace keyboard matrix scanner daemon.
  *
- * 74HC138 3-to-8 row decoder (A0/A1/A2 → Y0..Y7 active-LOW) + 7 column
- * GPIO inputs with pull-ups.  Physical layout: 4 rows × 14 columns.
+ * Replaces the in-kernel kb_iomatrix.c (24-debt #5). Opens /dev/gpiochip0
+ * to drive the 74HC138 row decoder + read the column inputs, decodes
+ * presses against the layered keymap, and injects each transition into the
+ * kernel's /dev/input/event0 ring buffer via ioctl(INPUT_INJECT_EVENT).
  *
- * Scan mapping (from M5Stack CardPuter firmware IOMatrix logic):
- *   output 0-3: row = output,     col = bit*2     (left half — even columns)
- *   output 4-7: row = output - 4, col = bit*2 + 1 (right half — odd columns)
+ * The keymap is CardPuter-specific (4 rows × 14 cols + Fn/Shift layers).
+ * If another iomatrix-style board appears (per ADR 017 "extract on second
+ * use" rule), split the keymap into a board-specific header and rename
+ * this daemon to apps/system/kb_iomatrix_<board>/.
  *
- * Keymap layers:
- *   [0] normal   [1] shifted   [2] fn
- *
- * Fn key mappings (user-defined for DuneOS — M5Stack firmware leaves Fn to apps):
- *   `+Fn=ESC   Backspace+Fn=Delete
- *   ;+Fn=Up    ,+Fn=Left   .+Fn=Down   /+Fn=Right
+ * Inter-row settling: relies on the natural latency of multiple ioctl
+ * calls (~few µs each on no-MMU) — the 74HC138 settles in ns. No explicit
+ * delay needed.
  */
 
-#include "drv_input_priv.h"
-#include "duneos/input_ioctl.h"
-#include "duneos/klog.h"
-#include "duneos/hal_gpio.h"
-#include "duneos/hal_time.h"
+#include <duneos/board.h>
 
-#include "board_config.h"
+extern void duneos_exit(int code);
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#ifndef DUNEOS_KB_MATRIX_ROWS
+/* Board has no `keyboard_matrix:` section — daemon is a no-op stub here. */
+void app_main(void) { duneos_exit(0); }
+#else
 
+#include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-static const char *TAG = "duneos/kb_iomatrix";
+#include <duneos/gpio_ioctl.h>
+#include <duneos/input_ioctl.h>
 
-/* ----- keymap ------------------------------------------------------------- */
+extern int usleep(unsigned int useconds);
 
-#define LAYERS 3   /* 0=normal  1=shifted  2=fn */
+#define SCAN_PERIOD_MS  10
+
+/* ----- keymap (CardPuter, 4 rows × 14 cols × 3 layers) ------------------- */
+
+#define LAYERS 3   /* 0 = normal  1 = shifted  2 = fn */
 
 static const uint8_t s_keymap[4][14][LAYERS] = {
     /* Row 0 — number row */
-    /*         normal        shifted       fn           */
     /* col 0  */ { {'`',  '~',  KEY_ESC   },
     /* col 1  */   {'1',  '!',  0         },
     /* col 2  */   {'2',  '@',  0         },
@@ -54,7 +60,6 @@ static const uint8_t s_keymap[4][14][LAYERS] = {
     /* col 13 */   {KEY_BACKSPACE, KEY_BACKSPACE, KEY_DELETE} },
 
     /* Row 1 — QWERTY */
-    /*         normal        shifted       fn           */
     /* col 0  */ { {KEY_TAB, KEY_TAB, 0   },
     /* col 1  */   {'q',  'Q',  0         },
     /* col 2  */   {'w',  'W',  0         },
@@ -71,7 +76,6 @@ static const uint8_t s_keymap[4][14][LAYERS] = {
     /* col 13 */   {'\\', '|',  0         } },
 
     /* Row 2 — ASDF + Fn/Shift */
-    /*         normal        shifted       fn           */
     /* col 0  */ { {KEY_FN,    KEY_FN,    0    },
     /* col 1  */   {KEY_SHIFT, KEY_SHIFT, 0    },
     /* col 2  */   {'a',  'A',  0              },
@@ -88,7 +92,6 @@ static const uint8_t s_keymap[4][14][LAYERS] = {
     /* col 13 */   {KEY_ENTER, KEY_ENTER, 0    } },
 
     /* Row 3 — ZXCV + modifiers + Space */
-    /*         normal        shifted       fn           */
     /* col 0  */ { {KEY_CTRL, KEY_CTRL, 0  },
     /* col 1  */   {KEY_OPT,  KEY_OPT,  0  },
     /* col 2  */   {KEY_ALT,  KEY_ALT,  0  },
@@ -110,8 +113,6 @@ static const uint8_t s_keymap[4][14][LAYERS] = {
 #define SHIFT_ROW 2
 #define SHIFT_COL 1
 
-/* ----- scan task ---------------------------------------------------------- */
-
 static const int s_row_pins[3] = {
     DUNEOS_KB_ROW_A0_PIN,
     DUNEOS_KB_ROW_A1_PIN,
@@ -121,29 +122,81 @@ static const int s_col_pins[DUNEOS_KB_NUM_COLS] = DUNEOS_KB_COL_PINS;
 
 static bool s_prev_state[DUNEOS_KB_MATRIX_ROWS][DUNEOS_KB_MATRIX_COLS];
 
-static void scan_task(void *arg)
+/* ----- helpers ----------------------------------------------------------- */
+
+static int gpio_fd  = -1;
+static int input_fd = -1;
+
+static int gpio_set_dir(int line, int dir)
 {
-    (void)arg;
+    gpio_req_t r = { .line = (uint8_t)line, .dir = (uint8_t)dir };
+    return ioctl(gpio_fd, GPIOCHIP_SET_DIR, &r);
+}
+
+static int gpio_set_pull(int line, int pull)
+{
+    gpio_req_t r = { .line = (uint8_t)line, .pull = (uint8_t)pull };
+    return ioctl(gpio_fd, GPIOCHIP_SET_PULL, &r);
+}
+
+static int gpio_write(int line, int val)
+{
+    gpio_req_t r = { .line = (uint8_t)line, .val = (uint8_t)val };
+    return ioctl(gpio_fd, GPIOCHIP_SET_VALUE, &r);
+}
+
+static int gpio_read(int line)
+{
+    gpio_req_t r = { .line = (uint8_t)line };
+    if (ioctl(gpio_fd, GPIOCHIP_GET_VALUE, &r) < 0) return -1;
+    return r.val;
+}
+
+static void inject(const input_event_t *ev)
+{
+    ioctl(input_fd, INPUT_INJECT_EVENT, (void *)ev);
+}
+
+/* ----- main loop --------------------------------------------------------- */
+
+void app_main(void)
+{
+    gpio_fd  = open("/dev/gpiochip0", O_RDWR);
+    if (gpio_fd  < 0) duneos_exit(2);
+    input_fd = open(DUNEOS_INPUT_DEV, O_RDWR);
+    if (input_fd < 0) { close(gpio_fd); duneos_exit(3); }
+
+    /* Configure row select lines as outputs (low by default). */
+    for (int i = 0; i < 3; i++) {
+        gpio_set_dir (s_row_pins[i], GPIO_DIR_OUTPUT);
+        gpio_set_pull(s_row_pins[i], GPIO_PULL_NONE);
+        gpio_write   (s_row_pins[i], 0);
+    }
+    /* Columns as pulled-up inputs (active-LOW on press). */
+    for (int i = 0; i < DUNEOS_KB_NUM_COLS; i++) {
+        gpio_set_dir (s_col_pins[i], GPIO_DIR_INPUT);
+        gpio_set_pull(s_col_pins[i], GPIO_PULL_UP);
+    }
+
+    memset(s_prev_state, 0, sizeof(s_prev_state));
     bool cur[DUNEOS_KB_MATRIX_ROWS][DUNEOS_KB_MATRIX_COLS];
 
-    while (1) {
+    for (;;) {
         for (int output = 0; output < 8; output++) {
-            duneos_hal_gpio_set_level(s_row_pins[0], (output >> 0) & 1);
-            duneos_hal_gpio_set_level(s_row_pins[1], (output >> 1) & 1);
-            duneos_hal_gpio_set_level(s_row_pins[2], (output >> 2) & 1);
-            duneos_hal_delay_us(50);
+            gpio_write(s_row_pins[0], (output >> 0) & 1);
+            gpio_write(s_row_pins[1], (output >> 1) & 1);
+            gpio_write(s_row_pins[2], (output >> 2) & 1);
 
             int row      = (output > 3) ? (7 - output) : (3 - output);
             int col_base = (output > 3) ? 0 : 1;
-            for (int bit = 0; bit < DUNEOS_KB_NUM_COLS; bit++)
-                cur[row][col_base + bit * 2] = (duneos_hal_gpio_get_level(s_col_pins[bit]) == 0);
+            for (int bit = 0; bit < DUNEOS_KB_NUM_COLS; bit++) {
+                int level = gpio_read(s_col_pins[bit]);
+                cur[row][col_base + bit * 2] = (level == 0);
+            }
         }
 
-        /* Layer selection: Fn takes priority over Shift */
-        int layer = cur[FN_ROW][FN_COL]    ? 2 :
+        int layer = cur[FN_ROW][FN_COL]       ? 2 :
                     cur[SHIFT_ROW][SHIFT_COL] ? 1 : 0;
-
-        uint32_t now = (uint32_t)(duneos_hal_monotonic_us() / 1000);
 
         for (int r = 0; r < DUNEOS_KB_MATRIX_ROWS; r++) {
             for (int c = 0; c < DUNEOS_KB_MATRIX_COLS; c++) {
@@ -154,36 +207,16 @@ static void scan_task(void *arg)
                 if (code == 0x00) continue;
 
                 input_event_t ev = {
-                    .time_ms = now,
+                    .time_ms = 0,   /* kernel side fills it from monotonic_us */
                     .type    = INPUT_EV_KEY,
                     .code    = code,
                     .value   = cur[r][c] ? INPUT_VAL_PRESS : INPUT_VAL_RELEASE,
                 };
-                drv_input_push_event(&ev);
+                inject(&ev);
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        usleep(SCAN_PERIOD_MS * 1000);
     }
 }
-
-/* ----- init --------------------------------------------------------------- */
-
-void kb_iomatrix_init(void)
-{
-    for (int i = 0; i < 3; i++) {
-        duneos_hal_gpio_set_dir(s_row_pins[i], DUNEOS_GPIO_DIR_OUTPUT);
-        duneos_hal_gpio_set_pull(s_row_pins[i], DUNEOS_GPIO_PULL_NONE);
-        duneos_hal_gpio_set_level(s_row_pins[i], 0);
-    }
-
-    for (int i = 0; i < DUNEOS_KB_NUM_COLS; i++) {
-        duneos_hal_gpio_set_dir(s_col_pins[i], DUNEOS_GPIO_DIR_INPUT);
-        duneos_hal_gpio_set_pull(s_col_pins[i], DUNEOS_GPIO_PULL_UP);
-    }
-
-    memset(s_prev_state, 0, sizeof(s_prev_state));
-    xTaskCreatePinnedToCore(scan_task, "kb_scan", 2048, NULL, 5, NULL, 0);
-    klog_i(TAG, "IOMatrix %dx%d scan task started",
-           DUNEOS_KB_MATRIX_ROWS, DUNEOS_KB_MATRIX_COLS);
-}
+#endif  /* DUNEOS_KB_MATRIX_ROWS */

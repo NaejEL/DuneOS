@@ -3,3 +3,5 @@
 services:
   - path: /flash/bin/usb_shell.dap
     restart: always
+  - path: /flash/bin/kb_iomatrix.dap
+    restart: always

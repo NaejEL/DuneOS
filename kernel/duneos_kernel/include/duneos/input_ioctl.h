@@ -12,6 +12,17 @@
  * Inspired by Linux evdev (linux/input.h).
  */
 
+/* ioctl command codes
+ *   INPUT_INJECT_EVENT — used by userspace input source daemons
+ *   (apps/system/kb_iomatrix.dap, apps/system/btn_gpio.dap, …) to push an
+ *   input_event_t into the kernel's /dev/input/event0 ring buffer. The
+ *   daemon does the hardware polling + keymap decoding; the kernel is just
+ *   the event router. Requires DUNEOS_PERM_INPUT in the app manifest. */
+#define INPUT_INJECT_EVENT  0x01    /* ← const input_event_t *           */
+
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 /* Event types */
 #define INPUT_EV_KEY    1   /* key press or release         */
 #define INPUT_EV_REL    2   /* relative axis change         */

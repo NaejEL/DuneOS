@@ -5,3 +5,5 @@ services:
     restart: always
   - path: /flash/bin/battery_daemon.dap
     restart: always
+  - path: /flash/bin/btn_gpio.dap
+    restart: always
