@@ -64,6 +64,20 @@ typedef struct gfx_ctx gfx_ctx_t;
  */
 gfx_ctx_t *gfx_open(void);
 
+/*
+ * If gfx_open() returned NULL, this returns a numeric code identifying
+ * the failure step — useful for diagnostic exit codes:
+ *   1 = /dev/fb0 ioctl(FB_GET_INFO) failed
+ *   2 = malloc(ctx) failed (fb0 path)
+ *   3 = malloc(back-buffer) failed (fb0 path)
+ *   4 = disp_open() returned NULL (libst7789 / chip init failed)
+ *   5 = malloc(ctx) failed (disp path)
+ *   6 = malloc(back-buffer) failed (disp path)
+ *   0 = no recent open attempt failed
+ * Returns 0 when gfx_open() succeeded (cleared on entry to gfx_open()).
+ */
+int gfx_last_error(void);
+
 /* Close the display and free the back-buffer. */
 void gfx_close(gfx_ctx_t *ctx);
 

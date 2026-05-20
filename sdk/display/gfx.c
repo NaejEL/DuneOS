@@ -23,10 +23,19 @@ struct gfx_ctx {
 
 /* ---- open / close -------------------------------------------------------- */
 
+/* Failure-step diagnostic — set whenever gfx_open returns NULL.
+ * Apps read it via gfx_last_error() and use distinct duneos_exit() codes
+ * to identify which step broke without needing kernel-side logs. */
+static int s_gfx_last_error = 0;
+
+int gfx_last_error(void) { return s_gfx_last_error; }
+
 gfx_ctx_t *gfx_open(void)
 {
     uint16_t w, h;
     gfx_backend_t backend;
+
+    s_gfx_last_error = 0;
 
     /* Tier B: kernel PSRAM framebuffer */
     int fd = open("/dev/fb0", O_RDWR);
@@ -38,9 +47,9 @@ gfx_ctx_t *gfx_open(void)
             backend = GFX_BACKEND_FB0;
 
             gfx_ctx_t *ctx = malloc(sizeof(*ctx));
-            if (!ctx) { close(fd); return NULL; }
+            if (!ctx) { s_gfx_last_error = 2; close(fd); return NULL; }
             ctx->buf = malloc((size_t)w * h * sizeof(uint16_t));
-            if (!ctx->buf) { free(ctx); close(fd); return NULL; }
+            if (!ctx->buf) { s_gfx_last_error = 3; free(ctx); close(fd); return NULL; }
             ctx->fd      = fd;
             ctx->width   = w;
             ctx->height  = h;
@@ -48,6 +57,7 @@ gfx_ctx_t *gfx_open(void)
             memset(ctx->buf, 0, (size_t)w * h * sizeof(uint16_t));
             return ctx;
         }
+        s_gfx_last_error = 1;
         close(fd);
     }
 
@@ -57,9 +67,9 @@ gfx_ctx_t *gfx_open(void)
         w = disp_width(disp);
         h = disp_height(disp);
         gfx_ctx_t *ctx = malloc(sizeof(*ctx));
-        if (!ctx) { disp_close(disp); return NULL; }
+        if (!ctx) { s_gfx_last_error = 5; disp_close(disp); return NULL; }
         ctx->buf = malloc((size_t)w * h * sizeof(uint16_t));
-        if (!ctx->buf) { free(ctx); disp_close(disp); return NULL; }
+        if (!ctx->buf) { s_gfx_last_error = 6; free(ctx); disp_close(disp); return NULL; }
         ctx->disp    = disp;
         ctx->width   = w;
         ctx->height  = h;
@@ -67,6 +77,7 @@ gfx_ctx_t *gfx_open(void)
         memset(ctx->buf, 0, (size_t)w * h * sizeof(uint16_t));
         return ctx;
     }
+    if (s_gfx_last_error == 0) s_gfx_last_error = 4;
 
     return NULL;
 }

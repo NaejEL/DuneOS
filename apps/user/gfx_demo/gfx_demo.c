@@ -7,7 +7,11 @@ void app_main(void)
 {
     gfx_ctx_t *ctx = gfx_open();
     if (!ctx) {
-        duneos_exit(1);
+        /* Encode the gfx_open failure step in the exit code (10..16) so the
+         * kernel's `app exited (code N)` message tells us which step broke
+         * without needing extra klog output. See gfx_last_error() in
+         * <duneos/gfx.h> for the code map (1..6 → exit 11..16). */
+        duneos_exit(10 + gfx_last_error());
         return;
     }
 
