@@ -347,11 +347,18 @@ class SplashScreen(ModalScreen):
             yield Static(f"[#58a6ff]{_SPLASH_ART}[/#58a6ff]", id="splashart")
             yield Static(f"[#d29922]{_SPLASH_TAG}[/#d29922]", id="splashtag")
 
+    def _close(self) -> None:
+        # Use App.pop_screen (sync) instead of Screen.dismiss (async). dismiss()
+        # can't be awaited from the screen's own message handler / timer, which
+        # raises ScreenError. pop_screen is safe from both.
+        if self.is_attached:
+            self.app.pop_screen()
+
     def on_mount(self) -> None:
-        self.set_timer(self._hold_s, self.dismiss)
+        self.set_timer(self._hold_s, self._close)
 
     def on_key(self, _) -> None:
-        self.dismiss()
+        self._close()
 
 
 # ---------------------------------------------------------------------------
