@@ -653,7 +653,7 @@ class ProfileEditorScreen(Screen):
 
     def __init__(self, profile_name: str) -> None:
         super().__init__()
-        from .system import load_profile
+        from .system import load_profile, parse_partition_sizes
         self._name    = profile_name
         self._profile = load_profile(profile_name)
         self._board   = self._profile["board"]
@@ -667,20 +667,34 @@ class ProfileEditorScreen(Screen):
         self._cursor: dict[str, int] = {"flash": 0, "sd": 0}
         self._col: str = "flash"
 
+        # Phase 25.3: cached size + permission-warning data for live UI.
+        self._sizes:    dict[str, int]       = {}     # app → ELF size in bytes
+        self._warnings: dict[str, list[str]] = {}     # app → list of warning strings
+        parts = parse_partition_sizes(self._board)
+        self._flash_max = parts.get("sysbin", 0)
+
     def _load_apps(self) -> None:
         from .manifest import load_manifest
+        from .system import _read_sdkconfig
+        from .capability_map import check_app
         flash_set = set(self._profile.get("apps_flash", []))
         sd_set    = set(self._profile.get("apps_sd",    []))
         init_flash = {self._app_from_path(e.get("path","")): e.get("restart","always")
                       for e in self._profile.get("init_flash", [])}
         init_sd    = {self._app_from_path(e.get("path","")): e.get("restart","always")
                       for e in self._profile.get("init_sd",    [])}
+        try:
+            sdk_lines = _read_sdkconfig(self._board)
+        except SystemExit:
+            sdk_lines = []
         seen = set()
         for app_dir, _ in find_apps():
             try:
-                name = load_manifest(app_dir)["name"]
+                m    = load_manifest(app_dir)
+                name = m["name"]
             except Exception:
                 name = app_dir.name
+                m    = {}
             if name in seen:
                 continue
             seen.add(name)
@@ -689,6 +703,11 @@ class ProfileEditorScreen(Screen):
                 "flash": (name in flash_set, init_flash.get(name)),
                 "sd":    (name in sd_set,    init_sd.get(name)),
             }
+            # Cache ELF size + permission warnings for live display.
+            elf = app_dir / "build" / "app.elf"
+            self._sizes[name] = elf.stat().st_size if elf.exists() else 0
+            mask = int(m.get("permissions", 0)) if m else 0
+            self._warnings[name] = check_app(name, mask, sdk_lines) if sdk_lines else []
 
     @staticmethod
     def _app_from_path(path: str) -> str:
@@ -708,11 +727,11 @@ class ProfileEditorScreen(Screen):
                 yield Static(desc)
         with Horizontal(id="profile2col"):
             with Vertical(classes="profilecolumn", id="flashcol") as fc:
-                fc.border_title = "  /flash  (sysbin LittleFS, ~1 MB)  "
+                fc.border_title = self._flash_bar()
                 yield OptionList(*self._make_opts("flash"),
                                  id="flashlist", classes="profilelist")
             with Vertical(classes="profilecolumn", id="sdcol") as sc:
-                sc.border_title = "  /sd  (deploy)  "
+                sc.border_title = self._sd_bar()
                 yield OptionList(*self._make_opts("sd"),
                                  id="sdlist", classes="profilelist")
         yield Static(
@@ -731,23 +750,57 @@ class ProfileEditorScreen(Screen):
         opts = []
         for name, _is_bin_ in self._apps:
             staged, restart = self._state[name][col]
+            warn  = bool(self._warnings.get(name))
+            size  = self._sizes.get(name, 0)
+            size_s = f"{size/1024:5.1f}KB" if size else "  ?  "
             t = Text()
+            # Warning marker (permission/CONFIG mismatch) prefixed before checkbox.
+            t.append(" ⚠ " if warn else "   ",
+                     style="#d29922" if warn else "")
             if staged:
                 if restart is not None:
-                    t.append(" ☑ ", style="bold #3fb950")
-                    t.append(f"{name:<26}", style="bold #c9d1d9")
+                    t.append("☑ ", style="bold #3fb950")
+                    t.append(f"{name:<24}", style="bold #c9d1d9")
+                    t.append(f"{size_s}  ", style="#6e7681")
                     t.append(f"restart: {restart}", style="#58a6ff")
                 else:
-                    t.append(" ☑ ", style="bold #3fb950")
-                    t.append(name, style="#c9d1d9")
+                    t.append("☑ ", style="bold #3fb950")
+                    t.append(f"{name:<24}", style="#c9d1d9")
+                    t.append(f"{size_s}", style="#6e7681")
             else:
-                t.append(" ☐ ", style="#6e7681")
-                t.append(name, style="#6e7681")
+                t.append("☐ ", style="#6e7681")
+                t.append(f"{name:<24}", style="#6e7681")
+                t.append(f"{size_s}", style="#4d5560")
             opts.append(Option(t, id=name))
         return opts
 
+    def _col_staged_bytes(self, col: str) -> int:
+        return sum(self._sizes.get(name, 0)
+                   for name, _ in self._apps
+                   if self._state[name][col][0])
+
+    def _flash_bar(self) -> str:
+        """Render the /flash column header with a live size bar."""
+        used  = self._col_staged_bytes("flash")
+        if self._flash_max <= 0:
+            return f"  /flash  ({used/1024:.1f} KB staged)  "
+        frac = max(0.0, min(1.0, used / self._flash_max))
+        filled = int(frac * 16)
+        bar    = "█" * filled + "░" * (16 - filled)
+        pct    = int(frac * 100)
+        status = "✗ OVERFLOW" if used > self._flash_max else f"{pct}%"
+        return f"  /flash  [{bar}] {used/1024:.1f}/{self._flash_max/1024:.0f} KB  {status}  "
+
+    def _sd_bar(self) -> str:
+        used = self._col_staged_bytes("sd")
+        n    = sum(1 for name, _ in self._apps if self._state[name]["sd"][0])
+        return f"  /sd  ({n} apps, {used/1024:.1f} KB total — informational)  "
+
     def _refresh(self) -> None:
-        for col, list_id in (("flash", "#flashlist"), ("sd", "#sdlist")):
+        for col, list_id, panel_id, title_fn in (
+            ("flash", "#flashlist", "#flashcol", self._flash_bar),
+            ("sd",    "#sdlist",    "#sdcol",    self._sd_bar),
+        ):
             ol = self.query_one(list_id, OptionList)
             cur = self._cursor[col]
             ol.clear_options()
@@ -755,6 +808,10 @@ class ProfileEditorScreen(Screen):
                 ol.add_option(opt)
             try:
                 ol.highlighted = cur
+            except Exception:
+                pass
+            try:
+                self.query_one(panel_id, Vertical).border_title = title_fn()
             except Exception:
                 pass
 

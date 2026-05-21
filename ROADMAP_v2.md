@@ -379,7 +379,12 @@ Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : u
   - Menu réorganisé en sections : Image composition (profile edit/pick/check) / Flash device (kernel/sysbin/monitor) / SD / Build / Legacy / Settings
   - 3 nouveaux handlers `DbtApp` : `_run_profile_edit`, `_run_profile_pick`, `_run_system_check` (capture stdout du check_profile pour afficher dans le RichLog)
   - Legacy `InitCfgScreen` (boards/<board>/init.yaml) **gardé** pour les boards sans profile — labellé "Init Config (board legacy)"
-- [ ] **25.3 — Polish** : `dbt system diff` (compare actif vs précédent), `dbt system size` (preview sysbin), inline warnings dans le TUI, taille sysbin live preview dans l'éditeur
+- [x] **25.3 — Polish** (shipped 2026-05-22)
+  - `dbt system size` : report kernel + sysbin + SD avec barres `[████░░] X KB / Y KB (pp%)`. Parse `boards/<board>/partitions.csv` pour `factory` (kernel) et `sysbin` (flash). Liste les top-5 apps par taille pour /flash et /sd. Exit non-zero si overflow détecté.
+  - `dbt system diff <other>` : compare profile actif vs autre, lit `apps_flash`/`apps_sd`/`init_flash`/`init_sd`, affiche +/- par section ; signale les boards différents en warning.
+  - `system.py` : helpers `parse_partition_sizes(board)`, `app_elf_size(name)`, `kernel_image_size()`, `compute_image_sizes(profile)`, `_fmt_kb`, `_bar`, `report_sizes`, `report_diff`.
+  - TUI éditeur : border title de chaque colonne devient une barre de progression live `[██░░░░░░] 157.7/1024 KB 15%`. Mise à jour à chaque cycle. Status `✗ OVERFLOW` quand on dépasse `sysbin` partition. SD column montre count + total (informational car SD card storage dynamic).
+  - TUI éditeur : indicateur `⚠` orange devant chaque app avec mismatch perms vs kernel CONFIG (lit `sdkconfig.board` une fois au load). Taille de chaque app affichée en colonne `N.N KB`.
 - [ ] **25.3 — Polish** : `dbt system diff` (compare actif vs précédent), `dbt system size` (preview sysbin), inline warnings dans le TUI
 - [ ] **25.4 — Branding** : champ `icon:` dans duneos.yaml (pour launcher contest), splash TUI logo
 ---

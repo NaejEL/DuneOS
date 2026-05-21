@@ -1,57 +1,42 @@
-# DuneOS image profile — M5Stack CardPuter, daily-driver setup.
-#
-# Activate with:    python tools/dbt.py system use cardputer-default
-# Validate with:    python tools/dbt.py system check
-# Build & flash:    python tools/dbt.py system build
-#                   python tools/dbt.py system flash
-#
-# To customise, copy this directory under another name and edit the lists below.
-# `dbt system check` will validate that every app referenced exists and that
-# its declared permissions are supported by the board's kernel profile.
-
 name: cardputer-default
 board: m5stack-cardputer
-description: "CardPuter daily-driver — USB shell, keyboard, basic utilities"
-
-# Apps staged into /flash/bin/ (sysbin LittleFS image, ~1 MB).
-# These are available even when no SD card is inserted.
+description: "CardPuter daily-driver \u2014 USB shell, keyboard, basic utilities"
 apps_flash:
-  - usb_shell
-  - kb_iomatrix
-  - hello_world
-  - test_exit
-  - test_crash
-
-# Boot services auto-started from /flash/init.yaml at every boot.
-# Each entry MUST reference an app listed in apps_flash above.
+- kb_iomatrix
+- usb_shell
+- wifi_daemon
+- hello_world
+- test_crash
+- test_exit
+- test_hardening
 init_flash:
-  - { path: /flash/bin/usb_shell.dap,   restart: always }
-  - { path: /flash/bin/kb_iomatrix.dap, restart: always }
-
-# Apps deployed to the SD card via `dbt system deploy <sd_mount>`.
-# Apps without `is_bin` (in apps/system/bin/) go to /sd/apps/, others to /sd/bin/.
+- path: /flash/bin/kb_iomatrix.dap
+  restart: always
+- path: /flash/bin/usb_shell.dap
+  restart: always
+- path: /flash/bin/wifi_daemon.dap
+  restart: always
+- path: /flash/bin/test_hardening.dap
+  restart: always
 apps_sd:
-  - g_shell
-  - gfx_demo
-  - uart_echo
-  - tcp_client
-  - cat
-  - ls
-  - free
-  - klog
-  - gpio
-  - input
-  - ifconfig
-  - ping
-  - tail
-  - reboot
-  - restart
-  - services
-  - mkdir
-  - mv
-  - rm
-  - battery
-
-# Optional /sd/init.yaml content. CardPuter daily-driver doesn't need extra
-# SD-side services — kb_iomatrix is already in flash.
+- battery
+- cat
+- free
+- gpio
+- ifconfig
+- input
+- klog
+- ls
+- mkdir
+- mv
+- ping
+- reboot
+- restart
+- rm
+- services
+- tail
+- g_shell
+- gfx_demo
+- tcp_client
+- uart_echo
 init_sd: []

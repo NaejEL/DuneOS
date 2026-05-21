@@ -388,6 +388,20 @@ def cmd_system_flash(args) -> None:
     cmd_flashimg(a)
 
 
+def cmd_system_size(args) -> None:
+    from .system import resolve_profile, report_sizes
+    _, profile = resolve_profile(getattr(args, "profile", None))
+    rc = report_sizes(profile)
+    sys.exit(1 if rc > 0 else 0)
+
+
+def cmd_system_diff(args) -> None:
+    from .system import resolve_profile, load_profile, report_diff
+    _, active = resolve_profile(getattr(args, "profile", None))
+    other = load_profile(args.other)
+    report_diff(active, other)
+
+
 def cmd_system_deploy(args) -> None:
     """Build (if needed) and deploy the profile.apps_sd onto an SD mount."""
     from .system import resolve_profile, _app_map
@@ -594,6 +608,21 @@ def main() -> None:
     p_sys_deploy.add_argument("sd_path", help="SD card mount point (e.g. /run/media/.../SD)")
     p_sys_deploy.add_argument("--profile", help="Profile name (default: active)")
     p_sys_deploy.set_defaults(func=cmd_system_deploy)
+
+    p_sys_size = sys_sub.add_parser(
+        "size",
+        help="Report kernel + sysbin + SD size projections vs partition limits",
+    )
+    p_sys_size.add_argument("--profile", help="Profile name (default: active)")
+    p_sys_size.set_defaults(func=cmd_system_size)
+
+    p_sys_diff = sys_sub.add_parser(
+        "diff",
+        help="Compare the active profile against another profile",
+    )
+    p_sys_diff.add_argument("other", help="Other profile name to compare against")
+    p_sys_diff.add_argument("--profile", help="Active profile to compare from (default: active)")
+    p_sys_diff.set_defaults(func=cmd_system_diff)
 
     args = parser.parse_args()
     args.func(args)
