@@ -1,5 +1,10 @@
 name: usb_shell
 version: "0.1.0"
 required_abi_version: 1
-permissions: 255
+# The shell only needs FS access — to read .dap ELFs from /flash/bin/ and
+# /sd/bin/ via the loader, and to read/write /tmp/.duneos_stdout for the
+# captured-app stdout redirect. Apps it launches declare their own perms;
+# the shell's mask is NOT transitive.
+#   FS_READ (32) + FS_WRITE (64) = 96
+permissions: 96
 stack_size: 16384

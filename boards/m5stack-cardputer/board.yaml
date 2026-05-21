@@ -45,6 +45,17 @@ board:
     spi_id: 2
     cd_pin: -1
 
+  # I2C0 — Grove HY2.0 4-pin connector. SDA=GPIO 2, SCL=GPIO 1 per the
+  # M5Stack CardPuter pinout. Nothing is wired on-board to this bus —
+  # it's for external sensors / displays / etc. plugged into the Grove
+  # port. Enabling the declaration here makes bspgen emit
+  # CONFIG_DUNEOS_DRV_I2C=y so apps like i2cscope can open /dev/i2c-0.
+  i2c:
+    - id: 0
+      sda_pin: 2
+      scl_pin: 1
+      freq_hz: 400000
+
   # Display: ST7789 240×135 served by userspace libst7789 over /dev/spi-1.
   # Pins below are the device-specific GPIOs (CS/DC/RST/BL); the SPI bus
   # itself is declared above under spi: id=3.
