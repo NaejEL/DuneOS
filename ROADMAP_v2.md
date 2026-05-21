@@ -385,8 +385,11 @@ Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : u
   - `system.py` : helpers `parse_partition_sizes(board)`, `app_elf_size(name)`, `kernel_image_size()`, `compute_image_sizes(profile)`, `_fmt_kb`, `_bar`, `report_sizes`, `report_diff`.
   - TUI éditeur : border title de chaque colonne devient une barre de progression live `[██░░░░░░] 157.7/1024 KB 15%`. Mise à jour à chaque cycle. Status `✗ OVERFLOW` quand on dépasse `sysbin` partition. SD column montre count + total (informational car SD card storage dynamic).
   - TUI éditeur : indicateur `⚠` orange devant chaque app avec mismatch perms vs kernel CONFIG (lit `sdkconfig.board` une fois au load). Taille de chaque app affichée en colonne `N.N KB`.
-- [ ] **25.3 — Polish** : `dbt system diff` (compare actif vs précédent), `dbt system size` (preview sysbin), inline warnings dans le TUI
-- [ ] **25.4 — Branding** : champ `icon:` dans duneos.yaml (pour launcher contest), splash TUI logo
+- [x] **25.4 — Branding + sequenced boot** (shipped 2026-05-22)
+  - Kernel : champ `after:` dans `init.yaml` (`duneos_service_desc_t.after`), exit observer dans `supervisor.c` (`duneos_supervisor_set_exit_observer`), `duneos_init_run()` orchestre lancement immédiat vs différé avec mutex de pending queue. Refuse les dépendances sur services `restart: always` (warn + lance quand même). `main.c` délègue à `duneos_init_run`.
+  - `apps/user/splash` : one-shot libgfx STREAM mode — gradient désert + silhouette de dunes + wordmark "DuneOS" centré, ~1.5 s puis exit. CardPuter `init.yaml` lance `splash` puis défère `kb_iomatrix` via `after: splash` (démo).
+  - `duneos.yaml` : champ `icon:` reconnu (string ≤ 64 chars), validation parse et warning sur clés inconnues (typo guard). Embarqué tel quel dans le manifest JSON ; pas d'ABI bump (consommé futur launcher).
+  - TUI `dbt` : `SplashScreen` ASCII wordmark "DuneOS" + tagline désert, 1 s au démarrage, dismissable par toute touche. Suppression possible via `DUNEOS_TUI_NO_SPLASH=1` (CI).
 ---
 
 ### Phase 26 — OSAL et Portabilité Scheduler

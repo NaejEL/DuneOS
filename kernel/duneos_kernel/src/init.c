@@ -2,6 +2,9 @@
 #include "duneos/klog.h"
 #include "board_config.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -137,6 +140,8 @@ static int parse_yaml(char *buf, duneos_init_config_t *cfg)
             }
         } else if (strcmp(key, "restart") == 0) {
             cur->restart = parse_restart(val);
+        } else if (strcmp(key, "after") == 0) {
+            strlcpy(cur->after, val, sizeof(cur->after));
         }
         /* "services:" and unknown keys are silently skipped */
 
@@ -242,4 +247,155 @@ int duneos_init_load(duneos_init_config_t *cfg)
 
     free(buf);
     return cfg->count > 0 ? 0 : -ENOENT;
+}
+
+/* ------------------------------------------------------------------------- */
+/* duneos_init_run() — launch services honouring the `after:` dependency.   */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Pending list state — shared between duneos_init_run() and on_service_exit().
+ *
+ * We hold a copy of the parsed config (not a pointer to caller-owned memory)
+ * because the caller may be on its way to kernel_idle() and the local cfg
+ * could go out of scope before all deferred services fire. The footprint is
+ * `DUNEOS_MAX_SERVICES * sizeof(duneos_service_desc_t)` = ~2.1 KiB on a kernel
+ * that already burns 64 KiB on the kernel task stack. Worth it for simplicity.
+ *
+ * Concurrency: the supervisor task fires the exit observer; main task only
+ * runs the initial pass. Both walk `s_pending[]`. Access is serialised by
+ * the fact that main blocks on duneos_supervisor_wait_all() right after the
+ * initial pass — but main may also race with an exit observer firing before
+ * wait_all() takes the lock. We guard the pending array with a small mutex
+ * so the deferred launch can't be missed.
+ */
+
+#define INIT_MAX_PENDING DUNEOS_MAX_SERVICES
+
+typedef struct {
+    duneos_service_desc_t desc;
+    char                  pred_name[DUNEOS_APP_NAME_MAX];
+    bool                  pending;   /* true until predecessor exits */
+    bool                  launched;  /* true once supervisor_launch returned 0 */
+} pending_entry_t;
+
+static pending_entry_t   s_pending[INIT_MAX_PENDING];
+static int               s_pending_count = 0;
+static SemaphoreHandle_t s_pending_lock = NULL;
+
+static void launch_one(const duneos_service_desc_t *s)
+{
+    klog_i(TAG, "starting service '%s' (restart=%d)",
+           s->path, (int)s->restart);
+    esp_err_t err = duneos_supervisor_launch_policy(s->path, s->restart);
+    if (err != ESP_OK)
+        klog_e(TAG, "failed to start '%s': %s", s->path, esp_err_to_name(err));
+}
+
+/* Exit observer — fires from the supervisor task when any app exits.
+ * Walks the pending list and launches anything whose predecessor was `name`.
+ * Keeps work short: no blocking primitives on s_lock (we are not holding it,
+ * but the supervisor is between exits — don't stall it). */
+static void on_service_exit(const char *name, int code)
+{
+    (void)code;
+    if (!s_pending_lock) return;
+
+    xSemaphoreTake(s_pending_lock, portMAX_DELAY);
+    for (int i = 0; i < s_pending_count; i++) {
+        if (!s_pending[i].pending) continue;
+        if (strcmp(s_pending[i].pred_name, name) != 0) continue;
+
+        klog_i(TAG, "'%s' exited — releasing '%s'", name, s_pending[i].desc.path);
+        s_pending[i].pending = false;
+        /* Drop the lock around launch_one — supervisor_launch_policy takes
+         * its own internal lock and we don't want to nest mutexes. */
+        duneos_service_desc_t snapshot = s_pending[i].desc;
+        xSemaphoreGive(s_pending_lock);
+        launch_one(&snapshot);
+        xSemaphoreTake(s_pending_lock, portMAX_DELAY);
+        s_pending[i].launched = true;
+    }
+    xSemaphoreGive(s_pending_lock);
+}
+
+/* Look up a service by app-name in the parsed config. Returns NULL if absent. */
+static const duneos_service_desc_t *find_by_name(const duneos_init_config_t *cfg,
+                                                  const char *name)
+{
+    for (int i = 0; i < cfg->count; i++) {
+        char base[DUNEOS_APP_NAME_MAX];
+        app_name_from_path(cfg->services[i].path, base, sizeof(base));
+        if (strcmp(base, name) == 0) return &cfg->services[i];
+    }
+    return NULL;
+}
+
+int duneos_init_run(const duneos_init_config_t *cfg)
+{
+    if (!cfg || cfg->count == 0) return 0;
+
+    if (!s_pending_lock) {
+        s_pending_lock = xSemaphoreCreateMutex();
+        if (!s_pending_lock) {
+            klog_e(TAG, "init: pending lock OOM — launching all services immediately");
+            for (int i = 0; i < cfg->count; i++) launch_one(&cfg->services[i]);
+            return cfg->count;
+        }
+    }
+
+    /* First pass: classify each service into immediate vs deferred.
+     * A service with `after: X` is deferred iff X is in cfg AND X eventually
+     * exits (i.e. restart != always). Otherwise we log and launch at boot. */
+    s_pending_count = 0;
+    int scheduled = 0;
+    for (int i = 0; i < cfg->count; i++) {
+        const duneos_service_desc_t *s = &cfg->services[i];
+
+        if (s->after[0] == '\0') {
+            launch_one(s);
+            scheduled++;
+            continue;
+        }
+
+        const duneos_service_desc_t *pred = find_by_name(cfg, s->after);
+        if (!pred) {
+            klog_w(TAG, "'%s' after '%s' but predecessor not in init.yaml — launching immediately",
+                   s->path, s->after);
+            launch_one(s);
+            scheduled++;
+            continue;
+        }
+        if (pred->restart == DUNEOS_RESTART_ALWAYS) {
+            klog_w(TAG, "'%s' after '%s' but predecessor has restart:always (never exits) — launching immediately",
+                   s->path, s->after);
+            launch_one(s);
+            scheduled++;
+            continue;
+        }
+
+        if (s_pending_count >= INIT_MAX_PENDING) {
+            klog_w(TAG, "'%s' deferred but pending list full — launching immediately",
+                   s->path);
+            launch_one(s);
+            scheduled++;
+            continue;
+        }
+
+        pending_entry_t *p = &s_pending[s_pending_count++];
+        p->desc = *s;
+        strlcpy(p->pred_name, s->after, sizeof(p->pred_name));
+        p->pending  = true;
+        p->launched = false;
+        klog_i(TAG, "service '%s' deferred until '%s' exits",
+               s->path, s->after);
+        scheduled++;
+    }
+
+    /* Register the observer only if we actually have deferred services. */
+    if (s_pending_count > 0) {
+        duneos_supervisor_set_exit_observer(on_service_exit);
+    }
+
+    return scheduled;
 }

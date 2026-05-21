@@ -267,6 +267,36 @@ ErrorModal {
     align: center middle;
 }
 
+#splashbox {
+    width: 48;
+    height: auto;
+    border: solid #1f6feb;
+    background: #0d1117;
+    border-title-color: #58a6ff;
+    border-title-style: bold;
+    padding: 1 2;
+    content-align: center middle;
+}
+
+#splashart {
+    width: 100%;
+    height: auto;
+    text-align: center;
+    color: #58a6ff;
+}
+
+#splashtag {
+    width: 100%;
+    height: 1;
+    text-align: center;
+    color: #d29922;
+    margin-top: 1;
+}
+
+SplashScreen {
+    align: center middle;
+}
+
 SetupScreen {
     align: center middle;
 }
@@ -280,6 +310,48 @@ Footer {
     color: #6e7681;
 }
 """
+
+
+# ---------------------------------------------------------------------------
+# Splash screen — shown briefly at TUI startup
+# ---------------------------------------------------------------------------
+
+_SPLASH_ART = r"""
+  ____                    ___  ____
+ |  _ \ _   _ _ __   ___ / _ \/ ___|
+ | | | | | | | '_ \ / _ \ | | \___ \
+ | |_| | |_| | | | |  __/ |_| |___) |
+ |____/ \__,_|_| |_|\___|\___/|____/
+"""
+
+_SPLASH_TAG = "desert ops since 2026"
+
+
+class SplashScreen(ModalScreen):
+    """One-shot ASCII logo shown for ~1 s at startup.
+
+    Any keypress dismisses it early. The DbtApp pushes this from on_mount and
+    a timer pops it on the configured delay so the user reaches the main menu
+    even if they don't touch the keyboard.
+    """
+
+    BINDINGS = [("escape", "dismiss", "")]
+
+    def __init__(self, hold_s: float = 1.0) -> None:
+        super().__init__()
+        self._hold_s = hold_s
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="splashbox") as v:
+            v.border_title = "  DuneOS  "
+            yield Static(f"[#58a6ff]{_SPLASH_ART}[/#58a6ff]", id="splashart")
+            yield Static(f"[#d29922]{_SPLASH_TAG}[/#d29922]", id="splashtag")
+
+    def on_mount(self) -> None:
+        self.set_timer(self._hold_s, self.dismiss)
+
+    def on_key(self, _) -> None:
+        self.dismiss()
 
 
 # ---------------------------------------------------------------------------
@@ -1090,6 +1162,10 @@ class DbtApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        # Splash for ~1 s; any keypress dismisses early. Suppress with
+        # DUNEOS_TUI_NO_SPLASH=1 in CI / scripted runs.
+        if not os.environ.get("DUNEOS_TUI_NO_SPLASH"):
+            self.push_screen(SplashScreen(hold_s=1.0))
         self.query_one("#menu", OptionList).focus()
         log = self.query_one("#log", RichLog)
         b = _board(); p = _port(); idf = find_idf_root()

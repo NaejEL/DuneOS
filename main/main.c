@@ -63,19 +63,10 @@ static int launch_from_init_yaml(void)
         return -1;
     }
 
-    int launched = 0;
-    for (int i = 0; i < cfg.count; i++) {
-        klog_i(TAG, "starting service '%s' (restart=%d)",
-               cfg.services[i].path, (int)cfg.services[i].restart);
-        esp_err_t err = duneos_supervisor_launch_policy(cfg.services[i].path,
-                                                        cfg.services[i].restart);
-        if (err != ESP_OK)
-            klog_e(TAG, "failed to start '%s': %s",
-                   cfg.services[i].path, esp_err_to_name(err));
-        else
-            launched++;
-    }
-    return launched;
+    /* duneos_init_run() handles immediate vs deferred launches and registers
+     * an exit observer for the `after:` dependency mechanism. Returns the
+     * total number of scheduled services (immediate + deferred). */
+    return duneos_init_run(&cfg);
 }
 
 /* Legacy single-app boot: scan /sd/apps/, honour /sd/autoboot if present. */

@@ -1,7 +1,11 @@
 # DuneOS /flash/init.yaml for m5stack-cardputer
 # Edit this file or use 'dbt' TUI (Init Config) to manage boot services.
 services:
+  - path: /flash/bin/splash.dap
+    restart: no
   - path: /flash/bin/usb_shell.dap
     restart: always
+    after: splash
   - path: /flash/bin/kb_iomatrix.dap
     restart: always
+    after: splash

@@ -136,6 +136,16 @@ int duneos_supervisor_restart_by_name(const char *name);
  */
 void duneos_service_ready(void);
 
+/*
+ * Exit observer (Phase 25.4) — set a callback that fires whenever an app
+ * exits. The init system uses this to release services that were waiting
+ * for a predecessor via `after:` in init.yaml. Only one observer at a
+ * time; calling with NULL clears it. Called from the supervisor task —
+ * keep work short (no blocking primitives on s_lock).
+ */
+typedef void (*duneos_exit_observer_fn)(const char *name, int code);
+void duneos_supervisor_set_exit_observer(duneos_exit_observer_fn fn);
+
 /* Send a message to the named app's mailbox. 0=ok, -1=error/full/not found */
 int duneos_send(const char *dest, const void *data, size_t len);
 

@@ -124,6 +124,9 @@ static int               s_active_count = 0;
 static int               s_want_restart = 0;
 static TimerHandle_t     s_wdt_timer;
 
+/* Phase 25.4: exit observer callback (init.c registers this for `after:`). */
+static duneos_exit_observer_fn s_exit_observer = NULL;
+
 /* Minimum pool size accepted by multi_heap_register (internal requirement) */
 #define MULTI_HEAP_MIN_SIZE  64u
 
@@ -470,6 +473,11 @@ static void supervisor_task(void *arg)
                                     ? " — circuit breaker tripped, restart disabled"
                                     : ""));
 
+        /* Phase 25.4: notify registered observers (init.c uses this for the
+         * `after:` dependency mechanism). Called without holding s_lock so
+         * the observer can launch other services safely. */
+        if (s_exit_observer) s_exit_observer(name, code);
+
         s_loader_ops.unload(app);
         slot_heap_free(slot);           /* free per-app heap pool */
         /* Phase 22: free the static stack buffer after the task is deleted.
@@ -756,6 +764,11 @@ void duneos_service_ready(void)
     strlcpy(name, slot ? slot->name : "(unknown)", sizeof(name));
     xSemaphoreGive(s_lock);
     klog_i(TAG, "service '%s' ready", name);
+}
+
+void duneos_supervisor_set_exit_observer(duneos_exit_observer_fn fn)
+{
+    s_exit_observer = fn;
 }
 
 int duneos_supervisor_running_count(void)

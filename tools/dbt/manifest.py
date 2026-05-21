@@ -43,11 +43,47 @@ def load_manifest(app_dir: Path) -> dict:
     )
 
 
+_KNOWN_FIELDS = {
+    # Identity
+    "name", "version", "required_abi_version",
+    # Runtime
+    "permissions", "stack_size", "heap_size", "wdt_timeout_ms",
+    # Build
+    "sources", "capabilities",
+    # Phase 25.4 — UI metadata, consumed by the future app launcher.
+    # Free-form short string: builtin name (e.g. "app", "term", "gear")
+    # or a path to an RGB565 asset (e.g. "/flash/icons/clock.rgb").
+    # Embedded into the manifest blob verbatim; not interpreted by the kernel.
+    "icon",
+}
+
+_ICON_MAX_LEN = 64
+
+
 def validate_manifest(m: dict) -> None:
     required = ["name", "version", "required_abi_version"]
     missing  = [k for k in required if k not in m]
     if missing:
         sys.exit(f"ERROR: manifest missing fields: {', '.join(missing)}")
+
+    icon = m.get("icon")
+    if icon is not None:
+        if not isinstance(icon, str):
+            sys.exit("ERROR: manifest 'icon' must be a string")
+        if len(icon) > _ICON_MAX_LEN:
+            sys.exit(
+                f"ERROR: manifest 'icon' too long "
+                f"({len(icon)} > {_ICON_MAX_LEN} chars)"
+            )
+
+    unknown = sorted(set(m.keys()) - _KNOWN_FIELDS)
+    if unknown:
+        # Don't fail the build — apps in the wild may have extra keys —
+        # but surface them so typos are visible (e.g. "stak_size:").
+        print(
+            f"  WARNING: manifest has unrecognised field(s): {', '.join(unknown)}",
+            file=sys.stderr,
+        )
 
 
 def _is_bin_app(app_dir: Path) -> bool:
