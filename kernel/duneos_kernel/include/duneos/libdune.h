@@ -119,6 +119,23 @@ void duneos_loader_unload(void *app);
 const duneos_app_manifest_t *duneos_loader_get_manifest(const void *app);
 
 /* -------------------------------------------------------------------------
+ * Configuration paths (Phase 25.5)
+ *
+ * DuneOS standard: an app's configuration lives at
+ *   /etc/<app_name>/config.yaml
+ *
+ * Apps are free to read from anywhere, but this convention lets users find
+ * config in a predictable place (mirrors /etc on Linux) and lets `dbt
+ * flashimg` provision per-board defaults from `boards/<board>/etc/`.
+ *
+ * duneos_config_path() builds the canonical path string. It does NOT open
+ * the file or check that it exists — call open() / stat() afterwards.
+ *
+ * Returns 0 on success, -1 if outsz is too small (path would be truncated).
+ * ---------------------------------------------------------------------- */
+int duneos_config_path(const char *app_name, char *out, size_t outsz);
+
+/* -------------------------------------------------------------------------
  * Low-level system
  * ---------------------------------------------------------------------- */
 

@@ -1,15 +1,18 @@
 /*
  * wifi_daemon — DuneOS WiFi connection daemon.
  *
- * Reads /sd/wifi.conf, connects in STA mode, signals duneos_service_ready(),
- * then monitors the link and reconnects on drop.
+ * Reads /etc/wifi_daemon/config.yaml, connects in STA mode, signals
+ * duneos_service_ready(), then monitors the link and reconnects on drop.
  *
- * /sd/wifi.conf format (simple key=value, one per line):
- *   ssid=MyNetwork
- *   password=MyPassword
+ * Config format (minimal YAML key: value, one per line):
+ *   ssid: MyNetwork
+ *   password: MyPassword
  *
- * Lines starting with '#' are ignored.  Leading/trailing whitespace on values
- * is NOT stripped — keep the file clean.
+ * Lines starting with '#' are ignored. Leading whitespace on values is
+ * stripped (so `key: value` and `key:value` both work).
+ *
+ * Legacy /sd/wifi.conf (key=value) is still read as a fallback to ease
+ * transition — will be removed in a future phase.
  *
  * /tmp/net_status is written (and refreshed on reconnect) in the format:
  *   ip=192.168.1.100
@@ -28,14 +31,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "duneos/wifi.h"
+#include "duneos/libdune.h"
 
 /* Exported by the kernel symbol table */
 extern void duneos_service_ready(void);
 extern void duneos_exit(int code);
 
-#define WIFI_CONF "/sd/wifi.conf"
+#define WIFI_CONF_LEGACY "/sd/wifi.conf"
 #define NET_STATUS "/tmp/net_status"
 
 /* Maximum backoff before giving up and restarting the daemon task. */
@@ -59,49 +64,41 @@ static void logf(const char *fmt, ...) {
 /* ------------------------------------------------------------------ */
 
 /*
- * Parse a key=value line into key and val (both pointing into buf).
- * Returns 1 if a valid pair was found, 0 otherwise.
+ * Parse a "key: value" or "key=value" line into key and val (both pointing
+ * into buf). Returns 1 if a valid pair was found, 0 otherwise.
+ *
+ * Supports both YAML-style (':') and legacy '=' separators so the same
+ * parser handles /etc/wifi_daemon/config.yaml and /sd/wifi.conf.
  */
 static int parse_kv(char *line, char **key, char **val) {
-  if (!line || line[0] == '#' || line[0] == '\0')
-    return 0;
-  char *eq = strchr(line, '=');
-  if (!eq)
-    return 0;
-  *eq = '\0';
+  if (!line) return 0;
+  /* skip leading whitespace */
+  while (*line && isspace((unsigned char)*line)) line++;
+  if (line[0] == '#' || line[0] == '\0') return 0;
+
+  char *sep = strchr(line, ':');
+  if (!sep) sep = strchr(line, '=');
+  if (!sep) return 0;
+  *sep = '\0';
   *key = line;
-  *val = eq + 1;
-  /* strip trailing \r */
+
+  char *v = sep + 1;
+  while (*v && isspace((unsigned char)*v)) v++;   /* strip leading WS */
+  *val = v;
+
+  /* strip trailing \r and whitespace */
   size_t vlen = strlen(*val);
-  if (vlen > 0 && (*val)[vlen - 1] == '\r')
-    (*val)[vlen - 1] = '\0';
+  while (vlen > 0 && isspace((unsigned char)(*val)[vlen - 1])) {
+    (*val)[--vlen] = '\0';
+  }
   return 1;
 }
 
-static int read_wifi_conf(char ssid[33], char pass[65]) {
-  ssid[0] = '\0';
-  pass[0] = '\0';
-
-  int fd = open(WIFI_CONF, O_RDONLY);
-  if (fd < 0) {
-    logf("wifi_daemon: " WIFI_CONF " not found");
-    return -1;
-  }
-
-  char buf[256];
-  ssize_t n = read(fd, buf, sizeof(buf) - 1);
-  close(fd);
-  if (n <= 0) {
-    logf("wifi_daemon: " WIFI_CONF " is empty");
-    return -1;
-  }
-  buf[n] = '\0';
-
+static int parse_buf(char *buf, char ssid[33], char pass[65]) {
   char *line = buf;
   while (line && *line) {
     char *nl = strchr(line, '\n');
-    if (nl)
-      *nl = '\0';
+    if (nl) *nl = '\0';
 
     char *key, *val;
     if (parse_kv(line, &key, &val)) {
@@ -113,12 +110,41 @@ static int read_wifi_conf(char ssid[33], char pass[65]) {
 
     line = nl ? nl + 1 : NULL;
   }
+  return ssid[0] ? 0 : -1;
+}
 
-  if (ssid[0] == '\0') {
-    logf("wifi_daemon: 'ssid' key missing in " WIFI_CONF);
-    return -1;
+static int try_read_conf(const char *path, char ssid[33], char pass[65]) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) return -1;
+
+  char buf[256];
+  ssize_t n = read(fd, buf, sizeof(buf) - 1);
+  close(fd);
+  if (n <= 0) return -1;
+  buf[n] = '\0';
+  return parse_buf(buf, ssid, pass);
+}
+
+static int read_wifi_conf(char ssid[33], char pass[65]) {
+  ssid[0] = '\0';
+  pass[0] = '\0';
+
+  /* Primary path: /etc/wifi_daemon/config.yaml (DuneOS Phase 25.5 standard). */
+  char conf_path[64];
+  if (duneos_config_path("wifi_daemon", conf_path, sizeof(conf_path)) == 0) {
+    if (try_read_conf(conf_path, ssid, pass) == 0) return 0;
   }
-  return 0;
+
+  /* Fallback: legacy /sd/wifi.conf for boards that haven't migrated. */
+  if (try_read_conf(WIFI_CONF_LEGACY, ssid, pass) == 0) {
+    logf("wifi_daemon: using legacy " WIFI_CONF_LEGACY
+         " — migrate to /etc/wifi_daemon/config.yaml");
+    return 0;
+  }
+
+  logf("wifi_daemon: no config found "
+       "(tried /etc/wifi_daemon/config.yaml and " WIFI_CONF_LEGACY ")");
+  return -1;
 }
 
 /* ------------------------------------------------------------------ */

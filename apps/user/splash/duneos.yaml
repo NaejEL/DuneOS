@@ -1,14 +1,15 @@
 name: splash
 version: "0.1.0"
 required_abi_version: 1
-permissions: 0
+# FS_READ (32) to open /etc/splash/config.yaml and the configured .dr asset.
+permissions: 32
 stack_size: 8192
-# STREAM mode — no back-buffer, draws go directly to /dev/disp0.
-# Small heap is enough for libgfx + libdisp internal state (~600 B).
-# heap_size > 0 keeps the app in spawned mode so init/the shell don't
-# block while it runs its 1.5 s sequence.
-heap_size: 4096
+# STREAM mode (libgfx) + an optional logo image in app memory.
+# A 120x120 RGB565 logo is 28.8 KiB; +4 KiB slack + libdisp state.
+heap_size: 36864
+icon: app
 capabilities:
   - display
 sources:
   - $SDK/display/gfx.c
+  - $SDK/image/libimage.c

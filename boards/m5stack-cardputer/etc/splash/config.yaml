@@ -1,0 +1,10 @@
+# DuneOS splash config — /etc/splash/config.yaml
+#
+# The splash app reads `logo:` and blits the named .dr (Dune Raster) file
+# centred on the display at boot. If this file is absent or the logo can't
+# be loaded, splash falls back to procedural sand-gradient art.
+#
+# Regenerate logo.dr with:
+#   python tools/dbt.py img convert <source.png> \
+#       boards/m5stack-cardputer/etc/splash/logo.dr --resize 120x120
+logo: /etc/splash/logo.dr

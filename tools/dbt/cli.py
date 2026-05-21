@@ -31,6 +31,7 @@ from .flashimg import cmd_flashimg
 from .setup import cmd_setup
 from .kernel import cmd_flash_kernel
 from .bspgen import cmd_bspgen
+from .img import cmd_img_convert
 
 
 # ---------------------------------------------------------------------------
@@ -623,6 +624,29 @@ def main() -> None:
     p_sys_diff.add_argument("other", help="Other profile name to compare against")
     p_sys_diff.add_argument("--profile", help="Active profile to compare from (default: active)")
     p_sys_diff.set_defaults(func=cmd_system_diff)
+
+    # --- img <verb> (Phase 25.5 — image asset converter) ---
+    p_img = sub.add_parser(
+        "img",
+        help="Image asset utilities (PNG/JPEG → .dr RGB565 raster)",
+    )
+    img_sub = p_img.add_subparsers(dest="img_cmd", required=True)
+
+    p_img_convert = img_sub.add_parser(
+        "convert",
+        help="Convert PNG/JPEG/etc. to DuneOS .dr (RGB565) format",
+    )
+    p_img_convert.add_argument("input",  help="Input image path (PNG, JPEG, …)")
+    p_img_convert.add_argument("output", help="Output .dr path")
+    p_img_convert.add_argument(
+        "--resize", metavar="WxH",
+        help="Resize before encoding, e.g. 120x120 (Lanczos)",
+    )
+    p_img_convert.add_argument(
+        "--background", metavar="R,G,B",
+        help="Flatten alpha over this colour (default: 0,0,0)",
+    )
+    p_img_convert.set_defaults(func=cmd_img_convert)
 
     args = parser.parse_args()
     args.func(args)

@@ -1,0 +1,8 @@
+# DuneOS wifi_daemon config — /etc/wifi_daemon/config.yaml
+#
+# Copy this file to boards/m5stack-cardputer/etc/wifi_daemon/config.yaml
+# (without the .example suffix), fill in your real credentials, and re-run
+# `dbt flashimg`. The actual config.yaml is gitignored so secrets stay out
+# of the repo.
+ssid: MyNetwork
+password: MyPassword

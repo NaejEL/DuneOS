@@ -239,6 +239,24 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
     safe_dest.write_text(_SAFE_INIT_YAML)
     print(f"  staged → /init.yaml.safe  (recovery image — used when recovery_pin held)")
 
+    # Phase 25.5: per-board /etc tree. Copied verbatim to the LittleFS root
+    # so apps can read /etc/<app>/config.yaml at runtime. Keeping the source
+    # of truth under boards/<board>/etc makes per-board overrides natural
+    # (each board declares its own splash logo path, wifi creds, etc.).
+    src_etc = DUNEOS_ROOT / "boards" / board_name / "etc"
+    if src_etc.is_dir():
+        dst_etc = staging_dir / "etc"
+        # Skip *.example/*.template — those are git-only docs/templates,
+        # never runtime files. Everything else is copied verbatim.
+        def _ignore(_src, names):
+            return [n for n in names
+                    if n.endswith(".example") or n.endswith(".template")]
+        shutil.copytree(src_etc, dst_etc, dirs_exist_ok=True, ignore=_ignore)
+        etc_files = sum(1 for _ in dst_etc.rglob("*") if _.is_file())
+        print(f"  staged → /etc/  ({etc_files} file(s) from boards/{board_name}/etc/)")
+    else:
+        print(f"  [info] no boards/{board_name}/etc/ — /etc/ left empty")
+
     return len(staged)
 
 

@@ -42,3 +42,8 @@ boards/*/idf_target.txt
 # Root partitions.csv superseded by per-board generation
 partitions.csv
 .clangd
+
+# Phase 25.5: per-board /etc — non-sensitive configs (splash logo path,
+# etc.) ARE committed. Apps that hold credentials list themselves below so
+# the real config stays local; only the .example template is committed.
+boards/*/etc/wifi_daemon/config.yaml

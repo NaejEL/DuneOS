@@ -141,6 +141,25 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const void *app)
 }
 
 /* -------------------------------------------------------------------------
+ * Config paths
+ *
+ * Pure string formatting — no kernel call. snprintf returning >= outsz means
+ * truncation; we treat that as failure rather than silently returning a bad
+ * path.
+ * ---------------------------------------------------------------------- */
+
+#include <stdio.h>
+#include <string.h>
+
+int duneos_config_path(const char *app_name, char *out, size_t outsz)
+{
+    if (!app_name || !out || outsz == 0) return -1;
+    int n = snprintf(out, outsz, "/etc/%s/config.yaml", app_name);
+    if (n < 0 || (size_t)n >= outsz) return -1;
+    return 0;
+}
+
+/* -------------------------------------------------------------------------
  * Low-level system
  * ---------------------------------------------------------------------- */
 
