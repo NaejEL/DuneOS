@@ -16,10 +16,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from textual import on, work
+from textual import events, on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Footer, Input, Label, OptionList, RichLog, Select, Static,
@@ -298,8 +298,7 @@ SplashScreen {
 
 #previewbox {
     width: 90;
-    height: auto;
-    max-height: 80%;
+    height: 80%;
     border: solid #1f6feb;
     background: #161b22;
     border-title-color: #58a6ff;
@@ -307,8 +306,14 @@ SplashScreen {
     padding: 1 2;
 }
 
-#previewbody {
+#previewscroll {
     width: 100%;
+    height: 1fr;
+    background: #0d1117;
+}
+
+#previewbody {
+    width: auto;
     height: auto;
     color: #c9d1d9;
     background: #0d1117;
@@ -714,14 +719,16 @@ class ProfilePreviewModal(ModalScreen):
     """Read-only YAML preview of the profile state about to be saved.
 
     Useful before pressing S in the editor to see exactly what will land in
-    profile.yaml (and therefore in the staged init.yaml on /flash). Closed
-    with Enter / Esc; the editor stays open behind it.
+    profile.yaml (and therefore in the staged init.yaml on /flash). The body
+    is in a VerticalScroll so long profiles scroll with PgUp/PgDn/arrows.
+    Closed with Enter / Esc / q; the editor stays open behind it.
     """
 
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
-        Binding("enter",  "dismiss", "Close", show=False),
         Binding("q",      "dismiss", "Close", show=False),
+        # Enter is intentionally NOT bound to dismiss — it would prevent the
+        # scroll widget from reaching the bottom of long previews.
     ]
 
     def __init__(self, profile_name: str, yaml_text: str) -> None:
@@ -732,8 +739,20 @@ class ProfilePreviewModal(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(id="previewbox") as v:
             v.border_title = f"  Preview: profiles/{self._name}/profile.yaml  "
-            yield Static(self._yaml, id="previewbody")
-            yield Static("[dim]  Enter / Esc / q  close[/dim]", id="previewhint")
+            with VerticalScroll(id="previewscroll"):
+                yield Static(self._yaml, id="previewbody")
+            yield Static(
+                "[dim]  ↑↓ PgUp PgDn  scroll   Esc / q  close[/dim]",
+                id="previewhint",
+            )
+
+    def on_mount(self) -> None:
+        # Focus the scroll container so arrow keys / PgUp/PgDn drive the
+        # scrolling immediately (no need to Tab into it first).
+        try:
+            self.query_one("#previewscroll", VerticalScroll).focus()
+        except Exception:
+            pass
 
 
 class ProfileEditorScreen(Screen):
@@ -881,6 +900,29 @@ class ProfileEditorScreen(Screen):
             self.query_one("#flashlist", OptionList).focus()
         except Exception:
             pass
+
+    def on_key(self, event: events.Key) -> None:
+        """Letter-key fallback for the editor actions.
+
+        `Binding(..., priority=True)` on the screen *should* fire before the
+        focused OptionList consumes the key, but in practice (Textual 0.x
+        behaviour observed on Linux terminals) some letter keys still get
+        eaten — A and P most notably. This handler runs before the bindings
+        machinery and explicitly stops propagation, so the action runs no
+        matter which child has focus. Keys not listed here fall through to
+        the OptionList for navigation / typeahead.
+        """
+        action_map = {
+            "a": self.action_cycle_after,
+            "r": self.action_cycle_restart,
+            "p": self.action_preview,
+            "s": self.action_save,
+        }
+        fn = action_map.get(event.key)
+        if fn:
+            fn()
+            event.stop()
+            event.prevent_default()
 
     def _init_predecessors(self, col: str, exclude: str) -> list[str]:
         """Apps eligible as `after:` predecessors in `col` (in init, not self)."""
