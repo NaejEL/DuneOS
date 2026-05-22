@@ -309,12 +309,7 @@ static void launch_one(const duneos_service_desc_t *s)
 static void on_service_exit(const char *name, int code)
 {
     (void)code;
-    klog_e(TAG, "[T-OBS] enter for '%s'", name);
-    vTaskDelay(pdMS_TO_TICKS(5));
-    if (!s_pending_lock) {
-        klog_e(TAG, "[T-OBS] no lock, return");
-        return;
-    }
+    if (!s_pending_lock) return;
 
     int released = 0;
     xSemaphoreTake(s_pending_lock, portMAX_DELAY);
@@ -322,28 +317,27 @@ static void on_service_exit(const char *name, int code)
         if (!s_pending[i].pending) continue;
         if (strcmp(s_pending[i].pred_name, name) != 0) continue;
 
-        klog_e(TAG, "[T-OBS] releasing %s", s_pending[i].desc.path);
-        vTaskDelay(pdMS_TO_TICKS(5));
+        klog_i(TAG, "after-dep: '%s' exited — releasing '%s'",
+               name, s_pending[i].desc.path);
         s_pending[i].pending = false;
         duneos_service_desc_t snapshot = s_pending[i].desc;
         xSemaphoreGive(s_pending_lock);
 
-        if (released > 0) {
-            klog_e(TAG, "[T-OBS] yield 20ms");
-            vTaskDelay(pdMS_TO_TICKS(20));
-        }
-        klog_e(TAG, "[T-OBS] pre-launch %s", snapshot.path);
-        vTaskDelay(pdMS_TO_TICKS(5));
+        /* 20 ms yield between successive launches so the previously
+         * launched dependent gets a scheduling slot before the next
+         * loader_load monopolises the supervisor's stack again. See the
+         * companion note in supervisor.c's exit-processing block. */
+        if (released > 0) vTaskDelay(pdMS_TO_TICKS(20));
         launch_one(&snapshot);
-        klog_e(TAG, "[T-OBS] post-launch %s", snapshot.path);
-        vTaskDelay(pdMS_TO_TICKS(5));
         released++;
 
         xSemaphoreTake(s_pending_lock, portMAX_DELAY);
         s_pending[i].launched = true;
     }
     xSemaphoreGive(s_pending_lock);
-    klog_e(TAG, "[T-OBS] done, released=%d", released);
+    if (released > 0)
+        klog_i(TAG, "after-dep: released %d service(s) waiting on '%s'",
+               released, name);
 }
 
 /* Look up a service by app-name in the parsed config. Returns NULL if absent. */

@@ -479,30 +479,32 @@ static void supervisor_task(void *arg)
          * heap pool) have been released. Otherwise a dependent service can
          * race the unloading app for the same device.
          *
-         * Trace via esp_rom_printf (panic-safe direct output) — if the kernel
-         * reboots between "exited" and "all done", these tags pinpoint which
-         * step died. Once the after-dep boot path is stable, remove these. */
-        klog_e(TAG, "[T] %s: pre-unload", name);
-        vTaskDelay(pdMS_TO_TICKS(5));   /* let CDC flush before the next step */
+         * The 1-tick yield (~10 ms) between the heap operations is empirically
+         * required: without it, the supervisor task at priority 3 monopolises
+         * Core 0 across unload + free + free + observer-launch-×N and the
+         * device hard-reboots. We never saw the panic message — symptom is
+         * a clean reset right after the exiting app's "exited (code N)" log.
+         * Hypothesis: FreeRTOS task-termination housekeeping (IDLE-driven for
+         * statically-allocated tasks) needs a scheduling opportunity before
+         * the next heap free or xTaskCreate. Backlog: "Kernel resilience
+         * under app-crash storms" — find the root cause and remove the yield. */
         s_loader_ops.unload(app);
-        klog_e(TAG, "[T] %s: pre-heap_free", name);
-        vTaskDelay(pdMS_TO_TICKS(5));
+        vTaskDelay(1);
         slot_heap_free(slot);           /* free per-app heap pool */
+        vTaskDelay(1);
         /* Phase 22: free the static stack buffer after the task is deleted.
          * vTaskDelete (called above for forced exits, or by the task itself)
          * guarantees the TCB is no longer referenced by FreeRTOS before the
          * supervisor processes the exit message. */
         if (slot->stack_mem) {
-            klog_e(TAG, "[T] %s: pre-stack_free", name);
-            vTaskDelay(pdMS_TO_TICKS(5));
             heap_caps_free(slot->stack_mem);
             slot->stack_mem  = NULL;
             slot->stack_size = 0;
+            vTaskDelay(1);
         }
         if (mailbox) {
-            klog_e(TAG, "[T] %s: pre-mbox_del", name);
-            vTaskDelay(pdMS_TO_TICKS(5));
             vQueueDelete(mailbox);
+            vTaskDelay(1);
         }
 
         if (should_restart) {
@@ -519,16 +521,8 @@ static void supervisor_task(void *arg)
         /* Phase 25.4: notify registered observers (init.c uses this for the
          * `after:` dependency mechanism). Called without holding s_lock and
          * AFTER unload so dependent services see a clean state. */
-        if (s_exit_observer) {
-            klog_e(TAG, "[T] %s: pre-observer", name);
-            vTaskDelay(pdMS_TO_TICKS(5));
-            s_exit_observer(name, code);
-            klog_e(TAG, "[T] %s: post-observer", name);
-            vTaskDelay(pdMS_TO_TICKS(5));
-        }
+        if (s_exit_observer) s_exit_observer(name, code);
 
-        klog_e(TAG, "[T] %s: pre-signal", name);
-        vTaskDelay(pdMS_TO_TICKS(5));
         maybe_signal_all_done();
         /* Signal callers waiting for any app to exit (e.g. shell `run`). */
         xSemaphoreGive(s_exit_event);
