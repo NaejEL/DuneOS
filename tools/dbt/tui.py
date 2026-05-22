@@ -928,11 +928,25 @@ class ProfileEditorScreen(Screen):
             event.stop()
             event.prevent_default()
 
-    def _init_predecessors(self, col: str, exclude: str) -> list[str]:
-        """Apps eligible as `after:` predecessors in `col` (in init, not self)."""
+    def _predecessor_restart(self, name: str) -> str | None:
+        """Restart policy of `name` if it's in init in either column, else None.
+
+        The kernel merges /flash/init.yaml + /sd/init.yaml at boot, so an
+        `after:` reference resolves across columns. Prefer flash if the same
+        name is in both (kernel dedup keeps the flash entry).
+        """
+        for col in ("flash", "sd"):
+            s = self._state.get(name, {}).get(col)
+            if s and s[0] and s[1] is not None:
+                return s[1]
+        return None
+
+    def _init_predecessors(self, exclude: str) -> list[str]:
+        """Apps eligible as `after:` predecessors — any app in init in either
+        column. Cross-column deps are valid; the kernel resolves `after:` on
+        the merged /flash + /sd init list."""
         return [n for n, _ in self._apps
-                if n != exclude and self._state[n][col][0]
-                and self._state[n][col][1] is not None]
+                if n != exclude and self._predecessor_restart(n) is not None]
 
     def _make_opts(self, col: str) -> list[Option]:
         opts = []
@@ -952,16 +966,17 @@ class ProfileEditorScreen(Screen):
                     t.append(f"{size_s}  ", style="#6e7681")
                     t.append(f"restart: {restart}", style="#58a6ff")
                     if after:
-                        # Hint with the predecessor's status: greyed if absent
-                        # from init, orange if predecessor is restart:always
-                        # (never exits → dependency degenerate).
-                        pred_state = self._state.get(after, {}).get(col)
-                        pred_color = "#d29922"
-                        if pred_state and pred_state[1]:
-                            pred_color = (
-                                "#d29922" if pred_state[1] == "always"
-                                else "#8b949e"
-                            )
+                        # Cross-column lookup: the kernel merges /flash +
+                        # /sd init.yaml, so an `after:` reference is valid
+                        # regardless of which column its predecessor lives
+                        # in. Orange = dependency degenerate (predecessor
+                        # absent from init, or restart:always so it never
+                        # exits to release us). Grey = clean dep.
+                        pred_restart = self._predecessor_restart(after)
+                        if pred_restart is None or pred_restart == "always":
+                            pred_color = "#d29922"   # orange — degenerate
+                        else:
+                            pred_color = "#8b949e"   # grey — clean
                         t.append(f"  after: {after}", style=pred_color)
                 else:
                     t.append("☑ ", style="bold #3fb950")
@@ -1106,7 +1121,7 @@ class ProfileEditorScreen(Screen):
         staged, restart, after = self._state[name][col]
         if not staged or restart is None:
             return  # only when already in init
-        cands = [""] + self._init_predecessors(col, name)
+        cands = [""] + self._init_predecessors(name)
         try:
             pos = cands.index(after)
         except ValueError:
