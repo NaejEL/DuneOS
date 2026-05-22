@@ -6,6 +6,8 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
+#include "esp_rom_sys.h"   /* esp_rom_printf — panic-safe trace output */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -309,7 +311,11 @@ static void launch_one(const duneos_service_desc_t *s)
 static void on_service_exit(const char *name, int code)
 {
     (void)code;
-    if (!s_pending_lock) return;
+    esp_rom_printf("[INIT-OBS] enter for '%s'\n", name);
+    if (!s_pending_lock) {
+        esp_rom_printf("[INIT-OBS] no lock, return\n");
+        return;
+    }
 
     int released = 0;
     xSemaphoreTake(s_pending_lock, portMAX_DELAY);
@@ -317,6 +323,7 @@ static void on_service_exit(const char *name, int code)
         if (!s_pending[i].pending) continue;
         if (strcmp(s_pending[i].pred_name, name) != 0) continue;
 
+        esp_rom_printf("[INIT-OBS] releasing %s\n", s_pending[i].desc.path);
         klog_i(TAG, "after-dep: '%s' exited — releasing '%s'",
                name, s_pending[i].desc.path);
         s_pending[i].pending = false;
@@ -325,14 +332,20 @@ static void on_service_exit(const char *name, int code)
 
         /* Yield briefly between launches (not before the first) so the
          * previously-launched dependent has a chance to initialise. */
-        if (released > 0) vTaskDelay(pdMS_TO_TICKS(20));
+        if (released > 0) {
+            esp_rom_printf("[INIT-OBS] yield 20ms\n");
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+        esp_rom_printf("[INIT-OBS] launch_one %s\n", snapshot.path);
         launch_one(&snapshot);
+        esp_rom_printf("[INIT-OBS] launched %s\n", snapshot.path);
         released++;
 
         xSemaphoreTake(s_pending_lock, portMAX_DELAY);
         s_pending[i].launched = true;
     }
     xSemaphoreGive(s_pending_lock);
+    esp_rom_printf("[INIT-OBS] done, released=%d\n", released);
     if (released > 0)
         klog_i(TAG, "after-dep: released %d service(s) waiting on '%s'",
                released, name);
