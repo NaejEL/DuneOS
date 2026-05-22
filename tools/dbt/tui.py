@@ -803,7 +803,11 @@ class ProfileEditorScreen(Screen):
             # name → {"flash": (staged, restart|None), "sd": (staged, restart|None)}
         }
         self._cursor: dict[str, int] = {"flash": 0, "sd": 0}
-        self._col: str = "flash"
+        # Set True while _refresh() is rebuilding OptionLists so the
+        # OptionHighlighted handlers don't treat the rebuild-fired events as
+        # real user navigation. Active column is derived live from
+        # self.focused (see _active_col); this just protects the cursor.
+        self._refreshing: bool = False
 
         # Phase 25.3: cached size + permission-warning data for live UI.
         self._sizes:    dict[str, int]       = {}     # app → ELF size in bytes
@@ -993,67 +997,90 @@ class ProfileEditorScreen(Screen):
         return f"  /sd  ({n} apps, {used/1024:.1f} KB total — informational)  "
 
     def _refresh(self) -> None:
-        for col, list_id, panel_id, title_fn in (
-            ("flash", "#flashlist", "#flashcol", self._flash_bar),
-            ("sd",    "#sdlist",    "#sdcol",    self._sd_bar),
-        ):
-            ol = self.query_one(list_id, OptionList)
-            cur = self._cursor[col]
-            ol.clear_options()
-            for opt in self._make_opts(col):
-                ol.add_option(opt)
-            try:
-                ol.highlighted = cur
-            except Exception:
-                pass
-            try:
-                self.query_one(panel_id, Vertical).border_title = title_fn()
-            except Exception:
-                pass
+        self._refreshing = True
+        try:
+            for col, list_id, panel_id, title_fn in (
+                ("flash", "#flashlist", "#flashcol", self._flash_bar),
+                ("sd",    "#sdlist",    "#sdcol",    self._sd_bar),
+            ):
+                ol = self.query_one(list_id, OptionList)
+                cur = self._cursor[col]
+                ol.clear_options()
+                for opt in self._make_opts(col):
+                    ol.add_option(opt)
+                try:
+                    ol.highlighted = cur
+                except Exception:
+                    pass
+                try:
+                    self.query_one(panel_id, Vertical).border_title = title_fn()
+                except Exception:
+                    pass
+        finally:
+            self._refreshing = False
 
     @on(OptionList.OptionHighlighted, "#flashlist")
     def _hi_flash(self, ev: OptionList.OptionHighlighted) -> None:
-        self._cursor["flash"] = ev.option_index
-        self._col = "flash"
+        # Only track the cursor; column is derived from the focused widget at
+        # action time. _refresh rebuilds both lists which fires this handler
+        # for both columns — if we set self._col here, the last event wins
+        # and the column tracker ends up out of sync with what the user sees.
+        if not self._refreshing:
+            self._cursor["flash"] = ev.option_index
 
     @on(OptionList.OptionHighlighted, "#sdlist")
     def _hi_sd(self, ev: OptionList.OptionHighlighted) -> None:
-        self._cursor["sd"] = ev.option_index
-        self._col = "sd"
+        if not self._refreshing:
+            self._cursor["sd"] = ev.option_index
+
+    def _active_col(self) -> str:
+        """Column under the user's cursor — read live from the focused widget.
+
+        Previously we tracked the active column in self._col via the
+        OptionHighlighted handlers, but _refresh() rebuilds both OptionLists
+        which fires those handlers for BOTH columns; whichever fired last
+        won, causing Space/A/R to operate on the wrong column even though
+        the visible cursor hadn't moved. self.focused is the ground truth.
+        """
+        f = self.focused
+        if f is not None and getattr(f, "id", None) == "sdlist":
+            return "sd"
+        return "flash"
 
     def action_focus_col(self, which: str) -> None:
-        self._col = which
         self.query_one("#flashlist" if which == "flash" else "#sdlist", OptionList).focus()
 
     def action_switch_col(self) -> None:
-        self.action_focus_col("sd" if self._col == "flash" else "flash")
+        self.action_focus_col("sd" if self._active_col() == "flash" else "flash")
 
     def action_cycle_state(self) -> None:
-        idx = self._cursor[self._col]
+        col = self._active_col()
+        idx = self._cursor[col]
         if not (0 <= idx < len(self._apps)):
             return
         name = self._apps[idx][0]
-        staged, restart, after = self._state[name][self._col]
+        staged, restart, after = self._state[name][col]
         # □ → ☑(no init) → ☑(init+always) → □
         if not staged:
-            self._state[name][self._col] = (True, None, "")
+            self._state[name][col] = (True, None, "")
         elif restart is None:
-            self._state[name][self._col] = (True, "always", after)
+            self._state[name][col] = (True, "always", after)
         else:
             # Removing from init also drops any `after:` reference.
-            self._state[name][self._col] = (False, None, "")
+            self._state[name][col] = (False, None, "")
         self._refresh()
 
     def action_cycle_restart(self) -> None:
-        idx = self._cursor[self._col]
+        col = self._active_col()
+        idx = self._cursor[col]
         if not (0 <= idx < len(self._apps)):
             return
         name = self._apps[idx][0]
-        staged, restart, after = self._state[name][self._col]
+        staged, restart, after = self._state[name][col]
         if not staged or restart is None:
             return  # only when already in init
         idx_r = _RESTART_CYCLE.index(restart) if restart in _RESTART_CYCLE else -1
-        self._state[name][self._col] = (
+        self._state[name][col] = (
             True,
             _RESTART_CYCLE[(idx_r + 1) % len(_RESTART_CYCLE)],
             after,
@@ -1071,20 +1098,21 @@ class ProfileEditorScreen(Screen):
         kernel logs a warning and launches immediately) — it's the same fail-
         safe behaviour we get from a missing predecessor.
         """
-        idx = self._cursor[self._col]
+        col = self._active_col()
+        idx = self._cursor[col]
         if not (0 <= idx < len(self._apps)):
             return
         name = self._apps[idx][0]
-        staged, restart, after = self._state[name][self._col]
+        staged, restart, after = self._state[name][col]
         if not staged or restart is None:
             return  # only when already in init
-        cands = [""] + self._init_predecessors(self._col, name)
+        cands = [""] + self._init_predecessors(col, name)
         try:
             pos = cands.index(after)
         except ValueError:
             pos = 0
         next_after = cands[(pos + 1) % len(cands)]
-        self._state[name][self._col] = (True, restart, next_after)
+        self._state[name][col] = (True, restart, next_after)
         self._refresh()
 
     def _build_profile_dict(self) -> dict:
