@@ -482,22 +482,26 @@ static void supervisor_task(void *arg)
          * Trace via esp_rom_printf (panic-safe direct output) — if the kernel
          * reboots between "exited" and "all done", these tags pinpoint which
          * step died. Once the after-dep boot path is stable, remove these. */
-        esp_rom_printf("[KERN-EXIT] %s: unload\n", name);
+        klog_e(TAG, "[T] %s: pre-unload", name);
+        vTaskDelay(pdMS_TO_TICKS(5));   /* let CDC flush before the next step */
         s_loader_ops.unload(app);
-        esp_rom_printf("[KERN-EXIT] %s: heap_free\n", name);
+        klog_e(TAG, "[T] %s: pre-heap_free", name);
+        vTaskDelay(pdMS_TO_TICKS(5));
         slot_heap_free(slot);           /* free per-app heap pool */
         /* Phase 22: free the static stack buffer after the task is deleted.
          * vTaskDelete (called above for forced exits, or by the task itself)
          * guarantees the TCB is no longer referenced by FreeRTOS before the
          * supervisor processes the exit message. */
         if (slot->stack_mem) {
-            esp_rom_printf("[KERN-EXIT] %s: stack_free\n", name);
+            klog_e(TAG, "[T] %s: pre-stack_free", name);
+            vTaskDelay(pdMS_TO_TICKS(5));
             heap_caps_free(slot->stack_mem);
             slot->stack_mem  = NULL;
             slot->stack_size = 0;
         }
         if (mailbox) {
-            esp_rom_printf("[KERN-EXIT] %s: mbox_del\n", name);
+            klog_e(TAG, "[T] %s: pre-mbox_del", name);
+            vTaskDelay(pdMS_TO_TICKS(5));
             vQueueDelete(mailbox);
         }
 
@@ -516,12 +520,15 @@ static void supervisor_task(void *arg)
          * `after:` dependency mechanism). Called without holding s_lock and
          * AFTER unload so dependent services see a clean state. */
         if (s_exit_observer) {
-            esp_rom_printf("[KERN-EXIT] %s: observer_in\n", name);
+            klog_e(TAG, "[T] %s: pre-observer", name);
+            vTaskDelay(pdMS_TO_TICKS(5));
             s_exit_observer(name, code);
-            esp_rom_printf("[KERN-EXIT] %s: observer_out\n", name);
+            klog_e(TAG, "[T] %s: post-observer", name);
+            vTaskDelay(pdMS_TO_TICKS(5));
         }
 
-        esp_rom_printf("[KERN-EXIT] %s: signal_done\n", name);
+        klog_e(TAG, "[T] %s: pre-signal", name);
+        vTaskDelay(pdMS_TO_TICKS(5));
         maybe_signal_all_done();
         /* Signal callers waiting for any app to exit (e.g. shell `run`). */
         xSemaphoreGive(s_exit_event);

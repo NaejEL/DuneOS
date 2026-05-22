@@ -6,8 +6,6 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
-#include "esp_rom_sys.h"   /* esp_rom_printf — panic-safe trace output */
-
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -311,9 +309,10 @@ static void launch_one(const duneos_service_desc_t *s)
 static void on_service_exit(const char *name, int code)
 {
     (void)code;
-    esp_rom_printf("[INIT-OBS] enter for '%s'\n", name);
+    klog_e(TAG, "[T-OBS] enter for '%s'", name);
+    vTaskDelay(pdMS_TO_TICKS(5));
     if (!s_pending_lock) {
-        esp_rom_printf("[INIT-OBS] no lock, return\n");
+        klog_e(TAG, "[T-OBS] no lock, return");
         return;
     }
 
@@ -323,32 +322,28 @@ static void on_service_exit(const char *name, int code)
         if (!s_pending[i].pending) continue;
         if (strcmp(s_pending[i].pred_name, name) != 0) continue;
 
-        esp_rom_printf("[INIT-OBS] releasing %s\n", s_pending[i].desc.path);
-        klog_i(TAG, "after-dep: '%s' exited — releasing '%s'",
-               name, s_pending[i].desc.path);
+        klog_e(TAG, "[T-OBS] releasing %s", s_pending[i].desc.path);
+        vTaskDelay(pdMS_TO_TICKS(5));
         s_pending[i].pending = false;
         duneos_service_desc_t snapshot = s_pending[i].desc;
         xSemaphoreGive(s_pending_lock);
 
-        /* Yield briefly between launches (not before the first) so the
-         * previously-launched dependent has a chance to initialise. */
         if (released > 0) {
-            esp_rom_printf("[INIT-OBS] yield 20ms\n");
+            klog_e(TAG, "[T-OBS] yield 20ms");
             vTaskDelay(pdMS_TO_TICKS(20));
         }
-        esp_rom_printf("[INIT-OBS] launch_one %s\n", snapshot.path);
+        klog_e(TAG, "[T-OBS] pre-launch %s", snapshot.path);
+        vTaskDelay(pdMS_TO_TICKS(5));
         launch_one(&snapshot);
-        esp_rom_printf("[INIT-OBS] launched %s\n", snapshot.path);
+        klog_e(TAG, "[T-OBS] post-launch %s", snapshot.path);
+        vTaskDelay(pdMS_TO_TICKS(5));
         released++;
 
         xSemaphoreTake(s_pending_lock, portMAX_DELAY);
         s_pending[i].launched = true;
     }
     xSemaphoreGive(s_pending_lock);
-    esp_rom_printf("[INIT-OBS] done, released=%d\n", released);
-    if (released > 0)
-        klog_i(TAG, "after-dep: released %d service(s) waiting on '%s'",
-               released, name);
+    klog_e(TAG, "[T-OBS] done, released=%d", released);
 }
 
 /* Look up a service by app-name in the parsed config. Returns NULL if absent. */
