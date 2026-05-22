@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 import platform
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -616,28 +615,7 @@ class AppSelectScreen(Screen):
 # Init Config screen (edit boards/<board>/init.yaml)
 # ---------------------------------------------------------------------------
 
-_INIT_PATH_RE    = re.compile(r'^\s+-\s+path:\s+\S*/([^/\s]+?)(?:\.dap)?\s*$')
-_INIT_RESTART_RE = re.compile(r'^\s+restart:\s+(\S+)\s*$')
 _RESTART_CYCLE   = ["always", "on-failure", "no"]
-
-
-def _parse_init_yaml(path: Path) -> dict[str, str]:
-    """Return {app_name: restart_policy} for services listed in path."""
-    result: dict[str, str] = {}
-    if not path.exists():
-        return result
-    current: str | None = None
-    for line in path.read_text().splitlines():
-        m = _INIT_PATH_RE.match(line)
-        if m:
-            current = m.group(1)
-            result[current] = "always"
-            continue
-        if current:
-            m = _INIT_RESTART_RE.match(line)
-            if m:
-                result[current] = m.group(1)
-    return result
 
 
 class ProfilePickScreen(Screen):
@@ -725,6 +703,7 @@ class ProfileEditorScreen(Screen):
         Binding("space",  "cycle_state",   "Cycle state"),
         Binding("enter",  "cycle_state",   "Cycle state", show=False),
         Binding("r",      "cycle_restart", "Restart policy"),
+        Binding("a",      "cycle_after",   "After: dep"),
         Binding("left",   "focus_col('flash')", "Flash col"),
         Binding("right",  "focus_col('sd')",    "SD col"),
         Binding("tab",    "switch_col",    "Switch col", show=False),
@@ -758,10 +737,18 @@ class ProfileEditorScreen(Screen):
         from .capability_map import check_app
         flash_set = set(self._profile.get("apps_flash", []))
         sd_set    = set(self._profile.get("apps_sd",    []))
-        init_flash = {self._app_from_path(e.get("path","")): e.get("restart","always")
-                      for e in self._profile.get("init_flash", [])}
-        init_sd    = {self._app_from_path(e.get("path","")): e.get("restart","always")
-                      for e in self._profile.get("init_sd",    [])}
+        # Each init_<col> entry maps app_name → (restart, after-or-empty). The
+        # `after:` field is optional in the YAML; treat missing as "" (no dep).
+        init_flash = {
+            self._app_from_path(e.get("path", "")):
+                (e.get("restart", "always"), e.get("after", ""))
+            for e in self._profile.get("init_flash", [])
+        }
+        init_sd    = {
+            self._app_from_path(e.get("path", "")):
+                (e.get("restart", "always"), e.get("after", ""))
+            for e in self._profile.get("init_sd", [])
+        }
         try:
             sdk_lines = _read_sdkconfig(self._board)
         except SystemExit:
@@ -778,9 +765,18 @@ class ProfileEditorScreen(Screen):
                 continue
             seen.add(name)
             self._apps.append((name, _is_bin(app_dir)))
+            flash_init = init_flash.get(name)
+            sd_init    = init_sd.get(name)
+            # State per (app, col): (staged, restart-or-None, after-or-"")
+            #   restart=None  ⇒ in apps_<col> only, not in init_<col>
+            #   after=""      ⇒ no dependency (launch immediately)
             self._state[name] = {
-                "flash": (name in flash_set, init_flash.get(name)),
-                "sd":    (name in sd_set,    init_sd.get(name)),
+                "flash": (name in flash_set,
+                          flash_init[0] if flash_init else None,
+                          flash_init[1] if flash_init else ""),
+                "sd":    (name in sd_set,
+                          sd_init[0]    if sd_init    else None,
+                          sd_init[1]    if sd_init    else ""),
             }
             # Cache ELF size + permission warnings for live display.
             elf = app_dir / "build" / "app.elf"
@@ -814,7 +810,7 @@ class ProfileEditorScreen(Screen):
                 yield OptionList(*self._make_opts("sd"),
                                  id="sdlist", classes="profilelist")
         yield Static(
-            "  ←→ col   ↑↓ nav   Space cycle (□/☑/☑+init)   R restart   S save   Esc discard",
+            "  ←→ col   ↑↓ nav   Space cycle (□/☑/☑+init)   R restart   A after-dep   S save   Esc discard",
             id="apphint",
         )
 
@@ -825,10 +821,16 @@ class ProfileEditorScreen(Screen):
         except Exception:
             pass
 
+    def _init_predecessors(self, col: str, exclude: str) -> list[str]:
+        """Apps eligible as `after:` predecessors in `col` (in init, not self)."""
+        return [n for n, _ in self._apps
+                if n != exclude and self._state[n][col][0]
+                and self._state[n][col][1] is not None]
+
     def _make_opts(self, col: str) -> list[Option]:
         opts = []
         for name, _is_bin_ in self._apps:
-            staged, restart = self._state[name][col]
+            staged, restart, after = self._state[name][col]
             warn  = bool(self._warnings.get(name))
             size  = self._sizes.get(name, 0)
             size_s = f"{size/1024:5.1f}KB" if size else "  ?  "
@@ -839,16 +841,28 @@ class ProfileEditorScreen(Screen):
             if staged:
                 if restart is not None:
                     t.append("☑ ", style="bold #3fb950")
-                    t.append(f"{name:<24}", style="bold #c9d1d9")
+                    t.append(f"{name:<22}", style="bold #c9d1d9")
                     t.append(f"{size_s}  ", style="#6e7681")
                     t.append(f"restart: {restart}", style="#58a6ff")
+                    if after:
+                        # Hint with the predecessor's status: greyed if absent
+                        # from init, orange if predecessor is restart:always
+                        # (never exits → dependency degenerate).
+                        pred_state = self._state.get(after, {}).get(col)
+                        pred_color = "#d29922"
+                        if pred_state and pred_state[1]:
+                            pred_color = (
+                                "#d29922" if pred_state[1] == "always"
+                                else "#8b949e"
+                            )
+                        t.append(f"  after: {after}", style=pred_color)
                 else:
                     t.append("☑ ", style="bold #3fb950")
-                    t.append(f"{name:<24}", style="#c9d1d9")
+                    t.append(f"{name:<22}", style="#c9d1d9")
                     t.append(f"{size_s}", style="#6e7681")
             else:
                 t.append("☐ ", style="#6e7681")
-                t.append(f"{name:<24}", style="#6e7681")
+                t.append(f"{name:<22}", style="#6e7681")
                 t.append(f"{size_s}", style="#4d5560")
             opts.append(Option(t, id=name))
         return opts
@@ -916,14 +930,15 @@ class ProfileEditorScreen(Screen):
         if not (0 <= idx < len(self._apps)):
             return
         name = self._apps[idx][0]
-        staged, restart = self._state[name][self._col]
+        staged, restart, after = self._state[name][self._col]
         # □ → ☑(no init) → ☑(init+always) → □
         if not staged:
-            self._state[name][self._col] = (True, None)
+            self._state[name][self._col] = (True, None, "")
         elif restart is None:
-            self._state[name][self._col] = (True, "always")
+            self._state[name][self._col] = (True, "always", after)
         else:
-            self._state[name][self._col] = (False, None)
+            # Removing from init also drops any `after:` reference.
+            self._state[name][self._col] = (False, None, "")
         self._refresh()
 
     def action_cycle_restart(self) -> None:
@@ -931,11 +946,42 @@ class ProfileEditorScreen(Screen):
         if not (0 <= idx < len(self._apps)):
             return
         name = self._apps[idx][0]
-        staged, restart = self._state[name][self._col]
+        staged, restart, after = self._state[name][self._col]
         if not staged or restart is None:
             return  # only when already in init
         idx_r = _RESTART_CYCLE.index(restart) if restart in _RESTART_CYCLE else -1
-        self._state[name][self._col] = (True, _RESTART_CYCLE[(idx_r + 1) % len(_RESTART_CYCLE)])
+        self._state[name][self._col] = (
+            True,
+            _RESTART_CYCLE[(idx_r + 1) % len(_RESTART_CYCLE)],
+            after,
+        )
+        self._refresh()
+
+    def action_cycle_after(self) -> None:
+        """Cycle the highlighted init entry's `after:` through other init apps.
+
+        Only meaningful when the app is in init (☑+restart). Predecessors are
+        OTHER apps that are also in init in the same column. Cycle order:
+            "" (none) → cand[0] → cand[1] → … → "" → …
+
+        A degenerate dep on a `restart: always` predecessor is allowed (the
+        kernel logs a warning and launches immediately) — it's the same fail-
+        safe behaviour we get from a missing predecessor.
+        """
+        idx = self._cursor[self._col]
+        if not (0 <= idx < len(self._apps)):
+            return
+        name = self._apps[idx][0]
+        staged, restart, after = self._state[name][self._col]
+        if not staged or restart is None:
+            return  # only when already in init
+        cands = [""] + self._init_predecessors(self._col, name)
+        try:
+            pos = cands.index(after)
+        except ValueError:
+            pos = 0
+        next_after = cands[(pos + 1) % len(cands)]
+        self._state[name][self._col] = (True, restart, next_after)
         self._refresh()
 
     def action_save(self) -> None:
@@ -946,17 +992,23 @@ class ProfileEditorScreen(Screen):
 
         init_flash = []
         for n, _ in self._apps:
-            staged, restart = self._state[n]["flash"]
+            staged, restart, after = self._state[n]["flash"]
             if staged and restart is not None:
-                init_flash.append({"path": f"/flash/bin/{n}.dap", "restart": restart})
+                entry = {"path": f"/flash/bin/{n}.dap", "restart": restart}
+                if after:
+                    entry["after"] = after
+                init_flash.append(entry)
 
         init_sd = []
         is_bin = {n: b for n, b in self._apps}
         for n, _ in self._apps:
-            staged, restart = self._state[n]["sd"]
+            staged, restart, after = self._state[n]["sd"]
             if staged and restart is not None:
                 base = "/sd/bin" if is_bin[n] else "/sd/apps"
-                init_sd.append({"path": f"{base}/{n}.dap", "restart": restart})
+                entry = {"path": f"{base}/{n}.dap", "restart": restart}
+                if after:
+                    entry["after"] = after
+                init_sd.append(entry)
 
         new_profile = {
             "name":        self._profile.get("name", self._name),
@@ -974,118 +1026,6 @@ class ProfileEditorScreen(Screen):
             return
         out = PROFILES_DIR / self._name / "profile.yaml"
         out.write_text(_yaml.safe_dump(new_profile, sort_keys=False, default_flow_style=False))
-        self.dismiss(True)
-
-    def action_discard(self) -> None:
-        self.dismiss(False)
-
-
-class InitCfgScreen(Screen):
-    """Interactive editor for boards/<board>/init.yaml.
-
-    Space/Enter toggles a service on/off (default restart: always).
-    R cycles the restart policy: always → on-failure → no → always.
-    S saves; Esc discards.
-    """
-
-    BINDINGS = [
-        Binding("escape", "discard",       "Discard"),
-        Binding("s",      "save",          "Save"),
-        Binding("space",  "toggle",        "Enable/Disable"),
-        Binding("enter",  "toggle",        "Enable/Disable", show=False),
-        Binding("r",      "cycle_restart", "Cycle restart"),
-    ]
-
-    def __init__(self, board_name: str) -> None:
-        super().__init__()
-        self._board   = board_name
-        self._apps:   list[str]             = []
-        self._policy: dict[str, str | None] = {}  # None = disabled
-        self._cursor: int                   = 0
-
-    def compose(self) -> ComposeResult:
-        self._load()
-        with Vertical(id="apppanel") as v:
-            v.border_title = f"  Init Config: {self._board}  "
-            yield OptionList(*self._make_opts(), id="applist")
-        yield Static(
-            "  ↑↓ nav   Space enable/disable   R cycle restart (always/on-failure/no)   S save   Esc discard",
-            id="apphint",
-        )
-
-    def _load(self) -> None:
-        board_init = DUNEOS_ROOT / "boards" / self._board / "init.yaml"
-        current    = _parse_init_yaml(board_init)
-        from .manifest import load_manifest
-        for app_dir, _ in find_apps():
-            try:
-                name = load_manifest(app_dir)["name"]
-            except Exception:
-                name = app_dir.name
-            if name not in self._apps:
-                self._apps.append(name)
-                self._policy[name] = current.get(name)
-
-    def _make_opts(self) -> list[Option]:
-        opts = []
-        for name in self._apps:
-            policy = self._policy[name]
-            t = Text()
-            if policy is not None:
-                t.append(" \u2611 ", style="bold #3fb950")
-                t.append(f"{name:<26}", style="bold #c9d1d9")
-                t.append(f"restart: {policy}", style="#58a6ff")
-            else:
-                t.append(" \u2610 ", style="#6e7681")
-                t.append(name, style="#6e7681")
-            opts.append(Option(t, id=name))
-        return opts
-
-    @on(OptionList.OptionHighlighted, "#applist")
-    def _on_hi(self, event: OptionList.OptionHighlighted) -> None:
-        self._cursor = event.option_index
-
-    def _refresh(self) -> None:
-        ol = self.query_one("#applist", OptionList)
-        ol.clear_options()
-        for opt in self._make_opts():
-            ol.add_option(opt)
-        try:
-            ol.highlighted = self._cursor
-        except Exception:
-            pass
-
-    def action_toggle(self) -> None:
-        if 0 <= self._cursor < len(self._apps):
-            name = self._apps[self._cursor]
-            self._policy[name] = "always" if self._policy[name] is None else None
-            self._refresh()
-
-    def action_cycle_restart(self) -> None:
-        if 0 <= self._cursor < len(self._apps):
-            name = self._apps[self._cursor]
-            p    = self._policy[name]
-            if p is None:
-                return
-            idx = _RESTART_CYCLE.index(p) if p in _RESTART_CYCLE else -1
-            self._policy[name] = _RESTART_CYCLE[(idx + 1) % len(_RESTART_CYCLE)]
-            self._refresh()
-
-    def action_save(self) -> None:
-        board_init = DUNEOS_ROOT / "boards" / self._board / "init.yaml"
-        enabled    = [(n, p) for n in self._apps if (p := self._policy[n]) is not None]
-        lines      = [
-            f"# DuneOS /flash/init.yaml for {self._board}\n",
-            f"# Edit this file or use 'dbt' TUI (Init Config) to manage boot services.\n",
-            f"services:\n",
-        ]
-        if not enabled:
-            lines.append("  # No services enabled — all services start from /sd/init.yaml.\n")
-        else:
-            for name, policy in enabled:
-                lines.append(f"  - path: /flash/bin/{name}.dap\n")
-                lines.append(f"    restart: {policy}\n")
-        board_init.write_text("".join(lines))
         self.dismiss(True)
 
     def action_discard(self) -> None:
@@ -1114,8 +1054,7 @@ _MENU: list[tuple[str, str, str] | None] = [
     ("build-all",    "b", "Build All"),
     ("build-app",    "a", "Build App…"),
     None,
-    # -- Legacy / advanced ----
-    ("init-cfg",     "i", "Init Config (board legacy)…"),
+    # -- Advanced ----
     ("bspgen",       "g", "BSP Gen…"),
     None,
     # -- Settings ----
@@ -1141,7 +1080,6 @@ class DbtApp(App):
         Binding("d", "do('flash-sd')",     "Deploy SD"),
         Binding("b", "do('build-all')",    "Build All"),
         Binding("a", "do('build-app')",    "Build App"),
-        Binding("i", "do('init-cfg')",     "Init Config"),
         Binding("g", "do('bspgen')",       "BSP Gen"),
         Binding("c", "do('board')",        "Board"),
         Binding("p", "do('port')",         "Port"),
@@ -1206,7 +1144,6 @@ class DbtApp(App):
             "build-all":    self._run_build_all,
             "build-app":    self._pick_and_build,
             "flash-sd":     self._run_flash_sd,
-            "init-cfg":     self._run_init_cfg,
             "bspgen":       self._run_bspgen,
             "board":        self._run_board_pick,
             "port":         self._run_port_pick,
@@ -1350,22 +1287,6 @@ class DbtApp(App):
         for line in buf.getvalue().splitlines():
             self._log(f"  {line}")
         self._log(f"  [{'#3fb950' if rc == 0 else '#f85149'}]→ exit {rc}[/]")
-
-    # -- Init Config ─────────────────────────────────────────────────────────
-
-    def _run_init_cfg(self) -> None:
-        board = _board()
-        if not board:
-            self._err("Board not configured", "Press c to open Setup.")
-            return
-
-        def _done(saved: bool | None) -> None:
-            if saved:
-                self._log(f"[#3fb950]✓[/#3fb950]  boards/{board}/init.yaml saved")
-            else:
-                self._log("[dim]  init config: discarded[/dim]")
-
-        self.push_screen(InitCfgScreen(board), _done)
 
     # -- Flash Kernel ────────────────────────────────────────────────────────
 

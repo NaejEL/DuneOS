@@ -31,7 +31,7 @@ from .flashimg import cmd_flashimg
 from .setup import cmd_setup
 from .kernel import cmd_flash_kernel
 from .bspgen import cmd_bspgen
-from .img import cmd_img_convert
+from .img import cmd_img_convert, cmd_img_splash
 
 
 # ---------------------------------------------------------------------------
@@ -647,6 +647,28 @@ def main() -> None:
         help="Flatten alpha over this colour (default: 0,0,0)",
     )
     p_img_convert.set_defaults(func=cmd_img_convert)
+
+    p_img_splash = img_sub.add_parser(
+        "splash",
+        help="Render the procedural DuneOS splash art (gradient + dunes + wordmark)",
+    )
+    p_img_splash.add_argument(
+        "output",
+        help="Output path. Extension decides format: .png/.jpg/... → image, .dr → raster",
+    )
+    p_img_splash.add_argument(
+        "--size", metavar="WxH", default=None,
+        help="Render at this resolution (default: 240x135, CardPuter)",
+    )
+    p_img_splash.add_argument(
+        "--scale", type=int, default=1,
+        help="Pixel-nearest upscale for the PNG output (default: 1, no upscale)",
+    )
+    p_img_splash.add_argument(
+        "--also-dr", action="store_true",
+        help="Also emit a .dr file alongside the PNG (sibling path)",
+    )
+    p_img_splash.set_defaults(func=cmd_img_splash)
 
     args = parser.parse_args()
     args.func(args)
