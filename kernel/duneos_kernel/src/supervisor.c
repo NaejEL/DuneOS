@@ -473,11 +473,11 @@ static void supervisor_task(void *arg)
                                     ? " — circuit breaker tripped, restart disabled"
                                     : ""));
 
-        /* Phase 25.4: notify registered observers (init.c uses this for the
-         * `after:` dependency mechanism). Called without holding s_lock so
-         * the observer can launch other services safely. */
-        if (s_exit_observer) s_exit_observer(name, code);
-
+        /* Free the exiting app FIRST, so by the time the observer launches
+         * dependent services (Phase 25.4 `after:`) the slot is fully free
+         * and any kernel resources the app held (SPI handles, GPIO claims,
+         * heap pool) have been released. Otherwise a dependent service can
+         * race the unloading app for the same device. */
         s_loader_ops.unload(app);
         slot_heap_free(slot);           /* free per-app heap pool */
         /* Phase 22: free the static stack buffer after the task is deleted.
@@ -501,6 +501,11 @@ static void supervisor_task(void *arg)
             s_want_restart--;
             xSemaphoreGive(s_lock);
         }
+
+        /* Phase 25.4: notify registered observers (init.c uses this for the
+         * `after:` dependency mechanism). Called without holding s_lock and
+         * AFTER unload so dependent services see a clean state. */
+        if (s_exit_observer) s_exit_observer(name, code);
 
         maybe_signal_all_done();
         /* Signal callers waiting for any app to exit (e.g. shell `run`). */
@@ -530,13 +535,17 @@ esp_err_t duneos_supervisor_init(void)
     s_exit_event = xSemaphoreCreateCounting(DUNEOS_MAX_RUNNING_APPS * 4, 0);
     if (!s_exit_event) return ESP_ERR_NO_MEM;
 
-    /* 16 KB: supervisor calls duneos_loader_load on restart, which chains
-     * fopen → FatFS → SPI DMA — a very deep call stack.  4 KB overflows
-     * into adjacent BSS and corrupts FreeRTOS list pointers. */
+    /* 24 KB: supervisor calls duneos_loader_load on restart, which chains
+     * fopen → FatFS → SPI DMA — a very deep call stack. 16 KB was tight
+     * for a single load; the Phase 25.4 `after:` observer chains MULTIPLE
+     * loads in sequence (one per deferred service released by the same
+     * exit), so we need more headroom to survive boot-time fan-outs (e.g.
+     * splash → usb_shell + kb_iomatrix + g_shell). 4 KB overflows into
+     * adjacent BSS and corrupts FreeRTOS list pointers. */
     /* Pin to Core 0: all DuneOS tasks run on Core 0 to avoid cross-core
      * SMP races on FreeRTOS ready/delayed lists without kernel spinlock. */
     BaseType_t ret = xTaskCreatePinnedToCore(supervisor_task, "duneos_sv",
-                                              16384, NULL,
+                                              24576, NULL,
                                               DUNEOS_APP_TASK_PRIORITY + 1,
                                               NULL, 0);
     if (ret != pdPASS) return ESP_ERR_NO_MEM;

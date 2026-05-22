@@ -4,6 +4,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "freertos/task.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -294,29 +295,47 @@ static void launch_one(const duneos_service_desc_t *s)
 
 /* Exit observer — fires from the supervisor task when any app exits.
  * Walks the pending list and launches anything whose predecessor was `name`.
- * Keeps work short: no blocking primitives on s_lock (we are not holding it,
- * but the supervisor is between exits — don't stall it). */
+ *
+ * Concurrency model: we are called from the supervisor task itself, so no
+ * other observer invocation can race us. supervisor_launch_policy takes
+ * s_lock internally, so we drop s_pending_lock around launch_one to keep
+ * the lock order simple (s_pending_lock never held while taking s_lock).
+ *
+ * Pacing: yield one tick between successive launches so the newly created
+ * task gets a chance to do its first init steps before the next loader.load
+ * monopolises the supervisor's stack again. This was observed mattering
+ * when one exit released 3+ deferred services that all wanted the display.
+ */
 static void on_service_exit(const char *name, int code)
 {
     (void)code;
     if (!s_pending_lock) return;
 
+    int released = 0;
     xSemaphoreTake(s_pending_lock, portMAX_DELAY);
     for (int i = 0; i < s_pending_count; i++) {
         if (!s_pending[i].pending) continue;
         if (strcmp(s_pending[i].pred_name, name) != 0) continue;
 
-        klog_i(TAG, "'%s' exited — releasing '%s'", name, s_pending[i].desc.path);
+        klog_i(TAG, "after-dep: '%s' exited — releasing '%s'",
+               name, s_pending[i].desc.path);
         s_pending[i].pending = false;
-        /* Drop the lock around launch_one — supervisor_launch_policy takes
-         * its own internal lock and we don't want to nest mutexes. */
         duneos_service_desc_t snapshot = s_pending[i].desc;
         xSemaphoreGive(s_pending_lock);
+
+        /* Yield briefly between launches (not before the first) so the
+         * previously-launched dependent has a chance to initialise. */
+        if (released > 0) vTaskDelay(pdMS_TO_TICKS(20));
         launch_one(&snapshot);
+        released++;
+
         xSemaphoreTake(s_pending_lock, portMAX_DELAY);
         s_pending[i].launched = true;
     }
     xSemaphoreGive(s_pending_lock);
+    if (released > 0)
+        klog_i(TAG, "after-dep: released %d service(s) waiting on '%s'",
+               released, name);
 }
 
 /* Look up a service by app-name in the parsed config. Returns NULL if absent. */
