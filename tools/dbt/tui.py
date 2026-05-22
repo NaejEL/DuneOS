@@ -296,6 +296,36 @@ SplashScreen {
     align: center middle;
 }
 
+#previewbox {
+    width: 90;
+    height: auto;
+    max-height: 80%;
+    border: solid #1f6feb;
+    background: #161b22;
+    border-title-color: #58a6ff;
+    border-title-style: bold;
+    padding: 1 2;
+}
+
+#previewbody {
+    width: 100%;
+    height: auto;
+    color: #c9d1d9;
+    background: #0d1117;
+    padding: 0 1;
+}
+
+#previewhint {
+    width: 100%;
+    height: 1;
+    color: #6e7681;
+    margin-top: 1;
+}
+
+ProfilePreviewModal {
+    align: center middle;
+}
+
 SetupScreen {
     align: center middle;
 }
@@ -680,6 +710,32 @@ def _is_bin(app_dir: Path) -> bool:
         return False
 
 
+class ProfilePreviewModal(ModalScreen):
+    """Read-only YAML preview of the profile state about to be saved.
+
+    Useful before pressing S in the editor to see exactly what will land in
+    profile.yaml (and therefore in the staged init.yaml on /flash). Closed
+    with Enter / Esc; the editor stays open behind it.
+    """
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("enter",  "dismiss", "Close", show=False),
+        Binding("q",      "dismiss", "Close", show=False),
+    ]
+
+    def __init__(self, profile_name: str, yaml_text: str) -> None:
+        super().__init__()
+        self._name = profile_name
+        self._yaml = yaml_text
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="previewbox") as v:
+            v.border_title = f"  Preview: profiles/{self._name}/profile.yaml  "
+            yield Static(self._yaml, id="previewbody")
+            yield Static("[dim]  Enter / Esc / q  close[/dim]", id="previewhint")
+
+
 class ProfileEditorScreen(Screen):
     """Two-column flash/SD profile editor.
 
@@ -697,16 +753,21 @@ class ProfileEditorScreen(Screen):
       Esc     discard
     """
 
+    # `priority=True` makes these fire even when the OptionList child has
+    # focus; otherwise Textual lets the focused widget see the keypress
+    # first and the screen-level binding is shadowed for plain letter keys
+    # (we hit this on "a" / "r").
     BINDINGS = [
-        Binding("escape", "discard",       "Discard"),
-        Binding("s",      "save",          "Save"),
-        Binding("space",  "cycle_state",   "Cycle state"),
-        Binding("enter",  "cycle_state",   "Cycle state", show=False),
-        Binding("r",      "cycle_restart", "Restart policy"),
-        Binding("a",      "cycle_after",   "After: dep"),
-        Binding("left",   "focus_col('flash')", "Flash col"),
-        Binding("right",  "focus_col('sd')",    "SD col"),
-        Binding("tab",    "switch_col",    "Switch col", show=False),
+        Binding("escape", "discard",            "Discard",         priority=True),
+        Binding("s",      "save",               "Save",            priority=True),
+        Binding("p",      "preview",            "Preview YAML",    priority=True),
+        Binding("space",  "cycle_state",        "Cycle state",     priority=True),
+        Binding("enter",  "cycle_state",        "Cycle state",     show=False, priority=True),
+        Binding("r",      "cycle_restart",      "Restart policy",  priority=True),
+        Binding("a",      "cycle_after",        "After: dep",      priority=True),
+        Binding("left",   "focus_col('flash')", "Flash col",       priority=True),
+        Binding("right",  "focus_col('sd')",    "SD col",          priority=True),
+        Binding("tab",    "switch_col",         "Switch col",      show=False, priority=True),
     ]
 
     def __init__(self, profile_name: str) -> None:
@@ -810,7 +871,7 @@ class ProfileEditorScreen(Screen):
                 yield OptionList(*self._make_opts("sd"),
                                  id="sdlist", classes="profilelist")
         yield Static(
-            "  ←→ col   ↑↓ nav   Space cycle (□/☑/☑+init)   R restart   A after-dep   S save   Esc discard",
+            "  ←→ col   ↑↓ nav   Space cycle (□/☑/☑+init)   R restart   A after-dep   P preview   S save   Esc discard",
             id="apphint",
         )
 
@@ -984,9 +1045,13 @@ class ProfileEditorScreen(Screen):
         self._state[name][self._col] = (True, restart, next_after)
         self._refresh()
 
-    def action_save(self) -> None:
-        """Re-render profiles/<name>/profile.yaml from the in-memory state."""
-        from .system import PROFILES_DIR
+    def _build_profile_dict(self) -> dict:
+        """Render the in-memory state as the dict we'll dump to profile.yaml.
+
+        Shared by action_save (writes the file) and action_preview (shows it
+        in a modal). Keeping this single-sourced means the preview always
+        matches what will actually be saved.
+        """
         flash_apps = [n for n, _ in self._apps if self._state[n]["flash"][0]]
         sd_apps    = [n for n, _ in self._apps if self._state[n]["sd"][0]]
 
@@ -1010,7 +1075,7 @@ class ProfileEditorScreen(Screen):
                     entry["after"] = after
                 init_sd.append(entry)
 
-        new_profile = {
+        return {
             "name":        self._profile.get("name", self._name),
             "board":       self._board,
             "description": self._profile.get("description", ""),
@@ -1019,11 +1084,29 @@ class ProfileEditorScreen(Screen):
             "apps_sd":     sd_apps,
             "init_sd":     init_sd,
         }
+
+    def action_preview(self) -> None:
+        """Show the YAML that would be saved, without saving."""
+        try:
+            import yaml as _yaml
+        except ImportError:
+            self.app.push_screen(ErrorModal(
+                "PyYAML missing",
+                "pip install pyyaml to enable preview."))
+            return
+        yaml_text = _yaml.safe_dump(self._build_profile_dict(),
+                                    sort_keys=False, default_flow_style=False)
+        self.app.push_screen(ProfilePreviewModal(self._name, yaml_text))
+
+    def action_save(self) -> None:
+        """Re-render profiles/<name>/profile.yaml from the in-memory state."""
+        from .system import PROFILES_DIR
         try:
             import yaml as _yaml
         except ImportError:
             self.dismiss(False)
             return
+        new_profile = self._build_profile_dict()
         out = PROFILES_DIR / self._name / "profile.yaml"
         out.write_text(_yaml.safe_dump(new_profile, sort_keys=False, default_flow_style=False))
         self.dismiss(True)

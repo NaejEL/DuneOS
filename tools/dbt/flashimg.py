@@ -219,6 +219,11 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
         for entry in profile.get("init_flash", []):
             lines.append(f"  - path: {entry.get('path','')}")
             lines.append(f"    restart: {entry.get('restart','no')}")
+            # Phase 25.4: propagate `after:` so the kernel observer sees the
+            # dependency. Without this the editor-set value silently dropped.
+            after = entry.get("after")
+            if after:
+                lines.append(f"    after: {after}")
         dest_init.write_text("\n".join(lines) + "\n")
         print(f"  staged → /init.yaml  (from profile '{profile['name']}')")
     else:
