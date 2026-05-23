@@ -280,19 +280,19 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
-### Phase 24.9.5 — Captured-app exit semantics (ADR 016)
+### Phase 24.9.5 — Captured-app exit semantics (ADR 016) ✅
 
 **Pourquoi cette phase** : observation faite en flashant gfx_demo sur CardPuter. `duneos_exit(1)` depuis un app captured (bin lancé par le shell) faisait `vTaskDelete(NULL)` qui tue **la task du shell** (car captured = même task que le caller). Symptôme observé : "every time gfx_demo fails, my shell restarts". Footgun classique pour les apps écrites en assumant la sémantique POSIX `exit()`. Petite phase critique pour la stabilité, à faire avant le launcher contest (qui lancera plusieurs apps captured).
 
-- [x] **Shell auto-dispatch spawned/captured** : `try_run_bin` (`apps/system/shell_core/shell_cmds.c`) lit `manifest->heap_size` après `loader_load` ; si > 0, unload + `supervisor_launch` (spawned mode, heap dédié). Sinon, captured fast-path. Permet à gfx_demo de tourner avec son heap_size=81920 quand l'utilisateur tape `gfx_demo` sans `run` devant. Premier morceau de Phase 24.9.5 livré 2026-05-20 — fixe le crash gfx_demo sur CardPuter.
-- [ ] **Mécanisme `setjmp`/`longjmp`** : `loader_run_captured` installe un `jmp_buf` (`s_captured_jmp`) avant `app->entry()`, protégé par mutex pour interdire les captured runs imbriqués. `duneos_exit(N)` détecte `s_captured_jmp != NULL` et `longjmp()` au lieu de `vTaskDelete`. Le code de sortie est stocké dans `s_captured_code` et lu par le caller.
-- [ ] **Restauration stdout robuste** : `capture_restore_stdout` appelé sur les deux chemins (return normal ET longjmp). Pas de double-close.
-- [ ] **Hook anti-`pthread_create` en captured** : `libdune_thread.c` consulte `s_captured_jmp` ; si non-NULL, `pthread_create` retourne `-EPERM` avec un klog warning. Un thread spawné depuis captured continuerait à tourner après le longjmp et corromprait le shell.
-- [ ] **Doc dans `<duneos/libdune.h>`** : section "Captured app contract" qui liste les 3 contraintes (no pthread, free what you alloc, close fds).
-- [ ] **Test de régression** : `gfx_demo` sans `heap_size` doit échouer proprement (exit code 1) sans tuer `usb_shell`. Test d'acceptance manuel + futur test host-side ADR 012.
-- [ ] **CLAUDE.md Hard-Won Lessons** : ajouter "duneos_exit captured = longjmp, pas vTaskDelete" comme entrée explicite (déjà tipped la mère de tous les futurs bugs).
+- [x] **Shell auto-dispatch spawned/captured** : `try_run_bin` (`apps/system/shell_core/shell_cmds.c`) lit `manifest->heap_size` après `loader_load` ; si > 0, unload + `supervisor_launch` (spawned mode, heap dédié). Sinon, captured fast-path. Permet à gfx_demo de tourner avec son heap_size=81920 quand l'utilisateur tape `gfx_demo` sans `run` devant. Premier morceau livré 2026-05-20 — fixe le crash gfx_demo sur CardPuter.
+- [x] **Mécanisme `setjmp`/`longjmp`** : `loader.c` installe `s_captured_jmp` (jmp_buf*) + `s_captured_code` + `s_captured_mux` (portMUX) + `s_captured_lock` (mutex anti-imbriqué). `duneos_loader_run_captured` fait le `setjmp(env)` avant `app->entry()` ; `duneos_loader_captured_longjmp(code)` est appelé par `duneos_exit` via le callback `s_loader_ops.captured_longjmp` enregistré dans `duneos_loader_ops_t`. Nested captured runs refusés via `xSemaphoreTake(s_captured_lock, 0) != pdTRUE`.
+- [x] **Restauration stdout robuste** : le `close(STDOUT_FILENO)` + `open(CAPTURE_PATH)` est réutilisé tel quel après le setjmp join — les deux chemins (return normal + longjmp) convergent au même endroit après le `setjmp` block, donc le code de capture+restore reste linéaire. Pas de double-close.
+- [x] **Hook anti-`pthread_create` en captured** : `api.c` wrap `pthread_create` dans `api_pthread_create` qui appelle `duneos_supervisor_captured_active()` (nouveau helper exposé par `supervisor.h`, lit `s_loader_ops.captured_active`) et retourne `EPERM` si captured. Bloque l'app en kernel-space ; libdune n'a pas besoin de check séparé.
+- [x] **Doc dans `<duneos/libdune.h>`** : nouvelle section "Captured app contract" en haut du header — liste les 3 contraintes (no pthread, free what you malloc, close what you open) + explique la dispatch via `heap_size` du manifest. La doc de `duneos_exit` pointe vers ce block.
+- [ ] **Test de régression sur device** : `run test_crash` depuis usb_shell doit retourner au prompt avec exit code 1 sans redémarrer le shell. Manual test avec CardPuter pending.
+- [x] **CLAUDE.md Hard-Won Lessons** : entrée "duneos_exit captured" mise à jour pour refléter que le fix est shipped (longjmp via captured_active+captured_longjmp) + contrats captured-mode.
 
-> **Coût estimé** : ~1 jour. ~50 lignes de code total dans loader.c + supervisor.c + libdune_thread.c. Pas de change d'ABI.
+> **Coût réel** : ~30 LoC ajoutées (3 fichiers : supervisor.h, supervisor.c, api.c). Mécanisme setjmp était déjà implémenté côté loader avant cette session ; il manquait juste le hook pthread_create et la doc. Pas de change d'ABI.
 
 ---
 

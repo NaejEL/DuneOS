@@ -736,6 +736,11 @@ esp_err_t duneos_supervisor_launch(const char *path)
     return duneos_supervisor_launch_policy(path, DUNEOS_RESTART_NO);
 }
 
+bool duneos_supervisor_captured_active(void)
+{
+    return s_loader_ops.captured_active && s_loader_ops.captured_active();
+}
+
 void duneos_exit(int code)
 {
     /* ADR 016: if the current task is running a captured app, unwind via
@@ -744,7 +749,7 @@ void duneos_exit(int code)
      * loader registers captured_active+captured_longjmp callbacks at
      * init time; older builds without them fall through to the
      * spawned-mode path harmlessly. */
-    if (s_loader_ops.captured_active && s_loader_ops.captured_active()) {
+    if (duneos_supervisor_captured_active()) {
         s_loader_ops.captured_longjmp(code);   /* does not return */
     }
 

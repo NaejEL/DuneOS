@@ -98,6 +98,19 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
 /* Called by duneos_exit() from within an app task (and by the task wrapper) */
 void duneos_supervisor_app_exited(int code);
 
+/*
+ * ADR 016 — true if the calling task is currently inside a captured-mode app
+ * run (shell `run <bin>` and similar). When true, the calling app shares the
+ * shell's task; spawning threads or calling pthread_create here would leave
+ * the thread running in the shell's task after the captured app unwinds via
+ * longjmp, corrupting it. Used by the kernel's pthread_create wrapper to
+ * refuse the call cleanly in that context.
+ *
+ * Safe to call from any task. Returns false before the loader has registered
+ * its ops (i.e. before any captured run could ever start).
+ */
+bool duneos_supervisor_captured_active(void);
+
 /* Block until every launched app has exited and no restart is pending */
 void duneos_supervisor_wait_all(void);
 

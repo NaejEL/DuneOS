@@ -166,6 +166,21 @@ static int api_supervisor_list_slots(void *out, int count)
     return duneos_supervisor_list_slots((duneos_slot_info_t *)out, count);
 }
 
+/* ADR 016: captured apps share the shell's task, so spawning a thread
+ * from within would leave it running in the shell after the captured app
+ * unwinds via longjmp — corrupting the shell. Refuse cleanly with EPERM.
+ * Apps that need threads should declare heap_size > 0 in their manifest;
+ * the shell auto-dispatches them to spawned mode. */
+static int api_pthread_create(pthread_t *t, const pthread_attr_t *attr,
+                              void *(*fn)(void *), void *arg)
+{
+    if (duneos_supervisor_captured_active()) {
+        errno = EPERM;
+        return EPERM;   /* pthread funcs return errno positive, not -1 */
+    }
+    return pthread_create(t, attr, fn, arg);
+}
+
 /* sem_t is absent from the bare-metal PicoLibc toolchain, so the API table
  * uses void *.  Kernel-side we have the real type from <semaphore.h>.      */
 static int api_sem_init   (void *s, int pshared, unsigned val) { return sem_init   ((sem_t *)s, pshared, val); }
@@ -219,7 +234,7 @@ static const duneos_api_t s_api = {
     },
 
     .thread = {
-        .pthread_create        = pthread_create,
+        .pthread_create        = api_pthread_create,
         .pthread_join          = pthread_join,
         .pthread_exit          = pthread_exit,
         .pthread_self          = pthread_self,

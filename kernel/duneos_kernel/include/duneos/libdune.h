@@ -37,6 +37,32 @@ extern "C" {
 extern const duneos_api_t *__duneos_api_ptr;
 
 /* -------------------------------------------------------------------------
+ * Captured app contract (ADR 016)
+ *
+ * When the shell runs a `.dap` "inline" (no `heap_size` declared in the
+ * manifest), the app body executes in the SHELL'S task — not in a separate
+ * task. This is the "captured" mode, and it has three contracts the app
+ * author MUST honour:
+ *
+ *   1. NO pthread_create. The kernel will refuse with EPERM. A thread
+ *      spawned here would keep running in the shell's task after the
+ *      captured app unwinds, corrupting it. If you need threads, declare
+ *      `heap_size: <bytes>` in your duneos.yaml — the shell will detect
+ *      that and dispatch the app to spawned mode (its own task) instead.
+ *
+ *   2. FREE WHAT YOU MALLOC. There's no per-app heap pool to wipe on exit,
+ *      so any malloc'd memory you don't free leaks into the shell.
+ *
+ *   3. CLOSE WHAT YOU OPEN. Same reason — any open() / opendir() / socket()
+ *      handle stays open in the shell's fd table after you exit.
+ *
+ * `duneos_exit(code)` is safe — the kernel longjmps back to the loader's
+ * setjmp checkpoint and unwinds cleanly; the shell survives and gets the
+ * captured app's stdout. Spawned-mode apps (heap_size > 0) have no such
+ * restrictions because they're real tasks.
+ * ---------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------
  * DuneOS lifecycle
  * ---------------------------------------------------------------------- */
 
@@ -44,6 +70,10 @@ extern const duneos_api_t *__duneos_api_ptr;
  * Terminate the calling app with the given exit code.
  * Notifies the supervisor, which frees app resources and applies the restart
  * policy from init.yaml.  Never returns.
+ *
+ * Captured-mode safety (ADR 016): if this is called while running captured,
+ * the kernel longjmps back to the loader instead of vTaskDelete-ing the
+ * shell task. See the "Captured app contract" block above.
  */
 void duneos_exit(int code) __attribute__((noreturn));
 
