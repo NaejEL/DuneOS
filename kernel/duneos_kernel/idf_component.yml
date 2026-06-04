@@ -4,7 +4,7 @@ dependencies:
   espressif/esp_tinyusb:
     version: "^2.0.1~1"
     rules:
-      - if: "idf_target in [esp32s2, esp32s3, esp32p4, esp32h4]"
+      - if: "idf_target in [esp32s2, esp32s3, esp32p4]"
   espressif/lan87xx:
     version: "*"
   espressif/ksz80xx:
