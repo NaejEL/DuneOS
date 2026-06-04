@@ -1574,7 +1574,7 @@ class DbtApp(App):
                 bat = (
                     f'@call "{export}"\r\n'
                     f'cd /d "{DUNEOS_ROOT}"\r\n'
-                    f'idf.py -p {port} monitor\r\n'
+                    f'idf.py -p "{port}" monitor\r\n'
                     f'exit /b %ERRORLEVEL%\r\n'
                 )
                 fd, bat_path = _tf.mkstemp(suffix='.bat')

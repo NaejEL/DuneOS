@@ -7,7 +7,7 @@ Handles:
 """
 
 SDK  = "esp-idf"
-ARCH = ["xtensa-esp32s3", "xtensa-esp32", "riscv32"]
+ARCH = ["xtensa-esp32s3", "xtensa-esp32s2", "xtensa-esp32", "riscv32"]
 
 import os
 import platform
@@ -156,6 +156,17 @@ def linker_script(board_dir: Path) -> Path | None:
 # Kernel build / flash / monitor
 # ---------------------------------------------------------------------------
 
+def _bat_arg(a: str) -> str:
+    """Quote one argument for a generated cmd.exe .bat line.
+
+    Without this, paths with spaces (e.g. C:\\Program Files\\...) split into
+    multiple args and cmd.exe metacharacters are interpreted unexpectedly.
+    """
+    if a and not any(c in a for c in ' \t"&|<>^()%!'):
+        return a
+    return '"' + a.replace('"', '""') + '"'
+
+
 def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
     """Invoke idf.py with the given arguments from the DuneOS repo root."""
     from ..setup import build_idf_env, idf_python
@@ -163,7 +174,7 @@ def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
     if is_win:
         import tempfile
         export   = idf_root / "export.bat"
-        args_str = " ".join(idf_args)
+        args_str = " ".join(_bat_arg(a) for a in idf_args)
         # list2cmdline escapes inner quotes with \" which cmd.exe does not
         # understand. Write a temp .bat instead.
         # export.bat changes cwd to IDF_PATH — cd /d back to DUNEOS_ROOT before
