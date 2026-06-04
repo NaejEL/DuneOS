@@ -49,6 +49,11 @@ static jmp_buf            *s_captured_jmp  = NULL;   /* protected by s_captured_
 static int                 s_captured_code = 0;
 static portMUX_TYPE        s_captured_mux  = portMUX_INITIALIZER_UNLOCKED;
 static SemaphoreHandle_t   s_captured_lock = NULL;   /* one-captured-run-at-a-time */
+/* Serializes load/unload: both mutate the exec-pool bump allocator and the
+ * exec-staging globals, and supervisor_launch() calls load() outside its own
+ * lock, so two tasks could otherwise load concurrently and corrupt them. */
+static SemaphoreHandle_t   s_loader_lock   = NULL;
+static void unload_locked(duneos_app_t *app);   /* caller holds s_loader_lock */
 
 bool duneos_loader_captured_active(void)
 {
@@ -994,6 +999,8 @@ static esp_err_t extract_manifest(FILE               *f,
 
 void duneos_loader_init(void)
 {
+    if (!s_loader_lock) s_loader_lock = xSemaphoreCreateMutex();
+
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     /* IRAM on ESP32 requires 32-bit aligned access — do NOT combine
      * MALLOC_CAP_EXEC with MALLOC_CAP_8BIT.  Writing always goes via the
@@ -1023,7 +1030,7 @@ void duneos_loader_init(void)
             klog_i(TAG, "exec pool IRAM=%p DRAM(base word)=%p (%u KB)",
                    s_exec_pool,
                    iram_word_dram_alias((uintptr_t)s_exec_pool),
-                   CONFIG_DUNEOS_EXEC_POOL_KB);
+                   (unsigned)(_pool_bytes / 1024u));
         }
     }
     s_exec_pool_used = 0;
@@ -1052,6 +1059,9 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         klog_e(TAG, "cannot open '%s'", path);
         return ESP_ERR_NOT_FOUND;
     }
+
+    /* Serialize against concurrent load/unload — see s_loader_lock. */
+    if (s_loader_lock) xSemaphoreTake(s_loader_lock, portMAX_DELAY);
 
     esp_err_t    err     = ESP_FAIL;
     elf32_hdr_t  hdr;
@@ -1257,7 +1267,8 @@ out:
     free(shstrtab);
     free(symtab);
     free(strtab);
-    if (app) duneos_loader_unload(app);
+    if (app) unload_locked(app);   /* lock already held */
+    if (s_loader_lock) xSemaphoreGive(s_loader_lock);
     return err;
 }
 
@@ -1528,7 +1539,10 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     return ESP_OK;
 }
 
-void duneos_loader_unload(duneos_app_t *app)
+/* Body of the unload; caller must hold s_loader_lock (it mutates the exec-pool
+ * bump allocator).  Called directly from load()'s error path (lock already
+ * held) and via the public wrapper below. */
+static void unload_locked(duneos_app_t *app)
 {
     if (!app) return;
     heap_caps_free(app->data_pool);
@@ -1540,4 +1554,12 @@ void duneos_loader_unload(duneos_app_t *app)
     }
 #endif
     free(app);
+}
+
+void duneos_loader_unload(duneos_app_t *app)
+{
+    if (!app) return;
+    if (s_loader_lock) xSemaphoreTake(s_loader_lock, portMAX_DELAY);
+    unload_locked(app);
+    if (s_loader_lock) xSemaphoreGive(s_loader_lock);
 }
