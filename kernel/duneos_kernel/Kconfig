@@ -124,6 +124,20 @@ config DUNEOS_DRV_FB
         On non-PSRAM boards, the display is served by userspace libst7789
         via /dev/spi-N (see Phase 24-debt #6+#2 — no kernel driver).
 
+config DUNEOS_DRV_ETH
+    bool "Ethernet driver (/dev/eth0)"
+    default n
+    help
+        Platform-agnostic Ethernet driver. Requires a hal_eth.h + hal_phy.h
+        backend in the active arch:
+          RMII (plain ESP32): arch/xtensa_esp32/hal/hal_eth.c
+            reads DUNEOS_ETH_* pins from board_config.h.
+          SPI Ethernet (ESP32-S3 + W5500): separate arch implementation,
+            not yet available.
+        Exposes /dev/eth0 with ioctl ETH_GET_MAC and ETH_GET_LINK_STATUS.
+        Apps access the network via BSD socket exports (esp_netif + lwIP IDF).
+        Phase 27 migrates to vendored lwIP + duneos_netif_*.
+
 config DUNEOS_DRV_WIFI
     bool "WiFi STA helper functions (duneos_wifi_* ABI symbols)"
     default n

@@ -1,7 +1,15 @@
 dependencies:
-  espressif/cjson:
-    version: "^1.7.19"
   joltwallet/littlefs:
     version: ">=1.21.1"
   espressif/esp_tinyusb:
     version: "^2.0.1~1"
+    rules:
+      - if: "idf_target in [esp32s2, esp32s3, esp32p4, esp32h4]"
+  espressif/lan87xx:
+    version: "*"
+  espressif/ksz80xx:
+    version: "*"
+  espressif/rtl8201:
+    version: "*"
+  espressif/ip101:
+    version: "*"

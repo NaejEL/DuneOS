@@ -201,6 +201,7 @@ int duneos_init_load(duneos_init_config_t *cfg)
      * Duplicate entries are skipped by app name (basename without .dap) so
      * "/flash/bin/usb_shell.dap" and "/sd/bin/usb_shell.dap" both resolve to
      * the same service and the flash-side entry wins. */
+    bool found_any_file = false;
     for (int i = 0; paths[i]; i++) {
         int fd = open(paths[i], O_RDONLY);
         if (fd < 0) continue;
@@ -209,12 +210,18 @@ int duneos_init_load(duneos_init_config_t *cfg)
         close(fd);
         if (n <= 0) continue;
         buf[n] = '\0';
+        found_any_file = true;
 
         duneos_init_config_t *tmp = calloc(1, sizeof(duneos_init_config_t));
         if (!tmp) { klog_w(TAG, "init: OOM skipping %s", paths[i]); continue; }
 
-        if (parse_yaml(buf, tmp) != 0 || tmp->count == 0) {
-            klog_w(TAG, "YAML parse error or empty services list in %s", paths[i]);
+        if (parse_yaml(buf, tmp) != 0) {
+            klog_w(TAG, "YAML parse error in %s", paths[i]);
+            free(tmp);
+            continue;
+        }
+        if (tmp->count == 0) {
+            klog_i(TAG, "%s: empty services list — nothing to launch", paths[i]);
             free(tmp);
             continue;
         }
@@ -247,7 +254,9 @@ int duneos_init_load(duneos_init_config_t *cfg)
     }
 
     free(buf);
-    return cfg->count > 0 ? 0 : -ENOENT;
+    /* -ENOENT only when no init.yaml file existed at all. An existing file
+     * with `services: []` is intentional and must not trigger autoboot. */
+    return found_any_file ? 0 : -ENOENT;
 }
 
 /* ------------------------------------------------------------------------- */

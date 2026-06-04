@@ -24,6 +24,10 @@
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 #include "soc/soc.h"
+/* Plain ESP32 soc.h omits this convenience define; compute it the same way. */
+#ifndef SOC_I_D_OFFSET
+#define SOC_I_D_OFFSET (SOC_DIRAM_IRAM_LOW - SOC_DIRAM_DRAM_LOW)
+#endif
 #endif
 
 static const char *TAG = "duneos/loader";
@@ -116,37 +120,73 @@ struct duneos_app {
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 
 /* On Xtensa, the same physical SRAM is dual-mapped: D-bus (DRAM, r/w) and
- * I-bus (IRAM, exec-only).  D-bus STORE instructions cannot target IRAM
- * addresses — they trigger a cache error.
+ * I-bus (IRAM, exec-only).  D-bus stores cannot target IRAM addresses, so each
+ * app's .text/.literal sections are staged in a contiguous DRAM scratch buffer,
+ * relocated there, then installed into the IRAM exec pool — executed via the
+ * IRAM address directly.
  *
- * Strategy: a static DRAM BSS array (s_exec_pool) is the backing store for
- * all app .text/.literal sections.  A bump allocator (s_exec_pool_used) tracks
- * usage; LIFO reclaim is possible when the unloading app was the last to
- * allocate (exec_pool_end == s_exec_pool_used).  Each allocation returns a DRAM
- * address; we compute the IRAM alias (dram + SOC_I_D_OFFSET) for the I-bus.
- * to_write_ptr() converts the IRAM alias back to DRAM for fread/relocation.
+ * The install must respect the per-SoC IRAM↔DRAM alias:
+ *   ESP32-S3 / S2 : DIRAM is linearly mapped — alias = IRAM - SOC_I_D_OFFSET,
+ *                   valid for the whole region (contiguous in both views).
+ *   ESP32 (LX6)   : SOC_DIRAM_INVERTED — the D-bus and I-bus views of SRAM1 are
+ *                   in REVERSE word order across the entire region, so contiguous
+ *                   IRAM is NON-contiguous in DRAM.  A single base-pointer memcpy
+ *                   corrupts the image; every word must be aliased individually,
+ *                   per esp_ptr_diram_iram_to_dram() in ESP-IDF:
+ *                     DRAM = SOC_DIRAM_DRAM_LOW + (SOC_DIRAM_IRAM_HIGH - IRAM) - 4
  *
- * This requires CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n (set in the board's
- * sdkconfig.defaults).  With MEMPROT enabled the DIRAM region is locked so
- * that dynamic code loading is impossible regardless of pool placement. */
+ * Requires CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n (sdkconfig.defaults). */
 
 #ifndef CONFIG_DUNEOS_EXEC_POOL_KB
 #define CONFIG_DUNEOS_EXEC_POOL_KB 64
 #endif
 
-/* Plain DRAM BSS — written at this address, executed via IRAM alias. */
-static uint8_t s_exec_pool[CONFIG_DUNEOS_EXEC_POOL_KB * 1024u]
-                   __attribute__((aligned(4)));
-static size_t  s_exec_pool_used; /* bump pointer: bytes consumed so far */
-
-/* Given the IRAM alias of a pool allocation, return the writable DRAM address. */
-static inline void *to_write_ptr(const void *iram_addr)
+/* DRAM alias of one word-aligned DIRAM IRAM address — used only by the final
+ * install pass (build_install_exec).  Mirrors ESP-IDF esp_ptr_diram_iram_to_dram. */
+static inline void *iram_word_dram_alias(uintptr_t iram)
 {
-    uintptr_t a      = (uintptr_t)iram_addr;
-    uintptr_t pstart = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
-    if (a >= pstart && a < pstart + sizeof(s_exec_pool))
-        return (void *)(a - (uintptr_t)SOC_I_D_OFFSET);
-    return (void *)iram_addr;
+#ifdef CONFIG_IDF_TARGET_ESP32
+    return (void *)(SOC_DIRAM_DRAM_LOW + (SOC_DIRAM_IRAM_HIGH - iram) - 4u);
+#else
+    return (void *)(iram - (uintptr_t)SOC_I_D_OFFSET);
+#endif
+}
+
+static uint8_t *s_exec_pool      = NULL;
+static size_t   s_exec_pool_size = 0;
+static size_t   s_exec_pool_used = 0;
+
+/* While an app loads, its exec-pool (.text/.literal) sections are staged in this
+ * contiguous DRAM scratch buffer, laid out 1:1 with the IRAM exec block.
+ * to_write_ptr() redirects exec-pool writes here; build_install_exec() copies the
+ * finished image into IRAM and frees the buffer before the app runs — transient,
+ * so it leaves no lasting allocation and cannot fragment the exec pool. */
+static uint8_t  *s_build_scratch   = NULL;
+static uintptr_t s_build_exec_base = 0;   /* IRAM base of the app's exec block */
+static size_t    s_build_exec_size = 0;
+
+/* Writable address for a load-time store.  Exec-pool addresses are redirected to
+ * the DRAM scratch buffer (contiguous, no inversion); everything else (data pool)
+ * is written directly. */
+static inline void *to_write_ptr(const void *addr)
+{
+    uintptr_t a = (uintptr_t)addr;
+    if (s_build_scratch && a >= s_build_exec_base &&
+            a < s_build_exec_base + s_build_exec_size)
+        return s_build_scratch + (a - s_build_exec_base);
+    return (void *)addr;
+}
+
+/* Install the relocated exec image from the DRAM scratch buffer into the IRAM
+ * exec block, one word at a time via each word's DRAM alias (mandatory on ESP32,
+ * where the DIRAM word order is inverted).  size must be a 4-byte multiple. */
+static void build_install_exec(uintptr_t iram_base, const uint8_t *scratch,
+                               size_t size)
+{
+    const uint32_t *src   = (const uint32_t *)scratch;
+    size_t          words = size / 4u;
+    for (size_t k = 0; k < words; k++)
+        *(uint32_t *)iram_word_dram_alias(iram_base + 4u * k) = src[k];
 }
 
 #else /* RISC-V or other: no IRAM/DRAM split, all memory is writable */
@@ -282,20 +322,31 @@ static esp_err_t load_sections(FILE              *f,
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     if (exec_total > 0) {
         size_t aligned = (s_exec_pool_used + 3u) & ~3u;
-        if (aligned + exec_total > sizeof(s_exec_pool)) {
+        if (!s_exec_pool || aligned + exec_total > s_exec_pool_size) {
             klog_e(TAG, "exec pool full (%zu B requested, %zu B free)",
-                   exec_total, sizeof(s_exec_pool) - aligned);
+                   exec_total, s_exec_pool ? s_exec_pool_size - aligned : 0u);
             return ESP_ERR_NO_MEM;
         }
         app->exec_pool_mark  = aligned;
-        void *dram           = s_exec_pool + aligned;
+        void *iram           = s_exec_pool + aligned;  /* already IRAM — executable */
         s_exec_pool_used     = aligned + exec_total;
         app->exec_pool_end   = s_exec_pool_used;
-        app->exec_block      = (void *)((uintptr_t)dram + (uintptr_t)SOC_I_D_OFFSET);
+        app->exec_block      = iram;
         app->exec_block_size = exec_total;
-        klog_d(TAG, "exec block: %zu B DRAM=%p IRAM=%p pool=%zu/%zu",
-               exec_total, dram, app->exec_block,
-               s_exec_pool_used, sizeof(s_exec_pool));
+
+        /* Stage exec sections in DRAM; build_install_exec() copies the relocated
+         * image into IRAM after relocation (freed in load_app before the app runs). */
+        s_build_exec_base = (uintptr_t)iram;
+        s_build_exec_size = exec_total;
+        s_build_scratch   = heap_caps_malloc(exec_total,
+                                             MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+        if (!s_build_scratch) {
+            klog_e(TAG, "exec staging alloc failed (%zu B)", exec_total);
+            return ESP_ERR_NO_MEM;
+        }
+        klog_d(TAG, "exec block: %zu B IRAM=%p scratch=%p pool=%zu/%zu",
+               exec_total, iram, (void *)s_build_scratch,
+               s_exec_pool_used, s_exec_pool_size);
     }
 #endif
 
@@ -789,8 +840,10 @@ static esp_err_t apply_relocations(FILE               *f,
             void *S = symbol_address(sym, strtab, app);
 
             /* Write via D-bus-safe alias; PC stays at exec address for offset math.
-             * On RISC-V to_write_ptr() is the identity — no I/D split. */
-            uint8_t *patch_ptr  = (uint8_t *)to_write_ptr(target_base) + rel->r_offset;
+             * to_write_ptr is called on the final per-byte address, not the section
+             * base, so cross-block relocations on ESP32 (non-contiguous DIRAM) work
+             * correctly.  On RISC-V to_write_ptr() is the identity. */
+            uint8_t *patch_ptr  = (uint8_t *)to_write_ptr((uint8_t *)target_base + rel->r_offset);
             uint32_t patch_pc   = (uint32_t)((uintptr_t)target_base + rel->r_offset);
             uint32_t target_addr = (uint32_t)(uintptr_t)S + (uint32_t)rel->r_addend;
 
@@ -942,19 +995,36 @@ static esp_err_t extract_manifest(FILE               *f,
 void duneos_loader_init(void)
 {
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Verify the pool's IRAM alias falls within the DIRAM executable region.
-     * Fails at boot if kernel BSS has grown too large to alias into DIRAM. */
-    uintptr_t pool_iram_start = (uintptr_t)s_exec_pool + (uintptr_t)SOC_I_D_OFFSET;
-    uintptr_t pool_iram_end   = pool_iram_start + sizeof(s_exec_pool);
-    if (pool_iram_start < SOC_DIRAM_IRAM_LOW || pool_iram_end > SOC_DIRAM_IRAM_HIGH) {
-        klog_e(TAG, "exec pool IRAM alias out of DIRAM range — reduce kernel BSS");
-        klog_e(TAG, "  DRAM %p  IRAM %p-%p  DIRAM %p-%p",
-               s_exec_pool,
-               (void *)pool_iram_start, (void *)pool_iram_end,
-               (void *)SOC_DIRAM_IRAM_LOW, (void *)SOC_DIRAM_IRAM_HIGH);
+    /* IRAM on ESP32 requires 32-bit aligned access — do NOT combine
+     * MALLOC_CAP_EXEC with MALLOC_CAP_8BIT.  Writing always goes via the
+     * DRAM alias (to_write_ptr); executing via the IRAM address directly.
+     * Try the configured size first; halve down to 8 KB if IRAM is tight. */
+    size_t _pool_bytes = CONFIG_DUNEOS_EXEC_POOL_KB * 1024u;
+    while (_pool_bytes >= 8 * 1024u) {
+        s_exec_pool = heap_caps_aligned_alloc(16, _pool_bytes, MALLOC_CAP_EXEC);
+        if (s_exec_pool) break;
+        _pool_bytes /= 2;
+    }
+    if (!s_exec_pool) {
+        klog_e(TAG, "exec pool alloc failed — apps cannot be loaded");
     } else {
-        klog_i(TAG, "exec pool DRAM=%p IRAM=%p (%u KB)",
-               s_exec_pool, (void *)pool_iram_start, CONFIG_DUNEOS_EXEC_POOL_KB);
+        s_exec_pool_size = _pool_bytes;
+        if (_pool_bytes < CONFIG_DUNEOS_EXEC_POOL_KB * 1024u)
+            klog_w(TAG, "exec pool reduced to %zu KB (IRAM heap tight)",
+                   _pool_bytes / 1024u);
+        uintptr_t pool_start = (uintptr_t)s_exec_pool;
+        uintptr_t pool_end   = pool_start + _pool_bytes;
+        if (pool_start < SOC_DIRAM_IRAM_LOW || pool_end > SOC_DIRAM_IRAM_HIGH) {
+            klog_e(TAG, "exec pool outside DIRAM IRAM range — apps may crash");
+            klog_e(TAG, "  pool=%p-%p  DIRAM=%p-%p",
+                   (void *)pool_start, (void *)pool_end,
+                   (void *)SOC_DIRAM_IRAM_LOW, (void *)SOC_DIRAM_IRAM_HIGH);
+        } else {
+            klog_i(TAG, "exec pool IRAM=%p DRAM(base word)=%p (%u KB)",
+                   s_exec_pool,
+                   iram_word_dram_alias((uintptr_t)s_exec_pool),
+                   CONFIG_DUNEOS_EXEC_POOL_KB);
+        }
     }
     s_exec_pool_used = 0;
 #endif
@@ -1070,7 +1140,11 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
     /* Arch compatibility check — reject binaries for a different ISA. */
     if (app->manifest.arch[0] != '\0') {
-#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+#if defined(CONFIG_IDF_TARGET_ESP32)
+        static const char kernel_arch[] = "xtensa-esp32";
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+        static const char kernel_arch[] = "xtensa-esp32s2";
+#elif defined(CONFIG_IDF_TARGET_ARCH_XTENSA)
         static const char kernel_arch[] = "xtensa-esp32s3";
 #else
         static const char kernel_arch[] = "riscv32";
@@ -1093,8 +1167,18 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Stores to IRAM via the D-bus alias are not visible to the instruction
-     * pipeline until ISYNC completes. */
+    /* Install the relocated image (staged in DRAM scratch) into the IRAM exec
+     * block, then release the scratch buffer.  ISYNC makes the freshly written
+     * instructions visible to the fetch pipeline. */
+    if (app->exec_block_size > 0 && s_build_scratch)
+        build_install_exec((uintptr_t)app->exec_block,
+                            s_build_scratch, app->exec_block_size);
+    if (s_build_scratch) {
+        heap_caps_free(s_build_scratch);
+        s_build_scratch   = NULL;
+        s_build_exec_base = 0;
+        s_build_exec_size = 0;
+    }
     asm volatile("isync" ::: "memory");
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
 
@@ -1159,6 +1243,15 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     err = ESP_OK;
 
 out:
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Release the transient exec-staging buffer if an error left it held. */
+    if (s_build_scratch) {
+        heap_caps_free(s_build_scratch);
+        s_build_scratch   = NULL;
+        s_build_exec_base = 0;
+        s_build_exec_size = 0;
+    }
+#endif
     fclose(f);
     free(shdrs);
     free(shstrtab);

@@ -42,6 +42,7 @@ typedef struct {
     uint8_t             chip_id;
     uint8_t             i2c_addr;
     uint8_t             pins;           /* always 8 */
+    uint8_t             direction;      /* GPIO_DIR_INPUT or GPIO_DIR_OUTPUT — per-chip policy */
     uint8_t             out_shadow;     /* current output latch */
 } pcf8574_slot_t;
 
@@ -68,8 +69,8 @@ static int pcf8574_read_byte(pcf8574_slot_t *s, uint8_t *out)
 
 static int pcf8574_op_init(pcf8574_slot_t *s)
 {
-    /* Boot with all pins released (= all-input). */
-    s->out_shadow = 0xFF;
+    /* INPUT chips: release all pins (high-impedance). OUTPUT chips: drive all low (safe). */
+    s->out_shadow = (s->direction == GPIO_DIR_INPUT) ? 0xFF : 0x00;
     return pcf8574_write_byte(s, s->out_shadow);
 }
 
@@ -114,6 +115,7 @@ static int pcf8574_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
     case GPIOCHIP_SET_VALUE: {
         gpio_req_t *r = arg;
         if (r->line >= s->pins) { errno = EINVAL; return -1; }
+        if (s->direction == GPIO_DIR_INPUT) { errno = EPERM; return -1; }
         xSemaphoreTake(s_lock, portMAX_DELAY);
         if (r->val) s->out_shadow |=  (uint8_t)(1u << r->line);
         else        s->out_shadow &= ~(uint8_t)(1u << r->line);
@@ -144,7 +146,7 @@ static int pcf8574_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
 
 /* ------------------------------------------------------------- registration */
 
-static int register_instance(uint8_t chip_id, uint8_t i2c_addr, uint8_t pins)
+static int register_instance(uint8_t chip_id, uint8_t i2c_addr, uint8_t pins, uint8_t direction)
 {
     if (s_num_slots >= MAX_PCF8574_INSTANCES) {
         klog_e(TAG, "too many PCF8574 instances (>%d)", MAX_PCF8574_INSTANCES);
@@ -157,6 +159,7 @@ static int register_instance(uint8_t chip_id, uint8_t i2c_addr, uint8_t pins)
     s->chip_id    = chip_id;
     s->i2c_addr   = i2c_addr;
     s->pins       = pins > 8 ? 8 : pins;
+    s->direction  = direction;
 
     if (pcf8574_op_init(s) < 0) {
         klog_e(TAG, "%s: chip init failed (addr=0x%02x)", s->name_buf, i2c_addr);
@@ -178,19 +181,39 @@ void drv_gpiochip_pcf8574_register(void)
 
 #ifdef DUNEOS_GPIOCHIP1_TYPE
     if (strcmp(DUNEOS_GPIOCHIP1_TYPE, "pcf8574") == 0)
-        register_instance(1, DUNEOS_GPIOCHIP1_I2C_ADDR, DUNEOS_GPIOCHIP1_PINS);
+        register_instance(1, DUNEOS_GPIOCHIP1_I2C_ADDR, DUNEOS_GPIOCHIP1_PINS,
+#ifdef DUNEOS_GPIOCHIP1_DIRECTION
+                          DUNEOS_GPIOCHIP1_DIRECTION);
+#else
+                          GPIO_DIR_OUTPUT);
+#endif
 #endif
 #ifdef DUNEOS_GPIOCHIP2_TYPE
     if (strcmp(DUNEOS_GPIOCHIP2_TYPE, "pcf8574") == 0)
-        register_instance(2, DUNEOS_GPIOCHIP2_I2C_ADDR, DUNEOS_GPIOCHIP2_PINS);
+        register_instance(2, DUNEOS_GPIOCHIP2_I2C_ADDR, DUNEOS_GPIOCHIP2_PINS,
+#ifdef DUNEOS_GPIOCHIP2_DIRECTION
+                          DUNEOS_GPIOCHIP2_DIRECTION);
+#else
+                          GPIO_DIR_OUTPUT);
+#endif
 #endif
 #ifdef DUNEOS_GPIOCHIP3_TYPE
     if (strcmp(DUNEOS_GPIOCHIP3_TYPE, "pcf8574") == 0)
-        register_instance(3, DUNEOS_GPIOCHIP3_I2C_ADDR, DUNEOS_GPIOCHIP3_PINS);
+        register_instance(3, DUNEOS_GPIOCHIP3_I2C_ADDR, DUNEOS_GPIOCHIP3_PINS,
+#ifdef DUNEOS_GPIOCHIP3_DIRECTION
+                          DUNEOS_GPIOCHIP3_DIRECTION);
+#else
+                          GPIO_DIR_OUTPUT);
+#endif
 #endif
 #ifdef DUNEOS_GPIOCHIP4_TYPE
     if (strcmp(DUNEOS_GPIOCHIP4_TYPE, "pcf8574") == 0)
-        register_instance(4, DUNEOS_GPIOCHIP4_I2C_ADDR, DUNEOS_GPIOCHIP4_PINS);
+        register_instance(4, DUNEOS_GPIOCHIP4_I2C_ADDR, DUNEOS_GPIOCHIP4_PINS,
+#ifdef DUNEOS_GPIOCHIP4_DIRECTION
+                          DUNEOS_GPIOCHIP4_DIRECTION);
+#else
+                          GPIO_DIR_OUTPUT);
+#endif
 #endif
 }
 

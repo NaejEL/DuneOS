@@ -20,7 +20,9 @@ esp_err_t duneos_vfs_deinit(void);
 
 /* Mount/unmount individual filesystems (called internally by duneos_vfs_init) */
 esp_err_t duneos_vfs_mount_flash(void);
+#if DUNEOS_HAS_SD
 esp_err_t duneos_vfs_mount_sd(void);
+#endif
 esp_err_t duneos_vfs_mount_tmp(void);
 esp_err_t duneos_vfs_mount_dev(void);
 

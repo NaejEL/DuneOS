@@ -1,12 +1,13 @@
 """ESP-IDF toolchain plugin for dbt.
 
 Handles:
-  sdk=esp-idf, arch=xtensa-esp32s3  (ESP32, ESP32-S2, ESP32-S3)
+  sdk=esp-idf, arch=xtensa-esp32s3  (ESP32-S3, ESP32-S2)
+  sdk=esp-idf, arch=xtensa-esp32    (plain ESP32 — integrated RMII Ethernet MAC)
   sdk=esp-idf, arch=riscv32          (ESP32-C2/C3/C5/C6/H2/P4)
 """
 
 SDK  = "esp-idf"
-ARCH = ["xtensa-esp32s3", "riscv32"]
+ARCH = ["xtensa-esp32s3", "xtensa-esp32", "riscv32"]
 
 import os
 import platform
@@ -160,10 +161,29 @@ def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
     from ..setup import build_idf_env, idf_python
     is_win = platform.system() == "Windows"
     if is_win:
+        import tempfile
         export   = idf_root / "export.bat"
         args_str = " ".join(idf_args)
-        cmd      = ["cmd", "/c", f'call "{export}" && idf.py {args_str}']
-        result   = subprocess.run(cmd, cwd=DUNEOS_ROOT)
+        # list2cmdline escapes inner quotes with \" which cmd.exe does not
+        # understand. Write a temp .bat instead.
+        # export.bat changes cwd to IDF_PATH — cd /d back to DUNEOS_ROOT before
+        # calling idf.py, otherwise CMake looks for CMakeLists.txt in the wrong dir.
+        bat = (
+            f'@call "{export}"\r\n'
+            f'cd /d "{DUNEOS_ROOT}"\r\n'
+            f'idf.py {args_str}\r\n'
+            f'exit /b %ERRORLEVEL%\r\n'
+        )
+        fd, bat_path = tempfile.mkstemp(suffix='.bat')
+        try:
+            with os.fdopen(fd, 'w') as f:
+                f.write(bat)
+            result = subprocess.run(['cmd', '/c', bat_path])
+        finally:
+            try:
+                os.unlink(bat_path)
+            except OSError:
+                pass
     else:
         env    = build_idf_env(idf_root)
         python = idf_python(idf_root)

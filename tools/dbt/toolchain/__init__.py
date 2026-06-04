@@ -94,8 +94,17 @@ def get_board_plugin():
     b = board_cfg.get("board", {})
 
     cpu  = b.get("cpu", "esp32s3")
-    arch = b.get("arch") or ("riscv32" if cpu in RISCV_CPUS else "xtensa-esp32s3")
     sdk  = b.get("sdk", "esp-idf")
+
+    _XTENSA_CPU_ARCH = {
+        "esp32s3": "xtensa-esp32s3",
+        "esp32s2": "xtensa-esp32s2",
+        "esp32":   "xtensa-esp32",
+    }
+    arch = b.get("arch") or (
+        "riscv32" if cpu in RISCV_CPUS
+        else _XTENSA_CPU_ARCH.get(cpu, "xtensa-esp32s3")
+    )
 
     # Ensure arch/cpu are present in board_cfg so plugins can rely on them
     board_cfg.setdefault("board", {})
