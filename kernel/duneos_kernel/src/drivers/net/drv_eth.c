@@ -33,15 +33,10 @@ typedef struct {
     bool     full_duplex;
 } eth_link_status_t;
 
-static bool              s_link_up     = false;
-static uint32_t          s_speed_mbps  = 0;
-static bool              s_full_duplex = false;
-
+/* Log-only: the authoritative link snapshot lives in the HAL (it owns the
+ * synchronisation), queried on demand via duneos_hal_eth_get_link(). */
 static void on_link_change(bool up, uint32_t speed_mbps, bool full_duplex)
 {
-    s_link_up     = up;
-    s_speed_mbps  = speed_mbps;
-    s_full_duplex = full_duplex;
     if (up)
         klog_i(TAG, "link up %lu Mbps %s-duplex",
                (unsigned long)speed_mbps, full_duplex ? "full" : "half");
@@ -52,15 +47,14 @@ static void on_link_change(bool up, uint32_t speed_mbps, bool full_duplex)
 static int eth_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
 {
     (void)fd;
+    if (!arg) { errno = EFAULT; return -1; }
+
     switch (cmd) {
     case ETH_GET_MAC:
         return duneos_hal_eth_get_mac((uint8_t *)arg);
     case ETH_GET_LINK_STATUS: {
         eth_link_status_t *st = arg;
-        st->up          = s_link_up;
-        st->speed_mbps  = s_speed_mbps;
-        st->full_duplex = s_full_duplex;
-        return 0;
+        return duneos_hal_eth_get_link(&st->up, &st->speed_mbps, &st->full_duplex);
     }
     default:
         errno = ENOTTY;

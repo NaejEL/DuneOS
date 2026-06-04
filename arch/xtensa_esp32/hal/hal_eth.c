@@ -23,6 +23,7 @@
 #include "esp_netif.h"
 #include "esp_event.h"
 #include "esp_mac.h"
+#include "freertos/FreeRTOS.h"
 
 #include <errno.h>
 #include <string.h>
@@ -33,10 +34,20 @@ static esp_eth_handle_t      s_eth_handle  = NULL;
 static esp_netif_t          *s_netif       = NULL;
 static duneos_hal_eth_link_cb_t s_link_cb  = NULL;
 
+/* Link state lives here so kernel callers (drv_eth.c) need no RTOS primitive:
+ * written from the event task, read via duneos_hal_eth_get_link(), guarded by
+ * a spinlock for a consistent snapshot. */
+static portMUX_TYPE          s_link_mux    = portMUX_INITIALIZER_UNLOCKED;
+static bool                  s_link_up     = false;
+static uint32_t              s_link_mbps   = 0;
+static bool                  s_link_fd     = false;
+
 static void _on_eth_event(void *arg, esp_event_base_t base,
                           int32_t event_id, void *data)
 {
-    if (!s_link_cb) return;
+    bool     up;
+    uint32_t mbps;
+    bool     full_duplex;
 
     if (event_id == ETHERNET_EVENT_CONNECTED) {
         /* Speed/duplex available via ioctl after link-up. */
@@ -44,11 +55,22 @@ static void _on_eth_event(void *arg, esp_event_base_t base,
         eth_duplex_t duplex = ETH_DUPLEX_FULL;
         esp_eth_ioctl(s_eth_handle, ETH_CMD_G_SPEED,  &speed);
         esp_eth_ioctl(s_eth_handle, ETH_CMD_G_DUPLEX_MODE, &duplex);
-        uint32_t mbps = (speed == ETH_SPEED_100M) ? 100 : 10;
-        s_link_cb(true,  mbps, duplex == ETH_DUPLEX_FULL);
+        up          = true;
+        mbps        = (speed == ETH_SPEED_100M) ? 100 : 10;
+        full_duplex = (duplex == ETH_DUPLEX_FULL);
     } else if (event_id == ETHERNET_EVENT_DISCONNECTED) {
-        s_link_cb(false, 0, false);
+        up = false; mbps = 0; full_duplex = false;
+    } else {
+        return;
     }
+
+    portENTER_CRITICAL(&s_link_mux);
+    s_link_up   = up;
+    s_link_mbps = mbps;
+    s_link_fd   = full_duplex;
+    portEXIT_CRITICAL(&s_link_mux);
+
+    if (s_link_cb) s_link_cb(up, mbps, full_duplex);
 }
 
 int duneos_hal_eth_init(void)
@@ -106,7 +128,11 @@ int duneos_hal_eth_start(void)
     if (!s_eth_handle) { errno = EINVAL; return -1; }
 
     /* event loop and lwIP already initialised in duneos_hal_eth_init(). */
-    esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, _on_eth_event, NULL);
+    if (esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID,
+                                   _on_eth_event, NULL) != ESP_OK) {
+        klog_e(TAG, "event handler register failed");
+        return -EIO;
+    }
 
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
     s_netif = esp_netif_new(&netif_cfg);
@@ -116,7 +142,14 @@ int duneos_hal_eth_start(void)
     }
 
     esp_eth_netif_glue_handle_t glue = esp_eth_new_netif_glue(s_eth_handle);
-    esp_netif_attach(s_netif, glue);
+    if (!glue) {
+        klog_e(TAG, "netif glue alloc failed");
+        return -ENOMEM;
+    }
+    if (esp_netif_attach(s_netif, glue) != ESP_OK) {
+        klog_e(TAG, "netif attach failed");
+        return -EIO;
+    }
 
     if (esp_eth_start(s_eth_handle) != ESP_OK) {
         klog_e(TAG, "esp_eth_start failed");
@@ -139,6 +172,20 @@ int duneos_hal_eth_get_mac(uint8_t mac[6])
         errno = EIO;
         return -1;
     }
+    return 0;
+}
+
+int duneos_hal_eth_get_link(bool *up, uint32_t *speed_mbps, bool *full_duplex)
+{
+    portENTER_CRITICAL(&s_link_mux);
+    bool     u = s_link_up;
+    uint32_t m = s_link_mbps;
+    bool     d = s_link_fd;
+    portEXIT_CRITICAL(&s_link_mux);
+
+    if (up)          *up          = u;
+    if (speed_mbps)  *speed_mbps  = m;
+    if (full_duplex) *full_duplex = d;
     return 0;
 }
 

@@ -727,10 +727,16 @@ def generate_sdkconfig_board(board: dict) -> str:
                 "CONFIG_ETH_USE_ESP32_EMAC=y",
             ]
             phy = net.get("type", "").lower()
-            if phy == "lan8720":
-                lines.append("CONFIG_ETH_PHY_LAN8720=y")
-            elif phy == "ksz8081":
-                lines.append("CONFIG_ETH_PHY_KSZ8081=y")
+            # Keep in sync with _PHY_TYPE_MAP (board_config.h side) so every PHY
+            # the kernel can be compiled for also gets its IDF Kconfig enabled.
+            _phy_kconfig = {
+                "lan8720": "CONFIG_ETH_PHY_LAN8720=y",
+                "ksz8081": "CONFIG_ETH_PHY_KSZ8081=y",
+                "rtl8201": "CONFIG_ETH_PHY_RTL8201=y",
+                "ip101":   "CONFIG_ETH_PHY_IP101=y",
+            }
+            if phy in _phy_kconfig:
+                lines.append(_phy_kconfig[phy])
             clk_mode = net.get("clk_mode", "ETH_CLOCK_GPIO0_IN")
             if "GPIO17_OUT" in clk_mode:
                 lines += ["CONFIG_ETH_RMII_CLK_OUTPUT=y",

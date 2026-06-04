@@ -44,6 +44,13 @@ int duneos_hal_eth_stop(void);
 int duneos_hal_eth_get_mac(uint8_t mac[6]);
 
 /*
+ * Read the current link state as a consistent snapshot. The arch implementation
+ * owns the synchronisation (link state is updated from an event task), keeping
+ * kernel callers free of any RTOS primitive. Any out pointer may be NULL.
+ */
+int duneos_hal_eth_get_link(bool *up, uint32_t *speed_mbps, bool *full_duplex);
+
+/*
  * Register a link-state callback. Only one callback is supported per arch
  * implementation. Pass NULL to deregister.
  * Must be called before duneos_hal_eth_start() to avoid missing the first
