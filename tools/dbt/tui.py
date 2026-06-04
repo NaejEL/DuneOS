@@ -1566,15 +1566,45 @@ class DbtApp(App):
         if not idf_root:
             self._err("ESP-IDF not found", "Press c to open Setup.")
             return
-        from .setup import build_idf_env, idf_python as _idf_python
-        env    = build_idf_env(idf_root)
-        python = _idf_python(idf_root)
-        idf_py = idf_root / "tools" / "idf.py"
+        import platform as _plat
         with self.suspend():
-            subprocess.run(
-                [str(python), str(idf_py), "-p", port, "monitor"],
-                env=env, cwd=DUNEOS_ROOT,
-            )
+            if _plat.system() == "Windows":
+                import tempfile as _tf, os as _os
+                export = idf_root / "export.bat"
+                bat = (
+                    f'@call "{export}"\r\n'
+                    f'cd /d "{DUNEOS_ROOT}"\r\n'
+                    f'idf.py -p {port} monitor\r\n'
+                    f'exit /b %ERRORLEVEL%\r\n'
+                )
+                fd, bat_path = _tf.mkstemp(suffix='.bat')
+                try:
+                    with _os.fdopen(fd, 'w') as f:
+                        f.write(bat)
+                    subprocess.run(['cmd', '/c', bat_path])
+                finally:
+                    try:
+                        _os.unlink(bat_path)
+                    except OSError:
+                        pass
+            else:
+                from .setup import build_idf_env, idf_python as _idf_python
+                env    = build_idf_env(idf_root)
+                python = _idf_python(idf_root)
+                idf_py = idf_root / "tools" / "idf.py"
+                if python and idf_py.exists():
+                    subprocess.run(
+                        [str(python), str(idf_py), "-p", port, "monitor"],
+                        env=env, cwd=DUNEOS_ROOT,
+                    )
+                else:
+                    import shlex as _shlex
+                    subprocess.run(
+                        ["bash", "-c",
+                         f'source "{idf_root / "export.sh"}" > /dev/null 2>&1 && '
+                         f'idf.py -p {_shlex.quote(port)} monitor'],
+                        cwd=DUNEOS_ROOT,
+                    )
 
     # -- Build All ───────────────────────────────────────────────────────────
 
