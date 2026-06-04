@@ -57,7 +57,11 @@ typedef struct {
     uint16_t            pullup_shadow;
 } sx1509_slot_t;
 
-/* One descriptor per board-declared expander; slot pool sized to match. */
+/* One descriptor per board-declared expander; slot pool sized to match.
+ * A board with no gpio_expanders never emits DUNEOS_GPIOCHIP_LIST, so guard the
+ * table: a driver enabled without instances (raw Kconfig override) then compiles
+ * to a no-op register() instead of failing at the initialiser. */
+#ifdef DUNEOS_GPIOCHIP_LIST
 static const duneos_gpiochip_desc_t s_descs[] = {
     DUNEOS_GPIOCHIP_LIST(DUNEOS_GPIOCHIP_ROW)
 };
@@ -65,6 +69,7 @@ static const duneos_gpiochip_desc_t s_descs[] = {
 
 static sx1509_slot_t     s_slots[SX1509_SLOT_MAX];
 static int               s_num_slots = 0;
+#endif
 static SemaphoreHandle_t s_lock = NULL;
 
 static sx1509_slot_t *slot_from_fd(const duneos_devfd_t *fd)
@@ -187,6 +192,7 @@ static int sx1509_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
 
 /* ------------------------------------------------------------- registration */
 
+#ifdef DUNEOS_GPIOCHIP_LIST
 static int register_instance(const duneos_gpiochip_desc_t *d)
 {
     if (s_num_slots >= (int)SX1509_SLOT_MAX) return -1;  /* unreachable: pool == table */
@@ -214,9 +220,11 @@ static int register_instance(const duneos_gpiochip_desc_t *d)
     s_num_slots++;
     return 0;
 }
+#endif /* DUNEOS_GPIOCHIP_LIST */
 
 void drv_gpiochip_sx1509_register(void)
 {
+#ifdef DUNEOS_GPIOCHIP_LIST
     if (!s_lock) s_lock = xSemaphoreCreateMutex();
     if (!s_lock) { klog_e(TAG, "mutex alloc failed"); return; }
 
@@ -225,6 +233,9 @@ void drv_gpiochip_sx1509_register(void)
         if (strcmp(s_descs[i].type, "sx1509") == 0)
             register_instance(&s_descs[i]);
     }
+#else
+    klog_w(TAG, "SX1509 driver enabled but board declares no gpio_expanders");
+#endif
 }
 
 DUNEOS_DRIVER_REGISTER(8, drv_gpiochip_sx1509_register);

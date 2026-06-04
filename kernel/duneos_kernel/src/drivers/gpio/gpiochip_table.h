@@ -8,6 +8,10 @@
  * edit: no driver change, no per-chip #ifdef, no fixed instance ceiling.
  *
  *   X(id, type, i2c_bus, i2c_addr, pins, direction)
+ *
+ * DUNEOS_GPIOCHIP_LIST is only emitted when the board declares ≥1 expander, so
+ * drivers guard their table + registration with `#ifdef DUNEOS_GPIOCHIP_LIST`
+ * (a driver enabled without instances then compiles to a no-op register()).
  */
 #ifndef DUNEOS_GPIOCHIP_TABLE_H
 #define DUNEOS_GPIOCHIP_TABLE_H
