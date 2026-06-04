@@ -151,7 +151,10 @@ next_line:
         line = (*eol == '\n') ? eol + 1 : eol;
     }
 
-    return cfg->count > 0 ? 0 : -EIO;
+    /* No services is a valid outcome (e.g. `services: []` on a headless board);
+     * the caller decides what to do with an empty list. parse_yaml only skips
+     * unrecognised lines, so it never reports a "parse error" of its own. */
+    return 0;
 }
 
 /* Extract app name from path: "/flash/bin/usb_shell.dap" → "usb_shell".
