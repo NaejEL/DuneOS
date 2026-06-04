@@ -63,14 +63,15 @@ void *duneos_hal_phy_handle(void)
 int duneos_hal_phy_get_link(bool *up, uint32_t *speed_mbps, bool *full_duplex)
 {
     if (!s_phy) { errno = EINVAL; return -1; }
-    /* In IDF v6, get_link() is a one-arg polling trigger; actual link state
-     * is delivered asynchronously via ETH_EVENT. Outputs are unavailable here
-     * — callers should use the duneos_hal_eth_set_link_callback() path. */
-    s_phy->get_link(s_phy);
-    *up          = false;
-    *speed_mbps  = 0;
-    *full_duplex = false;
-    return 0;
+    /* IDF v6 exposes no synchronous link readback on the PHY handle — real
+     * state is delivered asynchronously via ETH_EVENT. Don't fake a link-down
+     * a caller might trust: zero the (NULL-safe) outs and report unsupported.
+     * Use duneos_hal_eth_get_link() for the authoritative snapshot. */
+    if (up)          *up          = false;
+    if (speed_mbps)  *speed_mbps  = 0;
+    if (full_duplex) *full_duplex = false;
+    errno = ENOTSUP;
+    return -1;
 }
 
 int duneos_hal_phy_reset(void)

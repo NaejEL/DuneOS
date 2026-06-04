@@ -737,11 +737,18 @@ def generate_sdkconfig_board(board: dict) -> str:
             }
             if phy in _phy_kconfig:
                 lines.append(_phy_kconfig[phy])
+            # Generic ETH_CLOCK_GPIO<N>_<IN|OUT> parsing — mirrors the
+            # board_config.h DUNEOS_ETH_CLK_GPIO emission so the two stay in
+            # sync for any pin (GPIO0 in, GPIO0/16/17 out on ESP32).
             clk_mode = net.get("clk_mode", "ETH_CLOCK_GPIO0_IN")
-            if "GPIO17_OUT" in clk_mode:
+            try:
+                clk_gpio = int(clk_mode.replace("ETH_CLOCK_GPIO", "").split("_")[0])
+            except (ValueError, IndexError):
+                clk_gpio = 0
+            if "_OUT" in clk_mode:
                 lines += ["CONFIG_ETH_RMII_CLK_OUTPUT=y",
-                          "CONFIG_ETH_RMII_CLK_OUT_GPIO=17"]
-            elif "GPIO0_IN" in clk_mode:
+                          f"CONFIG_ETH_RMII_CLK_OUT_GPIO={clk_gpio}"]
+            else:
                 lines.append("CONFIG_ETH_RMII_CLK_INPUT=y")
             lines.append("")
             break
