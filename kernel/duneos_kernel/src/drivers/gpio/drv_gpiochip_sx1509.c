@@ -22,7 +22,7 @@
 #include "duneos/driver_init.h"
 #include "duneos/gpio_ioctl.h"
 #include "duneos/klog.h"
-#include "board_config.h"
+#include "gpiochip_table.h"
 #include "../i2c_bus.h"
 
 #include <freertos/FreeRTOS.h>
@@ -48,6 +48,7 @@ typedef struct {
     duneos_dev_driver_t drv;
     char                name_buf[12];   /* "gpiochipN\0" */
     uint8_t             chip_id;
+    uint8_t             bus;            /* I2C bus id */
     uint8_t             i2c_addr;
     uint8_t             pins;
     /* 16-bit shadows. SX1509 convention: dir bit=1 → input. */
@@ -56,9 +57,14 @@ typedef struct {
     uint16_t            pullup_shadow;
 } sx1509_slot_t;
 
-#define MAX_SX1509_INSTANCES 4
-static sx1509_slot_t   s_slots[MAX_SX1509_INSTANCES];
-static int             s_num_slots = 0;
+/* One descriptor per board-declared expander; slot pool sized to match. */
+static const duneos_gpiochip_desc_t s_descs[] = {
+    DUNEOS_GPIOCHIP_LIST(DUNEOS_GPIOCHIP_ROW)
+};
+#define SX1509_SLOT_MAX  (sizeof(s_descs) / sizeof(s_descs[0]))
+
+static sx1509_slot_t     s_slots[SX1509_SLOT_MAX];
+static int               s_num_slots = 0;
 static SemaphoreHandle_t s_lock = NULL;
 
 static sx1509_slot_t *slot_from_fd(const duneos_devfd_t *fd)
@@ -70,13 +76,13 @@ static sx1509_slot_t *slot_from_fd(const duneos_devfd_t *fd)
 static int sx1509_write_reg(sx1509_slot_t *s, uint8_t reg, uint8_t val)
 {
     uint8_t buf[2] = { reg, val };
-    return i2c_bus_write_read(0, s->i2c_addr, buf, 2, NULL, 0);
+    return i2c_bus_write_read(s->bus, s->i2c_addr, buf, 2, NULL, 0);
 }
 
 /* Read a single register (1-byte). */
 static int sx1509_read_reg(sx1509_slot_t *s, uint8_t reg, uint8_t *out)
 {
-    return i2c_bus_write_read(0, s->i2c_addr, &reg, 1, out, 1);
+    return i2c_bus_write_read(s->bus, s->i2c_addr, &reg, 1, out, 1);
 }
 
 /* Push the 16-bit shadow `val` to a pair of registers (low_reg = pins 0..7,
@@ -181,29 +187,30 @@ static int sx1509_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
 
 /* ------------------------------------------------------------- registration */
 
-static int register_instance(uint8_t chip_id, uint8_t i2c_addr, uint8_t pins)
+static int register_instance(const duneos_gpiochip_desc_t *d)
 {
-    if (s_num_slots >= MAX_SX1509_INSTANCES) {
-        klog_e(TAG, "too many SX1509 instances (>%d)", MAX_SX1509_INSTANCES);
-        return -1;
-    }
+    if (s_num_slots >= (int)SX1509_SLOT_MAX) return -1;  /* unreachable: pool == table */
+
     sx1509_slot_t *s = &s_slots[s_num_slots];
-    snprintf(s->name_buf, sizeof(s->name_buf), "gpiochip%u", (unsigned)chip_id);
+    snprintf(s->name_buf, sizeof(s->name_buf), "gpiochip%u", (unsigned)d->id);
     s->drv.name   = s->name_buf;
     s->drv.ioctl  = sx1509_ioctl;
-    s->chip_id    = chip_id;
-    s->i2c_addr   = i2c_addr;
-    s->pins       = pins > 16 ? 16 : pins;
+    s->chip_id    = d->id;
+    s->bus        = d->bus;
+    s->i2c_addr   = d->addr;
+    s->pins       = d->pins > 16 ? 16 : d->pins;
 
     if (sx1509_op_init(s) < 0) {
-        klog_e(TAG, "%s: chip init failed (addr=0x%02x)", s->name_buf, i2c_addr);
+        klog_e(TAG, "%s: chip init failed (bus=%u addr=0x%02x)",
+               s->name_buf, d->bus, d->addr);
         return -1;
     }
     if (duneos_dev_register(&s->drv) < 0) {
         klog_e(TAG, "%s: duneos_dev_register failed", s->name_buf);
         return -1;
     }
-    klog_i(TAG, "%s: SX1509 @0x%02x, %u lines", s->name_buf, i2c_addr, (unsigned)pins);
+    klog_i(TAG, "%s: SX1509 i2c-%u@0x%02x, %u lines",
+           s->name_buf, d->bus, d->addr, (unsigned)s->pins);
     s_num_slots++;
     return 0;
 }
@@ -213,25 +220,11 @@ void drv_gpiochip_sx1509_register(void)
     if (!s_lock) s_lock = xSemaphoreCreateMutex();
     if (!s_lock) { klog_e(TAG, "mutex alloc failed"); return; }
 
-    /* Iterate declared expander slots. bspgen emits DUNEOS_GPIOCHIP{N}_TYPE
-     * (string) + _I2C_ADDR + _PINS for each. We only register slots whose
-     * type matches "sx1509". MAX = 4 slots → gpiochip1..gpiochip4. */
-#ifdef DUNEOS_GPIOCHIP1_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP1_TYPE, "sx1509") == 0)
-        register_instance(1, DUNEOS_GPIOCHIP1_I2C_ADDR, DUNEOS_GPIOCHIP1_PINS);
-#endif
-#ifdef DUNEOS_GPIOCHIP2_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP2_TYPE, "sx1509") == 0)
-        register_instance(2, DUNEOS_GPIOCHIP2_I2C_ADDR, DUNEOS_GPIOCHIP2_PINS);
-#endif
-#ifdef DUNEOS_GPIOCHIP3_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP3_TYPE, "sx1509") == 0)
-        register_instance(3, DUNEOS_GPIOCHIP3_I2C_ADDR, DUNEOS_GPIOCHIP3_PINS);
-#endif
-#ifdef DUNEOS_GPIOCHIP4_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP4_TYPE, "sx1509") == 0)
-        register_instance(4, DUNEOS_GPIOCHIP4_I2C_ADDR, DUNEOS_GPIOCHIP4_PINS);
-#endif
+    /* Register every board-declared expander whose type is "sx1509". */
+    for (size_t i = 0; i < SX1509_SLOT_MAX; i++) {
+        if (strcmp(s_descs[i].type, "sx1509") == 0)
+            register_instance(&s_descs[i]);
+    }
 }
 
 DUNEOS_DRIVER_REGISTER(8, drv_gpiochip_sx1509_register);

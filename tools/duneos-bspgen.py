@@ -414,36 +414,36 @@ def generate(board: dict) -> str:
         ]
 
     # ----- GPIO expanders -----
-    # Schema: gpio_expanders: [{type: sx1509|pcf8574|mcp23017, i2c_addr: 0x.., pins: N}, ...]
-    # Each expander becomes /dev/gpiochipN (N = index + 1).
+    # Schema: gpio_expanders: [{type, i2c_addr, i2c_id?, pins?, direction?}, ...]
+    # Emitted as an X-macro table (DUNEOS_GPIOCHIP_LIST) so each chip-type driver
+    # iterates it — no per-chip #ifdef, scales to any count across any I2C bus.
     expanders = board.get("gpio_expanders", [])
     if expanders:
         lines += [
             "/* ---------- GPIO expanders ---------- */",
-            _define("DUNEOS_GPIO_EXPANDER_COUNT", len(expanders)),
+            _define("DUNEOS_GPIO_DIR_INPUT",  0),
+            _define("DUNEOS_GPIO_DIR_OUTPUT", 1),
             "",
+            "/* X(id, type, i2c_bus, i2c_addr, pins, direction) — iterated in-driver. */",
+            "#define DUNEOS_GPIOCHIP_LIST(X) \\",
         ]
-        if any("direction" in exp for exp in expanders):
-            lines += [
-                _define("DUNEOS_GPIO_DIR_INPUT",  0),
-                _define("DUNEOS_GPIO_DIR_OUTPUT", 1),
-                "",
-            ]
+        rows = []
         for idx, exp in enumerate(expanders):
-            chip_id = idx + 1   # gpiochip0 is the native chip
-            addr = exp["i2c_addr"]
+            chip_id  = idx + 1   # gpiochip0 is the native chip
+            addr     = exp["i2c_addr"]
             addr_str = hex(addr) if isinstance(addr, int) else addr
-            lines += [
-                f"/* gpiochip{chip_id} — {exp['type']} */",
-                _define(f"DUNEOS_GPIOCHIP{chip_id}_TYPE",     f'"{exp["type"]}"'),
-                _define(f"DUNEOS_GPIOCHIP{chip_id}_I2C_ADDR", addr_str),
-                _define(f"DUNEOS_GPIOCHIP{chip_id}_PINS",     exp.get("pins", 16)),
-            ]
-            direction = exp.get("direction")
-            if direction is not None:
-                dir_macro = "DUNEOS_GPIO_DIR_INPUT" if direction.lower() == "input" else "DUNEOS_GPIO_DIR_OUTPUT"
-                lines.append(_define(f"DUNEOS_GPIOCHIP{chip_id}_DIRECTION", dir_macro))
-            lines.append("")
+            bus      = exp.get("i2c_id", 0)
+            pins     = exp.get("pins", 16)
+            direction = str(exp.get("direction", "input")).strip().lower()
+            if direction not in ("input", "output"):
+                raise SystemExit(
+                    f"board.yaml: gpio_expander '{exp.get('type')}' @ {addr_str}: "
+                    f"direction must be 'input' or 'output', got '{exp.get('direction')!r}'")
+            dir_macro = "DUNEOS_GPIO_DIR_INPUT" if direction == "input" else "DUNEOS_GPIO_DIR_OUTPUT"
+            rows.append(f'    X({chip_id}, "{exp["type"]}", {bus}, {addr_str}, {pins}, {dir_macro})')
+        for i, row in enumerate(rows):
+            lines.append(row + (" \\" if i < len(rows) - 1 else ""))
+        lines.append("")
 
 
     # ----- Network interfaces -----
