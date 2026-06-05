@@ -1,0 +1,54 @@
+board:
+  name: "kincony-A16"
+  arch: xtensa-esp32
+  sdk: esp-idf
+  cpu: esp32
+  flash_size_mb: 4
+  psram_size_mb: 0
+  has_sd: false
+  console: uart
+
+  uart:
+    - id: 0
+      tx_pin: 1
+      rx_pin: 3
+      default_baud: 115200
+
+  i2c:
+    - id: 0
+      sda_pin: 4
+      scl_pin: 5
+      freq_hz: 400000
+
+  gpio_expanders:
+    - type: pcf8574
+      i2c_addr: 0x21
+      pins: 8
+      direction: input
+    - type: pcf8574
+      i2c_addr: 0x22
+      pins: 8
+      direction: input
+    - type: pcf8574
+      i2c_addr: 0x24
+      pins: 8
+      direction: output
+    - type: pcf8574
+      i2c_addr: 0x25
+      pins: 8
+      direction: output
+
+  wifi: true
+
+  network:
+    - type: lan8720
+      phy_addr: 0
+      phy_mdc_pin: 23
+      phy_mdio_pin: 18
+      clk_mode: ETH_CLOCK_GPIO17_OUT  # 50 MHz clock provided by the LAN8720's CLKOUT pin, connected to GPIO17
+      interface: rmii
+
+  kconfig:
+    - CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+    - CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
+    - CONFIG_ESP_INT_WDT_TIMEOUT_MS=3000

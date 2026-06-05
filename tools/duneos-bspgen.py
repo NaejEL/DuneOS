@@ -414,27 +414,76 @@ def generate(board: dict) -> str:
         ]
 
     # ----- GPIO expanders -----
-    # Schema: gpio_expanders: [{type: sx1509|pcf8574|mcp23017, i2c_addr: 0x.., pins: N}, ...]
-    # Each expander becomes /dev/gpiochipN (N = index + 1).
+    # Schema: gpio_expanders: [{type, i2c_addr, i2c_id?, pins?, direction?}, ...]
+    # Emitted as an X-macro table (DUNEOS_GPIOCHIP_LIST) so each chip-type driver
+    # iterates it — no per-chip #ifdef, scales to any count across any I2C bus.
     expanders = board.get("gpio_expanders", [])
     if expanders:
         lines += [
             "/* ---------- GPIO expanders ---------- */",
-            _define("DUNEOS_GPIO_EXPANDER_COUNT", len(expanders)),
+            _define("DUNEOS_GPIO_DIR_INPUT",  0),
+            _define("DUNEOS_GPIO_DIR_OUTPUT", 1),
+            "",
+            "/* X(id, type, i2c_bus, i2c_addr, pins, direction) — iterated in-driver. */",
+            "#define DUNEOS_GPIOCHIP_LIST(X) \\",
+        ]
+        rows = []
+        for idx, exp in enumerate(expanders):
+            chip_id  = idx + 1   # gpiochip0 is the native chip
+            addr     = exp["i2c_addr"]
+            addr_str = hex(addr) if isinstance(addr, int) else addr
+            bus      = exp.get("i2c_id", 0)
+            pins     = exp.get("pins", 16)
+            direction = str(exp.get("direction", "input")).strip().lower()
+            if direction not in ("input", "output"):
+                raise SystemExit(
+                    f"board.yaml: gpio_expander '{exp.get('type')}' @ {addr_str}: "
+                    f"direction must be 'input' or 'output', got {exp.get('direction')!r}")
+            dir_macro = "DUNEOS_GPIO_DIR_INPUT" if direction == "input" else "DUNEOS_GPIO_DIR_OUTPUT"
+            rows.append(f'    X({chip_id}, "{exp["type"]}", {bus}, {addr_str}, {pins}, {dir_macro})')
+        for i, row in enumerate(rows):
+            lines.append(row + (" \\" if i < len(rows) - 1 else ""))
+        lines.append("")
+
+
+    # ----- Network interfaces -----
+    # Currently supports: interface=rmii (ESP32 RMII MAC, hal_eth.c backend).
+    # SPI Ethernet (interface=spi, e.g. W5500) will add a second type here.
+    _PHY_TYPE_MAP = {
+        "lan8720": "DUNEOS_ETH_PHY_LAN8720",
+        "ksz8081": "DUNEOS_ETH_PHY_KSZ8081",
+        "rtl8201": "DUNEOS_ETH_PHY_RTL8201",
+        "ip101":   "DUNEOS_ETH_PHY_IP101",
+    }
+    _CLK_MODE_DEFAULTS = {
+        "rmii": "ETH_CLOCK_GPIO0_IN",
+    }
+    for net in board.get("network", []):
+        iface = net.get("interface", "rmii").lower()
+        if iface != "rmii":
+            continue
+        phy_type = _PHY_TYPE_MAP.get(net.get("type", "").lower())
+        if not phy_type:
+            continue
+        clk_raw = net.get("clk_mode", _CLK_MODE_DEFAULTS.get(iface, "ETH_CLOCK_GPIO0_IN"))
+        # Translate legacy ETH_CLOCK_GPIO*_OUT/IN to IDF v6 EMAC_ enum names.
+        clk_mode_v6 = "EMAC_CLK_OUT" if "_OUT" in clk_raw else "EMAC_CLK_EXT_IN"
+        try:
+            clk_gpio_num = int(clk_raw.replace("ETH_CLOCK_GPIO", "").split("_")[0])
+        except (ValueError, IndexError):
+            clk_gpio_num = 0
+        lines += [
+            "/* ---------- Ethernet RMII ---------- */",
+            _define("DUNEOS_HAVE_ETHERNET",    1),
+            _define("DUNEOS_ETH_PHY_TYPE",     phy_type),
+            _define("DUNEOS_ETH_PHY_ADDR",     net.get("phy_addr", 0)),
+            _define("DUNEOS_ETH_MDC_PIN",      net["phy_mdc_pin"]),
+            _define("DUNEOS_ETH_MDIO_PIN",     net["phy_mdio_pin"]),
+            _define("DUNEOS_ETH_CLK_MODE",     clk_mode_v6),
+            _define("DUNEOS_ETH_CLK_GPIO",     clk_gpio_num),
             "",
         ]
-        for idx, exp in enumerate(expanders):
-            chip_id = idx + 1   # gpiochip0 is the native chip
-            addr = exp["i2c_addr"]
-            addr_str = hex(addr) if isinstance(addr, int) else addr
-            lines += [
-                f"/* gpiochip{chip_id} — {exp['type']} */",
-                _define(f"DUNEOS_GPIOCHIP{chip_id}_TYPE",     f'"{exp["type"]}"'),
-                _define(f"DUNEOS_GPIOCHIP{chip_id}_I2C_ADDR", addr_str),
-                _define(f"DUNEOS_GPIOCHIP{chip_id}_PINS",     exp.get("pins", 16)),
-                "",
-            ]
-
+        break  # only one RMII interface per board
 
     # ----- Keyboard (I2C expander, legacy key) -----
     kb = board.get("keyboard")
@@ -669,6 +718,41 @@ def generate_sdkconfig_board(board: dict) -> str:
         lines.append("")
 
 
+    for net in board.get("network", []):
+        if net.get("interface", "").lower() == "rmii":
+            lines += [
+                "# Ethernet RMII",
+                "CONFIG_DUNEOS_DRV_ETH=y",
+                "CONFIG_ETH_ENABLED=y",
+                "CONFIG_ETH_USE_ESP32_EMAC=y",
+            ]
+            phy = net.get("type", "").lower()
+            # Keep in sync with _PHY_TYPE_MAP (board_config.h side) so every PHY
+            # the kernel can be compiled for also gets its IDF Kconfig enabled.
+            _phy_kconfig = {
+                "lan8720": "CONFIG_ETH_PHY_LAN8720=y",
+                "ksz8081": "CONFIG_ETH_PHY_KSZ8081=y",
+                "rtl8201": "CONFIG_ETH_PHY_RTL8201=y",
+                "ip101":   "CONFIG_ETH_PHY_IP101=y",
+            }
+            if phy in _phy_kconfig:
+                lines.append(_phy_kconfig[phy])
+            # Generic ETH_CLOCK_GPIO<N>_<IN|OUT> parsing — mirrors the
+            # board_config.h DUNEOS_ETH_CLK_GPIO emission so the two stay in
+            # sync for any pin (GPIO0 in, GPIO0/16/17 out on ESP32).
+            clk_mode = net.get("clk_mode", "ETH_CLOCK_GPIO0_IN")
+            try:
+                clk_gpio = int(clk_mode.replace("ETH_CLOCK_GPIO", "").split("_")[0])
+            except (ValueError, IndexError):
+                clk_gpio = 0
+            if "_OUT" in clk_mode:
+                lines += ["CONFIG_ETH_RMII_CLK_OUTPUT=y",
+                          f"CONFIG_ETH_RMII_CLK_OUT_GPIO={clk_gpio}"]
+            else:
+                lines.append("CONFIG_ETH_RMII_CLK_INPUT=y")
+            lines.append("")
+            break
+
     if board.get("wifi", True):
         lines += ["CONFIG_DUNEOS_DRV_WIFI=y", ""]
 
@@ -684,6 +768,14 @@ def generate_sdkconfig_board(board: dict) -> str:
         lines.append("")
     elif usb_mode == "jtag":
         lines += ["# USB JTAG/Serial (built-in — no TinyUSB)", ""]
+
+    # ---- Raw Kconfig overrides ----
+    # board.yaml kconfig: list is emitted verbatim — use for board-specific
+    # tuning that bspgen doesn't model structurally (e.g. stack sizes).
+    for kv in board.get("kconfig", []):
+        lines.append(str(kv))
+    if board.get("kconfig"):
+        lines.append("")
 
     # ---- Partition table ----
     lines += [

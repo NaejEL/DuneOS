@@ -21,7 +21,7 @@
 #include "duneos/driver_init.h"
 #include "duneos/gpio_ioctl.h"
 #include "duneos/klog.h"
-#include "board_config.h"
+#include "gpiochip_table.h"
 #include "../i2c_bus.h"
 
 #include <freertos/FreeRTOS.h>
@@ -40,14 +40,26 @@ typedef struct {
     duneos_dev_driver_t drv;
     char                name_buf[12];   /* "gpiochipN\0" */
     uint8_t             chip_id;
+    uint8_t             bus;            /* I2C bus id */
     uint8_t             i2c_addr;
     uint8_t             pins;           /* always 8 */
+    uint8_t             direction;      /* GPIO_DIR_INPUT or GPIO_DIR_OUTPUT — per-chip policy */
     uint8_t             out_shadow;     /* current output latch */
 } pcf8574_slot_t;
 
-#define MAX_PCF8574_INSTANCES 4
-static pcf8574_slot_t  s_slots[MAX_PCF8574_INSTANCES];
-static int             s_num_slots = 0;
+/* One descriptor per board-declared expander; slot pool sized to match.
+ * A board with no gpio_expanders never emits DUNEOS_GPIOCHIP_LIST, so guard the
+ * table: a driver enabled without instances (raw Kconfig override) then compiles
+ * to a no-op register() instead of failing at the initialiser. */
+#ifdef DUNEOS_GPIOCHIP_LIST
+static const duneos_gpiochip_desc_t s_descs[] = {
+    DUNEOS_GPIOCHIP_LIST(DUNEOS_GPIOCHIP_ROW)
+};
+#define PCF8574_SLOT_MAX  (sizeof(s_descs) / sizeof(s_descs[0]))
+
+static pcf8574_slot_t    s_slots[PCF8574_SLOT_MAX];
+static int               s_num_slots = 0;
+#endif
 static SemaphoreHandle_t s_lock = NULL;
 
 static pcf8574_slot_t *slot_from_fd(const duneos_devfd_t *fd)
@@ -57,19 +69,19 @@ static pcf8574_slot_t *slot_from_fd(const duneos_devfd_t *fd)
 
 static int pcf8574_write_byte(pcf8574_slot_t *s, uint8_t val)
 {
-    return i2c_bus_write_read(0, s->i2c_addr, &val, 1, NULL, 0);
+    return i2c_bus_write_read(s->bus, s->i2c_addr, &val, 1, NULL, 0);
 }
 
 static int pcf8574_read_byte(pcf8574_slot_t *s, uint8_t *out)
 {
     /* PCF8574 returns its byte on any read — no register pointer. */
-    return i2c_bus_write_read(0, s->i2c_addr, NULL, 0, out, 1);
+    return i2c_bus_write_read(s->bus, s->i2c_addr, NULL, 0, out, 1);
 }
 
 static int pcf8574_op_init(pcf8574_slot_t *s)
 {
-    /* Boot with all pins released (= all-input). */
-    s->out_shadow = 0xFF;
+    /* INPUT chips: release all pins (high-impedance). OUTPUT chips: drive all low (safe). */
+    s->out_shadow = (s->direction == GPIO_DIR_INPUT) ? 0xFF : 0x00;
     return pcf8574_write_byte(s, s->out_shadow);
 }
 
@@ -114,6 +126,7 @@ static int pcf8574_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
     case GPIOCHIP_SET_VALUE: {
         gpio_req_t *r = arg;
         if (r->line >= s->pins) { errno = EINVAL; return -1; }
+        if (s->direction == GPIO_DIR_INPUT) { errno = EPERM; return -1; }
         xSemaphoreTake(s_lock, portMAX_DELAY);
         if (r->val) s->out_shadow |=  (uint8_t)(1u << r->line);
         else        s->out_shadow &= ~(uint8_t)(1u << r->line);
@@ -144,53 +157,50 @@ static int pcf8574_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
 
 /* ------------------------------------------------------------- registration */
 
-static int register_instance(uint8_t chip_id, uint8_t i2c_addr, uint8_t pins)
+#ifdef DUNEOS_GPIOCHIP_LIST
+static int register_instance(const duneos_gpiochip_desc_t *d)
 {
-    if (s_num_slots >= MAX_PCF8574_INSTANCES) {
-        klog_e(TAG, "too many PCF8574 instances (>%d)", MAX_PCF8574_INSTANCES);
-        return -1;
-    }
+    if (s_num_slots >= (int)PCF8574_SLOT_MAX) return -1;  /* unreachable: pool == table */
+
     pcf8574_slot_t *s = &s_slots[s_num_slots];
-    snprintf(s->name_buf, sizeof(s->name_buf), "gpiochip%u", (unsigned)chip_id);
+    snprintf(s->name_buf, sizeof(s->name_buf), "gpiochip%u", (unsigned)d->id);
     s->drv.name   = s->name_buf;
     s->drv.ioctl  = pcf8574_ioctl;
-    s->chip_id    = chip_id;
-    s->i2c_addr   = i2c_addr;
-    s->pins       = pins > 8 ? 8 : pins;
+    s->chip_id    = d->id;
+    s->bus        = d->bus;
+    s->i2c_addr   = d->addr;
+    s->pins       = d->pins > 8 ? 8 : d->pins;
+    s->direction  = d->direction;
 
     if (pcf8574_op_init(s) < 0) {
-        klog_e(TAG, "%s: chip init failed (addr=0x%02x)", s->name_buf, i2c_addr);
+        klog_e(TAG, "%s: chip init failed (bus=%u addr=0x%02x)",
+               s->name_buf, d->bus, d->addr);
         return -1;
     }
     if (duneos_dev_register(&s->drv) < 0) {
         klog_e(TAG, "%s: duneos_dev_register failed", s->name_buf);
         return -1;
     }
-    klog_i(TAG, "%s: PCF8574 @0x%02x, %u lines", s->name_buf, i2c_addr, (unsigned)pins);
+    klog_i(TAG, "%s: PCF8574 i2c-%u@0x%02x, %u lines (%s)",
+           s->name_buf, d->bus, d->addr, (unsigned)s->pins,
+           d->direction == GPIO_DIR_INPUT ? "in" : "out");
     s_num_slots++;
     return 0;
 }
+#endif /* DUNEOS_GPIOCHIP_LIST */
 
 void drv_gpiochip_pcf8574_register(void)
 {
+#ifdef DUNEOS_GPIOCHIP_LIST
     if (!s_lock) s_lock = xSemaphoreCreateMutex();
     if (!s_lock) { klog_e(TAG, "mutex alloc failed"); return; }
 
-#ifdef DUNEOS_GPIOCHIP1_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP1_TYPE, "pcf8574") == 0)
-        register_instance(1, DUNEOS_GPIOCHIP1_I2C_ADDR, DUNEOS_GPIOCHIP1_PINS);
-#endif
-#ifdef DUNEOS_GPIOCHIP2_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP2_TYPE, "pcf8574") == 0)
-        register_instance(2, DUNEOS_GPIOCHIP2_I2C_ADDR, DUNEOS_GPIOCHIP2_PINS);
-#endif
-#ifdef DUNEOS_GPIOCHIP3_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP3_TYPE, "pcf8574") == 0)
-        register_instance(3, DUNEOS_GPIOCHIP3_I2C_ADDR, DUNEOS_GPIOCHIP3_PINS);
-#endif
-#ifdef DUNEOS_GPIOCHIP4_TYPE
-    if (strcmp(DUNEOS_GPIOCHIP4_TYPE, "pcf8574") == 0)
-        register_instance(4, DUNEOS_GPIOCHIP4_I2C_ADDR, DUNEOS_GPIOCHIP4_PINS);
+    for (size_t i = 0; i < PCF8574_SLOT_MAX; i++) {
+        if (strcmp(s_descs[i].type, "pcf8574") == 0)
+            register_instance(&s_descs[i]);
+    }
+#else
+    klog_w(TAG, "PCF8574 driver enabled but board declares no gpio_expanders");
 #endif
 }
 

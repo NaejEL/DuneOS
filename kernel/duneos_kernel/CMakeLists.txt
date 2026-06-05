@@ -69,10 +69,10 @@ list(APPEND DUNEOS_KERNEL_REQUIRES
     esp_event           # drv_wifi.c, drv_usb.c → hal_net.h (Phase 26)
 )
 
-# ── Permanent: TinyUSB is ESP-IDF-specific USB HW, abstracted by drv_usb.c ─
-list(APPEND DUNEOS_KERNEL_REQUIRES
-    espressif__esp_tinyusb
-)
+# ── TinyUSB: ESP32-S2/S3/P4 only (no USB OTG on plain ESP32/C3/H2) ─────────
+if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)
+    list(APPEND DUNEOS_KERNEL_REQUIRES espressif__esp_tinyusb)
+endif()
 
 # --- Arch discovery ----------------------------------------------------------
 # Each arch/*/arch.cmake self-selects via CONFIG_IDF_TARGET_ARCH_* and appends
@@ -136,6 +136,10 @@ endif()
 if(CONFIG_DUNEOS_DRV_FB)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/st7789_hw.c")
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/display/drv_fb_st7789.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_ETH)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/net/drv_eth.c")
 endif()
 
 if(CONFIG_DUNEOS_DRV_WIFI)

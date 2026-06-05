@@ -81,7 +81,11 @@ void duneos_hal_uart_deinit(duneos_hal_uart_t *h)
 
 int duneos_hal_uart_read(duneos_hal_uart_t *h, void *buf, size_t len)
 {
-    int n = uart_read_bytes(h->port, buf, (uint32_t)len, portMAX_DELAY);
+    /* 100 ms timeout: returns 0 bytes (not -1) when RX is idle.
+     * Allows read_line's idle-reprint timer and SHELL_FLUSH_ON_START to work.
+     * portMAX_DELAY blocks forever — unsafe when garbage bytes can arrive
+     * (e.g. floating RX pin on headless boards) and trigger spurious commands. */
+    int n = uart_read_bytes(h->port, buf, (uint32_t)len, pdMS_TO_TICKS(100));
     if (n < 0) { errno = EIO; return -1; }
     return n;
 }

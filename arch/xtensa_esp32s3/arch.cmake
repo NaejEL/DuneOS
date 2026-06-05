@@ -19,6 +19,12 @@ if(NOT CONFIG_IDF_TARGET_ARCH_XTENSA
     return()
 endif()
 
+# Yield to arch/xtensa_esp32/ for non-IDF dbt builds targeting plain ESP32.
+# IDF builds: both arch.cmake files fire and complement each other — no conflict.
+if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
+    return()
+endif()
+
 # HAL source implementations.  Public headers live in duneos_kernel/include/duneos/
 # with no ESP-IDF types; ESP-IDF is contained entirely in these .c files.
 list(APPEND DUNEOS_KERNEL_SRCS
@@ -46,4 +52,6 @@ list(APPEND DUNEOS_KERNEL_REQUIRES
     esp_driver_pcnt
     esp_adc
     esp_timer
+    esp_eth             # Ethernet headers available for all Xtensa targets;
+    esp_netif           # hal_eth.c impl lives in arch/xtensa_esp32/ (RMII, plain ESP32 only)
 )

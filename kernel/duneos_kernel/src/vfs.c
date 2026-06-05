@@ -142,6 +142,7 @@ esp_err_t duneos_vfs_provision_flash(void)
  * SD card (FatFS over SPI)
  * ---------------------------------------------------------------------- */
 
+#if DUNEOS_HAS_SD
 esp_err_t duneos_vfs_mount_sd(void)
 {
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
@@ -195,6 +196,7 @@ esp_err_t duneos_vfs_mount_sd(void)
                / (1024.0 * 1024.0 * 1024.0));
     return ESP_OK;
 }
+#endif /* DUNEOS_HAS_SD */
 
 /* -------------------------------------------------------------------------
  * board.info — written at boot so apps can discover hardware capabilities
@@ -320,12 +322,14 @@ esp_err_t duneos_vfs_deinit(void)
 {
     if (!s_initialized) return ESP_ERR_INVALID_STATE;
 
+#if DUNEOS_HAS_SD
     if (s_sd_mounted) {
         esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, s_card);
         spi_bus_free(DUNEOS_SD_SPI_HOST);
         s_card       = NULL;
         s_sd_mounted = false;
     }
+#endif
 
     if (s_flash_mounted) {
         esp_vfs_littlefs_unregister(FLASH_PARTITION);
