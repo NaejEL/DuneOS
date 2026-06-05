@@ -15,6 +15,7 @@
 #include "duneos/dev_driver.h"
 #include "duneos/driver_init.h"
 #include "duneos/hal_eth.h"
+#include "duneos/eth_ioctl.h"
 #include "duneos/klog.h"
 
 #include <errno.h>
@@ -22,16 +23,6 @@
 #include <string.h>
 
 #define TAG "duneos/eth"
-
-/* ioctl codes for /dev/eth0 */
-#define ETH_GET_MAC         0x01   /* arg: uint8_t[6]             */
-#define ETH_GET_LINK_STATUS 0x02   /* arg: eth_link_status_t *    */
-
-typedef struct {
-    bool     up;
-    uint32_t speed_mbps;
-    bool     full_duplex;
-} eth_link_status_t;
 
 /* Log-only: the authoritative link snapshot lives in the HAL (it owns the
  * synchronisation), queried on demand via duneos_hal_eth_get_link(). */
