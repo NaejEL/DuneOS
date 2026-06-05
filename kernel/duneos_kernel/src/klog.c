@@ -68,11 +68,17 @@ void klog_write(char level, const char *tag, const char *fmt, ...)
     }
     line[total] = '\0';
 
-    portENTER_CRITICAL(&s_mux);
-    ring_append(line, total);
-    portEXIT_CRITICAL(&s_mux);
+    /* Keep DEBUG out of the persistent ring: the loader emits one line per
+     * relocation section (~180 per app load), which otherwise floods the
+     * 16 KiB ring and evicts the boot sequence before it can be read back.
+     * DEBUG still reaches the live console below when explicitly enabled. */
+    if (level != 'D') {
+        portENTER_CRITICAL(&s_mux);
+        ring_append(line, total);
+        portEXIT_CRITICAL(&s_mux);
+    }
 
-    /* Forward only errors to ESP_LOG — I/W/D stay in the ring buffer only. */
+    /* Forward only errors to ESP_LOG — I/W stay in the ring buffer only. */
     if (level == 'E') ESP_LOGE(tag, "%s", line + prefix_len);
 }
 

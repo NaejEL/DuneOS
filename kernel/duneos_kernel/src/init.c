@@ -346,10 +346,20 @@ static void on_service_exit(const char *name, int code)
         xSemaphoreTake(s_pending_lock, portMAX_DELAY);
         s_pending[i].launched = true;
     }
+    /* Diagnostic: an exit that released nothing while services are still
+     * waiting means the exiting app's name didn't match any `after:` target —
+     * usually a blank/unexpected slot name. Surfaces the actual name seen. */
+    int still_waiting = 0;
+    for (int i = 0; i < s_pending_count; i++)
+        if (s_pending[i].pending) still_waiting++;
     xSemaphoreGive(s_pending_lock);
+
     if (released > 0)
         klog_i(TAG, "after-dep: released %d service(s) waiting on '%s'",
                released, name);
+    else if (still_waiting > 0)
+        klog_i(TAG, "after-dep: '%s' exited but %d service(s) still waiting (no name match)",
+               name, still_waiting);
 }
 
 /* Look up a service by app-name in the parsed config. Returns NULL if absent. */

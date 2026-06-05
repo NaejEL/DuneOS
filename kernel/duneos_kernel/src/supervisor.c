@@ -607,8 +607,28 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
         klog_e(TAG, "no free app slots (max %d)", DUNEOS_MAX_RUNNING_APPS);
         return ESP_ERR_NO_MEM;
     }
-    /* Pre-mark active to prevent a concurrent launch from grabbing this slot */
+    /* Pre-mark active to prevent a concurrent launch from grabbing this slot.
+     * Name the slot NOW from the path basename — the manifest name only lands
+     * after the (slower) load below, but the exit observer's `after:` matching
+     * and the `services` listing need a stable, non-blank name for the whole
+     * time the slot is active. Without this, an app that exits quickly (e.g.
+     * splash) can be observed with a blank name, so `after: splash` never
+     * matches and the dependent service is never released.
+     * Stash the previous occupant's name first so the circuit-breaker's
+     * same-app check below keeps comparing against the right thing. */
     slot->active = true;
+    char prev_name[DUNEOS_APP_NAME_MAX];
+    strlcpy(prev_name, slot->name, sizeof(prev_name));
+    {
+        const char *base = strrchr(path, '/');
+        base = base ? base + 1 : path;
+        size_t n = 0;
+        while (base[n] && base[n] != '.' && n + 1 < sizeof(slot->name)) {
+            slot->name[n] = base[n];
+            n++;
+        }
+        slot->name[n] = '\0';
+    }
     xSemaphoreGive(s_lock);
 
     duneos_app_t *app = NULL;
@@ -624,8 +644,8 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
      * the same app, but RESET when the slot starts hosting a different app
      * (manual launch of something new). Compare against the existing
      * slot->name BEFORE we overwrite it. */
-    bool same_app_as_before = (slot->name[0] != '\0' &&
-                               strcmp(slot->name, m->name) == 0);
+    bool same_app_as_before = (prev_name[0] != '\0' &&
+                               strcmp(prev_name, m->name) == 0);
 
     strlcpy(slot->name, m->name, sizeof(slot->name));
     strlcpy(slot->restart_path, path, sizeof(slot->restart_path));
