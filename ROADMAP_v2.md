@@ -476,7 +476,8 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 
 **Ethernet RMII** (optionnel, dépend de la disponibilité d'un board cible) :
 
-- [ ] **MAC ESP32 (pas S3)** : board RMII de référence à ajouter si la phase démarre avant Phase 29. PHY = LAN8720 ou KSZ8081 ; `arch/xtensa_esp32/hal/phy/lan8720.c` ~50 lignes implémentant `hal_phy_*`.
+- [x] **MAC ESP32 (pas S3)** : board de référence **kincony-A16** livrée (`feature/kincony-a16`). Arch `xtensa_esp32`, PHY LAN8720, `arch/xtensa_esp32/hal/hal_eth.c` + `hal_phy.c`, driver kernel `/dev/eth0` (`drv_eth.c`), `duneos_eth_get_info` + `ifconfig` eth0. Validé hardware : link 100M FD → DHCP → IP en ~3 s. **Backend pré-Phase-27 = `esp_netif` + esp_eth** (sera réécrit sur lwIP vendored + `struct netif` ici).
+- [ ] **Gap : `duneos_netif_wait_ip()` ne couvre pas l'Ethernet.** L'implémentation actuelle (`drv_wifi.c`) n'écoute que l'event group WiFi ; un `IP_EVENT_ETH_GOT_IP` ne réveille pas les waiters. Une app qui bloque sur « réseau up » via cette API ne voit donc pas l'eth (contournement : interroger `/dev/eth0` / `duneos_eth_get_info`). Correctif propre = la réimplémentation `wait_ip` au-dessus des flags `struct netif` ci-dessus ; en intérim, faire signaler le même event group depuis le handler `IP_EVENT` de `hal_eth.c`.
 
 ---
 
