@@ -1579,7 +1579,9 @@ class DbtApp(App):
                 )
                 fd, bat_path = _tf.mkstemp(suffix='.bat')
                 try:
-                    with _os.fdopen(fd, 'w') as f:
+                    # newline='' so the explicit \r\n in `bat` isn't re-translated
+                    # to \r\r\n by Windows text-mode newline handling.
+                    with _os.fdopen(fd, 'w', newline='') as f:
                         f.write(bat)
                     subprocess.run(['cmd', '/c', bat_path])
                 finally:

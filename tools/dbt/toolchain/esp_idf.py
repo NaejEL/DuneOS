@@ -187,7 +187,9 @@ def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
         )
         fd, bat_path = tempfile.mkstemp(suffix='.bat')
         try:
-            with os.fdopen(fd, 'w') as f:
+            # newline='' so the explicit \r\n in `bat` isn't re-translated to
+            # \r\r\n by Windows text-mode newline handling.
+            with os.fdopen(fd, 'w', newline='') as f:
                 f.write(bat)
             result = subprocess.run(['cmd', '/c', bat_path])
         finally:
