@@ -51,6 +51,13 @@ int duneos_hal_eth_get_mac(uint8_t mac[6]);
 int duneos_hal_eth_get_link(bool *up, uint32_t *speed_mbps, bool *full_duplex);
 
 /*
+ * Read the interface's current IPv4 configuration (network-byte-order words, as
+ * stored by the stack — octet 0 in the low byte). Returns 0 with a non-zero ip
+ * when an address is assigned, -1 otherwise. Any out pointer may be NULL.
+ */
+int duneos_hal_eth_get_ip(uint32_t *ip, uint32_t *gw, uint32_t *netmask);
+
+/*
  * Register a link-state callback. Only one callback is supported per arch
  * implementation. Pass NULL to deregister.
  * Must be called before duneos_hal_eth_start() to avoid missing the first

@@ -16,10 +16,12 @@
 #include "duneos/driver_init.h"
 #include "duneos/hal_eth.h"
 #include "duneos/eth_ioctl.h"
+#include "duneos/net.h"
 #include "duneos/klog.h"
 
 #include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #define TAG "duneos/eth"
@@ -51,6 +53,36 @@ static int eth_ioctl(duneos_devfd_t *fd, int cmd, void *arg)
         errno = ENOTTY;
         return -1;
     }
+}
+
+static void fmt_ipv4(char *out, size_t n, uint32_t addr)
+{
+    /* addr is stored octet-0 in the low byte (network order). */
+    snprintf(out, n, "%lu.%lu.%lu.%lu",
+             (unsigned long)(addr        & 0xff),
+             (unsigned long)((addr >>  8) & 0xff),
+             (unsigned long)((addr >> 16) & 0xff),
+             (unsigned long)((addr >> 24) & 0xff));
+}
+
+/* Exported (PERM_NET): fill *info with /dev/eth0's current IPv4 config. */
+int duneos_eth_get_info(duneos_net_info_t *info)
+{
+    if (!info) { errno = EINVAL; return -1; }
+
+    uint32_t ip = 0, gw = 0, mask = 0;
+    if (duneos_hal_eth_get_ip(&ip, &gw, &mask) < 0) return -1;
+
+    memset(info, 0, sizeof(*info));
+    fmt_ipv4(info->ip,      sizeof(info->ip),      ip);
+    fmt_ipv4(info->gw,      sizeof(info->gw),      gw);
+    fmt_ipv4(info->netmask, sizeof(info->netmask), mask);
+
+    uint8_t mac[6];
+    if (duneos_hal_eth_get_mac(mac) == 0)
+        snprintf(info->mac, sizeof(info->mac), "%02x:%02x:%02x:%02x:%02x:%02x",
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return 0;
 }
 
 static duneos_dev_driver_t s_eth_driver = {

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "duneos/net.h"   /* duneos_net_info_t (shared with Ethernet) */
 
 /*
  * DuneOS WiFi STA API — callable by apps via the kernel symbol table.
@@ -12,15 +13,6 @@
  * do not appear in the kernel export table and apps that request them
  * will fail to load.
  */
-
-typedef struct {
-    char   ip[16];       /* "192.168.1.100\0" — empty string if not connected */
-    char   gw[16];       /* "192.168.1.1\0"                                   */
-    char   netmask[16];  /* "255.255.255.0\0"                                 */
-    char   ssid[33];     /* connected AP SSID                                 */
-    int8_t rssi;         /* dBm; 0 if unknown                                 */
-    char   mac[18];      /* "aa:bb:cc:dd:ee:ff\0" — STA MAC address          */
-} duneos_net_info_t;
 
 /*
  * Initialise the WiFi subsystem: NVS, netif, default event loop, WiFi driver.

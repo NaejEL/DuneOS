@@ -13,6 +13,7 @@
 #include <stdarg.h>
 
 #include "duneos/wifi.h"
+#include "duneos/net.h"
 #include "duneos/bin_args.h"
 
 static void out(const char *s) { write(STDOUT_FILENO, s, strlen(s)); }
@@ -29,16 +30,22 @@ static void outf(const char *fmt, ...)
 void app_main(void)
 {
     duneos_net_info_t info;
-    int rc = duneos_wifi_get_info(&info);
 
-    if (rc != 0) {
+    if (duneos_wifi_get_info(&info) == 0) {
+        outf("wlan0: inet %s  netmask %s  gateway %s\r\n",
+             info.ip, info.netmask, info.gw);
+        outf("       ether %s\r\n", info.mac);
+        outf("       ssid: %s  signal: %d dBm\r\n",
+             info.ssid, (int)info.rssi);
+    } else {
         out("wlan0: not connected\r\n");
-        return;
     }
 
-    outf("wlan0: inet %s  netmask %s  gateway %s\r\n",
-         info.ip, info.netmask, info.gw);
-    outf("       ether %s\r\n", info.mac);
-    outf("       ssid: %s  signal: %d dBm\r\n",
-         info.ssid, (int)info.rssi);
+    if (duneos_eth_get_info(&info) == 0) {
+        outf("eth0:  inet %s  netmask %s  gateway %s\r\n",
+             info.ip, info.netmask, info.gw);
+        outf("       ether %s\r\n", info.mac);
+    } else {
+        out("eth0:  not connected\r\n");
+    }
 }

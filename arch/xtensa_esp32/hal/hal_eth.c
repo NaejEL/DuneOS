@@ -189,6 +189,18 @@ int duneos_hal_eth_get_link(bool *up, uint32_t *speed_mbps, bool *full_duplex)
     return 0;
 }
 
+int duneos_hal_eth_get_ip(uint32_t *ip, uint32_t *gw, uint32_t *netmask)
+{
+    if (!s_netif) { errno = EINVAL; return -1; }
+    esp_netif_ip_info_t info;
+    if (esp_netif_get_ip_info(s_netif, &info) != ESP_OK) { errno = EIO; return -1; }
+
+    if (ip)      *ip      = info.ip.addr;
+    if (gw)      *gw      = info.gw.addr;
+    if (netmask) *netmask = info.netmask.addr;
+    return info.ip.addr ? 0 : -1;   /* 0.0.0.0 ⇒ no address yet */
+}
+
 int duneos_hal_eth_set_link_callback(duneos_hal_eth_link_cb_t cb)
 {
     s_link_cb = cb;
