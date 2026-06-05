@@ -1,20 +1,35 @@
 dependencies:
   joltwallet/littlefs:
     version: ">=1.21.1"
+  # USB OTG stack — only chips that have USB-OTG MAC peripherals can use it.
+  # NOTE: the variable name is `target`, not `idf_target` — `idf_target` is
+  # silently treated as a string literal by the if_parser, so the rule
+  # evaluates `"idf_target" == "esp32sN"` which is always false, and the dep
+  # gets skipped on every target. See idf_component_tools/manifest/if_parser.py
+  # LeftValue.get_value (only "idf_version" and "target" are recognised).
   espressif/esp_tinyusb:
     version: "^2.0.1~1"
     rules:
-      - if: "idf_target in [esp32s2, esp32s3, esp32p4]"
+      - if: "target in [esp32s2, esp32s3, esp32p4]"
   # RMII Ethernet PHY drivers (hal_phy.c dispatches across all four at runtime).
-  # Left unconditional: gating with `rules: if idf_target in [esp32]` excludes
-  # them even on esp32 in this component-manager version, breaking the build.
-  # They are tiny header-only libs, so the dep-surface cost on other targets is
-  # negligible.
+  # Only the plain ESP32 has the RMII MAC peripheral; S3/S2/C6/P4/H2 either
+  # lack EMAC or expose a different MAC family. The registry only publishes
+  # versions of these PHY components for esp32, so on any other target the
+  # version solver fails ("no versions of espressif/X match *") unless we
+  # gate the dependency out.
   espressif/lan87xx:
     version: "*"
+    rules:
+      - if: "target == esp32"
   espressif/ksz80xx:
     version: "*"
+    rules:
+      - if: "target == esp32"
   espressif/rtl8201:
     version: "*"
+    rules:
+      - if: "target == esp32"
   espressif/ip101:
     version: "*"
+    rules:
+      - if: "target == esp32"
