@@ -134,6 +134,7 @@ def find_idf_root() -> Path | None:
         search_bases = [
             Path("C:/Espressif/frameworks"),
             Path(os.environ.get("USERPROFILE", "C:/Users")) / ".espressif" / "frameworks",
+            Path("C:/esp"),   # version-prefixed layout: C:/esp/v6.0.1/esp-idf
         ]
     else:
         home = Path.home()

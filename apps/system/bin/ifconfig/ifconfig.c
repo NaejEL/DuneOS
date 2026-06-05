@@ -13,6 +13,8 @@
 #include <stdarg.h>
 
 #include "duneos/wifi.h"
+#include "duneos/net.h"
+#include "duneos/eth_ioctl.h"
 #include "duneos/bin_args.h"
 
 static void out(const char *s) { write(STDOUT_FILENO, s, strlen(s)); }
@@ -29,16 +31,37 @@ static void outf(const char *fmt, ...)
 void app_main(void)
 {
     duneos_net_info_t info;
-    int rc = duneos_wifi_get_info(&info);
 
-    if (rc != 0) {
+    if (duneos_wifi_get_info(&info) == 0) {
+        outf("wlan0: inet %s  netmask %s  gateway %s\r\n",
+             info.ip, info.netmask, info.gw);
+        outf("       ether %s\r\n", info.mac);
+        outf("       ssid: %s  signal: %d dBm\r\n",
+             info.ssid, (int)info.rssi);
+    } else {
         out("wlan0: not connected\r\n");
-        return;
     }
 
-    outf("wlan0: inet %s  netmask %s  gateway %s\r\n",
-         info.ip, info.netmask, info.gw);
-    outf("       ether %s\r\n", info.mac);
-    outf("       ssid: %s  signal: %d dBm\r\n",
-         info.ssid, (int)info.rssi);
+    /* Ethernet: report link state explicitly so "no IP" (DHCP) is
+     * distinguishable from "no link" (PHY/clock/cable). */
+    eth_link_status_t lnk = { 0 };
+    int efd = open("/dev/eth0", O_RDWR);
+    if (efd >= 0) {
+        ioctl(efd, ETH_GET_LINK_STATUS, &lnk);
+        close(efd);
+    }
+
+    if (duneos_eth_get_info(&info) == 0) {
+        outf("eth0:  inet %s  netmask %s  gateway %s\r\n",
+             info.ip, info.netmask, info.gw);
+        outf("       ether %s\r\n", info.mac);
+    } else if (lnk.up) {
+        out("eth0:  link up, no IP yet (DHCP pending)\r\n");
+    } else {
+        out("eth0:  no link\r\n");
+    }
+
+    if (lnk.up)
+        outf("       link: up, %lu Mbps %s-duplex\r\n",
+             (unsigned long)lnk.speed_mbps, lnk.full_duplex ? "full" : "half");
 }

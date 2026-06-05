@@ -1,0 +1,24 @@
+name: kincony-a16-default
+board: kincony-A16
+description: "Kincony A16 UART shell, WiFi, Ethernet, 4x PCF8574"
+apps_flash:
+- cat
+- free
+- gpio
+- ifconfig
+- klog
+- ls
+- ping
+- reboot
+- restart
+- services
+- tail
+- uart_shell
+- wifi_daemon
+init_flash:
+- path: /flash/bin/uart_shell.dap
+  restart: always
+- path: /flash/bin/wifi_daemon.dap
+  restart: always
+apps_sd: []
+init_sd: []

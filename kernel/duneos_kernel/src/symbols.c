@@ -282,6 +282,10 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),
 #endif /* CONFIG_DUNEOS_DRV_WIFI */
 
+#ifdef CONFIG_DUNEOS_DRV_ETH
+    SYM_P("duneos_eth_get_info",         duneos_eth_get_info,         DUNEOS_PERM_NET),
+#endif
+
     /* Sentinel */
     { NULL, NULL, 0 },
 };

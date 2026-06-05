@@ -72,6 +72,13 @@ class CapabilityNotApplicable(Exception):
     """
 
 
+class CapabilityMissing(CapabilityNotApplicable):
+    """Raised when the active board simply does not have the hardware required
+    by a capability (e.g. no battery section for 'battery'). Extends
+    CapabilityNotApplicable so builder.py's existing except clause skips it.
+    """
+
+
 CAPABILITY_MAP: dict[str, CapabilitySpec] = {
     "display": {
         "board_key": ["display", "driver"],
@@ -189,11 +196,9 @@ def resolve(capabilities: list[str],
         driver = _board_key_get(spec["board_key"])
         if not driver:
             board_path = ".".join(spec["board_key"])
-            sys.exit(
-                f"ERROR: app requires capability '{cap}' but the active board\n"
-                f"  does not declare it. Expected board.yaml to set:\n"
-                f"      {board_path}: <driver-name>\n"
-                f"  Capability description: {spec['description']}"
+            raise CapabilityMissing(
+                f"capability '{cap}' not available on this board "
+                f"(board.yaml missing {board_path})"
             )
 
         if driver in spec.get("kernel_served", set()):

@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 #include "esp_err.h"
-#ifndef CONFIG_ESP_CONSOLE_USB_CDC
+#ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
 #endif
@@ -25,11 +25,10 @@ static void kernel_idle(void)
 }
 
 /* console_init() wires stdin/stdout through the USB Serial/JTAG hardware
- * peripheral (GPIO19/20 in JTAG mode).  Skip it when TinyUSB OTG is active
- * — they share the same D+/D- pins and the JTAG driver would claim the mux
- * before TinyUSB can enumerate.  With CONFIG_ESP_CONSOLE_USB_CDC=y the
- * _write() hook already routes printf through TinyUSB CDC automatically. */
-#ifndef CONFIG_ESP_CONSOLE_USB_CDC
+ * peripheral.  Only compiled when CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y —
+ * the SoC has the peripheral and it is the selected console.
+ * Plain ESP32 has no USB hardware; TinyUSB CDC boards use a different path. */
+#ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
 static void console_init(void)
 {
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
@@ -44,7 +43,7 @@ static void console_init(void)
     fcntl(fileno(stdin),  F_SETFL, 0);
     fcntl(fileno(stdout), F_SETFL, 0);
 }
-#endif
+#endif /* CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG */
 
 /* Launch all services defined in /flash/init.yaml (and /sd/init.yaml).
  * Returns the number of services successfully started, or -1 on config error. */
@@ -95,10 +94,7 @@ static int launch_autoboot(void)
 
 void app_main(void)
 {
-#ifndef CONFIG_ESP_CONSOLE_USB_CDC
-    /* USB Serial/JTAG VFS: wires stdin/stdout to the JTAG peripheral.
-     * Skipped when TinyUSB OTG is the console — they share GPIO19/20 and
-     * the JTAG driver would claim the USB mux before TinyUSB can enumerate. */
+#ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     console_init();
 #endif
 

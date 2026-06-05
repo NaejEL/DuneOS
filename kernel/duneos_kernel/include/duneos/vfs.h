@@ -1,10 +1,18 @@
 #pragma once
 
+#include "board_config.h"   /* DUNEOS_HAS_SD (authoritative; default below) */
 #include "esp_err.h"
 #include "sdmmc_cmd.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+/* Match vfs.c: a board that omits DUNEOS_HAS_SD is treated as "SD present", so
+ * this header and vfs.c agree on whether duneos_vfs_mount_sd() is declared —
+ * regardless of include order in the translation unit. */
+#ifndef DUNEOS_HAS_SD
+#define DUNEOS_HAS_SD 1
+#endif
 
 /*
  * DuneOS VFS initialisation.
@@ -20,7 +28,9 @@ esp_err_t duneos_vfs_deinit(void);
 
 /* Mount/unmount individual filesystems (called internally by duneos_vfs_init) */
 esp_err_t duneos_vfs_mount_flash(void);
+#if DUNEOS_HAS_SD
 esp_err_t duneos_vfs_mount_sd(void);
+#endif
 esp_err_t duneos_vfs_mount_tmp(void);
 esp_err_t duneos_vfs_mount_dev(void);
 
