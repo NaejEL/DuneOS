@@ -25,7 +25,7 @@ typedef struct {
     uint8_t     bus;         /* I2C bus id (i2c_id in board.yaml)     */
     uint8_t     addr;        /* 7-bit I2C address                    */
     uint8_t     pins;
-    uint8_t     direction;   /* GPIO_DIR_INPUT|OUTPUT — policy hint   */
+    uint8_t     direction;   /* DUNEOS_GPIO_DIR_INPUT|OUTPUT (== GPIO_DIR_*) */
 } duneos_gpiochip_desc_t;
 
 /* Row emitter passed to DUNEOS_GPIOCHIP_LIST(). */

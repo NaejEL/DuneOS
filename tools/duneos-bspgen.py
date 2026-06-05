@@ -438,7 +438,7 @@ def generate(board: dict) -> str:
             if direction not in ("input", "output"):
                 raise SystemExit(
                     f"board.yaml: gpio_expander '{exp.get('type')}' @ {addr_str}: "
-                    f"direction must be 'input' or 'output', got '{exp.get('direction')!r}'")
+                    f"direction must be 'input' or 'output', got {exp.get('direction')!r}")
             dir_macro = "DUNEOS_GPIO_DIR_INPUT" if direction == "input" else "DUNEOS_GPIO_DIR_OUTPUT"
             rows.append(f'    X({chip_id}, "{exp["type"]}", {bus}, {addr_str}, {pins}, {dir_macro})')
         for i, row in enumerate(rows):
