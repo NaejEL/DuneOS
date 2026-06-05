@@ -1,0 +1,14 @@
+name: launcher
+version: "0.1.0"
+required_abi_version: 1
+permissions: 352          # INPUT | FS_READ | FS_WRITE
+stack_size: 8192
+# heap_size > 0 keeps the launcher in spawned mode (its own task + slot) so it
+# can loop forever and spawn child apps without occupying the shell's task.
+heap_size: 8192
+capabilities:
+  - display
+sources:
+  - $SDK/ui/ui.c
+  - $SDK/display/gfx.c
+  - $SDK/app/libappmeta.c
