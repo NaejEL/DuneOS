@@ -5,3 +5,6 @@ permissions: 352
 stack_size: 8192
 capabilities:
   - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
