@@ -14,13 +14,20 @@
  * Both outcomes are SUCCESS — the test just confirms the runtime mode
  * matched expectations. A non-EPERM error in captured mode (or a failure
  * to spawn in spawned mode) is the actual bug.
+ *
+ * Output uses dprintf(STDOUT_FILENO, ...) NOT printf — printf is not in
+ * the kernel symbol table by design (would bypass the VFS). See
+ * CLAUDE.md → Hard-Won Lessons.
  */
 
 #include <errno.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <string.h>
+#include <unistd.h>     /* STDOUT_FILENO */
 
+/* dprintf is POSIX 2008 but not exposed by PicoLibc's stdio.h headers here.
+ * Declare it ourselves — the kernel symbol table exports it (symbols.c). */
+extern int  dprintf(int fd, const char *fmt, ...);
 extern void duneos_exit(int code);
 
 static volatile int s_thread_ran = 0;
@@ -38,22 +45,25 @@ void app_main(void)
     int rc = pthread_create(&t, NULL, thread_body, NULL);
 
     if (rc == EPERM) {
-        printf("test_pthread: CAPTURED mode — pthread_create EPERM "
-               "(ADR 016 guard active)\n");
+        dprintf(STDOUT_FILENO,
+                "test_pthread: CAPTURED mode — pthread_create EPERM "
+                "(ADR 016 guard active)\n");
         duneos_exit(0);
         return;
     }
 
     if (rc != 0) {
-        printf("test_pthread: UNEXPECTED — pthread_create rc=%d (%s)\n",
-               rc, strerror(rc));
+        dprintf(STDOUT_FILENO,
+                "test_pthread: UNEXPECTED — pthread_create rc=%d (%s)\n",
+                rc, strerror(rc));
         duneos_exit(1);
         return;
     }
 
     /* Spawned mode: the thread runs, we wait for it. */
     pthread_join(t, NULL);
-    printf("test_pthread: SPAWNED mode — thread ran=%d "
-           "(pthread_create succeeded)\n", s_thread_ran);
+    dprintf(STDOUT_FILENO,
+            "test_pthread: SPAWNED mode — thread ran=%d "
+            "(pthread_create succeeded)\n", s_thread_ran);
     duneos_exit(s_thread_ran ? 0 : 1);
 }

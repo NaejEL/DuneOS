@@ -219,12 +219,17 @@ static void app_task_entry(void *arg)
 
 static xt_exc_handler s_orig_exc[XCHAL_EXCCAUSE_NUM];
 
-/* Causes we intercept for app recovery. */
+/* Causes we intercept for app recovery. EXCCAUSE_INSTR_PROHIBITED catches
+ * the case where an app jumps to address 0 (call through NULL function
+ * pointer) — the most common failure mode for apps with unresolved-symbol
+ * relocations the loader left at NULL. Without it, that scenario panics
+ * the kernel instead of just killing the offending app. */
 static const int s_exc_causes[] = {
     EXCCAUSE_ILLEGAL,
     EXCCAUSE_DIVIDE_BY_ZERO,
     EXCCAUSE_LOAD_PROHIBITED,
     EXCCAUSE_STORE_PROHIBITED,
+    EXCCAUSE_INSTR_PROHIBITED,
 };
 #define NUM_EXC_CAUSES  ((int)(sizeof(s_exc_causes)/sizeof(s_exc_causes[0])))
 
