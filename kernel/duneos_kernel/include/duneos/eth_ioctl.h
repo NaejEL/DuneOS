@@ -17,6 +17,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* ioctl() is exported by the kernel ABI; declare it here for -nostdlib apps. */
+extern int ioctl(int fd, unsigned long request, ...);
+
 #define ETH_GET_MAC         0x01   /* arg: uint8_t[6]          */
 #define ETH_GET_LINK_STATUS 0x02   /* arg: eth_link_status_t * */
 
