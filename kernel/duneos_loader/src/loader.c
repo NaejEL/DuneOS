@@ -1000,6 +1000,9 @@ static esp_err_t extract_manifest(FILE               *f,
 void duneos_loader_init(void)
 {
     if (!s_loader_lock) s_loader_lock = xSemaphoreCreateMutex();
+    if (!s_loader_lock)
+        klog_e(TAG, "loader lock alloc failed — concurrent load/unload will NOT "
+                    "be serialized (exec pool may corrupt under memory pressure)");
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     /* IRAM on ESP32 requires 32-bit aligned access — do NOT combine
