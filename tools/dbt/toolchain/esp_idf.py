@@ -167,10 +167,25 @@ def _bat_arg(a: str) -> str:
     return '"' + a.replace('"', '""') + '"'
 
 
+def _active_idf_target() -> str:
+    """Read the active board's idf_target.txt (e.g. 'esp32s3'), or '' if unknown."""
+    board_file = DUNEOS_ROOT / ".duneos_board"
+    if not board_file.exists():
+        return ""
+    board = board_file.read_text().strip()
+    tgt = DUNEOS_ROOT / "boards" / board / "idf_target.txt"
+    return tgt.read_text().strip() if tgt.exists() else ""
+
+
 def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
     """Invoke idf.py with the given arguments from the DuneOS repo root."""
     from ..setup import build_idf_env, idf_python
     is_win = platform.system() == "Windows"
+    # Pin IDF_TARGET to the active board's chip so a stale env var left over
+    # from a different board (e.g. IDF_TARGET=esp32 after working on an ESP32
+    # board, then switching to an esp32s3 board) can't conflict with the
+    # board's generated sdkconfig and abort idf.py.
+    target = _active_idf_target()
     if is_win:
         import tempfile
         export   = idf_root / "export.bat"
@@ -181,7 +196,8 @@ def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
         # calling idf.py, otherwise CMake looks for CMakeLists.txt in the wrong dir.
         bat = (
             f'@call "{export}"\r\n'
-            f'cd /d "{DUNEOS_ROOT}"\r\n'
+            + (f'set "IDF_TARGET={target}"\r\n' if target else 'set "IDF_TARGET="\r\n')
+            + f'cd /d "{DUNEOS_ROOT}"\r\n'
             f'idf.py {args_str}\r\n'
             f'exit /b %ERRORLEVEL%\r\n'
         )
@@ -199,6 +215,8 @@ def _run_idf(idf_root: Path, idf_args: list[str]) -> int:
                 pass
     else:
         env    = build_idf_env(idf_root)
+        if target and env is not None:
+            env["IDF_TARGET"] = target
         python = idf_python(idf_root)
         idf_py = idf_root / "tools" / "idf.py"
         if python and idf_py.exists():

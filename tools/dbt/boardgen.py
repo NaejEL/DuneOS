@@ -256,5 +256,7 @@ def write_to(build_dir: Path, board_cfg: dict, board_name: str,
              capabilities: list[str]) -> Path:
     build_dir.mkdir(parents=True, exist_ok=True)
     out = build_dir / "_board.h"
-    out.write_text(generate(board_cfg, board_name, capabilities))
+    # encoding="utf-8": the generated header carries non-ASCII glyphs (→) in
+    # comments; Windows' default cp1252 codec can't encode them.
+    out.write_text(generate(board_cfg, board_name, capabilities), encoding="utf-8")
     return out
