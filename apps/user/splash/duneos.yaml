@@ -5,8 +5,8 @@ required_abi_version: 1
 permissions: 32
 stack_size: 8192
 # STREAM mode (libgfx) + an optional logo image in app memory.
-# A 120x120 RGB565 logo is 28.8 KiB; +4 KiB slack + libdisp state.
-heap_size: 36864
+# A 160x120 RGB565 logo is 38.4 KiB (the /etc PNG→.dr cap); +slack + libdisp.
+heap_size: 49152
 icon: app
 capabilities:
   - display

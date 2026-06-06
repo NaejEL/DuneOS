@@ -271,6 +271,7 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
             return [n for n in names
                     if n.endswith(".example") or n.endswith(".template")]
         shutil.copytree(src_etc, dst_etc, dirs_exist_ok=True, ignore=_ignore)
+        _convert_etc_pngs(dst_etc)
         etc_files = sum(1 for _ in dst_etc.rglob("*") if _.is_file())
         print(f"  staged → /etc/  ({etc_files} file(s) from boards/{board_name}/etc/)")
     else:
@@ -279,6 +280,34 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
     _install_default_icons(staging_dir)
 
     return len(staged)
+
+
+#: Cap for /etc raster assets (e.g. the splash logo) so the .dr fits a modest
+#: app heap. Aspect is preserved; smaller images are left untouched.
+_ETC_IMG_MAX = (160, 120)
+
+
+def _convert_etc_pngs(etc_root: Path) -> None:
+    """Render any PNG dropped under /etc to a sibling .dr at flash time, so a
+    non-developer can swap e.g. the splash logo (etc/splash/logo.png) without
+    running `dbt img convert`. The PNG is not shipped — only the .dr apps read.
+    Aspect-preserving downscale to _ETC_IMG_MAX. Non-fatal if Pillow is absent."""
+    pngs = list(etc_root.rglob("*.png"))
+    if not pngs:
+        return
+    try:
+        from PIL import Image
+    except ImportError:
+        print("  [warn] Pillow missing — /etc PNGs not converted to .dr")
+        return
+    from . import img
+    for png in pngs:
+        w, h = Image.open(png).size
+        scale = min(_ETC_IMG_MAX[0] / w, _ETC_IMG_MAX[1] / h, 1.0)
+        size = (round(w * scale), round(h * scale)) if scale < 1.0 else None
+        img.convert(png, png.with_suffix(".dr"), resize=size)
+        png.unlink()
+        print(f"  /etc: {png.name} -> {png.with_suffix('.dr').name}")
 
 
 def _install_default_icons(staging_dir: Path) -> None:
