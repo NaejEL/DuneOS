@@ -434,11 +434,11 @@ Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : u
 **Ordre recommandé** (du plus fort levier au plus faible) : **icônes → explorateur de fichiers → jeux**. Les icônes sont un multiplicateur (toute app ajoutée ensuite en hérite, le launcher est la porte d'entrée de la démo) et figent une décision d'archi ; l'explorateur est la meilleure vitrine « vrai OS » (VFS, /flash + /sd, side-loading) ; les jeux sont la cerise fun, plus faible levier.
 
 - [x] **i2cscope** — couteau suisse I²C (scan / xfer / sniff Pulseable VCD / scénarios SD). Structure modulaire (1 fichier/écran) = layout de référence pour les apps multi-écrans.
-- [ ] **Icônes par app (ADR 023, modèle freedesktop)** :
-  - `dbt` : étape d'install des icônes au build d'image — copie `apps/<app>/icon.dr` (ou `icon.png` converti) vers `/flash/share/icons/<name>.dr` ; `dbt deploy` copie le `.dr` à côté du `.dap` sur SD.
-  - launcher : résolution nom→fichier via search path (voisin SD → `/sd/share/icons` → `/flash/share/icons` → fallback générique), `duneos_image_load_dr` + blit par ligne, placeholder si absent.
-  - set de fallback générique livré dans l'image (`application.dr`, `folder.dr`, …) — le `hicolor` de freedesktop.
-  - taille launcher standard à figer (défaut `dbt img convert --resize` 24×24 ou 32×32 RGB565).
+- [ ] **Icônes par app (ADR 023, modèle freedesktop)** — taille standard **32×32 RGB565** :
+  - [x] `dbt build` : conversion build-time `icon.png` → `build/icon.dr` (`build_app_icon`, non-fatale si Pillow absent). Le dev dépose un PNG, point. (2026-06-06)
+  - [ ] `dbt` : étape d'install des icônes au build d'image — copie `build/icon.dr` (ou `apps/<app>/icon.dr` hand-authored) vers `/flash/share/icons/<name>.dr` ; `dbt deploy` copie le `.dr` à côté du `.dap` sur SD.
+  - [ ] launcher : résolution nom→fichier via search path (voisin SD → `/sd/share/icons` → `/flash/share/icons` → fallback générique), `duneos_image_load_dr` + blit, placeholder si absent. UI cible : **carrousel coverflow** (icône centrale 32×32, voisines réduites de part et d'autre).
+  - [ ] set de fallback générique livré dans l'image (`application.dr`, `folder.dr`, …) — le `hicolor` de freedesktop.
 - [ ] **Explorateur de fichiers graphique** : nav arborescente `/flash` + `/sd` (`opendir`/`readdir`/`stat`), libui `list` + `textview`, hexview pour binaires / textview pour texte, lancement de `.dap` (tie-in loader/launcher). Réutilise le pattern modulaire d'i2cscope.
 - [ ] **Jeux** : `snake` + `tetris` (libgfx STREAM + input), `lua` REPL. Plus faible levier archi — fun de démo, faisables à tout moment.
 

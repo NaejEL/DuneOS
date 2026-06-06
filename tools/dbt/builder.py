@@ -64,6 +64,34 @@ def build_libdune(plugin, arch: str, board_cfg: dict, tc: dict) -> Path:
     return lib_path
 
 
+#: Standard launcher icon size (ADR 023). One size; the launcher owns it.
+ICON_SIZE = (32, 32)
+
+
+def build_app_icon(app_dir: Path, build_dir: Path) -> None:
+    """Render an app's icon.png to build/icon.dr (32×32 RGB565) at build time, so
+    devs ship a plain PNG and never run `dbt img convert` by hand (ADR 023).
+
+    Non-fatal: no icon.png, or Pillow not installed, just skips — the icon is
+    optional and the launcher falls back to a generic one. mtime-cached.
+    """
+    png = app_dir / "icon.png"
+    if not png.exists():
+        return
+    dr = build_dir / "icon.dr"
+    if dr.exists() and dr.stat().st_mtime >= png.stat().st_mtime:
+        return
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        print("  WARN  icon.png present but Pillow missing — skipping icon.dr "
+              "(pip install Pillow)")
+        return
+    from . import img
+    print(f"  ICON  icon.png -> {dr.name} ({ICON_SIZE[0]}x{ICON_SIZE[1]})")
+    img.convert(png, dr, resize=ICON_SIZE)
+
+
 def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc: dict) -> bool:
     build_dir = app_dir / APP_BUILD_DIR
     build_dir.mkdir(exist_ok=True)
@@ -88,6 +116,10 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
     _boardgen_write(build_dir, board_cfg,
                     board_cfg.get("board", {}).get("name", "unknown"),
                     manifest.get("capabilities", []))
+
+    # Build-time PNG→.dr icon conversion (ADR 023) — ship an icon.png, get an
+    # icon.dr; non-fatal if absent or Pillow is missing.
+    build_app_icon(app_dir, build_dir)
 
     # Capability resolution (ADR 014): apps declare needs, dbt picks the
     # board-specific source files. Resolved sources are treated identically
