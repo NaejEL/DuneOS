@@ -439,6 +439,7 @@ Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : u
   - [ ] `dbt` : étape d'install des icônes au build d'image — copie `build/icon.dr` (ou `apps/<app>/icon.dr` hand-authored) vers `/flash/share/icons/<name>.dr` ; `dbt deploy` copie le `.dr` à côté du `.dap` sur SD.
   - [ ] launcher : résolution nom→fichier via search path (voisin SD → `/sd/share/icons` → `/flash/share/icons` → fallback générique), `duneos_image_load_dr` + blit, placeholder si absent. UI cible : **carrousel coverflow** (icône centrale 32×32, voisines réduites de part et d'autre).
   - [ ] set de fallback générique livré dans l'image (`application.dr`, `folder.dr`, …) — le `hicolor` de freedesktop.
+- [ ] **Vues responsives (ADR 024)** — la démo tourne sur CardPuter **et** T-Embed sans changer les apps. Le layout dérive de `ui_size()` / `board.info` (`width`/`height`), jamais de pixels hardcodés. Launcher : taille d'icône dérivée (focus 48 px, previews scalées). ✅ ; audit/fix du reste (colonne valeur `i2cscope` à `x=150`, revue `g_shell`/`gfx_demo`/`splash`). ⏳
 - [ ] **Explorateur de fichiers graphique** : nav arborescente `/flash` + `/sd` (`opendir`/`readdir`/`stat`), libui `list` + `textview`, hexview pour binaires / textview pour texte, lancement de `.dap` (tie-in loader/launcher). Réutilise le pattern modulaire d'i2cscope.
 - [ ] **Jeux** : `snake` + `tetris` (libgfx STREAM + input), `lua` REPL. Plus faible levier archi — fun de démo, faisables à tout moment.
 

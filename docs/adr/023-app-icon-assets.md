@@ -37,8 +37,10 @@ embeds it.
 - **Manifest:** `icon: <name>` — a name, not a path (matches freedesktop).
 - **Source:** the app ships `icon.png` in its directory; `dbt build` renders it
   to `build/icon.dr` automatically (non-fatal if Pillow is absent — the icon is
-  optional). A hand-authored `icon.dr` is also accepted. Standard launcher size:
-  **32×32 RGB565 (≈ 2 KB)** — one size; the launcher owns it.
+  optional). A hand-authored `icon.dr` is also accepted. Standard size:
+  **48×48 RGB565 (≈ 4.6 KB)** — one stored size; the launcher blits it 1:1 for
+  the focused app and nearest-neighbour downscales it for side previews. Sizing
+  the *layout* to the screen is [[ADR-024]] (board-driven responsive views).
 - **Install (flashed apps):** when `dbt system`/`flashimg` assembles the sysbin
   LittleFS image, it copies each included app's icon to
   `/flash/share/icons/<name>.dr` — the "package install drops icons into
@@ -74,9 +76,8 @@ embeds it.
   with graceful fallback. Bounded work.
 - Apps opt in by shipping `icon.png` (or `icon.dr`) + setting `icon:`; apps
   without one get the generic fallback — no breakage.
-- Standard launcher icon size fixed at 32×32 RGB565; multi-size theming
-  (freedesktop's `<size>/` dirs) is deferred — one size is enough for the
-  launcher today.
+- Standard icon size fixed at 48×48 RGB565; multi-size theming (freedesktop's
+  `<size>/` dirs) is deferred — one stored size, scaled at render, is enough.
 - `dbt build` gains a non-fatal build-time `icon.png` → `build/icon.dr` step
   (`build_app_icon`), so devs never run `dbt img convert` by hand. **Done
   2026-06-06.**
