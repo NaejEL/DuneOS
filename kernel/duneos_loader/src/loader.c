@@ -93,7 +93,12 @@ int duneos_loader_get_captured_exit_code(void)
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
-#define MAX_SECTIONS 512
+/* Upper bound on ELF section-header count. Apps built with
+ * -ffunction-sections/-fdata-sections across several translation units emit one
+ * section per function/object (plus a .rela twin), so a multi-file app easily
+ * runs into the hundreds. The bound only sizes section_bases[] in the per-app
+ * descriptor (calloc'd per load, freed on unload) — 4 B/entry, transient. */
+#define MAX_SECTIONS 1024
 
 struct duneos_app {
     duneos_app_manifest_t manifest;
@@ -169,6 +174,12 @@ static size_t   s_exec_pool_used = 0;
 static uint8_t  *s_build_scratch   = NULL;
 static uintptr_t s_build_exec_base = 0;   /* IRAM base of the app's exec block */
 static size_t    s_build_exec_size = 0;
+/* True when s_build_scratch is a malloc'd staging buffer that must be installed
+ * into IRAM and freed (plain ESP32, inverted DIRAM). False when it points
+ * straight at the exec block's linear DRAM alias (ESP32-S2/S3): writes land in
+ * place, so there is nothing to copy or free — and load needs no contiguous DRAM
+ * the size of the app's code. */
+static bool      s_build_scratch_owned = false;
 
 /* Writable address for a load-time store.  Exec-pool addresses are redirected to
  * the DRAM scratch buffer (contiguous, no inversion); everything else (data pool)
@@ -339,17 +350,28 @@ static esp_err_t load_sections(FILE              *f,
         app->exec_block      = iram;
         app->exec_block_size = exec_total;
 
-        /* Stage exec sections in DRAM; build_install_exec() copies the relocated
-         * image into IRAM after relocation (freed in load_app before the app runs). */
         s_build_exec_base = (uintptr_t)iram;
         s_build_exec_size = exec_total;
-        s_build_scratch   = heap_caps_malloc(exec_total,
-                                             MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#ifdef CONFIG_IDF_TARGET_ESP32
+        /* Plain ESP32: DIRAM word order is inverted, so there is no linear DRAM
+         * view of the exec block — stage relocations in a contiguous scratch and
+         * install per-word via the inverting alias (build_install_exec). */
+        s_build_scratch       = heap_caps_malloc(exec_total,
+                                                 MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
         if (!s_build_scratch) {
             klog_e(TAG, "exec staging alloc failed (%zu B)", exec_total);
             return ESP_ERR_NO_MEM;
         }
-        klog_d(TAG, "exec block: %zu B IRAM=%p scratch=%p pool=%zu/%zu",
+        s_build_scratch_owned = true;
+#else
+        /* ESP32-S2/S3: the exec block's DRAM alias is linear (fixed offset, no
+         * word inversion), so relocations write straight through it — in place,
+         * no scratch malloc, no install copy. Load is then bounded by the exec
+         * pool, not by a contiguous DRAM block the size of the app's code. */
+        s_build_scratch       = (uint8_t *)iram_word_dram_alias((uintptr_t)iram);
+        s_build_scratch_owned = false;
+#endif
+        klog_d(TAG, "exec block: %zu B IRAM=%p write=%p pool=%zu/%zu",
                exec_total, iram, (void *)s_build_scratch,
                s_exec_pool_used, s_exec_pool_size);
     }
@@ -1180,18 +1202,20 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Install the relocated image (staged in DRAM scratch) into the IRAM exec
-     * block, then release the scratch buffer.  ISYNC makes the freshly written
-     * instructions visible to the fetch pipeline. */
-    if (app->exec_block_size > 0 && s_build_scratch)
-        build_install_exec((uintptr_t)app->exec_block,
-                            s_build_scratch, app->exec_block_size);
-    if (s_build_scratch) {
+    /* With a malloc'd scratch (plain ESP32), copy the relocated image into the
+     * IRAM exec block and free it. On S2/S3 the relocations already landed in the
+     * exec block via its DRAM alias — nothing to install or free. ISYNC makes the
+     * freshly written instructions visible to the fetch pipeline either way. */
+    if (s_build_scratch_owned) {
+        if (app->exec_block_size > 0 && s_build_scratch)
+            build_install_exec((uintptr_t)app->exec_block,
+                                s_build_scratch, app->exec_block_size);
         heap_caps_free(s_build_scratch);
-        s_build_scratch   = NULL;
-        s_build_exec_base = 0;
-        s_build_exec_size = 0;
     }
+    s_build_scratch       = NULL;
+    s_build_scratch_owned = false;
+    s_build_exec_base     = 0;
+    s_build_exec_size     = 0;
     asm volatile("isync" ::: "memory");
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
 
@@ -1257,13 +1281,14 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
 out:
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Release the transient exec-staging buffer if an error left it held. */
-    if (s_build_scratch) {
+    /* Release the transient exec-staging buffer if an error left it held (only
+     * the malloc'd scratch is owned; the S2/S3 DRAM-alias pointer is not heap). */
+    if (s_build_scratch_owned && s_build_scratch)
         heap_caps_free(s_build_scratch);
-        s_build_scratch   = NULL;
-        s_build_exec_base = 0;
-        s_build_exec_size = 0;
-    }
+    s_build_scratch       = NULL;
+    s_build_scratch_owned = false;
+    s_build_exec_base     = 0;
+    s_build_exec_size     = 0;
 #endif
     fclose(f);
     free(shdrs);

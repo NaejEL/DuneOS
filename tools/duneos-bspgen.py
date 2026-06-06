@@ -670,7 +670,8 @@ def generate_sdkconfig_board(board: dict) -> str:
     # ---- DuneOS drivers ----
     lines += ["# DuneOS kernel drivers", "CONFIG_DUNEOS_DRV_NULL=y",
               "CONFIG_DUNEOS_DRV_UART=y", "CONFIG_DUNEOS_DRV_KLOG=y",
-              "CONFIG_DUNEOS_DRV_GPIO=y", ""]
+              "CONFIG_DUNEOS_DRV_GPIO=y",
+              "CONFIG_DUNEOS_DRV_LOGIC=y", ""]
 
     if board.get("i2c"):
         lines += ["CONFIG_DUNEOS_DRV_I2C=y", ""]

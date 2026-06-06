@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/select.h>
 
 #include "duneos/task.h"
 #include "esp_system.h"
@@ -122,6 +123,9 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("lseek",        lseek     ),
     SYM("fstat",        fstat     ),
     SYM("stat",         stat      ),
+    /* esp_vfs select — works on /dev fds (gpiochip0, input) AND sockets.
+     * Not the lwIP-only lwip_select; no NET permission needed for device I/O. */
+    SYM("select",       select    ),
     SYM_P("unlink",     unlink,   DUNEOS_PERM_FS_WRITE),
     SYM_P("rename",     rename,   DUNEOS_PERM_FS_WRITE),
     SYM("dup",          duneos_dup ),
@@ -278,8 +282,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("inet_ntoa_r",  ip4addr_ntoa_r,  DUNEOS_PERM_NET),
     SYM_P("inet_ntop",    lwip_inet_ntop,  DUNEOS_PERM_NET),
     SYM_P("inet_pton",    lwip_inet_pton,  DUNEOS_PERM_NET),
-    SYM_P("select",       lwip_select,     DUNEOS_PERM_NET),
-    SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),
+    SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),  /* sockets only — /dev uses select() */
 #endif /* CONFIG_DUNEOS_DRV_WIFI */
 
 #ifdef CONFIG_DUNEOS_DRV_ETH

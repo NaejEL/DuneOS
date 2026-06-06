@@ -138,3 +138,13 @@ int duneos_hal_i2c_write_read(duneos_hal_i2c_t *h,
     if (err != ESP_OK) { errno = EIO; return -1; }
     return 0;
 }
+
+int duneos_hal_i2c_probe(duneos_hal_i2c_t *h, uint16_t addr)
+{
+    if (!h) { errno = EINVAL; return -1; }
+    xSemaphoreTake(h->lock, portMAX_DELAY);
+    esp_err_t err = i2c_master_probe(h->bus, addr, 50 /* ms */);
+    xSemaphoreGive(h->lock);
+    if (err != ESP_OK) { errno = ENXIO; return -1; }
+    return 0;
+}

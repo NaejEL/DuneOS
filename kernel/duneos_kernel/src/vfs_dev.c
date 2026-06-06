@@ -17,6 +17,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
+#include <sys/select.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -280,6 +282,115 @@ extern void drv_usb_register(void);
 extern void drv_usb_cdc_register(void);
 #endif
 
+/* ----- select() / poll() ------------------------------------------------- */
+/*
+ * esp_vfs select bridge (pattern mirrors ESP-IDF's UART VFS). On start_select
+ * the fd_sets hold devfs-local fds; we clear them and remember which read fds
+ * each select watches. A driver gaining data calls duneos_dev_select_notify(),
+ * which FD_SETs the matching fds and wakes the waiter via the esp_vfs sem.
+ * Only read-readiness is modelled (our selectable devices are read-driven).
+ */
+#define DEVFS_MAX_SELECTS 4
+
+typedef struct {
+    bool                 active;
+    esp_vfs_select_sem_t sem;
+    fd_set              *readfds;       /* live set — ready bits written here */
+    fd_set               watch;         /* read fds this select waits on      */
+} dev_select_t;
+
+static dev_select_t s_selects[DEVFS_MAX_SELECTS];
+static portMUX_TYPE s_sel_mux = portMUX_INITIALIZER_UNLOCKED;
+
+static bool fd_readable(int fd)
+{
+    if (fd < 0 || fd >= DEVFS_MAX_FDS || !s_fds[fd].open) return true; /* error→ready */
+    const duneos_dev_driver_t *drv = s_fds[fd].drv;
+    if (drv && drv->readable) return drv->readable(&s_fds[fd]);
+    return true;   /* no readiness callback → treat as always-readable */
+}
+
+static esp_err_t devfs_start_select(int nfds, fd_set *readfds, fd_set *writefds,
+                                    fd_set *exceptfds, esp_vfs_select_sem_t sem,
+                                    void **end_select_args)
+{
+    *end_select_args = NULL;
+    int max = nfds < DEVFS_MAX_FDS ? nfds : DEVFS_MAX_FDS;
+
+    fd_set watch = *readfds;
+    FD_ZERO(readfds);
+    FD_ZERO(writefds);
+    FD_ZERO(exceptfds);
+
+    portENTER_CRITICAL(&s_sel_mux);
+
+    dev_select_t *sl = NULL;
+    for (int i = 0; i < DEVFS_MAX_SELECTS; i++)
+        if (!s_selects[i].active) { sl = &s_selects[i]; break; }
+    if (!sl) { portEXIT_CRITICAL(&s_sel_mux); return ESP_ERR_NO_MEM; }
+
+    sl->active  = true;
+    sl->sem     = sem;
+    sl->readfds = readfds;
+    sl->watch   = watch;
+
+    bool any = false;
+    for (int fd = 0; fd < max; fd++) {
+        if (FD_ISSET(fd, &watch) && fd_readable(fd)) { FD_SET(fd, readfds); any = true; }
+    }
+    if (any) esp_vfs_select_triggered(sem);
+
+    portEXIT_CRITICAL(&s_sel_mux);
+
+    *end_select_args = sl;
+    return ESP_OK;
+}
+
+static esp_err_t devfs_end_select(void *end_select_args)
+{
+    dev_select_t *sl = end_select_args;
+    if (!sl) return ESP_OK;
+    portENTER_CRITICAL(&s_sel_mux);
+    sl->active  = false;
+    sl->readfds = NULL;
+    portEXIT_CRITICAL(&s_sel_mux);
+    return ESP_OK;
+}
+
+void duneos_dev_select_notify(const duneos_dev_driver_t *drv)
+{
+    portENTER_CRITICAL(&s_sel_mux);
+    for (int i = 0; i < DEVFS_MAX_SELECTS; i++) {
+        dev_select_t *sl = &s_selects[i];
+        if (!sl->active) continue;
+        bool hit = false;
+        for (int fd = 0; fd < DEVFS_MAX_FDS; fd++)
+            if (FD_ISSET(fd, &sl->watch) && s_fds[fd].open && s_fds[fd].drv == drv) {
+                FD_SET(fd, sl->readfds); hit = true;
+            }
+        if (hit) esp_vfs_select_triggered(sl->sem);
+    }
+    portEXIT_CRITICAL(&s_sel_mux);
+}
+
+void duneos_dev_select_notify_isr(const duneos_dev_driver_t *drv, int *woken)
+{
+    BaseType_t w = pdFALSE;
+    portENTER_CRITICAL_ISR(&s_sel_mux);
+    for (int i = 0; i < DEVFS_MAX_SELECTS; i++) {
+        dev_select_t *sl = &s_selects[i];
+        if (!sl->active) continue;
+        bool hit = false;
+        for (int fd = 0; fd < DEVFS_MAX_FDS; fd++)
+            if (FD_ISSET(fd, &sl->watch) && s_fds[fd].open && s_fds[fd].drv == drv) {
+                FD_SET(fd, sl->readfds); hit = true;
+            }
+        if (hit) esp_vfs_select_triggered_isr(sl->sem, &w);
+    }
+    portEXIT_CRITICAL_ISR(&s_sel_mux);
+    if (woken) *woken = (int)w;
+}
+
 /* ----- mount ------------------------------------------------------------- */
 
 esp_err_t duneos_vfs_mount_dev(void)
@@ -300,6 +411,8 @@ esp_err_t duneos_vfs_mount_dev(void)
         .opendir  = devfs_opendir,
         .readdir  = devfs_readdir,
         .closedir = devfs_closedir,
+        .start_select = devfs_start_select,
+        .end_select   = devfs_end_select,
     };
 
     esp_err_t err = esp_vfs_register("/dev", &vfs, NULL);

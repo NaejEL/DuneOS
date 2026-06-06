@@ -27,7 +27,7 @@ extern int ioctl(int fd, unsigned long request, ...);
 #define GPIOCHIP_GET_VALUE   0x03  /* ← gpio_req_t {line} → fills .val            */
 #define GPIOCHIP_SET_VALUE   0x04  /* ← gpio_req_t {line, val}                    */
 #define GPIOCHIP_SET_PULL    0x05  /* ← gpio_req_t {line, pull}                   */
-#define GPIOCHIP_SET_IRQ     0x06  /* reserved — IRQ delivery deferred to Phase 12 */
+#define GPIOCHIP_SET_IRQ     0x06  /* ← gpio_irq_req_t {line, edge} — arm/disarm edge events */
 
 /* GPIO_DIR_* — direction constants for GPIOCHIP_SET_DIR */
 #define GPIO_DIR_INPUT       0
@@ -39,10 +39,12 @@ extern int ioctl(int fd, unsigned long request, ...);
 #define GPIO_PULL_DOWN       2
 #define GPIO_PULL_UPDOWN     3  /* both pull-up and pull-down enabled simultaneously */
 
-/* GPIO_EDGE_* — interrupt edge constants for GPIOCHIP_SET_IRQ (reserved) */
+/* GPIO_EDGE_* — edge selector for GPIOCHIP_SET_IRQ, and the edge reported in a
+ * gpio_event_t (only RISING/FALLING are ever reported). GPIO_EDGE_NONE disarms. */
 #define GPIO_EDGE_RISING     0
 #define GPIO_EDGE_FALLING    1
 #define GPIO_EDGE_BOTH       2
+#define GPIO_EDGE_NONE       3
 
 /*
  * Returned by GPIOCHIP_GET_INFO.
@@ -67,8 +69,27 @@ typedef struct {
  * Argument for GPIOCHIP_SET_IRQ (reserved, returns ENOSYS in Phase 8).
  * IRQ delivery to app tasks will be wired up in Phase 12 (/dev/input/event0).
  */
+/*
+ * Argument for GPIOCHIP_SET_IRQ. Arms (edge = RISING/FALLING/BOTH) or disarms
+ * (edge = NONE) edge-event delivery on `line`. Once armed, read() on the
+ * gpiochip fd returns gpio_event_t records (blocking until an edge occurs),
+ * mirroring the Linux GPIO chardev line-event model.
+ */
 typedef struct {
     uint8_t line;
     uint8_t edge;   /* GPIO_EDGE_*          */
     int     signo;  /* reserved             */
 } gpio_irq_req_t;
+
+/*
+ * One edge event, returned by read() on /dev/gpiochip0 after a line was armed
+ * with GPIOCHIP_SET_IRQ. read() blocks until at least one event is available;
+ * pass a buffer of N * sizeof(gpio_event_t) to drain up to N at once.
+ */
+typedef struct {
+    uint32_t timestamp_us;   /* monotonic microseconds at the edge       */
+    uint8_t  line;           /* GPIO line that changed                   */
+    uint8_t  edge;           /* GPIO_EDGE_RISING or GPIO_EDGE_FALLING    */
+    uint8_t  level;          /* line level after the edge (0/1)          */
+    uint8_t  _pad;
+} gpio_event_t;

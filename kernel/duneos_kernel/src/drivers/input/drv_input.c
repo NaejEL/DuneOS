@@ -34,6 +34,8 @@ static volatile int      s_tail = 0;
 static portMUX_TYPE      s_mux  = portMUX_INITIALIZER_UNLOCKED;
 static SemaphoreHandle_t s_data_sem;
 
+static const duneos_dev_driver_t s_drv_input;   /* fwd ref for select notify */
+
 void drv_input_push_event(const input_event_t *ev)
 {
     portENTER_CRITICAL(&s_mux);
@@ -47,6 +49,15 @@ void drv_input_push_event(const input_event_t *ev)
 
     if (was_empty)
         xSemaphoreGive(s_data_sem);
+
+    /* Injected from a userspace daemon task (kb_iomatrix) — wake any select(). */
+    duneos_dev_select_notify(&s_drv_input);
+}
+
+static bool input_readable(duneos_devfd_t *fd)
+{
+    (void)fd;
+    return s_head != s_tail;
 }
 
 /* ----- VFS callbacks ------------------------------------------------------ */
@@ -114,10 +125,11 @@ static int input_init(void)
 }
 
 static const duneos_dev_driver_t s_drv_input = {
-    .name  = "input/event0",
-    .init  = input_init,
-    .read  = input_read,
-    .ioctl = input_ioctl,
+    .name     = "input/event0",
+    .init     = input_init,
+    .read     = input_read,
+    .ioctl    = input_ioctl,
+    .readable = input_readable,
 };
 
 void drv_input_register(void)

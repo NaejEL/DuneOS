@@ -28,6 +28,16 @@ config DUNEOS_DRV_GPIO
         Enable /dev/gpiochip0 for native ESP32 GPIO access via ioctl().
         Uses esp_driver_gpio (gpio_config, gpio_get/set_level, gpio_set_pull_mode).
 
+config DUNEOS_DRV_LOGIC
+    bool "Logic-capture device (/dev/logic0)"
+    default n
+    help
+        Enable /dev/logic0 for synchronous multi-line logic capture (ADR 020).
+        Samples GPIOs at a fixed cadence into transition records — the reliable
+        way to sniff a serial bus (I2C, SPI, bit-bang), unlike per-edge GPIO
+        interrupts which can't keep pace at clock rates. Polled backend in
+        arch/<arch>/hal/hal_logic.c.
+
 config DUNEOS_DRV_I2C
     bool "I2C master bus (/dev/i2c-0)"
     default n

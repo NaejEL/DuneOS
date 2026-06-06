@@ -256,6 +256,17 @@ static void write_board_info(const char *path)
 #endif
     );
     write(fd, buf, n);
+
+#ifdef CONFIG_DUNEOS_DRV_I2C
+    /* I2C0 pins, so apps (e.g. i2cscope's bus sniffer) can find SCL/SDA at
+     * runtime instead of hardcoding board-specific GPIO numbers. */
+    n = snprintf(buf, sizeof(buf),
+        "i2c0_scl: %d\n"
+        "i2c0_sda: %d\n",
+        (int)DUNEOS_I2C0_SCL_PIN, (int)DUNEOS_I2C0_SDA_PIN);
+    write(fd, buf, n);
+#endif
+
     close(fd);
 }
 #endif

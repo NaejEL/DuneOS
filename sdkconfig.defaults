@@ -21,3 +21,6 @@ CONFIG_FATFS_MAX_LFN=255
 # overflow and gives the supervisor a chance to kill the app without kernel reboot.
 CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y
 
+
+# select()/poll() on /dev devices (ADR 019)
+CONFIG_VFS_SUPPORT_SELECT=y

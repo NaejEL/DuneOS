@@ -106,6 +106,10 @@ if(CONFIG_DUNEOS_DRV_GPIOCHIP_MCP23017)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/gpio/drv_gpiochip_mcp23017.c")
 endif()
 
+if(CONFIG_DUNEOS_DRV_LOGIC)
+    list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/logic/drv_logic.c")
+endif()
+
 if(CONFIG_DUNEOS_DRV_I2C)
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/i2c_bus.c")
     list(APPEND DUNEOS_KERNEL_SRCS "src/drivers/drv_i2c.c")

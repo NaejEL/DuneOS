@@ -69,13 +69,15 @@ static pcf8574_slot_t *slot_from_fd(const duneos_devfd_t *fd)
 
 static int pcf8574_write_byte(pcf8574_slot_t *s, uint8_t val)
 {
-    return i2c_bus_write_read(s->bus, s->i2c_addr, &val, 1, NULL, 0);
+    struct i2c_msg m = { .addr = s->i2c_addr, .flags = 0, .len = 1, .buf = &val };
+    return i2c_transfer(&m, 1) == 1 ? 0 : -1;
 }
 
 static int pcf8574_read_byte(pcf8574_slot_t *s, uint8_t *out)
 {
     /* PCF8574 returns its byte on any read — no register pointer. */
-    return i2c_bus_write_read(s->bus, s->i2c_addr, NULL, 0, out, 1);
+    struct i2c_msg m = { .addr = s->i2c_addr, .flags = I2C_M_RD, .len = 1, .buf = out };
+    return i2c_transfer(&m, 1) == 1 ? 0 : -1;
 }
 
 static int pcf8574_op_init(pcf8574_slot_t *s)

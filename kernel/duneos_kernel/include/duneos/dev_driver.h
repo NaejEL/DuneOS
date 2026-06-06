@@ -51,6 +51,12 @@ typedef struct {
     ssize_t (*read) (struct duneos_devfd *fd,       void *buf, size_t len);
     ssize_t (*write)(struct duneos_devfd *fd, const void *buf, size_t len);
     int     (*ioctl)(struct duneos_devfd *fd, int cmd, void *arg);
+
+    /* select()/poll() read-readiness. Return true if read() would not block.
+     * NULL → the fd is treated as always-readable (synchronous devices).
+     * Event-driven drivers (input, gpiochip) implement this and call
+     * duneos_dev_select_notify() when their queue gains data. */
+    bool    (*readable)(struct duneos_devfd *fd);
 } duneos_dev_driver_t;
 
 /* Per open-file-descriptor state managed by vfs_dev.c. */
@@ -67,3 +73,12 @@ typedef struct duneos_devfd {
  * Returns 0 on success, -1 on failure (init() returned -1 or table full).
  */
 int duneos_dev_register(const duneos_dev_driver_t *drv);
+
+/*
+ * Wake any select()/poll() waiting on a read of a device owned by `drv`.
+ * Call after pushing data into the device's queue so a blocked selector
+ * re-evaluates. Use the _isr variant from interrupt context (e.g. a GPIO ISR);
+ * it sets *woken if a higher-priority task must be resumed.
+ */
+void duneos_dev_select_notify(const duneos_dev_driver_t *drv);
+void duneos_dev_select_notify_isr(const duneos_dev_driver_t *drv, int *woken);
