@@ -1,0 +1,9 @@
+# BQ27220 fuel gauge — LilyGO T-Embed (gauge at 0x55)
+# Registers follow DuneOS sdk/sensor/libbq27220.c; current (0x0C) is the
+# standard BQ27xxx Current() command. Adjust to your silicon's datasheet.
+name BQ27220
+addr 0x55
+word  0x04 mV Voltage
+word  0x1C %  Charge
+sword 0x0C mA Current
+hex   0x06 -  Flags
