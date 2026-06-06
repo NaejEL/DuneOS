@@ -203,6 +203,20 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
         print(f"  staged → /bin/{app_name}.dap")
         staged.append(app_name)
 
+        # Install the app's icon into the shared theme dir (ADR 023):
+        # /flash/share/icons/<icon-name>.dr, resolved by name in the launcher.
+        # Prefer a hand-authored icon.dr, else the build-time one from icon.png.
+        icon_name = manifest.get("icon")
+        if icon_name:
+            icon_src = app_dir / "icon.dr"
+            if not icon_src.exists():
+                icon_src = app_dir / "build" / "icon.dr"
+            if icon_src.exists():
+                icons_dir = staging_dir / "share" / "icons"
+                icons_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(icon_src, icons_dir / f"{icon_name}.dr")
+                print(f"  staged → /share/icons/{icon_name}.dr")
+
     # Stage init.yaml — three sources:
     dest_init = staging_dir / "init.yaml"
     if safe_mode:
@@ -262,7 +276,34 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
     else:
         print(f"  [info] no boards/{board_name}/etc/ — /etc/ left empty")
 
+    _install_default_icons(staging_dir)
+
     return len(staged)
+
+
+def _install_default_icons(staging_dir: Path) -> None:
+    """Install the OS generic-icon fallback set into /share/icons/ (ADR 023, the
+    freedesktop `hicolor` role): assets/icons/*.png → <staging>/share/icons/*.dr.
+    The launcher falls back to `application.dr` for icon-less apps. Non-fatal;
+    never overwrites a per-app icon of the same name already staged."""
+    src = DUNEOS_ROOT / "assets" / "icons"
+    if not src.is_dir():
+        return
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        print("  [warn] Pillow missing — default icons not installed")
+        return
+    from . import img
+    from .builder import ICON_SIZE
+    icons_dir = staging_dir / "share" / "icons"
+    icons_dir.mkdir(parents=True, exist_ok=True)
+    for png in sorted(src.glob("*.png")):
+        dst = icons_dir / f"{png.stem}.dr"
+        if dst.exists():
+            continue                      # a per-app icon of this name wins
+        img.convert(png, dst, resize=ICON_SIZE)
+        print(f"  staged → /share/icons/{dst.name}  (default)")
 
 
 # ---------------------------------------------------------------------------

@@ -24,4 +24,15 @@ def deploy_single(app_dir: Path, sd_path: Path, is_bin: bool) -> bool:
     dest = dest_dir / f"{manifest['name']}.dap"
     shutil.copy2(elf, dest)
     print(f"  ->  {dest}")
+
+    # Ship the icon next to the .dap (ADR 023): the launcher looks for
+    # <name>.dr adjacent to a side-loaded app. Keeps the .dap itself lean.
+    icon_src = app_dir / "icon.dr"
+    if not icon_src.exists():
+        icon_src = app_dir / APP_BUILD_DIR / "icon.dr"
+    if icon_src.exists():
+        icon_dest = dest_dir / f"{manifest['name']}.dr"
+        shutil.copy2(icon_src, icon_dest)
+        print(f"  ->  {icon_dest}")
+
     return True

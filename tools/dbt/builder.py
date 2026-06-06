@@ -64,23 +64,30 @@ def build_libdune(plugin, arch: str, board_cfg: dict, tc: dict) -> Path:
     return lib_path
 
 
-#: Standard launcher icon size (ADR 023). One size; the launcher owns it.
-ICON_SIZE = (32, 32)
+#: Standard app icon size (ADR 023). One size; the launcher scales for previews.
+ICON_SIZE = (48, 48)
 
 
 def build_app_icon(app_dir: Path, build_dir: Path) -> None:
-    """Render an app's icon.png to build/icon.dr (32×32 RGB565) at build time, so
-    devs ship a plain PNG and never run `dbt img convert` by hand (ADR 023).
+    """Render an app's icon.png to build/icon.dr (ICON_SIZE RGB565) at build time,
+    so devs ship a plain PNG and never run `dbt img convert` by hand (ADR 023).
 
     Non-fatal: no icon.png, or Pillow not installed, just skips — the icon is
-    optional and the launcher falls back to a generic one. mtime-cached.
+    optional and the launcher falls back to a generic one. Cached on mtime *and*
+    the stored .dr dimensions (so changing ICON_SIZE forces a reconvert).
     """
+    import struct
     png = app_dir / "icon.png"
     if not png.exists():
         return
     dr = build_dir / "icon.dr"
     if dr.exists() and dr.stat().st_mtime >= png.stat().st_mtime:
-        return
+        try:
+            _, w, h, _ = struct.unpack_from("<HHHH", dr.read_bytes(), 0)
+            if (w, h) == ICON_SIZE:
+                return
+        except Exception:
+            pass   # malformed/short → fall through and reconvert
     try:
         import PIL  # noqa: F401
     except ImportError:
