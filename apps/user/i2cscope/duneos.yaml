@@ -11,3 +11,7 @@ sources:
   - $SDK/display/gfx.c
   - $SDK/ui/ui.c
   - $SDK/i2c/smbus.c
+# Runtime data pushed to the SD card on deploy (dbt creates the folder).
+# The scenario engine reads /sd/i2cscope/*.scn.
+data:
+  - { src: scenarios, dst: i2cscope }

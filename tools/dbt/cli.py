@@ -169,19 +169,21 @@ def cmd_deploy(args) -> None:
     if not elf.exists():
         sys.exit("ERROR: app.elf not found — run 'dbt build' first")
 
-    manifest = load_manifest(app_dir)
-    app_name = manifest["name"]
-    subdir   = "bin" if is_bin else "apps"
-    if getattr(args, "bin", False):
-        subdir = "bin"
+    # Raw .elf debug copy stays inline; the normal path goes through
+    # deploy_single so it ships the icon (.dr) and the manifest's data: files too.
+    if getattr(args, "elf", False):
+        import shutil
+        manifest = load_manifest(app_dir)
+        subdir   = "bin" if is_bin else "apps"
+        dest_dir = sd_path / subdir
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_elf = dest_dir / f"{manifest['name']}.elf"
+        shutil.copy2(elf, dest_elf)
+        print(f"Deployed → {dest_elf}")
+        return
 
-    dest_dir = sd_path / subdir
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    ext      = ".dap" if not getattr(args, "elf", False) else ".elf"
-    import shutil
-    dest_elf = dest_dir / f"{app_name}{ext}"
-    shutil.copy2(elf, dest_elf)
-    print(f"Deployed → {dest_elf}")
+    if not deploy_single(app_dir, sd_path, is_bin):
+        sys.exit(1)
 
 
 def cmd_clean(args) -> None:
@@ -367,7 +369,7 @@ def cmd_system_build(args) -> None:
 
 def cmd_system_flash(args) -> None:
     """Stage profile.apps_flash + profile.init_flash and flash the sysbin partition."""
-    from .system import resolve_profile
+    from .system import resolve_profile, build_profile
     from .flashimg import cmd_flashimg
     name, profile = resolve_profile(getattr(args, "profile", None))
     board_file = DUNEOS_ROOT / ".duneos_board"
@@ -378,6 +380,16 @@ def cmd_system_flash(args) -> None:
             f"  Run `dbt system use {name}` first."
         )
     print(f"`dbt system flash` — profile '{name}' (board: {profile['board']})\n")
+
+    # Rebuild the profile's apps first, unless --no-build. cmd_flashimg's own
+    # --build only rebuilds bin/ apps, so user apps (splash, launcher, …) would
+    # otherwise ship stale — the classic "I flashed but still see the old one".
+    if not getattr(args, "no_build", False):
+        plugin, arch, cpu, board_cfg = get_board_plugin()
+        tc = plugin.find_compiler(arch, cpu)
+        if build_profile(profile, plugin, arch, cpu, board_cfg, tc) != 0:
+            sys.exit("build failed — not flashing")
+
     # Delegate to cmd_flashimg with the profile attached.
     class _A: pass
     a = _A()
@@ -621,6 +633,8 @@ def main() -> None:
     p_sys_flash.add_argument("--profile", help="Profile name (default: active)")
     p_sys_flash.add_argument("--port", help="Serial port (overrides .duneos_port)")
     p_sys_flash.add_argument("--baud", type=int, default=460800)
+    p_sys_flash.add_argument("--no-build", action="store_true",
+                             help="Skip rebuilding the profile's apps before flashing")
     p_sys_flash.set_defaults(func=cmd_system_flash)
 
     p_sys_deploy = sys_sub.add_parser(
