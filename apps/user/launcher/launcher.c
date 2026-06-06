@@ -29,6 +29,7 @@
 
 #include "duneos/gfx.h"
 #include "duneos/ui.h"
+#include "duneos/ui_carousel.h"
 #include "duneos/appmeta.h"
 #include "duneos/input_ioctl.h"
 
@@ -40,13 +41,18 @@ extern void duneos_supervisor_wait_for_completion(int target_count);
 #define MAX_APPS      32
 #define NAME_LEN      32
 #define PATH_LEN      288
+#define ICON_PATH_LEN 96    /* "/flash/share/icons/<name>.dr" + margin */
 
 static char        s_names[MAX_APPS][NAME_LEN];
 static char        s_paths[MAX_APPS][PATH_LEN];
+static char        s_icon_names[MAX_APPS][NAME_LEN]; /* manifest icon name, or "" */
 static const char *s_name_ptrs[MAX_APPS];
+static char        s_icon_scratch[ICON_PATH_LEN];    /* reused by the icon callback */
 static int         s_count;
 static int         s_total_dap;   /* .dap files seen (before display filter) */
 static int         s_meta_ok;     /* of those, manifests read successfully    */
+
+static ui_carousel_t s_car;
 
 static const char *const k_dirs[] = { "/sd/apps" };
 
@@ -110,6 +116,7 @@ static void scan_dir(const char *dir)
 
         copy_name(s_names[s_count], name);
         memcpy(s_paths[s_count], path, sizeof(s_paths[s_count]));
+        copy_name(s_icon_names[s_count], meta.icon);   /* "" if none */
         s_name_ptrs[s_count] = s_names[s_count];
         s_count++;
     }
@@ -127,12 +134,26 @@ static void scan_apps(void)
 
 /* ----- rendering --------------------------------------------------------- */
 
-static void render_home(ui_t *ui, const ui_list_t *list)
+/* Carousel icon provider: resolve item idx's .dr path lazily (ADR 023 search
+ * path) into one shared buffer — so per-app storage is just the icon name. */
+static const char *launcher_icon(int idx, void *ctx)
+{
+    (void)ctx;
+    return ui_app_icon_path(s_paths[idx], s_icon_names[idx],
+                            s_icon_scratch, sizeof(s_icon_scratch))
+               ? s_icon_scratch : NULL;
+}
+
+/* Title + reusable libui coverflow carousel + position hint. The carousel owns
+ * the icon/label area; the launcher only frames it. */
+static void render_home(ui_t *ui)
 {
     ui_clear(ui);
     ui_titlebar(ui, "DuneOS");
-    ui_list_draw(ui, list);
-    ui_statusbar(ui, "Up/Down  Enter=run");
+    ui_carousel_draw(ui, &s_car);
+    char st[32];
+    snprintf(st, sizeof(st), "%d/%d   < >  Enter", s_car.sel + 1, s_car.n);
+    ui_statusbar(ui, st);
     ui_flush(ui);
 }
 
@@ -173,13 +194,11 @@ void app_main(void)
 
     scan_apps();
 
-    uint16_t sw, sh;
-    ui_size(ui, &sw, &sh);
+    /* Carousel fills the area between the title and status bars; sizes derive
+     * from the screen (ADR 024 — responsive). */
     int bar_h = 8 + 2 * ui_theme(ui)->pad;
-
-    ui_list_t list;
-    ui_list_init(&list, 0, bar_h, sw, sh - 2 * bar_h);
-    ui_list_set_items(&list, s_name_ptrs, s_count);
+    ui_carousel_init(&s_car, 0, bar_h, ui_screen_w(ui), ui_screen_h(ui) - 2 * bar_h);
+    ui_carousel_set_items(&s_car, s_name_ptrs, s_count, launcher_icon, NULL);
 
     if (s_count == 0) {
         /* Diagnostic body: how the scan classified /sd/apps. Lets us tell apart
@@ -193,7 +212,7 @@ void app_main(void)
         ui_statusbar(ui, "Empty");
         ui_flush(ui);
     } else {
-        render_home(ui, &list);
+        render_home(ui);
     }
 
     for (;;) {
@@ -202,18 +221,17 @@ void app_main(void)
         if (ev.type != INPUT_EV_KEY || ev.value == INPUT_VAL_RELEASE) continue;
         if (s_count == 0) continue;
 
-        switch (ui_list_key(&list, ev.code)) {
-        case UI_LIST_MOVED:
-            ui_list_draw(ui, &list);
-            ui_flush(ui);
+        switch (ui_carousel_key(&s_car, ev.code)) {
+        case UI_CAROUSEL_MOVED:
+            render_home(ui);
             break;
-        case UI_LIST_SELECT:
-            launch(s_paths[list.sel], &gfx, &ui);
+        case UI_CAROUSEL_SELECT:
+            launch(s_paths[s_car.sel], &gfx, &ui);
             if (!ui) { if (input >= 0) close(input); duneos_exit(10); }
-            render_home(ui, &list);
+            render_home(ui);
             break;
-        case UI_LIST_CANCEL:
-        case UI_LIST_NONE:
+        case UI_CAROUSEL_CANCEL:   /* launcher is home — Esc does not quit */
+        case UI_CAROUSEL_NONE:
             break;
         }
     }

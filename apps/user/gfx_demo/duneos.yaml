@@ -1,6 +1,7 @@
 name: gfx_demo
 version: "0.1.0"
 required_abi_version: 1
+icon: gfx_demo
 permissions: 0
 stack_size: 8192
 # Phase 24.10 STREAM mode — no back-buffer, draws go directly to the

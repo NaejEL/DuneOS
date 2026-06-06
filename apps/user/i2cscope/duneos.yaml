@@ -4,7 +4,7 @@ required_abi_version: 1
 permissions: 360          # I2C | FS_READ | FS_WRITE | INPUT
 stack_size: 8192
 heap_size: 4096
-icon: gear
+icon: i2cscope
 capabilities:
   - display
 sources:

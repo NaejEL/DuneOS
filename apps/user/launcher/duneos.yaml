@@ -10,5 +10,7 @@ capabilities:
   - display
 sources:
   - $SDK/ui/ui.c
+  - $SDK/ui/ui_carousel.c
   - $SDK/display/gfx.c
   - $SDK/app/libappmeta.c
+  - $SDK/image/libimage.c
