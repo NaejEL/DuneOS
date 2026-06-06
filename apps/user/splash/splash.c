@@ -41,11 +41,17 @@ static int read_config(char *out_logo, size_t logosz, int *out_ms)
     int fd = open(conf_path, O_RDONLY);
     if (fd < 0) return -1;
 
-    char buf[256];
-    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    /* Read the whole file: the keys (logo:/duration_ms:) sit after a long
+     * comment header, so a short buffer would miss them. */
+    char   buf[1024];
+    size_t total = 0;
+    ssize_t r;
+    while (total < sizeof(buf) - 1 &&
+           (r = read(fd, buf + total, sizeof(buf) - 1 - total)) > 0)
+        total += (size_t)r;
     close(fd);
-    if (n <= 0) return -1;
-    buf[n] = '\0';
+    if (total == 0) return -1;
+    buf[total] = '\0';
 
     char *line = buf;
     while (line && *line) {
