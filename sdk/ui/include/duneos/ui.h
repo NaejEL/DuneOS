@@ -66,6 +66,17 @@ void              ui_set_theme(ui_t *ui, const ui_theme_t *theme);
 const ui_theme_t *ui_theme(const ui_t *ui);
 void              ui_size(const ui_t *ui, uint16_t *w, uint16_t *h);
 
+/* The borrowed gfx context (for widgets that need raw blits, e.g. ui_carousel). */
+gfx_ctx_t *ui_gfx(const ui_t *ui);
+
+/* Responsive layout helpers (ADR 024): derive sizes from the screen rather than
+ * hardcoding pixels, so an app lays out correctly on any board's panel.
+ *   ui_pct_w(ui, 50)  → half the screen width, etc. */
+int ui_screen_w(const ui_t *ui);
+int ui_screen_h(const ui_t *ui);
+int ui_pct_w(const ui_t *ui, int pct);
+int ui_pct_h(const ui_t *ui, int pct);
+
 /* Present the frame (gfx_flush passthrough; no-op in STREAM mode). */
 void ui_flush(ui_t *ui);
 

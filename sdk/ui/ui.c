@@ -64,6 +64,15 @@ void ui_size(const ui_t *ui, uint16_t *w, uint16_t *h)
     if (h) *h = ui->h;
 }
 
+gfx_ctx_t *ui_gfx(const ui_t *ui) { return ui ? ui->gfx : NULL; }
+
+/* Responsive layout helpers (ADR 024): size things as a fraction of the screen
+ * instead of hardcoding pixels, so the same app lays out on any panel. */
+int ui_screen_w(const ui_t *ui) { return ui ? ui->w : 0; }
+int ui_screen_h(const ui_t *ui) { return ui ? ui->h : 0; }
+int ui_pct_w(const ui_t *ui, int pct) { return ui ? ui->w * pct / 100 : 0; }
+int ui_pct_h(const ui_t *ui, int pct) { return ui ? ui->h * pct / 100 : 0; }
+
 void ui_flush(ui_t *ui) { if (ui) gfx_flush(ui->gfx); }
 
 /* ----- primitives -------------------------------------------------------- */
