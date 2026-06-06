@@ -1,7 +1,7 @@
 /*
  * splash — one-shot boot logo.
  *
- * Reads /etc/splash/config.yaml:
+ * Reads /flash/etc/splash/config.yaml:
  *   logo:        path to a .dr raster to blit centred (optional)
  *   duration_ms: how long to hold before exiting (optional, default 2000)
  * Drop a logo.png next to config.yaml and `dbt flashimg` converts it to

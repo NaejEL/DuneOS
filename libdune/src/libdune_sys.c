@@ -154,7 +154,10 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const void *app)
 int duneos_config_path(const char *app_name, char *out, size_t outsz)
 {
     if (!app_name || !out || outsz == 0) return -1;
-    int n = snprintf(out, outsz, "/etc/%s/config.yaml", app_name);
+    /* The config tree is staged into the LittleFS sysbin, which mounts at
+     * /flash — so the physical path is /flash/etc/<app>/config.yaml. ("/etc" on
+     * its own has no mount and never resolved.) */
+    int n = snprintf(out, outsz, "/flash/etc/%s/config.yaml", app_name);
     if (n < 0 || (size_t)n >= outsz) return -1;
     return 0;
 }
