@@ -12,7 +12,7 @@
  * Messaging:
  *   Each running slot has a FreeRTOS queue (mailbox). duneos_send() looks up
  *   the target slot by name. duneos_recv() looks up the calling task's slot.
- *   Both are O(DUNEOS_MAX_RUNNING_APPS) — fine for a small embedded system.
+ *   Both are O(running apps) over the slot list — fine for an embedded system.
  *
  * Phase 20 — Memory hardening:
  *   - Per-app heap pool (multi_heap_register) for malloc isolation
@@ -56,7 +56,7 @@ void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops)
 
 /* ----- internal types ---------------------------------------------------- */
 
-typedef struct {
+typedef struct app_slot {
     duneos_app_t           *app;
     TaskHandle_t            task;
     QueueHandle_t           mailbox;
@@ -86,6 +86,11 @@ typedef struct {
     uintptr_t           data_pool_base;
     size_t              data_pool_size;
 
+    /* Grow-only slot pool: slots are malloc'd on demand and never freed (stable
+     * addresses keep the lock-free, ISR-context slot lookups safe); an inactive
+     * slot is reused before a new one is allocated. The only ceiling is RAM. */
+    struct app_slot    *next;
+
     /* Phase 20: crash recovery — set by exception/overflow/WDT handlers */
     bool                crashed;    /* prevents double-post from WDT on already-killed slot */
     uint32_t            exc_cause;  /* Xtensa EXCCAUSE at crash */
@@ -111,7 +116,10 @@ typedef struct {
 
 /* ----- state ------------------------------------------------------------- */
 
-static app_slot_t        s_slots[DUNEOS_MAX_RUNNING_APPS];
+/* Head of the grow-only slot list (see app_slot.next). Slots are added at the
+ * head; the write is atomic so the lock-free ISR walkers below never observe a
+ * half-linked node. */
+static app_slot_t       *s_slot_head = NULL;
 static QueueHandle_t     s_exit_queue;
 static SemaphoreHandle_t s_all_done;
 /* Counting semaphore — signalled once per app exit handled by supervisor_task.
@@ -140,38 +148,43 @@ static duneos_exit_observer_fn s_exit_observer = NULL;
 
 /* ----- slot helpers ------------------------------------------------------ */
 
-/* Lock-free scan: safe from ISR/exception context (O(4), read-only). */
+/* Lock-free scan: safe from ISR/exception context (read-only; nodes are never
+ * freed, so the walk can't dangle even if a launch links a new node). */
 static app_slot_t *slot_by_task_unsafe(TaskHandle_t t)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (s_slots[i].task == t) return &s_slots[i];
-    }
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (s->task == t) return s;
     return NULL;
 }
 
 static app_slot_t *slot_by_task(TaskHandle_t t)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (s_slots[i].active && s_slots[i].task == t) return &s_slots[i];
-    }
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (s->active && s->task == t) return s;
     return NULL;
 }
 
 static app_slot_t *slot_by_name(const char *name)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (s_slots[i].active && strcmp(s_slots[i].name, name) == 0)
-            return &s_slots[i];
-    }
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (s->active && strcmp(s->name, name) == 0) return s;
     return NULL;
 }
 
+/* Reuse an inactive slot, else grow the pool by one (RAM is the only limit).
+ * Called under s_lock. The new node is fully initialised before being linked at
+ * the head with a single atomic pointer write, so a concurrent lock-free walker
+ * sees either the old list or the new node complete — never a partial link. */
 static app_slot_t *slot_alloc(void)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (!s_slots[i].active) return &s_slots[i];
-    }
-    return NULL;
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (!s->active) return s;
+
+    app_slot_t *s = calloc(1, sizeof(*s));
+    if (!s) return NULL;
+    s->next     = s_slot_head;
+    s_slot_head = s;
+    return s;
 }
 
 /* ----- forward declarations ---------------------------------------------- */
@@ -371,8 +384,7 @@ static void wdt_timer_cb(TimerHandle_t timer)
 {
     (void)timer;
     TickType_t now = xTaskGetTickCount();
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        app_slot_t *s = &s_slots[i];
+    for (app_slot_t *s = s_slot_head; s; s = s->next) {
         if (!s->active || !s->wdt_timeout_ticks || s->crashed) continue;
         if ((now - s->wdt_last_kick_tick) >= s->wdt_timeout_ticks) {
             s->crashed = true;
@@ -538,7 +550,7 @@ static void supervisor_task(void *arg)
 
 esp_err_t duneos_supervisor_init(void)
 {
-    memset(s_slots, 0, sizeof(s_slots));
+    s_slot_head = NULL;   /* slots are allocated lazily on first launch */
     s_active_count = 0;
 
     s_lock = xSemaphoreCreateMutex();
@@ -591,7 +603,7 @@ esp_err_t duneos_supervisor_init(void)
     if (!s_wdt_timer) return ESP_ERR_NO_MEM;
     xTimerStart(s_wdt_timer, 0);
 
-    klog_d(TAG, "supervisor ready (max %d concurrent apps)", DUNEOS_MAX_RUNNING_APPS);
+    klog_d(TAG, "supervisor ready (app slots grow on demand, RAM-limited)");
     return ESP_OK;
 }
 
@@ -604,7 +616,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     app_slot_t *slot = slot_alloc();
     if (!slot) {
         xSemaphoreGive(s_lock);
-        klog_e(TAG, "no free app slots (max %d)", DUNEOS_MAX_RUNNING_APPS);
+        klog_e(TAG, "cannot allocate an app slot — out of memory");
         return ESP_ERR_NO_MEM;
     }
     /* Pre-mark active to prevent a concurrent launch from grabbing this slot.
@@ -857,14 +869,15 @@ void duneos_supervisor_wait_for_completion(int target_count)
 int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count)
 {
     if (!out || count <= 0) return 0;
-    int n = count < DUNEOS_MAX_RUNNING_APPS ? count : DUNEOS_MAX_RUNNING_APPS;
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    for (int i = 0; i < n; i++) {
-        out[i].active        = s_slots[i].active;
-        out[i].restart_policy= s_slots[i].restart_policy;
-        out[i].restart_count = s_slots[i].restart_count;
-        strlcpy(out[i].name, s_slots[i].active ? s_slots[i].name : "",
-                sizeof(out[i].name));
+    int n = 0;
+    for (app_slot_t *s = s_slot_head; s && n < count; s = s->next) {
+        if (!s->active) continue;            /* list running apps only */
+        out[n].active        = s->active;
+        out[n].restart_policy= s->restart_policy;
+        out[n].restart_count = s->restart_count;
+        strlcpy(out[n].name, s->name, sizeof(out[n].name));
+        n++;
     }
     xSemaphoreGive(s_lock);
     return n;

@@ -23,7 +23,11 @@
  * All functions are safe to call from any task context after init.
  */
 
-#define DUNEOS_MAX_RUNNING_APPS  4
+/* App slots are allocated dynamically (a grow-only pool) — the number of
+ * concurrent apps is limited only by RAM, not by a fixed count. This value is a
+ * soft hint used to size the exit queue/semaphore and the default `list_slots`
+ * buffer; it is NOT a hard cap on running apps. */
+#define DUNEOS_MAX_RUNNING_APPS  16
 #define DUNEOS_MAILBOX_DEPTH     8
 #define DUNEOS_MSG_DATA_MAX      64
 #define DUNEOS_PATH_MAX          128     /* max length for stored service paths */

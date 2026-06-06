@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define DUNEOS_MAX_RUNNING_APPS  4
+/* Listing buffer size — app slots are RAM-limited (grow-only pool) in the
+ * kernel; this just bounds how many we show in one `services` call. */
+#define DUNEOS_MAX_RUNNING_APPS  16
 #define DUNEOS_APP_NAME_MAX      64
 typedef enum {
     DUNEOS_RESTART_NO         = 0,
