@@ -152,7 +152,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 - [x] **Headers DHI hardware** : `hal_uart.h`, `hal_gpio.h`, `hal_i2c.h`, `hal_spi.h`, `hal_adc.h`, `hal_time.h` — types purs (`uint32_t`, `int`, callbacks C standards). Zéro dépendance ESP-IDF.
 - [x] **Implémentations ESP-IDF** : `arch/xtensa_esp32s3/hal/hal_*.c` — ESP-IDF types **uniquement en interne**. Compilation conditionnelle via le triple-guard `arch.cmake`.
 - [x] **Migration des backends HW** : `drv_uart.c`, `drv_gpio.c`, `drv_i2c.c`, `drv_spi.c`, `i2c_bus.c`, `drv_battery_adc_simple.c` délèguent au HAL. Drivers input (`btn_gpio.c`, `enc_quadrature.c`, `kb_iomatrix.c`) migrés. `dev_driver.h` et `i2c_bus.h` retournent `int`.
-- [x] **Abstraction interruptions** : `duneos_hal_gpio_set_intr()` (usage kernel-interne). `GPIOCHIP_SET_IRQ` retourne `ENOSYS` — livraison userspace via signal repoussée (Phase 27 — VFS natif + `poll`).
+- [x] **Abstraction interruptions** : `duneos_hal_gpio_set_intr()` (usage kernel-interne). **Livraison userspace implémentée 2026-06-06** (contest sprint, app i2cscope) : `GPIOCHIP_SET_IRQ` arme une ligne en détection de front, `read()` sur `/dev/gpiochip0` retourne des `gpio_event_t` horodatés — modèle GPIO chardev line-events de Linux ([ADR 019](docs/adr/019-linux-device-interface-semantics.md)). Plus de signal/`poll` requis pour le cas edge-stream.
 - [x] **Arch dans le manifest** : Champ `arch[32]` dans `duneos_app_manifest_t`. Loader rejette les `.dap` cross-ISA. `dbt builder.py` injecte `arch` depuis le plugin toolchain.
 - [x] **IDs numériques en BSP** : `bspgen.py` émet SPI host et ADC unit en entiers.
 - [x] **`arch.cmake` self-selection** : `file(GLOB arch/*/arch.cmake)` + triple-guard. Ajouter une arch = créer un seul fichier, zéro touche au kernel core.
@@ -326,6 +326,33 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 
 ---
 
+### Phase 24.12 — Alignement des interfaces device sur Linux (ADR 019) 🟡 EN COURS
+
+**Pourquoi** : les interfaces `/dev` (app-facing) doivent suivre la sémantique Linux, pas le vocabulaire ESP-IDF — pour que le savoir et le code userspace Linux se transposent directement, et pour tenir l'objectif « couche POSIX partielle ». L'ESP-IDF s'arrête au HAL ([ADR 009](docs/adr/009-driver-boundary.md)) ; la couche au-dessus parle Linux. Décision actée par [ADR 019](docs/adr/019-linux-device-interface-semantics.md). Amorcé pendant le sprint contest (app i2cscope, sniffer).
+
+- [x] **I²C → i2c-dev** : `struct i2c_msg {addr, flags, len, buf}` + `I2C_M_RD`, ioctls `I2C_SLAVE`/`I2C_RDWR` (tableau de msgs), primitif noyau `i2c_transfer()`. Sonde = msg write len 0. Drivers (drv_i2c, expanders, libbq27220) migrés ; `i2c_bus_write_read`/`I2C_SET_ADDR` supprimés de l'ABI.
+- [x] **GPIO events → gpio chardev line-events** : `GPIOCHIP_SET_IRQ` arme un front, `read()` retourne des `gpio_event_t` horodatés.
+- [x] **`select()` sur `/dev`** : bridge `esp_vfs` (`start_select`/`end_select` dans `vfs_dev.c`) + callback `readable()` par driver ; gpio/input réveillent les selecteurs en attente. `select` exporté = le `select` d'esp_vfs (VFS + sockets), plus le `lwip_select` NET-only. (`poll()` sur `/dev` reste à faire — esp_vfs n'a pas de `poll`.)
+- [x] **I²C reinit** : `ioctl(I2C_RESET)` (extension DuneOS) ré-init le contrôleur pour restaurer le mux SCL/SDA après qu'un sniffer a repris les pins en GPIO — change d'usage sans reboot.
+- [ ] **SPI → spidev** : `struct spi_ioc_transfer`, `SPI_IOC_MESSAGE(n)`, `SPI_IOC_WR_MODE`/`WR_MAX_SPEED_HZ`/`WR_BITS_PER_WORD`. Remplace l'ioctl SPI maison actuel.
+- [ ] **UART → termios** : `tcgetattr`/`tcsetattr`, `cfsetspeed`.
+- [ ] **Revue input (evdev) / fb (fbdev)** : vérifier la dérive vs les modèles Linux.
+
+---
+
+### Phase 24.13 — Réduction des sections ELF des apps (ADR 022) 🟡 STOPGAP LIVRÉ
+
+**Pourquoi** : les apps sont des ET_REL produits par `ld -r` avec `-ffunction-sections`/`-fdata-sections`, donc une section par fonction/objet (+ sa jumelle `.rela`). Le link relocatable ne GC rien, et le loader mappe **toutes** les sections `SHF_ALLOC` (pas de GC non plus). Deux coûts : (1) le **nombre de sections** explose — `i2cscope` modulaire a atteint 584 et dépassé `MAX_SECTIONS=512` le 2026-06-06 ; (2) le **code mort des libs** (fonctions `ui_*`/`gfx_*` non appelées) est chargé dans le pool exec IRAM 64 KB — la ressource la plus rare sur CardPuter sans PSRAM. `-ffunction-sections` n'a de sens qu'avec `--gc-sections`, que le link app ne fait pas → aujourd'hui le flag ne fait qu'inflater le compte sans rien rendre. Décision actée par [ADR 022](docs/adr/022-app-elf-section-optimization.md).
+
+**Statut** : 🟡 stopgap livré (cap relevé), optimisation de fond à mesurer puis trancher.
+
+- [x] **Stopgap 2026-06-06** : `MAX_SECTIONS` 512→1024 dans `loader.c` (le tableau `section_bases[]` est `calloc` par app, libéré au unload — ~4 B/entrée, transitoire). Débloque les apps multi-fichiers ; n'adresse pas la cause.
+- [ ] **Mesurer** : `size`/`readelf` sur un app représentatif — quelle fraction du pool exec est du code mort de lib ?
+- [ ] **Trancher le levier** (ADR 022) : (A) retirer `-ffunction-sections`/`-fdata-sections` des CFLAGS app (gratuit, tue l'inflation, perd la granularité d'un futur GC) ; (B) vrai GC fonction-level (partial-link avec racine d'entrée — paie le plus, plus risqué) ; (C) fusionner les sections via script linker (`*(.text .text.*)` — corrige le compte, garde tout le code).
+- [ ] **Implémenter** dans `tools/dbt/constants.py` (`CFLAGS_COMMON`/`LDFLAGS`) et/ou un script linker app — pas dans le code des apps.
+
+---
+
 ### Phase 24.9 — Driver self-registration kernel-side (ADR 015 Pattern 1) ✅
 
 Élimine les `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` hardcodés dans `vfs_dev.c`. Pattern Linux `module_init`, **réalisé via constructors GCC plutôt qu'ELF section** (esquive la friction linker ESP-IDF v6).
@@ -470,9 +497,9 @@ Préparer la stack réseau avant d'affronter le découplage WiFi. **API gelée p
 **VFS natif** :
 
 - [ ] **`vfs.h`** : Migration des 6 signatures publiques `esp_err_t` → `int` (-errno). Dette héritée de Phase 24.
-- [ ] **`duneos_vfs` natif** : Remplacer `esp_vfs.h` dans `vfs.c`, `vfs_dev.c`, `vfs_tmp.c` — gère nativement `poll()`/`select()` et les sockets via wait-queues bâties sur `osal_sem`.
+- [ ] **`duneos_vfs` natif** : Remplacer `esp_vfs.h` dans `vfs.c`, `vfs_dev.c`, `vfs_tmp.c` — gère nativement `poll()`/`select()` et les sockets via wait-queues bâties sur `osal_sem`. **Intérim livré 2026-06-06** (Phase 24.12) : `select()` sur les fd `/dev` via le bridge `esp_vfs` (`start_select`/`end_select` dans `vfs_dev.c` + callback `readable` par driver). Le rewrite natif remplacera ce bridge ; `poll()` sur `/dev` reste à faire (esp_vfs n'a pas de `poll`).
 - [ ] **VFS Sockets** : Router les appels BSD vers lwIP via la nouvelle stack interne.
-- [ ] **GPIO IRQ userspace** : `GPIOCHIP_SET_IRQ` (ENOSYS en Phase 24) devient livrable maintenant que `poll()` est dispo — events sur fd dédié.
+- [x] **GPIO IRQ userspace** : `GPIOCHIP_SET_IRQ` **livré 2026-06-06** (contest sprint) — arme une ligne en détection de front, events `gpio_event_t` lus via `read()` sur `/dev/gpiochip0`, `select()`-able. Modèle Linux gpio chardev line-events ([ADR 019](docs/adr/019-linux-device-interface-semantics.md)). N'a pas eu besoin d'attendre le VFS natif.
 
 **Ethernet RMII** (optionnel, dépend de la disponibilité d'un board cible) :
 

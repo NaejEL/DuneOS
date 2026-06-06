@@ -31,5 +31,6 @@ init_flash:
 apps_sd:
 - g_shell
 - gfx_demo
+- i2cscope
 
 init_sd: []
