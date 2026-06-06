@@ -271,7 +271,7 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
             return [n for n in names
                     if n.endswith(".example") or n.endswith(".template")]
         shutil.copytree(src_etc, dst_etc, dirs_exist_ok=True, ignore=_ignore)
-        _convert_etc_pngs(dst_etc)
+        _convert_etc_pngs(dst_etc, _board_display_size(board_name))
         etc_files = sum(1 for _ in dst_etc.rglob("*") if _.is_file())
         print(f"  staged → /etc/  ({etc_files} file(s) from boards/{board_name}/etc/)")
     else:
@@ -282,16 +282,28 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
     return len(staged)
 
 
-#: Cap for /etc raster assets (e.g. the splash logo) so the .dr fits a modest
-#: app heap. Aspect is preserved; smaller images are left untouched.
-_ETC_IMG_MAX = (160, 120)
+def _board_display_size(board_name: str | None) -> tuple[int, int]:
+    """The board's panel resolution from board_config.h, for sizing /etc art.
+    Falls back to a generous default if the macros aren't found."""
+    if board_name:
+        cfg = DUNEOS_ROOT / "boards" / board_name / "board_config.h"
+        if cfg.exists():
+            import re
+            txt = cfg.read_text(encoding="utf-8", errors="ignore")
+            mw = re.search(r"DUNEOS_DISPLAY_WIDTH\s+(\d+)", txt)
+            mh = re.search(r"DUNEOS_DISPLAY_HEIGHT\s+(\d+)", txt)
+            if mw and mh:
+                return (int(mw.group(1)), int(mh.group(1)))
+    return (320, 240)
 
 
-def _convert_etc_pngs(etc_root: Path) -> None:
+def _convert_etc_pngs(etc_root: Path, max_wh: tuple[int, int]) -> None:
     """Render any PNG dropped under /etc to a sibling .dr at flash time, so a
     non-developer can swap e.g. the splash logo (etc/splash/logo.png) without
     running `dbt img convert`. The PNG is not shipped — only the .dr apps read.
-    Aspect-preserving downscale to _ETC_IMG_MAX. Non-fatal if Pillow is absent."""
+    Aspect-preserving downscale so it fits the board's panel (max_wh); a
+    full-screen logo is streamed by the splash, not heap-loaded. Non-fatal if
+    Pillow is absent."""
     pngs = list(etc_root.rglob("*.png"))
     if not pngs:
         return
@@ -303,7 +315,7 @@ def _convert_etc_pngs(etc_root: Path) -> None:
     from . import img
     for png in pngs:
         w, h = Image.open(png).size
-        scale = min(_ETC_IMG_MAX[0] / w, _ETC_IMG_MAX[1] / h, 1.0)
+        scale = min(max_wh[0] / w, max_wh[1] / h, 1.0)
         size = (round(w * scale), round(h * scale)) if scale < 1.0 else None
         img.convert(png, png.with_suffix(".dr"), resize=size)
         png.unlink()

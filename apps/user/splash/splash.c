@@ -133,19 +133,20 @@ void app_main(void)
     int  duration_ms   = DEFAULT_DURATION_MS;
     read_config(logo_path, sizeof(logo_path), &duration_ms);
 
-    duneos_image_t logo = { 0 };
-    int have_logo = (logo_path[0] && duneos_image_load_dr(logo_path, &logo) == 0);
+    uint16_t lw, lh;
+    int have_logo = (logo_path[0] && duneos_image_info_dr(logo_path, &lw, &lh) == 0);
 
     if (have_logo) {
-        /* Night-desert navy that matches the shipped logo's edges, so the
-         * border around a non-full-screen logo blends in. */
-        fill_gradient(ctx, w, h, 12, 16, 30, 22, 28, 48);
-        int x = ((int)w - (int)logo.width)  / 2;
-        int y = ((int)h - (int)logo.height) / 2;
+        /* Streamed row by row (duneos_image_blit_dr) — no full-image heap, so a
+         * full-screen logo is fine on a low-RAM board. Fill behind it only when
+         * the logo doesn't cover the screen, so its border blends in. */
+        if (lw < w || lh < h)
+            fill_gradient(ctx, w, h, 12, 16, 30, 22, 28, 48);
+        int x = ((int)w - (int)lw) / 2;
+        int y = ((int)h - (int)lh) / 2;
         if (x < 0) x = 0;
         if (y < 0) y = 0;
-        gfx_blit(ctx, x, y, logo.width, logo.height, logo.pixels);
-        duneos_image_free(&logo);
+        duneos_image_blit_dr(ctx, x, y, logo_path);
     } else {
         draw_procedural(ctx, w, h);
     }

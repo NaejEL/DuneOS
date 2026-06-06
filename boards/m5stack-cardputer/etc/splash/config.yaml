@@ -6,7 +6,8 @@
 #
 # To change the splash: drop a `logo.png` next to this file (in
 # boards/<board>/etc/splash/) and run `dbt flashimg` / `dbt system flash`.
-# It is converted to logo.dr automatically (aspect-preserving, max 160x120) —
-# no toolchain needed. Keep it small-ish so it fits the splash app's heap.
+# It is converted to logo.dr automatically (aspect-preserving, downscaled to fit
+# the board's panel) — no toolchain needed. A full-screen logo is fine: splash
+# streams it row by row, so it costs no extra heap.
 logo: /etc/splash/logo.dr
 duration_ms: 2000

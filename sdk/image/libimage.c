@@ -68,3 +68,58 @@ void duneos_image_free(duneos_image_t *img)
     free(img->pixels);
     memset(img, 0, sizeof(*img));
 }
+
+/* read() can return short; loop until n bytes or EOF/error. */
+static ssize_t read_full(int fd, void *buf, size_t n)
+{
+    size_t got = 0;
+    uint8_t *p = buf;
+    while (got < n) {
+        ssize_t r = read(fd, p + got, n - got);
+        if (r <= 0) break;
+        got += (size_t)r;
+    }
+    return (ssize_t)got;
+}
+
+int duneos_image_info_dr(const char *path, uint16_t *w, uint16_t *h)
+{
+    if (!path) return -2;
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return -1;
+    dr_header_t hdr;
+    ssize_t hn = read_full(fd, &hdr, sizeof(hdr));
+    close(fd);
+    if (hn != (ssize_t)sizeof(hdr) || hdr.magic != DUNEOS_IMAGE_MAGIC ||
+        hdr.format != DUNEOS_IMAGE_FMT_RGB565 || !hdr.width || !hdr.height)
+        return -2;
+    if (w) *w = hdr.width;
+    if (h) *h = hdr.height;
+    return 0;
+}
+
+#define DR_BLIT_MAX_W 480   /* widest supported row; row buffer is on the stack */
+
+int duneos_image_blit_dr(gfx_ctx_t *gfx, int x, int y, const char *path)
+{
+    if (!gfx || !path) return -2;
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return -1;
+
+    dr_header_t hdr;
+    if (read_full(fd, &hdr, sizeof(hdr)) != (ssize_t)sizeof(hdr) ||
+        hdr.magic != DUNEOS_IMAGE_MAGIC || hdr.format != DUNEOS_IMAGE_FMT_RGB565 ||
+        !hdr.width || !hdr.height || hdr.width > DR_BLIT_MAX_W) {
+        close(fd);
+        return -2;
+    }
+
+    uint16_t row[DR_BLIT_MAX_W];
+    size_t rb = (size_t)hdr.width * 2;
+    for (uint16_t ry = 0; ry < hdr.height; ry++) {
+        if (read_full(fd, row, rb) != (ssize_t)rb) { close(fd); return -4; }
+        gfx_blit(gfx, x, y + ry, hdr.width, 1, row);
+    }
+    close(fd);
+    return 0;
+}
