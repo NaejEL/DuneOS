@@ -354,6 +354,28 @@ ui_input_event_t ui_input_key(ui_input_t *in, uint16_t key)
     }
 }
 
+void ui_spans(ui_t *ui, int x, int y, int w,
+              const ui_span_t *spans, int n, uint16_t bg)
+{
+    if (!ui || !spans) return;
+    gfx_rect(ui->gfx, x, y, w, GLYPH_H, bg);
+
+    int cx = x, limit = x + w;
+    char buf[40];
+    for (int i = 0; i < n; i++) {
+        if (!spans[i].text) continue;
+        int maxc = (limit - cx) / GLYPH_W;
+        if (maxc <= 0) break;
+        int len = (int)strlen(spans[i].text);
+        if (len > maxc) len = maxc;
+        if (len > (int)sizeof(buf) - 1) len = (int)sizeof(buf) - 1;
+        memcpy(buf, spans[i].text, len);
+        buf[len] = '\0';
+        gfx_text(ui->gfx, cx, y, buf, spans[i].fg, bg);
+        cx += len * GLYPH_W;
+    }
+}
+
 void ui_input_draw(ui_t *ui, const ui_input_t *in)
 {
     if (!ui || !in) return;

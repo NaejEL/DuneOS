@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 /* ELF32 little-endian field offsets (ESP32 is LE, ELF data is LE). */
 #define EH_SIZE        52
@@ -27,10 +28,7 @@
 #define SH_SIZE_FIELD  20
 
 #define JSON_MAX   2048
-#define SHSTR_MAX  8192   /* covers ~300+ sections; larger falls back to slow path */
-
-static char s_shstr[SHSTR_MAX];
-static char s_json[JSON_MAX];
+#define SHSTR_MAX  16384  /* cap on the transient shstrtab malloc; larger → slow path */
 
 static uint16_t rd16(const unsigned char *p) { return (uint16_t)(p[0] | (p[1] << 8)); }
 static uint32_t rd32(const unsigned char *p)
@@ -127,33 +125,41 @@ int appmeta_read(const char *dap_path, appmeta_t *out)
 
     uint32_t man_off = 0, man_size = 0;
 
+    /* Fast path: read the whole name table once + section headers in batches,
+     * comparing names in memory (apps carry ~300 sections; two-reads-per-section
+     * makes a directory scan crawl over FAT). The shstrtab buffer is malloc'd
+     * transiently — kept off the launcher's permanent BSS so it doesn't eat
+     * into the DRAM a spawned app needs. Falls back to per-name reads if the
+     * malloc fails or the table is unusual. */
     if (shentsize == SH_SIZE && shstr_size > 0 && shstr_size <= SHSTR_MAX) {
-        /* Fast path: read the whole name table once and the section headers in
-         * batches, comparing names in memory. Apps carry ~300 sections, so the
-         * naive two-reads-per-section makes a directory scan crawl over FAT. */
-        if (read_at(fd, (long)shstr_off, s_shstr, shstr_size) != 0) { close(fd); return -1; }
-        s_shstr[shstr_size - 1] = '\0';
-
-        unsigned char batch[SH_SIZE * 16];
-        for (uint16_t i = 0; i < shnum && man_size == 0; ) {
-            int nb = shnum - i;
-            if (nb > 16) nb = 16;
-            if (read_at(fd, (long)(shoff + (uint32_t)i * SH_SIZE),
-                        batch, (unsigned)nb * SH_SIZE) != 0) { close(fd); return -1; }
-            for (int j = 0; j < nb; j++) {
-                const unsigned char *e = batch + (size_t)j * SH_SIZE;
-                uint32_t name_off = rd32(e + SH_NAME);
-                if (name_off < shstr_size &&
-                    strcmp(s_shstr + name_off, ".duneos_manifest") == 0) {
-                    man_off  = rd32(e + SH_OFFSET);
-                    man_size = rd32(e + SH_SIZE_FIELD);
-                    break;
+        char *shstr = malloc(shstr_size);
+        if (shstr) {
+            if (read_at(fd, (long)shstr_off, shstr, shstr_size) == 0) {
+                shstr[shstr_size - 1] = '\0';
+                unsigned char batch[SH_SIZE * 16];
+                for (uint16_t i = 0; i < shnum && man_size == 0; ) {
+                    int nb = shnum - i;
+                    if (nb > 16) nb = 16;
+                    if (read_at(fd, (long)(shoff + (uint32_t)i * SH_SIZE),
+                                batch, (unsigned)nb * SH_SIZE) != 0) break;
+                    for (int j = 0; j < nb; j++) {
+                        const unsigned char *e = batch + (size_t)j * SH_SIZE;
+                        uint32_t name_off = rd32(e + SH_NAME);
+                        if (name_off < shstr_size &&
+                            strcmp(shstr + name_off, ".duneos_manifest") == 0) {
+                            man_off  = rd32(e + SH_OFFSET);
+                            man_size = rd32(e + SH_SIZE_FIELD);
+                            break;
+                        }
+                    }
+                    i += nb;
                 }
             }
-            i += nb;
+            free(shstr);
         }
-    } else {
-        /* Fallback (unusual shentsize or oversized name table): read each name. */
+    }
+    if (man_size == 0) {
+        /* Fallback: read each section name individually. */
         for (uint16_t i = 0; i < shnum; i++) {
             if (read_at(fd, (long)(shoff + (uint32_t)i * shentsize), sh, SH_SIZE) != 0) {
                 close(fd); return -1;
@@ -169,12 +175,16 @@ int appmeta_read(const char *dap_path, appmeta_t *out)
     }
     if (man_size == 0) { close(fd); return -1; }
     if (man_size > JSON_MAX) man_size = JSON_MAX;
-    if (read_at(fd, (long)man_off, s_json, man_size) != 0) { close(fd); return -1; }
-    s_json[man_size - 1] = '\0';
+
+    char *json = malloc(man_size);
+    if (!json) { close(fd); return -1; }
+    if (read_at(fd, (long)man_off, json, man_size) != 0) { free(json); close(fd); return -1; }
+    json[man_size - 1] = '\0';
     close(fd);
 
-    json_str(s_json, "name", out->name, sizeof(out->name));
-    json_str(s_json, "icon", out->icon, sizeof(out->icon));
-    out->has_display = json_caps_display(s_json);
+    json_str(json, "name", out->name, sizeof(out->name));
+    json_str(json, "icon", out->icon, sizeof(out->icon));
+    out->has_display = json_caps_display(json);
+    free(json);
     return 0;
 }

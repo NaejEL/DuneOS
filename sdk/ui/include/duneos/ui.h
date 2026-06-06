@@ -177,3 +177,20 @@ typedef enum {
 /* Printable ASCII appends; KEY_BACKSPACE deletes; KEY_ENTER submits;
  * KEY_ESC cancels. */
 ui_input_event_t ui_input_key(ui_input_t *in, uint16_t key);
+
+/* ----- colored spans ----------------------------------------------------- */
+
+/* One run of text with its own colour. */
+typedef struct {
+    const char *text;
+    uint16_t    fg;
+} ui_span_t;
+
+/*
+ * Draw a sequence of colour-coded text runs left-to-right on one 8px row,
+ * filling [x, x+w) with bg first. Runs are clipped to the right edge. Handy for
+ * mixed-colour lines (e.g. an I2C decode: address in one colour, data in
+ * another, ACK/NACK in a third). For a single colour use ui_label instead.
+ */
+void ui_spans(ui_t *ui, int x, int y, int w,
+              const ui_span_t *spans, int n, uint16_t bg);
