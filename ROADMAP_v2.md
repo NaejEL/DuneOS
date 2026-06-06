@@ -376,7 +376,7 @@ Isoler le noyau pour amorcer la sortie du framework Espressif. **Périmètre de 
 >
 > **Plan complet : [`docs/contest-2026.md`](docs/contest-2026.md).**
 >
-> En cas de participation au [contest M5Stack 2026](https://m5stack.com/global-innovation-contest-2026) (deadline 7 août 2026), la roadmap **gèle après Phase 25 (minimum viable)** jusqu'au 31 août. Les Phases 26-29 reprennent au 1er septembre. Le sprint absorbe Phases 24.7 + 25-minimal et livre une killer-app demo : `i2cscope` + `lua` REPL + `snake` + `tetris` + launcher graphique avec icônes (nouveau champ `icon:` dans le manifest).
+> En cas de participation au [contest M5Stack 2026](https://m5stack.com/global-innovation-contest-2026) (deadline 7 août 2026), la roadmap **gèle après Phase 25 (minimum viable)** jusqu'au 31 août. Les Phases 26-29 reprennent au 1er septembre. Le sprint absorbe Phases 24.7 + 25-minimal et livre une killer-app demo : `i2cscope` (✅) + un **explorateur de fichiers graphique** + `lua` REPL + `snake` + `tetris` + launcher graphique avec **icônes par app façon freedesktop** ([ADR 023](docs/adr/023-app-icon-assets.md) — `icon:` = un nom, le `.dr` vit dans `/flash/share/icons/`, pas dans le `.dap`). Détail sprint : **Phase 25.6**.
 >
 > **Non-bloquant pour la roadmap principale** si on ne participe pas — dans ce cas, Phase 25 attaque directement après Phase 24.7.
 
@@ -424,6 +424,24 @@ Un Yocto sans la complexité de Yocto. Le concept central est le **profile** : u
   - `apps/user/splash` : one-shot libgfx STREAM mode — gradient désert + silhouette de dunes + wordmark "DuneOS" centré, ~1.5 s puis exit. CardPuter `init.yaml` lance `splash` puis défère `kb_iomatrix` via `after: splash` (démo).
   - `duneos.yaml` : champ `icon:` reconnu (string ≤ 64 chars), validation parse et warning sur clés inconnues (typo guard). Embarqué tel quel dans le manifest JSON ; pas d'ABI bump (consommé futur launcher).
   - TUI `dbt` : `SplashScreen` ASCII wordmark "DuneOS" + tagline désert, 1 s au démarrage, dismissable par toute touche. Suppression possible via `DUNEOS_TUI_NO_SPLASH=1` (CI).
+
+---
+
+### Phase 25.6 — Apps de démo contest + icônes launcher 🟡 EN COURS
+
+**Pourquoi** : la démo contest a besoin d'une identité visuelle (icônes launcher) et d'apps qui montrent que DuneOS est un vrai OS. `i2cscope` est livré (✅, 2026-06-06 — scan/xfer/sniff/scenarios, `/dev/logic0`, libsmbus). Reste l'identité + les apps restantes.
+
+**Ordre recommandé** (du plus fort levier au plus faible) : **icônes → explorateur de fichiers → jeux**. Les icônes sont un multiplicateur (toute app ajoutée ensuite en hérite, le launcher est la porte d'entrée de la démo) et figent une décision d'archi ; l'explorateur est la meilleure vitrine « vrai OS » (VFS, /flash + /sd, side-loading) ; les jeux sont la cerise fun, plus faible levier.
+
+- [x] **i2cscope** — couteau suisse I²C (scan / xfer / sniff Pulseable VCD / scénarios SD). Structure modulaire (1 fichier/écran) = layout de référence pour les apps multi-écrans.
+- [ ] **Icônes par app (ADR 023, modèle freedesktop)** :
+  - `dbt` : étape d'install des icônes au build d'image — copie `apps/<app>/icon.dr` (ou `icon.png` converti) vers `/flash/share/icons/<name>.dr` ; `dbt deploy` copie le `.dr` à côté du `.dap` sur SD.
+  - launcher : résolution nom→fichier via search path (voisin SD → `/sd/share/icons` → `/flash/share/icons` → fallback générique), `duneos_image_load_dr` + blit par ligne, placeholder si absent.
+  - set de fallback générique livré dans l'image (`application.dr`, `folder.dr`, …) — le `hicolor` de freedesktop.
+  - taille launcher standard à figer (défaut `dbt img convert --resize` 24×24 ou 32×32 RGB565).
+- [ ] **Explorateur de fichiers graphique** : nav arborescente `/flash` + `/sd` (`opendir`/`readdir`/`stat`), libui `list` + `textview`, hexview pour binaires / textview pour texte, lancement de `.dap` (tie-in loader/launcher). Réutilise le pattern modulaire d'i2cscope.
+- [ ] **Jeux** : `snake` + `tetris` (libgfx STREAM + input), `lua` REPL. Plus faible levier archi — fun de démo, faisables à tout moment.
+
 ---
 
 ### Phase 26 — OSAL et Portabilité Scheduler
