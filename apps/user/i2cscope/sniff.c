@@ -9,6 +9,7 @@
 
 #include "i2cscope.h"
 #include "duneos/logic_ioctl.h"
+#include "duneos/i2c_decode.h"
 
 #include <sys/select.h>
 #include <sys/time.h>
@@ -16,18 +17,18 @@
 #define MAX_EDGES 768        /* captured transitions (8 B each) */
 
 /* logic0 channel assignment: bit 0 = SCL, bit 1 = SDA. */
-#define M_SCL  (1u << 0)
-#define M_SDA  (1u << 1)
+#define CH_SCL 0
+#define CH_SDA 1
+#define M_SCL  (1u << CH_SCL)
+#define M_SDA  (1u << CH_SDA)
 
 static logic_sample_t s_edges[MAX_EDGES];
 static int            s_nedges;
 static char           s_vcd_path[40];
 
-/* Decoded transaction tokens. */
-enum { TOK_START, TOK_ADDR, TOK_DATA, TOK_STOP };
-typedef struct { uint8_t type, val, rw, ack; } tok_t;
-static tok_t s_tok[384];
-static int   s_ntok;
+/* Decoded I2C tokens (shared decoder — sdk/proto/i2c_decode). */
+static i2c_token_t s_tok[384];
+static int         s_ntok;
 
 /* Pick /sd/i2csniff-NNN.vcd with the lowest free index (so captures accumulate
  * instead of overwriting one fixed file). */
@@ -95,48 +96,14 @@ static void capture(void)
     close(lg);
 }
 
-/* Decode the captured transition stream into tokens. Edge-based: SDA is sampled
- * on the actual SCL rising edge, so clock stretching (slave holding SCL low) is
- * handled implicitly — there's simply no rising edge until the line is released. */
+/* Decode the captured transition stream into I2C tokens via the shared decoder.
+ * s_edges is logic_sample_t {t_us, levels} — the same layout as i2c_sample_t —
+ * with SCL on bit CH_SCL and SDA on bit CH_SDA. */
 static void decode(void)
 {
-    s_ntok = 0;
-    int scl = 1, sda = 1, active = 0, bits = 0, byte = 0, idx = 0;
-    int cap = (int)(sizeof(s_tok) / sizeof(s_tok[0]));
-
-    for (int i = 0; i < s_nedges && s_ntok < cap; i++) {
-        uint32_t lv   = s_edges[i].levels;
-        int      nscl = (lv & M_SCL) ? 1 : 0;
-        int      nsda = (lv & M_SDA) ? 1 : 0;
-        int      pscl = scl, psda = sda;
-
-        /* SDA moving while SCL stays high → START / STOP. */
-        if (pscl == 1 && nscl == 1 && nsda != psda) {
-            if (psda == 1 && nsda == 0) {                /* START */
-                s_tok[s_ntok++] = (tok_t){ TOK_START, 0, 0, 0 };
-                active = 1; bits = 0; byte = 0; idx = 0;
-            } else {                                     /* STOP */
-                s_tok[s_ntok++] = (tok_t){ TOK_STOP, 0, 0, 0 };
-                active = 0;
-            }
-        }
-
-        /* SCL rising edge → clock a bit (sample SDA). */
-        if (pscl == 0 && nscl == 1 && active) {
-            if (bits < 8) { byte = (byte << 1) | (nsda & 1); bits++; }
-            else {                                       /* 9th clock = ACK */
-                tok_t t = { (uint8_t)(idx == 0 ? TOK_ADDR : TOK_DATA),
-                            0, 0, (uint8_t)(nsda == 0) };
-                if (idx == 0) { t.val = (uint8_t)(byte >> 1); t.rw = (uint8_t)(byte & 1); }
-                else          { t.val = (uint8_t)byte; }
-                s_tok[s_ntok++] = t;
-                bits = 0; byte = 0; idx++;
-            }
-        }
-
-        scl = nscl;
-        sda = nsda;
-    }
+    s_ntok = i2c_decode((const i2c_sample_t *)s_edges, s_nedges,
+                        CH_SCL, CH_SDA, s_tok,
+                        (int)(sizeof(s_tok) / sizeof(s_tok[0])));
 }
 
 /* Flow-render the decoded transactions with a colour legend on top. Markers in
@@ -171,23 +138,23 @@ static void render(void)
     } while (0)
 
     for (int i = 0; i < s_ntok && cy + 8 <= ybot; i++) {
-        tok_t    *t   = &s_tok[i];
-        uint16_t  ack = t->ack ? C_ACK : C_NACK;
+        i2c_token_t *t   = &s_tok[i];
+        uint16_t     ack = t->ack ? C_ACK : C_NACK;
         switch (t->type) {
-        case TOK_START:
+        case I2C_TOK_START:
             if (cx > 0) { cx = 0; cy += rh; }
             EMIT("S ", C_MARK);
             break;
-        case TOK_ADDR:
+        case I2C_TOK_ADDR:
             snprintf(buf, sizeof(buf), "%02X", t->val); EMIT(buf, C_ADDR);
             EMIT(t->rw ? "/R" : "/W", C_ADDR);
             EMIT(t->ack ? "+ " : "- ", ack);
             break;
-        case TOK_DATA:
+        case I2C_TOK_DATA:
             snprintf(buf, sizeof(buf), "%02X", t->val); EMIT(buf, C_DATA);
             EMIT(t->ack ? "+ " : "- ", ack);
             break;
-        case TOK_STOP:
+        case I2C_TOK_STOP:
             EMIT("P", C_MARK);
             cx = 0; cy += rh;
             break;
