@@ -5,6 +5,7 @@ description: "Contest 2026 — graphical launcher home, sideloadable apps on /sd
 # Flash (sysbin): the home launcher + the services it needs. These boot from
 # /flash so the device comes up to the launcher even with no SD card inserted.
 apps_flash:
+- wifi_daemon
 - splash
 - kb_iomatrix
 - usb_shell
@@ -21,6 +22,8 @@ init_flash:
   restart: always
 - path: /flash/bin/usb_shell.dap
   restart: always
+- path: /flash/bin/wifi_daemon.dap
+  restart: always
 - path: /flash/bin/launcher.dap
   restart: always
   after: splash
@@ -32,5 +35,6 @@ apps_sd:
 - g_shell
 - gfx_demo
 - i2cscope
+- files
 
 init_sd: []
