@@ -82,9 +82,12 @@ void ui_carousel_draw(ui_t *ui, const ui_carousel_t *c)
     int cy     = c->y + c->h * 42 / 100;   /* icon vertical centre */
 
     /* Sides first (so the larger focused icon overlaps them), each depth
-     * smaller. Skip a depth that would wrap onto an already-shown item. */
+     * smaller. `2*d <= n` lets the carousel wrap: with few apps the same item
+     * may appear at both far edges (it's coming around) — that's intended; only
+     * `2*d > n` (e.g. depth 2 with 3 apps) would redraw a nearer item, which we
+     * skip. */
     int sz = big, xl = cx - big / 2 - gap, xr = cx + big / 2 + gap;
-    for (int d = 1; d <= radius && 2 * d < c->n; d++) {
+    for (int d = 1; d <= radius && 2 * d <= c->n; d++) {
         sz = sz * 66 / 100;
         if (sz < 14) sz = 14;
         int li = ((c->sel - d) % c->n + c->n) % c->n;
