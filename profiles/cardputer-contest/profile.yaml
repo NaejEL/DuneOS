@@ -35,5 +35,7 @@ apps_sd:
 - files
 - waves
 - drview
+- snake
+- tetris
 
 init_sd: []
