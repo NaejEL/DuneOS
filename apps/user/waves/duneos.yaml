@@ -1,0 +1,15 @@
+name: waves
+version: "0.1.0"
+required_abi_version: 1
+icon: waves
+opens: [".vcd"]           # ADR 026 — VCD chronogram viewer
+permissions: 288         # FS_READ | INPUT
+stack_size: 8192
+heap_size: 8192
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
+  - $SDK/ui/ui_wave.c
+  - $SDK/proto/i2c_decode.c
