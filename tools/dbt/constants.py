@@ -15,8 +15,14 @@ XTENSA_CPUS = {"esp32", "esp32s2", "esp32s3"}
 RISCV_CPUS  = {"esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"}
 
 CFLAGS_COMMON = [
-    "-ffunction-sections",
-    "-fdata-sections",
+    # NOT -ffunction-sections / -fdata-sections: the .dap is ET_REL (ld -r), and
+    # `ld -r` does no gc-sections, so per-function sections eliminate nothing —
+    # they just explode the section count (~528 for the launcher), which inflates
+    # the loader's per-load transient buffers (shdrs/shstrtab/symtab/strtab ≈ 60 K
+    # read from SD + malloc'd on the general heap). One section per .o instead
+    # keeps the same code but shrinks that transient ~5x — and unblocks the app
+    # arena (which needs the general heap to keep a big contiguous block free).
+    # See docs/audit-ram-2026-06.md P0 and ADR 022.
     "-fno-builtin",
     "-fno-common",
     "-ffreestanding",

@@ -34,9 +34,11 @@
 #include "duneos/input_ioctl.h"
 
 extern void duneos_exit(int code);
-extern int  duneos_supervisor_launch(const char *path);
-extern int  duneos_supervisor_running_count(void);
-extern void duneos_supervisor_wait_for_completion(int target_count);
+extern int  duneos_supervisor_chain(const char *child_path);
+
+/* Where we stash the highlighted app's name across a handoff, so the launcher
+ * reopens on the same selection after the child exits (ADR 031). */
+#define SEL_FILE "/tmp/.launcher_sel"
 
 #define MAX_APPS      32
 #define NAME_LEN      32
@@ -157,23 +159,45 @@ static void render_home(ui_t *ui)
     ui_flush(ui);
 }
 
-/* ----- launch ------------------------------------------------------------ */
+/* ----- selection persistence (survives a handoff) ------------------------ */
 
-/* Release the display, run the app to completion in its own slot, then let
- * the caller reacquire the display and repaint. */
-static void launch(const char *path, gfx_ctx_t **gfx, ui_t **ui)
+static void save_sel(void)
 {
-    ui_destroy(*ui);
-    gfx_close(*gfx);
-    *ui  = NULL;
-    *gfx = NULL;
+    if (s_car.sel < 0 || s_car.sel >= s_count) return;
+    int fd = open(SEL_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) return;
+    write(fd, s_names[s_car.sel], (int)strlen(s_names[s_car.sel]));
+    close(fd);
+}
 
-    int before = duneos_supervisor_running_count();
-    if (duneos_supervisor_launch(path) == 0)
-        duneos_supervisor_wait_for_completion(before);
+/* Reopen on the app we handed off to, so launcher→game→launcher feels seamless. */
+static void restore_sel(void)
+{
+    char buf[NAME_LEN];
+    int fd = open(SEL_FILE, O_RDONLY);
+    if (fd < 0) return;
+    int n = (int)read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (n <= 0) return;
+    buf[n] = '\0';
+    for (int i = 0; i < s_count; i++)
+        if (strcmp(s_names[i], buf) == 0) { s_car.sel = i; return; }
+}
 
-    *gfx = gfx_open_mode(GFX_MODE_STREAM);
-    if (*gfx) *ui = ui_create(*gfx);
+/* ----- launch (navigation-stack handoff, ADR 031) ------------------------ */
+
+/* Release the display + input, register the app as our successor, and exit.
+ * The supervisor frees our RAM, runs the app in the freed space, and relaunches
+ * us when it exits — so the launcher is never resident during a child, and a
+ * RAM-hungry app (e.g. tetris' 32 KiB canvas) gets the contiguous block it needs. */
+static void launch(const char *path, gfx_ctx_t *gfx, ui_t *ui, int input)
+{
+    save_sel();
+    ui_destroy(ui);
+    gfx_close(gfx);
+    if (input >= 0) close(input);
+    duneos_supervisor_chain(path);
+    duneos_exit(0);   /* does not return — supervisor takes over */
 }
 
 /* ----- main -------------------------------------------------------------- */
@@ -199,6 +223,7 @@ void app_main(void)
     int bar_h = 8 + 2 * ui_theme(ui)->pad;
     ui_carousel_init(&s_car, 0, bar_h, ui_screen_w(ui), ui_screen_h(ui) - 2 * bar_h);
     ui_carousel_set_items(&s_car, s_name_ptrs, s_count, launcher_icon, NULL);
+    restore_sel();   /* reopen on the app we last handed off to (ADR 031) */
 
     if (s_count == 0) {
         /* Diagnostic body: how the scan classified /sd/apps. Lets us tell apart
@@ -226,9 +251,7 @@ void app_main(void)
             render_home(ui);
             break;
         case UI_CAROUSEL_SELECT:
-            launch(s_paths[s_car.sel], &gfx, &ui);
-            if (!ui) { if (input >= 0) close(input); duneos_exit(10); }
-            render_home(ui);
+            launch(s_paths[s_car.sel], gfx, ui, input);   /* hands off + exits */
             break;
         case UI_CAROUSEL_CANCEL:   /* launcher is home — Esc does not quit */
         case UI_CAROUSEL_NONE:

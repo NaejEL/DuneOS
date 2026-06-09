@@ -178,6 +178,16 @@ typedef struct {
 /* Fill out[] with up to count per-app memory snapshots; returns entries filled. */
 int duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count);
 
+/*
+ * Navigation-stack handoff (ADR 031). The calling app registers child_path as
+ * its successor and then exits (duneos_exit): the supervisor frees the caller,
+ * launches child_path in its place, and relaunches the caller when the child
+ * exits. Lets a parent (launcher / shell) hand the device — and its RAM — to a
+ * child without staying resident. Returns 0, or -1 if not called from an app
+ * slot. The caller MUST exit shortly after for the handoff to take effect.
+ */
+int duneos_supervisor_chain(const char *child_path);
+
 /* Force-kill and relaunch the named slot regardless of its restart policy.
  * Returns 0 if found and kill queued, -1 if name not found or slot inactive. */
 int duneos_supervisor_restart_by_name(const char *name);

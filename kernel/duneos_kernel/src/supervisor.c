@@ -57,11 +57,16 @@ void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops)
 
 /* ----- app memory arena (ADR 008/025) ----------------------------------- */
 
-/* A contiguous DRAM block reserved at boot for ALL per-app backing allocations
- * (data pool, task stack, per-app heap pool). Reserved before WiFi/lwIP churn
- * the general heap and served via a dedicated multi_heap, so apps get
- * contiguous blocks isolated from system fragmentation. Companion to the loader
- * exec pool (which does this for app .text). Skipped on PSRAM boards. */
+/* A contiguous DRAM block reserved at boot for all per-app backing allocations:
+ * the data pool (.data/.bss/.rodata), the task stack, and the per-app heap pool.
+ * Keeping every per-app allocation here leaves the general heap clean for the
+ * kernel, WiFi, and the loader's transient ELF parsing (the section-header table
+ * is ~16 KiB for a multi-section app and must find a contiguous block). Reserved
+ * before WiFi/lwIP churn the general heap, served via a dedicated multi_heap, so
+ * the foreground app gets the contiguous blocks it needs (waves' 18 KiB data
+ * pool, tetris' canvas) regardless of fragmentation. With the handoff (ADR 031)
+ * only one foreground app is resident, so this stays small. Companion to the
+ * loader exec pool (app .text). Skipped on PSRAM boards. */
 #ifndef CONFIG_DUNEOS_APP_ARENA_KB
 #define CONFIG_DUNEOS_APP_ARENA_KB 96
 #endif
@@ -183,6 +188,12 @@ typedef struct app_slot {
     uint32_t                restart_count;
     bool                    force_restart;
 
+    /* ADR 031 navigation-stack handoff: when set (via duneos_supervisor_chain),
+     * this slot's NEXT exit launches chain_child in its place instead of
+     * restarting; the supervisor then relaunches this slot's app when the child
+     * exits. Lets a parent (launcher/shell) free its RAM while a child runs. */
+    char                    chain_child[DUNEOS_PATH_MAX];
+
     /* Phase 24.7: circuit breaker — disable restart after too many crashes
      * in a short window. Prevents a bad init.yaml from looping forever and
      * blocking the user out (USB MSC may not enumerate during a restart
@@ -250,6 +261,13 @@ static TimerHandle_t     s_wdt_timer;
 
 /* Phase 25.4: exit observer callback (init.c registers this for `after:`). */
 static duneos_exit_observer_fn s_exit_observer = NULL;
+
+/* ADR 031 handoff watch (depth-1: launcher→game→launcher). When an app named
+ * s_chain_watch_name exits, the supervisor launches s_chain_launch_path (the
+ * parent that handed off). Single slot — nesting a chain inside a chain
+ * overwrites it, which is fine for the launcher/shell use case. */
+static char s_chain_watch_name[DUNEOS_APP_NAME_MAX];
+static char s_chain_launch_path[DUNEOS_PATH_MAX];
 
 /* Minimum pool size accepted by multi_heap_register (internal requirement) */
 #define MULTI_HEAP_MIN_SIZE  64u
@@ -546,10 +564,17 @@ static void supervisor_task(void *arg)
         duneos_app_t           *app     = slot->app;
         QueueHandle_t           mailbox = slot->mailbox;
         duneos_restart_policy_t policy  = slot->restart_policy;
+        char                    chain_child[DUNEOS_PATH_MAX];
+        strlcpy(chain_child, slot->chain_child, sizeof(chain_child));
 
         bool should_restart = slot->force_restart ||
                               (policy == DUNEOS_RESTART_ALWAYS) ||
                               (policy == DUNEOS_RESTART_ON_FAILURE && code != 0);
+
+        /* ADR 031: a handoff exit is intentional — never restart the parent here
+         * (it is relaunched after the child exits), and don't count it against
+         * the circuit breaker. */
+        if (chain_child[0]) should_restart = false;
 
         /* Phase 24.7 circuit breaker: if this service is restarting,
          * count it against the recent-crashes window. Trip the breaker
@@ -651,6 +676,34 @@ static void supervisor_task(void *arg)
             xSemaphoreGive(s_lock);
         }
 
+        /* ADR 031 navigation-stack handoff: a parent that called
+         * duneos_supervisor_chain() has now exited (freeing its RAM) — launch
+         * the child in its place and arm the watch so the parent is relaunched
+         * when the child exits. Conversely, if the app that just exited is the
+         * watched child, relaunch the parent. Mutually exclusive per exit. */
+        if (chain_child[0]) {
+            const char *cb = strrchr(chain_child, '/');
+            cb = cb ? cb + 1 : chain_child;
+            strlcpy(s_chain_watch_name, cb, sizeof(s_chain_watch_name));
+            char *dot = strchr(s_chain_watch_name, '.');
+            if (dot) *dot = '\0';
+            strlcpy(s_chain_launch_path, rpath, sizeof(s_chain_launch_path));
+            klog_i(TAG, "handoff: '%s' exited → launching '%s'", name, chain_child);
+            if (duneos_supervisor_launch_policy(chain_child, DUNEOS_RESTART_NO) != ESP_OK) {
+                klog_e(TAG, "handoff: child launch failed — relaunching '%s'", name);
+                s_chain_watch_name[0]  = '\0';
+                s_chain_launch_path[0] = '\0';
+                duneos_supervisor_launch_policy(rpath, DUNEOS_RESTART_ALWAYS);
+            }
+        } else if (s_chain_watch_name[0] && strcmp(name, s_chain_watch_name) == 0) {
+            char parent[DUNEOS_PATH_MAX];
+            strlcpy(parent, s_chain_launch_path, sizeof(parent));
+            s_chain_watch_name[0]  = '\0';
+            s_chain_launch_path[0] = '\0';
+            klog_i(TAG, "handoff: '%s' exited → relaunching '%s'", name, parent);
+            duneos_supervisor_launch_policy(parent, DUNEOS_RESTART_ALWAYS);
+        }
+
         /* Phase 25.4: notify registered observers (init.c uses this for the
          * `after:` dependency mechanism). Called without holding s_lock and
          * AFTER unload so dependent services see a clean state. */
@@ -750,6 +803,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
      * Stash the previous occupant's name first so the circuit-breaker's
      * same-app check below keeps comparing against the right thing. */
     slot->active = true;
+    slot->chain_child[0] = '\0';   /* fresh slot: no pending handoff */
     char prev_name[DUNEOS_APP_NAME_MAX];
     strlcpy(prev_name, slot->name, sizeof(prev_name));
     {
@@ -1032,6 +1086,17 @@ int duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count)
     }
     xSemaphoreGive(s_lock);
     return n;
+}
+
+int duneos_supervisor_chain(const char *child_path)
+{
+    if (!child_path) return -1;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (!slot) { xSemaphoreGive(s_lock); return -1; }
+    strlcpy(slot->chain_child, child_path, sizeof(slot->chain_child));
+    xSemaphoreGive(s_lock);
+    return 0;
 }
 
 int duneos_supervisor_restart_by_name(const char *name)

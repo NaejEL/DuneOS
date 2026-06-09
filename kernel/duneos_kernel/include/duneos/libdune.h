@@ -138,6 +138,9 @@ void duneos_supervisor_wait_for_completion(int target_count);
 int  duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
 int  duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count);
 int  duneos_supervisor_restart_by_name(const char *name);
+/* Hand off to child_path and exit; the supervisor relaunches us when it exits
+ * (ADR 031). Call then duneos_exit(). Frees our RAM for the child. */
+int  duneos_supervisor_chain(const char *child_path);
 
 /* -------------------------------------------------------------------------
  * VFS queries

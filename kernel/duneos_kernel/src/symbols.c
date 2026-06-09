@@ -237,6 +237,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_service_ready",                duneos_service_ready                  ),
     SYM("duneos_supervisor_list_slots",        duneos_supervisor_list_slots          ),
     SYM("duneos_supervisor_list_mem",          duneos_supervisor_list_mem            ),
+    SYM("duneos_supervisor_chain",             duneos_supervisor_chain               ),
     SYM("duneos_vfs_list_mounts",              duneos_vfs_list_mounts                ),
     SYM("duneos_vfs_flash_available",          duneos_vfs_flash_available            ),
     SYM("duneos_vfs_sd_available",             duneos_vfs_sd_available               ),

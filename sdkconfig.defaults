@@ -63,8 +63,13 @@ CONFIG_LWIP_UDP_RECVMBOX_SIZE=6
 CONFIG_LWIP_TCP_WND_DEFAULT=2880
 CONFIG_LWIP_TCP_SND_BUF_DEFAULT=2880
 
-# App arena DISABLED for now (=0): reserving a big fixed arena just moves the
-# RAM shortage to the general heap (it starved the loader's ELF-parsing and the
-# WiFi stack). Apps allocate from the general heap until we right-size stacks/
-# heaps from measured usage (ps tool). The arena code stays behind this knob.
-CONFIG_DUNEOS_APP_ARENA_KB=0
+# App arena (ADR 008/025/031): a contiguous DRAM block reserved at boot for every
+# per-app backing allocation (data pool + stack + heap pool), so the foreground
+# app always gets its big contiguous blocks (waves' 18K data, tetris' 20K canvas)
+# regardless of general-heap fragmentation. Viable now that P0 (audit §3) killed
+# the loader's per-load transient: merging app sections (no -ffunction-sections,
+# audit P0 / ADR 022) cut the launcher from 528 to 18 sections, so the section-
+# header table the loader reads dropped from ~28K to <1K — the general heap no
+# longer needs a big contiguous block, so the arena can take its 64K. Halves down
+# to 16K if DRAM is tight at boot; skipped on PSRAM boards.
+CONFIG_DUNEOS_APP_ARENA_KB=64
