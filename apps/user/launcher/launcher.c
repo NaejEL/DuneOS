@@ -149,7 +149,7 @@ static const char *launcher_icon(int idx, void *ctx)
 static void render_home(ui_t *ui)
 {
     ui_clear(ui);
-    ui_titlebar(ui, "DuneOS");
+    ui_statusbar_top(ui, "DuneOS");
     ui_carousel_draw(ui, &s_car);
     char st[32];
     snprintf(st, sizeof(st), "%d/%d   < >  Enter", s_car.sel + 1, s_car.n);

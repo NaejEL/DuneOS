@@ -3,8 +3,7 @@ version: "0.1.0"
 required_abi_version: 1
 icon: tetris
 permissions: 352          # INPUT | FS_READ | FS_WRITE
-stack_size: 8192
-heap_size: 8192
+heap_size: 32768          # ~14 KiB offscreen well canvas + slack
 capabilities:
   - display
 sources:

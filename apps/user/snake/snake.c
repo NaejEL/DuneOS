@@ -56,18 +56,27 @@ static void reset(void)
     place_food();
 }
 
-static void render(void)
+static void draw_score(void)
 {
-    game_clear(&gm, C_BG);
     char s[24];
     snprintf(s, sizeof(s), "snake  %d", score);
     gfx_text(gm.gfx, 2, 1, s, C_BAR, C_BG);
+}
+
+/* Full repaint — only on (re)start. Per-tick updates are incremental (step). */
+static void render(void)
+{
+    game_clear(&gm, C_BG);
+    draw_score();
     game_cell(&gm, ox, oy, fx, fy, CELL, C_FOOD);
     for (int i = 0; i < slen; i++)
         game_cell(&gm, ox, oy, sx[i], sy[i], CELL, i == 0 ? C_HEAD : C_BODY);
     gfx_flush(gm.gfx);
 }
 
+/* Advance one step and paint only what changed: erase the vacated tail, recolor
+ * the old head to body, draw the new head. No full-screen clear ⇒ no flicker
+ * (each cell is one small atomic write on the STREAM display). */
 static int step(void)
 {
     dx = pdx; dy = pdy;
@@ -76,12 +85,24 @@ static int step(void)
     for (int i = 0; i < slen; i++) if (sx[i] == hx && sy[i] == hy) return 0; /* self */
 
     int grow = (hx == fx && hy == fy);
+    int tail_x = sx[slen - 1], tail_y = sy[slen - 1];
+
     int n = grow ? slen + 1 : slen;
     if (n > MAX_LEN) n = MAX_LEN;
     for (int i = n - 1; i > 0; i--) { sx[i] = sx[i - 1]; sy[i] = sy[i - 1]; }
     sx[0] = hx; sy[0] = hy;
     slen = n;
-    if (grow) { score++; place_food(); }
+
+    if (!grow) game_cell(&gm, ox, oy, tail_x, tail_y, CELL, C_BG);  /* erase tail */
+    if (slen > 1) game_cell(&gm, ox, oy, sx[1], sy[1], CELL, C_BODY); /* old head */
+    game_cell(&gm, ox, oy, sx[0], sy[0], CELL, C_HEAD);              /* new head */
+
+    if (grow) {
+        score++;
+        place_food();
+        game_cell(&gm, ox, oy, fx, fy, CELL, C_FOOD);
+        draw_score();
+    }
     return 1;
 }
 
@@ -122,9 +143,8 @@ void app_main(void)
                 if (game_over(&gm, "Game Over", score) == KEY_ESC) goto done;
                 reset();
                 render();
-            } else {
-                render();
             }
+            /* successful step already painted incrementally — no render() */
             break;
         case GAME_QUIT:
             goto done;

@@ -3,7 +3,6 @@ version: "0.1.0"
 required_abi_version: 1
 # FS_READ (32) to open /etc/splash/config.yaml and the configured .dr asset.
 permissions: 32
-stack_size: 8192
 # STREAM mode (libgfx). The logo is streamed to the display row by row
 # (duneos_image_blit_dr) — no full-image buffer — so even a full-screen logo
 # needs only a small heap for libgfx/libdisp state.

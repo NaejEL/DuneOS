@@ -122,10 +122,21 @@ typedef struct {
     uint32_t                restart_count;
 } duneos_slot_info_t;
 
+/* Per-app memory snapshot — matches supervisor.h's duneos_proc_mem_t.       */
+typedef struct {
+    char     name[64];      /* DUNEOS_APP_NAME_MAX */
+    uint32_t data_size;     /* data pool (.data/.bss/.rodata)        */
+    uint32_t stack_size;    /* reserved task stack                   */
+    uint32_t stack_used;    /* peak stack use (reserved − high-water) */
+    uint32_t heap_size;     /* reserved per-app heap pool (0 if none) */
+    uint32_t heap_used;     /* currently allocated in the heap pool  */
+} duneos_proc_mem_t;
+
 int  duneos_supervisor_launch(const char *path);
 int  duneos_supervisor_running_count(void);
 void duneos_supervisor_wait_for_completion(int target_count);
 int  duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+int  duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count);
 int  duneos_supervisor_restart_by_name(const char *name);
 
 /* -------------------------------------------------------------------------

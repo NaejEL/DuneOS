@@ -4,7 +4,6 @@ required_abi_version: 1
 icon: waves
 opens: [".vcd"]           # ADR 026 — VCD chronogram viewer
 permissions: 288         # FS_READ | INPUT
-stack_size: 8192
 heap_size: 8192
 capabilities:
   - display

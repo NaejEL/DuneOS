@@ -172,31 +172,64 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
         print(f"  ERROR: no .c files in {app_dir}", file=sys.stderr)
         return False
 
-    # Embed manifest as JSON string in a dedicated ELF section
-    manifest_c = build_dir / "_manifest.c"
-    # Inject the target arch so the kernel can reject cross-arch binaries.
-    manifest["arch"] = arch
-    manifest_json = json.dumps(manifest, separators=(",", ":"))
-    manifest_c.write_text(
-        f'__attribute__((section("{MANIFEST_SECTION}"), used))\n'
-        f'const char _duneos_manifest[] = {json.dumps(manifest_json)};\n'
-    )
-    sources = [manifest_c] + list(sources)
-
     includes = [f"-I{SDK_INCLUDE}", f"-I{build_dir}", f"-I{app_dir}"]
     for inc in sorted(extra_includes):
         includes.append(f"-I{inc}")
 
+    # Static stack-usage instrumentation (.su frame sizes + .ci call graph) so
+    # dbt can COMPUTE the app's stack instead of trusting the manifest. Cheap,
+    # compile-time only, no effect on the emitted code.
+    stack_flags = ["-fstack-usage", "-fcallgraph-info=su"]
+
+    # Compile the app + SDK sources first — this produces the .ci files the
+    # stack analysis needs. The manifest (which carries the computed stack) is
+    # generated and compiled afterwards, once we know the size.
     objects = []
     for src in sources:
         obj = build_dir / (src.stem + ".o")
-        compile_cmd = [str(cc)] + cflags + includes + ["-c", str(src), "-o", str(obj)]
+        compile_cmd = [str(cc)] + cflags + includes + stack_flags + ["-c", str(src), "-o", str(obj)]
         print(f"  CC  {src.name}")
         try:
             run(compile_cmd)
         except SystemExit:
             return False
         objects.append(obj)
+
+    # --- Stack auto-sizing (ADR 029): dbt owns the stack, not the manifest ---
+    from .stackusage import analyze as _stack_analyze, recommend as _stack_recommend
+    analysis = _stack_analyze(build_dir)
+    auto, reason = _stack_recommend(analysis)
+    manual = int(manifest.get("stack_size", 0))   # optional override / fallback
+    if auto is not None:
+        final_stack = max(auto, manual)
+        if manual and manual > auto:
+            print(f"  [stack] computed {auto} B (worst-case {analysis['worst']}+reserve); "
+                  f"manifest overrides to {manual} B ({100*auto//manual}% needed)")
+        else:
+            print(f"  [stack] computed {final_stack} B "
+                  f"(own-code worst-case {analysis['worst']} B + reserve)")
+    else:
+        # Could not size safely (recursion / no entry): keep the manual value,
+        # or a safe default if none was given.
+        final_stack = manual if manual else 8192
+        print(f"  [stack] could not auto-size ({reason}) — using {final_stack} B")
+    manifest["stack_size"] = final_stack
+
+    # Embed the (now stack-resolved) manifest as a JSON string in its ELF section.
+    manifest["arch"] = arch   # so the kernel can reject cross-arch binaries
+    manifest_json = json.dumps(manifest, separators=(",", ":"))
+    manifest_c = build_dir / "_manifest.c"
+    manifest_c.write_text(
+        f'__attribute__((section("{MANIFEST_SECTION}"), used))\n'
+        f'const char _duneos_manifest[] = {json.dumps(manifest_json)};\n'
+    )
+    manifest_obj = build_dir / "_manifest.o"
+    print("  CC  _manifest.c")
+    try:
+        run([str(cc)] + cflags + includes + ["-c", str(manifest_c), "-o", str(manifest_obj)])
+    except SystemExit:
+        return False
+    objects.append(manifest_obj)
 
     libdune = build_libdune(plugin, arch, board_cfg, tc)
 

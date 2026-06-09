@@ -3,6 +3,5 @@ version: "0.1.0"
 required_abi_version: 1
 # I2C (8) + FS_READ (32) + FS_WRITE (64) + BATTERY (128) = 232
 permissions: 232
-stack_size: 4096
 capabilities:
   - battery

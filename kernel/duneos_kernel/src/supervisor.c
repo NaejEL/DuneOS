@@ -24,6 +24,7 @@
 
 #include "duneos/supervisor.h"
 #include "duneos/klog.h"
+#include "duneos/meminfo.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -52,6 +53,121 @@ static duneos_loader_ops_t s_loader_ops;
 void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops)
 {
     s_loader_ops = *ops;
+}
+
+/* ----- app memory arena (ADR 008/025) ----------------------------------- */
+
+/* A contiguous DRAM block reserved at boot for ALL per-app backing allocations
+ * (data pool, task stack, per-app heap pool). Reserved before WiFi/lwIP churn
+ * the general heap and served via a dedicated multi_heap, so apps get
+ * contiguous blocks isolated from system fragmentation. Companion to the loader
+ * exec pool (which does this for app .text). Skipped on PSRAM boards. */
+#ifndef CONFIG_DUNEOS_APP_ARENA_KB
+#define CONFIG_DUNEOS_APP_ARENA_KB 96
+#endif
+
+static uint8_t            *s_app_arena      = NULL;
+static size_t              s_app_arena_size = 0;
+static multi_heap_handle_t s_app_arena_heap = NULL;
+
+static void app_arena_init(void)
+{
+#if !defined(CONFIG_SPIRAM) && CONFIG_DUNEOS_APP_ARENA_KB > 0
+    size_t want  = (size_t)CONFIG_DUNEOS_APP_ARENA_KB * 1024u;
+    size_t bytes = want;
+    while (bytes >= 16 * 1024u) {
+        s_app_arena = heap_caps_malloc(bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        if (s_app_arena) break;
+        bytes /= 2;
+    }
+    if (!s_app_arena) {
+        klog_w(TAG, "app arena alloc failed — apps use the general heap");
+        return;
+    }
+    s_app_arena_size = bytes;
+    s_app_arena_heap = multi_heap_register(s_app_arena, bytes);
+    if (bytes < want)
+        klog_w(TAG, "app arena reduced to %zu KB (DRAM tight at boot)", bytes / 1024u);
+    klog_i(TAG, "app arena: %zu KB @ %p", bytes / 1024u, (void *)s_app_arena);
+#endif
+}
+
+static inline bool ptr_in_arena(const void *p)
+{
+    uintptr_t base = (uintptr_t)s_app_arena;
+    uintptr_t x    = (uintptr_t)p;
+    return s_app_arena && x >= base && x < base + s_app_arena_size;
+}
+
+void *duneos_supervisor_arena_alloc(size_t size)
+{
+    if (s_app_arena_heap) {
+        void *p = multi_heap_malloc(s_app_arena_heap, size);
+        if (p) return p;   /* arena full → degrade to general heap, don't hard-fail */
+    }
+    return heap_caps_malloc(size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+}
+
+void *duneos_supervisor_arena_aligned_alloc(size_t align, size_t size)
+{
+    if (s_app_arena_heap) {
+        void *p = multi_heap_aligned_alloc(s_app_arena_heap, size, align);
+        if (p) return p;
+    }
+    return heap_caps_aligned_alloc(align, size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+}
+
+void duneos_supervisor_arena_free(void *ptr)
+{
+    if (!ptr) return;
+    if (ptr_in_arena(ptr)) multi_heap_free(s_app_arena_heap, ptr);
+    else heap_caps_free(ptr);
+}
+
+static uint32_t s_ram_entry_free  = 0;   /* INTERNAL free at app_main entry      */
+static uint32_t s_ram_kernel_free = 0;   /* INTERNAL free after kernel init      */
+
+void duneos_meminfo_mark(int phase)
+{
+    uint32_t f = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (phase == 0) s_ram_entry_free = f;
+    else            s_ram_kernel_free = f;
+}
+
+int duneos_meminfo(duneos_meminfo_t *out)
+{
+    if (!out) return -1;
+
+    multi_heap_info_t in;
+    heap_caps_get_info(&in, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    out->internal_total    = (uint32_t)(in.total_free_bytes + in.total_allocated_bytes);
+    out->internal_free     = (uint32_t)in.total_free_bytes;
+    out->internal_largest  = (uint32_t)in.largest_free_block;
+    out->internal_min_free = (uint32_t)in.minimum_free_bytes;
+
+    out->exec_free    = heap_caps_get_free_size(MALLOC_CAP_EXEC);
+    out->exec_largest = heap_caps_get_largest_free_block(MALLOC_CAP_EXEC);
+    out->dma_free     = heap_caps_get_free_size(MALLOC_CAP_DMA);
+    out->dma_largest  = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+
+    size_t used = 0, size = 0;
+    if (s_loader_ops.exec_pool_stats) s_loader_ops.exec_pool_stats(&used, &size);
+    out->exec_pool_used = (uint32_t)used;
+    out->exec_pool_size = (uint32_t)size;
+
+    out->arena_size = (uint32_t)s_app_arena_size;
+    if (s_app_arena_heap) {
+        multi_heap_info_t a;
+        multi_heap_get_info(s_app_arena_heap, &a);
+        out->arena_free    = (uint32_t)a.total_free_bytes;
+        out->arena_largest = (uint32_t)a.largest_free_block;
+    } else {
+        out->arena_free = out->arena_largest = 0;
+    }
+
+    out->internal_entry_free  = s_ram_entry_free;
+    out->internal_kernel_free = s_ram_kernel_free;
+    return 0;
 }
 
 /* ----- internal types ---------------------------------------------------- */
@@ -363,7 +479,7 @@ static void slot_heap_free(app_slot_t *slot)
             if (!pool_ok)
                 klog_e(TAG, "slot_heap_free: per-app heap corrupted before free!");
         }
-        heap_caps_free(slot->heap_pool_buf);
+        duneos_supervisor_arena_free(slot->heap_pool_buf);
         slot->heap_pool_buf  = NULL;
         slot->heap_handle    = NULL;
         slot->heap_pool_size = 0;
@@ -514,7 +630,7 @@ static void supervisor_task(void *arg)
          * guarantees the TCB is no longer referenced by FreeRTOS before the
          * supervisor processes the exit message. */
         if (slot->stack_mem) {
-            heap_caps_free(slot->stack_mem);
+            duneos_supervisor_arena_free(slot->stack_mem);
             slot->stack_mem  = NULL;
             slot->stack_size = 0;
             vTaskDelay(1);
@@ -555,6 +671,11 @@ esp_err_t duneos_supervisor_init(void)
 
     s_lock = xSemaphoreCreateMutex();
     if (!s_lock) return ESP_ERR_NO_MEM;
+
+    /* Reserve the app arena NOW — before any app launches and before WiFi/lwIP
+     * start fragmenting the general heap. This is the whole point: grab a big
+     * contiguous block while one still exists. */
+    app_arena_init();
 
     s_exit_queue = xQueueCreate(DUNEOS_MAX_RUNNING_APPS, sizeof(exit_msg_t));
     if (!s_exit_queue) return ESP_ERR_NO_MEM;
@@ -681,8 +802,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     slot->heap_handle    = NULL;
     slot->heap_pool_size = 0;
     if (m->heap_size >= MULTI_HEAP_MIN_SIZE) {
-        slot->heap_pool_buf = heap_caps_malloc(m->heap_size,
-                                                MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        slot->heap_pool_buf = duneos_supervisor_arena_alloc(m->heap_size);
         if (slot->heap_pool_buf) {
             slot->heap_pool_size = m->heap_size;
             slot->heap_handle    = multi_heap_register(slot->heap_pool_buf,
@@ -713,8 +833,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
      * xTaskCreateStaticPinnedToCore requires an external stack buffer and a
      * StaticTask_t (TCB) that both outlive the task — both live in app_slot_t.
      * Aligning to 16 bytes satisfies Xtensa's CALL0/CALL8 ABI requirements. */
-    slot->stack_mem  = heap_caps_aligned_alloc(16, stack,
-                                                MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    slot->stack_mem  = duneos_supervisor_arena_aligned_alloc(16, stack);
     slot->stack_size = stack;
     if (!slot->stack_mem) {
         s_loader_ops.unload(app);
@@ -748,7 +867,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
         xSemaphoreGive(s_lock);
         s_loader_ops.unload(app);
         slot_heap_free(slot);
-        heap_caps_free(slot->stack_mem);
+        duneos_supervisor_arena_free(slot->stack_mem);
         slot->stack_mem = NULL;
         if (slot->mailbox) vQueueDelete(slot->mailbox);
         slot->active = false;
@@ -877,6 +996,38 @@ int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count)
         out[n].restart_policy= s->restart_policy;
         out[n].restart_count = s->restart_count;
         strlcpy(out[n].name, s->name, sizeof(out[n].name));
+        n++;
+    }
+    xSemaphoreGive(s_lock);
+    return n;
+}
+
+int duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count)
+{
+    if (!out || count <= 0) return 0;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    int n = 0;
+    for (app_slot_t *s = s_slot_head; s && n < count; s = s->next) {
+        if (!s->active) continue;
+        strlcpy(out[n].name, s->name, sizeof(out[n].name));
+        out[n].data_size  = (uint32_t)s->data_pool_size;
+        out[n].stack_size = (uint32_t)s->stack_size;
+
+        /* Real peak stack use = reserved − lowest-ever free (high-water mark).
+         * uxTaskGetStackHighWaterMark returns StackType_t units; scale to bytes. */
+        uint32_t free_min = s->task
+            ? (uint32_t)uxTaskGetStackHighWaterMark(s->task) * (uint32_t)sizeof(StackType_t)
+            : 0;
+        out[n].stack_used = (free_min && s->stack_size > free_min)
+            ? s->stack_size - free_min : 0;
+
+        out[n].heap_size = (uint32_t)s->heap_pool_size;
+        out[n].heap_used = 0;
+        if (s->heap_handle) {
+            multi_heap_info_t hi;
+            multi_heap_get_info(s->heap_handle, &hi);
+            out[n].heap_used = (uint32_t)hi.total_allocated_bytes;
+        }
         n++;
     }
     xSemaphoreGive(s_lock);

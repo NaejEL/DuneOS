@@ -4,7 +4,6 @@ required_abi_version: 1
 icon: drview
 opens: [".dr"]            # ADR 026 — image viewer for Dune Raster files
 permissions: 288         # FS_READ | INPUT
-stack_size: 8192
 heap_size: 8192
 capabilities:
   - display

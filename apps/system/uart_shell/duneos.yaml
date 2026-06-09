@@ -2,4 +2,7 @@ name: uart_shell
 version: "0.1.0"
 required_abi_version: 1
 permissions: 96
-stack_size: 16384
+# stack_size OVERRIDE: like usb_shell, uart_shell runs captured bin apps IN ITS
+# OWN TASK (shared shell_core → duneos_loader_run_captured) + the loader on this
+# stack — depth the static analyser can't see (ADR 029).
+stack_size: 8192

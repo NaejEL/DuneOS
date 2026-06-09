@@ -154,3 +154,40 @@ void gfx_flush(gfx_ctx_t *ctx);
  */
 void gfx_blit(gfx_ctx_t *ctx, int x, int y, int w, int h,
               const uint16_t *pixels);
+
+/*
+ * Offscreen canvas — partial rendering / sprite compositing.
+ *
+ * Flicker on a STREAM-mode display comes from clearing then redrawing the
+ * panel each frame: the eye catches the blank intermediate. The fix the big
+ * UI libs use (TFT_eSPI sprites, LVGL partial buffers, esp_lcd bounce buffers)
+ * is to compose the moving region in an offscreen RAM buffer and push it to
+ * the panel in a single contiguous write — the panel never shows a partial
+ * frame.
+ *
+ * A canvas IS a gfx_ctx: pass it to gfx_fill / gfx_rect / gfx_text / gfx_blit
+ * exactly like a display context. Draw into it (cheap RAM writes), then
+ * gfx_canvas_present() blits it onto the live display at (x, y) in one shot.
+ *
+ * MEMORY: w*h*2 bytes. Size the canvas to the area that actually changes —
+ * a 60×120 well is 14 KiB, vs a full 240×135 frame at 63 KiB. That bound is
+ * what makes this viable on a no-PSRAM board.
+ *
+ * Example (a game well that must not flicker):
+ *   gfx_ctx_t *well = gfx_canvas_new(COLS*cell, ROWS*cell);
+ *   ... each frame:
+ *   gfx_fill(well, bg);
+ *   ... draw blocks into `well` ...
+ *   gfx_canvas_present(display, well, ox, oy);   // one atomic blit
+ *   ... on exit:
+ *   gfx_canvas_free(well);
+ *
+ * Returns NULL on allocation failure or non-positive dimensions.
+ */
+gfx_ctx_t *gfx_canvas_new(int w, int h);
+
+/* Blit `canvas` onto `display` at (x, y) in a single transaction. */
+void gfx_canvas_present(gfx_ctx_t *display, const gfx_ctx_t *canvas, int x, int y);
+
+/* Free a canvas created by gfx_canvas_new(). Do NOT pass to gfx_close(). */
+void gfx_canvas_free(gfx_ctx_t *canvas);

@@ -16,7 +16,11 @@ extern void duneos_exit(int code);
 #define ROWS 20
 #define BAR  10
 
+#define C_BG    GFX_RGB(14, 16, 24)
+#define C_FRAME GFX_RGB(60, 70, 90)
+
 static game_t   gm;
+static gfx_ctx_t *well;              /* offscreen canvas for the play field */
 static int      cell, ox, oy;
 static uint16_t board[ROWS][COLS];   /* 0 = empty, else colour */
 
@@ -97,29 +101,38 @@ static void reset(void)
     spawn();
 }
 
+/* Static chrome: title + well border. Drawn once; the per-frame canvas present
+ * lands strictly inside the border so this never needs repainting. */
+static void draw_chrome(void)
+{
+    game_clear(&gm, C_BG);
+    gfx_rect(gm.gfx, ox - 1, oy - 1, COLS * cell + 2, 1, C_FRAME);
+    gfx_rect(gm.gfx, ox - 1, oy + ROWS * cell, COLS * cell + 2, 1, C_FRAME);
+    gfx_rect(gm.gfx, ox - 1, oy, 1, ROWS * cell, C_FRAME);
+    gfx_rect(gm.gfx, ox + COLS * cell, oy, 1, ROWS * cell, C_FRAME);
+}
+
+/* Compose the whole play field in the offscreen canvas, then push it to the
+ * panel in a single blit — the well never shows a half-drawn frame, so no
+ * flicker. Score text overwrites itself in place (small, no clear needed). */
 static void render(void)
 {
-    game_clear(&gm, GFX_RGB(14, 16, 24));
-    char s[24];
-    snprintf(s, sizeof(s), "tetris  %d", s_score);
-    gfx_text(gm.gfx, 2, 1, s, GFX_WHITE, GFX_RGB(14, 16, 24));
-
-    /* well border */
-    gfx_rect(gm.gfx, ox - 1, oy - 1, COLS * cell + 2, 1, GFX_RGB(60, 70, 90));
-    gfx_rect(gm.gfx, ox - 1, oy + ROWS * cell, COLS * cell + 2, 1, GFX_RGB(60, 70, 90));
-    gfx_rect(gm.gfx, ox - 1, oy, 1, ROWS * cell, GFX_RGB(60, 70, 90));
-    gfx_rect(gm.gfx, ox + COLS * cell, oy, 1, ROWS * cell, GFX_RGB(60, 70, 90));
+    gfx_fill(well, C_BG);
 
     for (int r = 0; r < ROWS; r++)
         for (int c = 0; c < COLS; c++)
-            if (board[r][c]) game_cell(&gm, ox, oy, c, r, cell, board[r][c]);
+            if (board[r][c]) game_cell_at(well, 0, 0, c, r, cell, board[r][c]);
 
     for (int y = 0; y < 4; y++)
         for (int x = 0; x < 4; x++)
             if (cell_set(s_type, s_rot, x, y) && s_py + y >= 0)
-                game_cell(&gm, ox, oy, s_px + x, s_py + y, cell, COLOR[s_type]);
+                game_cell_at(well, 0, 0, s_px + x, s_py + y, cell, COLOR[s_type]);
 
-    gfx_flush(gm.gfx);
+    gfx_canvas_present(gm.gfx, well, ox, oy);
+
+    char s[24];
+    snprintf(s, sizeof(s), "tetris  %d", s_score);
+    gfx_text(gm.gfx, 2, 1, s, GFX_WHITE, C_BG);
 }
 
 /* Drop one row; lock + respawn when it can't. Returns 0 on game over. */
@@ -141,7 +154,11 @@ void app_main(void)
     ox = (gm.w - COLS * cell) / 2;
     oy = BAR;
 
+    well = gfx_canvas_new(COLS * cell, ROWS * cell);
+    if (!well) { game_close(&gm); duneos_exit(11); }
+
     reset();
+    draw_chrome();
     render();
 
     for (;;) {
@@ -168,6 +185,7 @@ void app_main(void)
             if (!gravity()) {
                 if (game_over(&gm, "Game Over", s_score) == KEY_ESC) goto done;
                 reset();
+                draw_chrome();   /* overlay clobbered the border */
             }
             render();
             break;
@@ -177,6 +195,7 @@ void app_main(void)
     }
 
 done:
+    gfx_canvas_free(well);
     game_close(&gm);
     duneos_exit(0);
 }

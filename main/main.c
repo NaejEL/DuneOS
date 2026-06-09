@@ -15,6 +15,7 @@
 #include "duneos/loader.h"
 #include "duneos/supervisor.h"
 #include "duneos/init.h"
+#include "duneos/meminfo.h"
 
 static const char *TAG = "duneos";
 
@@ -94,6 +95,9 @@ static int launch_autoboot(void)
 
 void app_main(void)
 {
+    /* Baseline before DuneOS does anything → IDF/FreeRTOS startup heap cost. */
+    duneos_meminfo_mark(0);
+
 #ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     console_init();
 #endif
@@ -116,6 +120,10 @@ void app_main(void)
         kernel_idle();
         return;
     }
+
+    /* Baseline after kernel init, before any service → DuneOS kernel cost is
+     * (entry − kernel); everything after is running services (apps + WiFi). */
+    duneos_meminfo_mark(1);
 
     int launched = launch_from_init_yaml();
     if (launched < 0) {

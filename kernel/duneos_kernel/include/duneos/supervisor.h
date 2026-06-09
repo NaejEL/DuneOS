@@ -75,6 +75,9 @@ typedef void (*duneos_get_data_pool_fn_t)(const duneos_app_t *app,
 /* ADR 016: callbacks for captured-app exit unwinding. */
 typedef bool      (*duneos_captured_active_fn_t)(void);
 typedef void      (*duneos_captured_longjmp_fn_t)(int code) __attribute__((noreturn));
+/* Exec-pool diagnostics (ADR 008): report the app exec pool's used/size so the
+ * kernel can surface it without including loader.h. */
+typedef void      (*duneos_exec_pool_stats_fn_t)(size_t *used, size_t *size);
 
 typedef struct {
     duneos_load_fn_t             load;
@@ -84,10 +87,24 @@ typedef struct {
     duneos_get_data_pool_fn_t    get_data_pool;
     duneos_captured_active_fn_t  captured_active;   /* may be NULL */
     duneos_captured_longjmp_fn_t captured_longjmp;  /* may be NULL */
+    duneos_exec_pool_stats_fn_t  exec_pool_stats;   /* may be NULL */
 } duneos_loader_ops_t;
 
 /* Called by duneos_loader_init() before any supervisor_launch() */
 void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops);
+
+/*
+ * App memory arena (ADR 008/025). The supervisor reserves one contiguous DRAM
+ * block at boot and serves every per-app backing allocation from it — data
+ * pool, task stack, per-app heap pool — so apps get contiguous memory isolated
+ * from the WiFi/system heap churn. The loader uses these for the app data pool;
+ * the supervisor uses them for stack and heap pool. Each falls back to the
+ * general internal heap when the arena is absent (PSRAM boards / disabled) or
+ * exhausted, so callers never need to special-case it.
+ */
+void *duneos_supervisor_arena_alloc(size_t size);
+void *duneos_supervisor_arena_aligned_alloc(size_t align, size_t size);
+void  duneos_supervisor_arena_free(void *ptr);
 
 /* Start the supervisor (call once from app_main before any launch) */
 esp_err_t duneos_supervisor_init(void);
@@ -141,6 +158,25 @@ typedef struct {
 
 /* Fill out[] with up to count slot snapshots; returns number of entries filled. */
 int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+
+/*
+ * Per-app memory snapshot for a `ps`-style view: what each running app *reserves*
+ * vs what it *really uses*. stack_used is the peak (high-water) since the task
+ * started; heap_used is what's currently allocated in the app's per-app heap
+ * pool. The gap between reserved and used is wasted RAM to reclaim (right-size
+ * the manifest stack_size / heap_size).
+ */
+typedef struct {
+    char     name[DUNEOS_APP_NAME_MAX];
+    uint32_t data_size;     /* data pool (.data/.bss/.rodata)          */
+    uint32_t stack_size;    /* reserved task stack                      */
+    uint32_t stack_used;    /* peak stack use (reserved − high-water)   */
+    uint32_t heap_size;     /* reserved per-app heap pool (0 if none)   */
+    uint32_t heap_used;     /* currently allocated in the heap pool     */
+} duneos_proc_mem_t;
+
+/* Fill out[] with up to count per-app memory snapshots; returns entries filled. */
+int duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count);
 
 /* Force-kill and relaunch the named slot regardless of its restart policy.
  * Returns 0 if found and kill queued, -1 if name not found or slot inactive. */

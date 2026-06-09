@@ -56,6 +56,14 @@ void game_clear(game_t *gm, uint16_t color);
  * cells read as a grid. */
 void game_cell(game_t *gm, int ox, int oy, int gx, int gy, int px, uint16_t color);
 
+/* Same as game_cell but onto any gfx context — pass an offscreen canvas
+ * (gfx_canvas_new) to compose a whole region in RAM and present it flicker-free,
+ * or gm->gfx to draw a single cell straight to the display (incremental update).
+ * Drawing per-cell straight to a STREAM display is itself flicker-free: an 8x8
+ * rect is one tiny atomic SPI write, so games that only touch a few cells per
+ * tick (snake) need no canvas at all — just redraw the cells that changed. */
+void game_cell_at(gfx_ctx_t *g, int ox, int oy, int gx, int gy, int px, uint16_t color);
+
 /* Centred "Game Over" style overlay (title + score line); waits for a key and
  * returns its code. */
 uint16_t game_over(game_t *gm, const char *title, int score);

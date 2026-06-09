@@ -3,6 +3,10 @@ version: "0.1.0"
 required_abi_version: 1
 icon: g_shell
 permissions: 352
+# stack_size OVERRIDE: like usb_shell, g_shell runs captured bin apps IN ITS OWN
+# TASK (shared shell_core → duneos_loader_run_captured) + the loader on this
+# stack. Depth the static analyser can't see (ADR 029). 8 KiB covers shell +
+# deepest captured tool + loader.
 stack_size: 8192
 capabilities:
   - display

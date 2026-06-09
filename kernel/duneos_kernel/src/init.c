@@ -303,6 +303,10 @@ static void launch_one(const duneos_service_desc_t *s)
     esp_err_t err = duneos_supervisor_launch_policy(s->path, s->restart);
     if (err != ESP_OK)
         klog_e(TAG, "failed to start '%s': %s", s->path, esp_err_to_name(err));
+    /* No meminfo dump here: this runs in the init task on the boot path, and a
+     * fault here is silent (console comes up after init) and boot-loops. Read
+     * the memory picture interactively with `free` instead — it runs in its own
+     * app task and cannot take down the boot. */
 }
 
 /* Exit observer — fires from the supervisor task when any app exits.

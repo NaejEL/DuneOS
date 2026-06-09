@@ -74,9 +74,14 @@ void game_clear(game_t *gm, uint16_t color)
     gfx_rect(gm->gfx, 0, 0, gm->w, gm->h, color);
 }
 
+void game_cell_at(gfx_ctx_t *g, int ox, int oy, int gx, int gy, int px, uint16_t color)
+{
+    gfx_rect(g, ox + gx * px, oy + gy * px, px - 1, px - 1, color);
+}
+
 void game_cell(game_t *gm, int ox, int oy, int gx, int gy, int px, uint16_t color)
 {
-    gfx_rect(gm->gfx, ox + gx * px, oy + gy * px, px - 1, px - 1, color);
+    game_cell_at(gm->gfx, ox, oy, gx, gy, px, color);
 }
 
 uint16_t game_over(game_t *gm, const char *title, int score)

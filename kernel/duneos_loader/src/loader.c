@@ -386,8 +386,11 @@ static esp_err_t load_sections(FILE              *f,
             app->data_pool = heap_caps_malloc(data_total,
                                                MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
 #else
-        app->data_pool = heap_caps_malloc(data_total,
-                                          MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+        /* No-PSRAM: serve the data pool from the supervisor's app arena, the
+         * contiguous DRAM block reserved at boot and isolated from WiFi/system
+         * heap fragmentation (ADR 008/025). Falls back to the general heap
+         * inside arena_alloc when the arena is absent/exhausted. */
+        app->data_pool = duneos_supervisor_arena_alloc(data_total);
 #endif
         if (!app->data_pool) {
             klog_e(TAG, "data pool alloc failed (%zu B)", data_total);
@@ -1019,6 +1022,12 @@ static esp_err_t extract_manifest(FILE               *f,
  * Public API
  * ---------------------------------------------------------------------- */
 
+static void duneos_loader_exec_pool_stats(size_t *used, size_t *size)
+{
+    if (used) *used = s_exec_pool_used;
+    if (size) *size = s_exec_pool_size;
+}
+
 void duneos_loader_init(void)
 {
     if (!s_loader_lock) s_loader_lock = xSemaphoreCreateMutex();
@@ -1070,6 +1079,7 @@ void duneos_loader_init(void)
         /* ADR 016: captured-mode exit unwinding. */
         .captured_active  = duneos_loader_captured_active,
         .captured_longjmp = duneos_loader_captured_longjmp,
+        .exec_pool_stats  = duneos_loader_exec_pool_stats,
     };
     duneos_supervisor_register_loader(&ops);
 }
@@ -1573,7 +1583,9 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
 static void unload_locked(duneos_app_t *app)
 {
     if (!app) return;
-    heap_caps_free(app->data_pool);
+    /* Routes to the app arena when the pool came from it, else the general/SPIRAM
+     * heap — arena_free checks the address range. */
+    duneos_supervisor_arena_free(app->data_pool);
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     /* LIFO reclaim: only possible when this app was the last to allocate. */
     if (app->exec_block_size > 0 && s_exec_pool_used == app->exec_pool_end) {

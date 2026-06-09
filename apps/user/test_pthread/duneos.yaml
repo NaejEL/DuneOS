@@ -3,7 +3,6 @@ version: "0.1.0"
 required_abi_version: 3
 # FS_WRITE (64) for printf → stdout. No other resources used.
 permissions: 64
-stack_size: 8192
 # heap_size omitted on purpose: when the user types `test_pthread` at the
 # usb_shell prompt, the shell sees no heap_size and dispatches to CAPTURED
 # mode → pthread_create returns EPERM (the test path we want to validate).

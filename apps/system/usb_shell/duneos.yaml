@@ -7,4 +7,8 @@ required_abi_version: 1
 # the shell's mask is NOT transitive.
 #   FS_READ (32) + FS_WRITE (64) = 96
 permissions: 96
-stack_size: 16384
+# stack_size OVERRIDE (dbt auto-sizes everything else): the shell runs captured
+# bin apps (ps, ls, cat…) IN ITS OWN TASK (ADR 016), plus the loader runs on
+# this stack during launch — depth the static analyser can't see. Sized for the
+# deepest captured tool + loader (observed peak ~4 KB via `ps`, 2x margin).
+stack_size: 8192

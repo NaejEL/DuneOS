@@ -199,3 +199,32 @@ config DUNEOS_DRV_USB_CDC
         NOTE: same USB-JTAG conflict as DUNEOS_DRV_USB_MSC applies.
 
 endmenu
+
+menu "DuneOS kernel memory"
+
+config DUNEOS_APP_ARENA_KB
+    int "App memory arena size (KiB)"
+    default 96
+    range 0 256
+    help
+        Size of the contiguous DRAM arena the supervisor reserves at boot for
+        ALL per-app backing allocations: data pool (.data/.bss/.rodata), task
+        stack, and per-app heap pool. Reserving it early — before WiFi/lwIP
+        start churning the general heap — and serving every app allocation from
+        a dedicated multi_heap isolates apps from system fragmentation, so the
+        foreground app always finds the contiguous blocks it needs even though
+        total free RAM looks fragmented (ADR 008/025). The companion to the
+        loader exec pool, which already does this for app .text.
+
+        Size it for the peak concurrent app set (boot daemons + one foreground
+        app once the navigation-stack handoff lands; daemons + launcher + one
+        game until then). On a no-PSRAM board this competes with the exec pool
+        and the WiFi/system heap, so do not over-reserve. The supervisor halves
+        down to 16 KiB if DRAM is tight at boot, and apps fall back to the
+        general heap if the arena can't be reserved at all.
+
+        Set 0 to disable the arena (apps allocate from the general heap, the
+        pre-arena behaviour). On PSRAM boards the arena is skipped regardless —
+        app data goes to SPIRAM and fragmentation is a non-issue.
+
+endmenu

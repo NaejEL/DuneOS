@@ -24,3 +24,47 @@ CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y
 
 # select()/poll() on /dev devices (ADR 019)
 CONFIG_VFS_SUPPORT_SELECT=y
+
+# WiFi — frugal buffer budget (contest 2026 item 0, ADR 025/008).
+# The WiFi + lwIP stack grabs internal RAM on association. On a no-PSRAM board
+# (CardPuter, 320 KiB DRAM) the default buffer counts starve the launcher's
+# per-app allocations → ESP_ERR_NO_MEM at launch. STA-only light traffic
+# (scan/join, small HTTP) does not need the throughput these buffers buy, so we
+# cut them hard. Dynamic TX (vs static) frees buffers when idle; disabling AMPDU
+# drops the block-ack window buffers (the biggest single saver). Boards WITH
+# PSRAM can raise these in their board sdkconfig if they want throughput.
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=4
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER=y
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_AMPDU_TX_ENABLED=n
+CONFIG_ESP_WIFI_AMPDU_RX_ENABLED=n
+
+# WiFi code IRAM->flash (ADR 030). The WiFi lib normally links ~25-30 KiB of hot
+# code into IRAM for speed. On the ESP32-S3 that IRAM is D/IRAM SRAM, so moving
+# it to flash (XIP) returns that SRAM to the general heap as INTERNAL DRAM —
+# measured the single biggest lever for the launcher's contiguous-block problem.
+# Cost: lower WiFi throughput, irrelevant for contest connectivity.
+CONFIG_ESP_WIFI_IRAM_OPT=n
+CONFIG_ESP_WIFI_RX_IRAM_OPT=n
+
+# Trim the remaining runtime WiFi buffers (the ~70 KiB DRAM the WiFi+lwIP stack
+# grabs on association — measured via `free`'s services breakdown).
+CONFIG_ESP_WIFI_CACHE_TX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_MGMT_SBUF_NUM=8
+
+# lwIP frugal budget: no IPv6, fewer sockets, smaller mailboxes and a 2-MSS TCP
+# window. STA + light HTTP doesn't need more; throughput drops, footprint too.
+CONFIG_LWIP_IPV6=n
+CONFIG_LWIP_MAX_SOCKETS=8
+CONFIG_LWIP_TCPIP_RECVMBOX_SIZE=16
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=6
+CONFIG_LWIP_UDP_RECVMBOX_SIZE=6
+CONFIG_LWIP_TCP_WND_DEFAULT=2880
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=2880
+
+# App arena DISABLED for now (=0): reserving a big fixed arena just moves the
+# RAM shortage to the general heap (it starved the loader's ELF-parsing and the
+# WiFi stack). Apps allocate from the general heap until we right-size stacks/
+# heaps from measured usage (ps tool). The arena code stays behind this knob.
+CONFIG_DUNEOS_APP_ARENA_KB=0

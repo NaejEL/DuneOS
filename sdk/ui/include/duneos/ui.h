@@ -104,6 +104,17 @@ void ui_titlebar(ui_t *ui, const char *title);
 /* Full-width bar at the bottom showing left-aligned hint text. */
 void ui_statusbar(ui_t *ui, const char *text);
 
+/*
+ * System status bar at the TOP: an optional app title on the left, and on the
+ * right the ambient indicators (WiFi signal, battery, modifier locks, clock)
+ * read from their tmpfs producers (ADR 027). Each slot renders only if its
+ * producer is present — no WiFi glyph until WiFi runs, no clock until the
+ * realtime clock is set. Drawn opt-in by the foreground app, in place of
+ * ui_titlebar; games omit it to keep the whole panel. Requires linking
+ * $SDK/ui/ui_statusbar.c. title may be NULL for indicators only.
+ */
+void ui_statusbar_top(ui_t *ui, const char *title);
+
 /* Clear the screen and draw a centred title + body (split on '\n'). Handy for
  * "Loading…" / error / empty-state screens. body may be NULL. */
 void ui_message(ui_t *ui, const char *title, const char *body);
