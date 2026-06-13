@@ -93,20 +93,21 @@ int duneos_loader_get_captured_exit_code(void)
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
-/* Upper bound on ELF section-header count. Apps built with
- * -ffunction-sections/-fdata-sections across several translation units emit one
- * section per function/object (plus a .rela twin), so a multi-file app easily
- * runs into the hundreds. The bound only sizes section_bases[] in the per-app
- * descriptor (calloc'd per load, freed on unload) — 4 B/entry, transient. */
+/* Upper bound on ELF section-header count — the loader rejects apps above it.
+ * A generous ceiling, not a per-app cost: section_bases is allocated to the
+ * real e_shnum (P2.1, audit §3). Section counts are modest now that apps merge
+ * sections (no -ffunction-sections, audit P0). */
 #define MAX_SECTIONS 1024
 
 struct duneos_app {
     duneos_app_manifest_t manifest;
 
-    /* Runtime base address of each section, indexed by section header index.
-     * NULL for sections not loaded into memory (no SHF_ALLOC, size 0, etc.) */
-    void *section_bases[MAX_SECTIONS];
-    int   section_count;
+    /* Runtime base of each section, indexed by section header index; NULL for
+     * sections not loaded (no SHF_ALLOC, size 0, …). Allocated to e_shnum at
+     * load (section_count entries) and freed on unload — ~4 B/section instead
+     * of a fixed 4 KiB per resident app (P2.1). */
+    void **section_bases;
+    int    section_count;
 
     /* Monolithic pool for all data sections (rodata + data + bss).
      * One contiguous allocation freed in a single heap_caps_free on unload. */
@@ -491,7 +492,8 @@ static void *symbol_address(const elf32_sym_t  *sym,
         }
         return ptr;
     }
-    if (sym->st_shndx < MAX_SECTIONS && app->section_bases[sym->st_shndx]) {
+    if ((int)sym->st_shndx < app->section_count &&
+        app->section_bases[sym->st_shndx]) {
         return (uint8_t *)app->section_bases[sym->st_shndx] + sym->st_value;
     }
     return NULL;
@@ -1167,9 +1169,13 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         break;
     }
 
-    /* 5. Allocate app descriptor */
+    /* 5. Allocate app descriptor + the section-base table sized to the real
+     * section count (P2.1: ~4 B/section instead of a fixed 4 KiB array). */
     app = calloc(1, sizeof(duneos_app_t));
     if (!app) { err = ESP_ERR_NO_MEM; goto out; }
+    app->section_count = hdr.e_shnum;
+    app->section_bases = calloc(hdr.e_shnum, sizeof(void *));
+    if (!app->section_bases) { err = ESP_ERR_NO_MEM; goto out; }
 
     /* 6. Manifest */
     err = extract_manifest(f, &hdr, shdrs, shstrtab, &app->manifest);
@@ -1593,6 +1599,7 @@ static void unload_locked(duneos_app_t *app)
         klog_d(TAG, "exec pool reclaimed: pool now %zu B used", s_exec_pool_used);
     }
 #endif
+    free(app->section_bases);
     free(app);
 }
 

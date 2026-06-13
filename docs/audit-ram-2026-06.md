@@ -198,13 +198,13 @@ entry/kernel/services).
 | Action | Gain estimé | Gain mesuré | Risque | Statut |
 | --- | ---: | ---: | --- | --- |
 | **P0 merge sections** (drop `-ffunction-sections`) | transient 60→12 K/load + débloque arène + vitesse | | faible (ET_REL = pas de gc) | **clé de voûte, à faire en 1er** |
-| P1.1 `-Os` | 10-30 K | | faible | validé, à faire |
+| P1.1 `-Os` | 10-30 K | 8,8 K IRAM (+90 K flash) | **moyen (révisé)** | **REVERTÉ 2026-06-10** — gain mesuré -Os vs -Og même code (`.iram0.text` 75831→67039), mais le kernel **ne boote plus** en `-Os`. Probable UB latent exposé par l'optimisation dans du code bas-niveau (loader écrit l'IRAM via l'alias DRAM, exec-install, barrières mémoire). À ne PAS réactiver avant d'avoir isolé l'UB (manque de `volatile`/barrière). Le `-Os` est donc un gain conditionnel, pas acquis. |
 | P1.2 `SPI_FLASH_ROM_IMPL` | 7-10 K | | moyen (LittleFS) | |
 | P1.3 FreeRTOS→flash | ~8 K | | faible | nom IDF v6 à vérifier |
 | P1.4 heap/ringbuf→flash | 2-5 K | | faible | |
 | P1.5 newlib nano | qq K | | moyen (%f) | |
 | P1.6 dcache 16 K | 16 K | | **perf rendu** | à mesurer |
-| P2.1 `section_bases` | 15-20 K | | faible | |
+| P2.1 `section_bases` | 15-20 K | **24,6 K** (mesuré `free`) | faible | **fait + validé 2026-06-10** — `free` 42296→66952, low-water 17K→38K. Mieux que l'estimation (5 apps résidentes × ~4K + reload). |
 | P2.2 klog 8 K | 8 K | | nul | |
 | P2.3 ring GPIO | 3 K | | faible | |
 | P2.4 mailbox lazy | 3-5 K | | faible | |
