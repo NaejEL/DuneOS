@@ -61,6 +61,28 @@ int duneos_vfs_list_mounts(char (*out)[32], int max)
     return n;
 }
 
+/* Total + free bytes of the filesystem backing `path` (for `df`). 0 on success,
+ * -errno otherwise. /tmp and /dev have no block accounting (-ENODEV). */
+int duneos_fs_info(const char *path, uint64_t *total, uint64_t *freeb)
+{
+    if (!path || !total || !freeb) return -EINVAL;
+    if (strncmp(path, FLASH_MOUNT_POINT, sizeof(FLASH_MOUNT_POINT) - 1) == 0) {
+        size_t t = 0, u = 0;
+        if (esp_littlefs_info(FLASH_PARTITION, &t, &u) != ESP_OK) return -EIO;
+        *total = t;
+        *freeb = (t > u) ? (uint64_t)(t - u) : 0;
+        return 0;
+    }
+    if (strncmp(path, SD_MOUNT_POINT, sizeof(SD_MOUNT_POINT) - 1) == 0) {
+        uint64_t t = 0, f = 0;
+        if (esp_vfs_fat_info(SD_MOUNT_POINT, &t, &f) != ESP_OK) return -EIO;
+        *total = t;
+        *freeb = f;
+        return 0;
+    }
+    return -ENODEV;
+}
+
 /* -------------------------------------------------------------------------
  * Public availability queries
  * ---------------------------------------------------------------------- */

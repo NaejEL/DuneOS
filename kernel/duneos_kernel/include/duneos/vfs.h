@@ -45,6 +45,10 @@ bool duneos_vfs_sd_available(void);
  */
 int duneos_vfs_list_mounts(char (*out)[32], int max);
 
+/* Total + free bytes of the filesystem backing `path` (for `df`). 0 on success,
+ * -errno (e.g. -ENODEV for /tmp, /dev which have no block accounting). */
+int duneos_fs_info(const char *path, uint64_t *total, uint64_t *freeb);
+
 /*
  * Return the live sdmmc_card_t handle (or NULL if SD is not mounted).
  * Used by the USB MSC driver to hand raw sector access to TinyUSB.

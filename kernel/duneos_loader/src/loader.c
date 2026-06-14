@@ -14,12 +14,14 @@
 #include <errno.h>
 
 #include "duneos/klog.h"
+#include "duneos/shellpipe.h"
 #include "esp_heap_caps.h"
 #include "esp_rom_sys.h"
 #include "cJSON.h"
 
 #include <setjmp.h>
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "freertos/semphr.h"
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
@@ -1579,6 +1581,95 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
 
     klog_d(TAG, "capture: %zu byte(s) captured (exit code %d)",
            (size_t)n, s_captured_code);
+    xSemaphoreGive(s_captured_lock);
+    return ESP_OK;
+}
+
+#define SHELLPIPE_DEV "/dev/shellpipe"
+
+/* Live free bytes on the running task's stack. A captured bin runs on the
+ * shell's stack via a plain call (ADR 016), so it must not dive past the stack
+ * end — that corrupts neighbouring memory before the canary fires (hard reboot).
+ * configUSE_TRACE_FACILITY gives pxStackBase; compare to the current SP. */
+static size_t captured_free_stack(void)
+{
+#if configUSE_TRACE_FACILITY
+    TaskStatus_t ts;
+    vTaskGetInfo(NULL, &ts, pdFALSE, eInvalid);
+    uintptr_t sp   = (uintptr_t)__builtin_frame_address(0);
+    uintptr_t base = (uintptr_t)ts.pxStackBase;
+    return (sp > base) ? (size_t)(sp - base) : 0;
+#else
+    return (size_t)-1;   /* can't measure → don't guard */
+#endif
+}
+
+/* Refuse a captured run when the deepest plausible tool + its VFS write chain
+ * wouldn't fit the remaining stack. A graceful error beats a reboot. */
+#define CAPTURED_MIN_STACK 4096
+
+esp_err_t duneos_loader_run_captured_streamed(duneos_app_t *app,
+                                              duneos_shell_sink_fn sink, void *ctx)
+{
+    if (!app || !app->entry) return ESP_ERR_INVALID_ARG;
+
+    if (!s_captured_lock) {
+        s_captured_lock = xSemaphoreCreateMutex();
+        if (!s_captured_lock) return ESP_ERR_NO_MEM;
+    }
+    if (xSemaphoreTake(s_captured_lock, 0) != pdTRUE) {
+        klog_w(TAG, "stream: refusing nested run");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    size_t freestk = captured_free_stack();
+    if (freestk < CAPTURED_MIN_STACK) {
+        klog_e(TAG, "captured: refusing — %u B stack free < %d (would overflow)",
+               (unsigned)freestk, CAPTURED_MIN_STACK);
+        xSemaphoreGive(s_captured_lock);
+        return ESP_ERR_NO_MEM;
+    }
+
+    duneos_shellpipe_set_sink(sink, ctx);
+
+    /* Route fd 1 to the sink device: close fd 1 to free the slot, then open
+     * /dev/shellpipe so it lands at the lowest free fd (1). The shell does not
+     * use fd 1 itself, so it stays bound to the device after the run. */
+    close(STDOUT_FILENO);
+    int capfd = open(SHELLPIPE_DEV, O_WRONLY);
+    if (capfd < 0) {
+        klog_e(TAG, "stream: open " SHELLPIPE_DEV " failed: errno %d", errno);
+        duneos_shellpipe_set_sink(NULL, NULL);
+        xSemaphoreGive(s_captured_lock);
+        return ESP_FAIL;
+    }
+    if (capfd != STDOUT_FILENO) {
+        close(capfd);
+        klog_e(TAG, "stream: expected fd 1, got %d", capfd);
+        duneos_shellpipe_set_sink(NULL, NULL);
+        xSemaphoreGive(s_captured_lock);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    /* Same setjmp checkpoint as the buffered path so duneos_exit() unwinds here
+     * (ADR 016) instead of vTaskDelete()-ing the shell task. */
+    jmp_buf env;
+    portENTER_CRITICAL(&s_captured_mux);
+    s_captured_jmp  = &env;
+    s_captured_code = 0;
+    portEXIT_CRITICAL(&s_captured_mux);
+
+    if (setjmp(env) == 0)
+        app->entry();
+
+    portENTER_CRITICAL(&s_captured_mux);
+    s_captured_jmp = NULL;
+    portEXIT_CRITICAL(&s_captured_mux);
+
+    close(STDOUT_FILENO);
+    duneos_shellpipe_set_sink(NULL, NULL);
+
+    klog_d(TAG, "stream: done (exit code %d)", s_captured_code);
     xSemaphoreGive(s_captured_lock);
     return ESP_OK;
 }

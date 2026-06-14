@@ -30,6 +30,7 @@ set(DUNEOS_KERNEL_SRCS
     "src/drivers/drv_null.c"
     "src/drivers/drv_uart.c"
     "src/drivers/drv_klog.c"
+    "src/drivers/drv_shellpipe.c"
 )
 
 # --- REQUIRES ---------------------------------------------------------------

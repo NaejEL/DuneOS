@@ -30,6 +30,20 @@
 #include "lwip/inet.h"
 #endif
 
+#include "duneos/net.h"   /* duneos_net_info_t + the eth/wifi info getters */
+#include <errno.h>
+
+/* When a transport's driver is absent, still provide its info getter as an
+ * -ENODEV stub so net tools (ifconfig) resolve their symbols and load on any
+ * board, then report that interface as down. */
+#ifndef CONFIG_DUNEOS_DRV_ETH
+int duneos_eth_get_info(duneos_net_info_t *info) { (void)info; return -ENODEV; }
+#endif
+#ifndef CONFIG_DUNEOS_DRV_WIFI
+int duneos_wifi_get_info(duneos_net_info_t *info);
+int duneos_wifi_get_info(duneos_net_info_t *info) { (void)info; return -ENODEV; }
+#endif
+
 /*
  * Kernel export symbol table — the ABI contract between DuneOS and apps.
  *
@@ -96,6 +110,10 @@ static int duneos_dup2(int fd, int newfd)
 esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app);
 esp_err_t duneos_loader_run(duneos_app_t *app);
 esp_err_t duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t *out_len);
+typedef void (*duneos_shell_sink_fn)(const char *data, int len, void *ctx);
+esp_err_t duneos_loader_run_captured_streamed(duneos_app_t *app,
+                                              duneos_shell_sink_fn sink, void *ctx);
+int       duneos_loader_get_captured_exit_code(void);
 void      duneos_loader_unload(duneos_app_t *app);
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
 
@@ -239,6 +257,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_supervisor_list_mem",          duneos_supervisor_list_mem            ),
     SYM("duneos_supervisor_chain",             duneos_supervisor_chain               ),
     SYM("duneos_vfs_list_mounts",              duneos_vfs_list_mounts                ),
+    SYM("duneos_fs_info",                      duneos_fs_info                        ),
     SYM("duneos_vfs_flash_available",          duneos_vfs_flash_available            ),
     SYM("duneos_vfs_sd_available",             duneos_vfs_sd_available               ),
     SYM("duneos_supervisor_restart_by_name",   duneos_supervisor_restart_by_name     ),
@@ -250,6 +269,8 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_loader_load",         duneos_loader_load         ),
     SYM("duneos_loader_run",          duneos_loader_run          ),
     SYM("duneos_loader_run_captured", duneos_loader_run_captured ),
+    SYM("duneos_loader_run_captured_streamed", duneos_loader_run_captured_streamed),
+    SYM("duneos_loader_get_captured_exit_code", duneos_loader_get_captured_exit_code),
     SYM("duneos_loader_unload",       duneos_loader_unload       ),
     SYM("duneos_loader_get_manifest", duneos_loader_get_manifest ),
 
@@ -260,7 +281,6 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("duneos_wifi_init",            duneos_wifi_init,            DUNEOS_PERM_NET),
     SYM_P("duneos_wifi_sta_connect",     duneos_wifi_sta_connect,     DUNEOS_PERM_NET),
     SYM_P("duneos_wifi_sta_disconnect",  duneos_wifi_sta_disconnect,  DUNEOS_PERM_NET),
-    SYM_P("duneos_wifi_get_info",        duneos_wifi_get_info,        DUNEOS_PERM_NET),
     SYM_P("duneos_netif_wait_ip",        duneos_netif_wait_ip,        DUNEOS_PERM_NET),
 
     /* ------------------------------------------------------------------ */
@@ -289,9 +309,11 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),  /* sockets only — /dev uses select() */
 #endif /* CONFIG_DUNEOS_DRV_WIFI */
 
-#ifdef CONFIG_DUNEOS_DRV_ETH
+    /* Net info getters — always exported (real driver when present, else an
+     * -ENODEV stub above) so net tools resolve their symbols and load on any
+     * board, then report the interface down instead of failing to start. */
+    SYM_P("duneos_wifi_get_info",        duneos_wifi_get_info,        DUNEOS_PERM_NET),
     SYM_P("duneos_eth_get_info",         duneos_eth_get_info,         DUNEOS_PERM_NET),
-#endif
 
     /* Sentinel */
     { NULL, NULL, 0 },
