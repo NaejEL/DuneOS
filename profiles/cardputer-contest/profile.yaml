@@ -2,8 +2,9 @@ name: cardputer-contest
 board: m5stack-cardputer
 description: "Contest 2026 — graphical launcher home, sideloadable apps on /sd/apps"
 
-# Flash (sysbin): the home launcher + the services it needs. These boot from
-# /flash so the device comes up to the launcher even with no SD card inserted.
+# Flash (sysbin, mounted at root "/"): the home launcher + the services it
+# needs. These boot from /bin so the device comes up to the launcher even with
+# no SD card inserted.
 apps_flash:
 - wifi_daemon
 - splash
@@ -11,9 +12,11 @@ apps_flash:
 - usb_shell
 - battery_pub
 - launcher
-# CLI coreutils — land in /flash/bin so the shell is useful with no SD card.
+- logd
+# CLI coreutils — land in /bin so the shell is useful with no SD card.
 # grep/sed/find share the ADR 036 regex engine; the rest follow ADR 033.
 - ls
+- logs
 - cat
 - cp
 - head
@@ -47,17 +50,19 @@ apps_flash:
 # in parallel; the launcher waits for splash to exit (after: splash) so the
 # display is free, then takes over as the home screen.
 init_flash:
-- path: /flash/bin/splash.dap
+- path: /bin/splash.dap
   restart: no
-- path: /flash/bin/kb_iomatrix.dap
+- path: /bin/kb_iomatrix.dap
   restart: always
-- path: /flash/bin/usb_shell.dap
+- path: /bin/usb_shell.dap
   restart: always
-- path: /flash/bin/battery_pub.dap
+- path: /bin/battery_pub.dap
   restart: always
-- path: /flash/bin/wifi_daemon.dap
+- path: /bin/wifi_daemon.dap
   restart: always
-- path: /flash/bin/launcher.dap
+- path: /bin/logd.dap
+  restart: always
+- path: /bin/launcher.dap
   restart: always
   after: splash
 

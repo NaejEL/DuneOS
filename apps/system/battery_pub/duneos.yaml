@@ -3,3 +3,5 @@ version: "0.1.0"
 required_abi_version: 1
 # FS_READ (32) + FS_WRITE (64) + BATTERY (128) = 224
 permissions: 224
+sources:
+  - $SDK/log/dlog.c

@@ -26,7 +26,6 @@
 
 #include <ctype.h>
 #include <fcntl.h>
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -37,6 +36,7 @@
 #include "duneos/ambient.h"
 #include "duneos/libdune.h"
 #include "duneos/wifi.h"
+#include "duneos/dlog.h"
 
 #define KNOWN_YAML      "/data/wifi/known.yaml"
 #define KNOWN_YAML_SEED "/flash/etc/wifi/known.yaml"
@@ -65,18 +65,6 @@ typedef struct {
 } daemon_state_t;
 
 static uint8_t s_scan_seq;
-
-/* ------------------------------------------------------------------ */
-
-static void logf(const char *fmt, ...) {
-  char buf[128];
-  va_list ap;
-  va_start(ap, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, ap);
-  va_end(ap);
-  write(STDOUT_FILENO, buf, strlen(buf));
-  write(STDOUT_FILENO, "\r\n", 2);
-}
 
 /* ------------------------------------------------------------------ */
 /* known.yaml parsing                                                  */
@@ -227,7 +215,7 @@ static void do_scan_cmd(void) {
   duneos_wifi_ap_t aps[MAX_SCAN];
   int n = duneos_wifi_scan(aps, MAX_SCAN);
   if (n < 0) {
-    logf("wifi_daemon: scan failed (%d)", n);
+    DLOGW("scan failed (%d)", n);
     return;
   }
   if (n > MAX_SCAN) n = MAX_SCAN;
@@ -242,7 +230,7 @@ static void do_scan_cmd(void) {
   if (fd < 0) return;
   write(fd, blob, 2 + (size_t)n * sizeof(duneos_wifi_ap_t));
   close(fd);
-  logf("wifi_daemon: scan done, %d AP(s)", n);
+  DLOGI("scan done, %d AP(s)", n);
 }
 
 /* ------------------------------------------------------------------ */
@@ -251,10 +239,10 @@ static void do_scan_cmd(void) {
 
 static bool connect_to(const known_net_t *net) {
   publish_ambient(AMBIENT_WIFI_CONNECTING, 0, net->ssid);
-  logf("wifi_daemon: connecting to '%s'...", net->ssid);
+  DLOGI("connecting to '%s'...", net->ssid);
 
   if (duneos_wifi_sta_connect(net->ssid, net->psk, 30000) != 0) {
-    logf("wifi_daemon: connect to '%s' failed", net->ssid);
+    DLOGW("connect to '%s' failed", net->ssid);
     clear_net_status();
     return false;
   }
@@ -263,7 +251,7 @@ static bool connect_to(const known_net_t *net) {
   if (duneos_wifi_get_info(&info) == 0) {
     write_net_status(&info);
     publish_ambient(AMBIENT_WIFI_UP, info.rssi, info.ssid);
-    logf("wifi_daemon: connected  ip=%s  rssi=%d dBm", info.ip,
+    DLOGI("connected  ip=%s  rssi=%d dBm", info.ip,
          (int)info.rssi);
   } else {
     publish_ambient(AMBIENT_WIFI_UP, 0, net->ssid);
@@ -277,7 +265,7 @@ static int pick_best_known(const known_net_t *nets, int nknown) {
   duneos_wifi_ap_t aps[MAX_SCAN];
   int n = duneos_wifi_scan(aps, MAX_SCAN);
   if (n < 0) {
-    logf("wifi_daemon: scan failed (%d)", n);
+    DLOGW("scan failed (%d)", n);
     return -1;
   }
   if (n > MAX_SCAN) n = MAX_SCAN;
@@ -300,7 +288,7 @@ static void schedule_retry(daemon_state_t *st, const char *ssid) {
 }
 
 static void on_link_lost(daemon_state_t *st) {
-  logf("wifi_daemon: link lost");
+  DLOGW("link lost");
   st->connected = false;
   duneos_wifi_sta_disconnect();
   clear_net_status();
@@ -312,7 +300,7 @@ static void on_link_lost(daemon_state_t *st) {
 static void auto_connect(daemon_state_t *st) {
   int k = pick_best_known(st->known, st->nknown);
   if (k < 0) {
-    logf("wifi_daemon: no known network in range, retry in %lu s",
+    DLOGW("no known network in range, retry in %lu s",
          (unsigned long)st->backoff_s);
     schedule_retry(st, NULL);
     return;
@@ -351,7 +339,7 @@ static void cmd_status(daemon_state_t *st) {
 static void cmd_join(daemon_state_t *st, const char *ssid) {
   while (*ssid == ' ') ssid++;
   if (!*ssid) {
-    logf("wifi_daemon: JOIN without ssid");
+    DLOGW("JOIN without ssid");
     return;
   }
 
@@ -362,7 +350,7 @@ static void cmd_join(daemon_state_t *st, const char *ssid) {
     k = find_known(st->known, st->nknown, ssid);
   }
   if (k < 0) {
-    logf("wifi_daemon: JOIN '%s': not in known.yaml", ssid);
+    DLOGW("JOIN '%s': not in known.yaml", ssid);
     publish_ambient(AMBIENT_WIFI_DOWN, 0, NULL);
     return;
   }
@@ -390,21 +378,21 @@ static void handle_cmd(daemon_state_t *st, char *cmd) {
   } else if (strncmp(cmd, "JOIN ", 5) == 0) {
     cmd_join(st, cmd + 5);
   } else if (strcmp(cmd, "DISCONNECT") == 0) {
-    logf("wifi_daemon: user disconnect");
+    DLOGI("user disconnect");
     duneos_wifi_sta_disconnect();
     st->connected = false;
     st->user_disconnected = true;
     clear_net_status();
     publish_ambient(AMBIENT_WIFI_DOWN, 0, NULL);
   } else if (strcmp(cmd, "RECONNECT") == 0) {
-    logf("wifi_daemon: reconnect enabled");
+    DLOGI("reconnect enabled");
     st->user_disconnected = false;
     st->backoff_s = 5;
     st->retry_wakeups = 0;
   } else if (strcmp(cmd, "STATUS") == 0) {
     cmd_status(st);
   } else {
-    logf("wifi_daemon: unknown command '%s'", cmd);
+    DLOGW("unknown command '%s'", cmd);
   }
 }
 
@@ -415,10 +403,12 @@ static void handle_cmd(daemon_state_t *st, char *cmd) {
 void app_main(void) {
   daemon_state_t st = {.backoff_s = 5};
 
+  dlog_open("wifi_daemon");
+
   publish_ambient(AMBIENT_WIFI_DOWN, 0, NULL);
 
   st.nknown = load_known(st.known);
-  logf("wifi_daemon: %d known network(s)", st.nknown);
+  DLOGI("%d known network(s)", st.nknown);
 
   /* No eager duneos_wifi_init() here: WiFi+lwIP grab ~40-50 KiB of internal
    * RAM, which starves the boot-time launch of the home app (g_shell 20 KiB

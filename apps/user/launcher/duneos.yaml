@@ -14,3 +14,4 @@ sources:
   - $SDK/display/gfx.c
   - $SDK/app/libappmeta.c
   - $SDK/image/libimage.c
+  - $SDK/log/dlog.c

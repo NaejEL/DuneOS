@@ -34,6 +34,7 @@
 #include "duneos/appmeta.h"
 #include "duneos/input_ioctl.h"
 #include "duneos/ambient.h"
+#include "duneos/dlog.h"
 
 extern void duneos_exit(int code);
 extern int  duneos_supervisor_chain(const char *child_path);
@@ -194,6 +195,7 @@ static void restore_sel(void)
  * RAM-hungry app (e.g. tetris' 32 KiB canvas) gets the contiguous block it needs. */
 static void launch(const char *path, gfx_ctx_t *gfx, ui_t *ui, int input)
 {
+    DLOGI("launching %s", path);
     save_sel();
     ui_destroy(ui);
     gfx_close(gfx);
@@ -209,14 +211,16 @@ void app_main(void)
     /* Diagnostic exit codes mirror g_shell's convention:
      *   10 = display open failed
      *   11 = /dev/input/event0 open failed                                  */
+    dlog_open("launcher");
+
     gfx_ctx_t *gfx = gfx_open_mode(GFX_MODE_STREAM);
-    if (!gfx) duneos_exit(10);
+    if (!gfx) { DLOGE("display open failed"); duneos_exit(10); }
 
     int input = open("/dev/input/event0", O_RDONLY);
-    if (input < 0) { gfx_close(gfx); duneos_exit(11); }
+    if (input < 0) { DLOGE("/dev/input/event0 open failed"); gfx_close(gfx); duneos_exit(11); }
 
     ui_t *ui = ui_create(gfx);
-    if (!ui) { close(input); gfx_close(gfx); duneos_exit(10); }
+    if (!ui) { DLOGE("ui_create failed"); close(input); gfx_close(gfx); duneos_exit(10); }
 
     scan_apps();
 

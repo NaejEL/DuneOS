@@ -1,0 +1,5 @@
+name: logs
+version: "0.1.0"
+required_abi_version: 1
+# FS_READ (32) — lists and reads files under the active log dir.
+permissions: 32

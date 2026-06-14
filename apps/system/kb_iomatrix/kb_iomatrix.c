@@ -35,6 +35,7 @@ void app_main(void) { duneos_exit(0); }
 #include <duneos/gpio_ioctl.h>
 #include <duneos/input_ioctl.h>
 #include <duneos/ambient.h>     /* AMBIENT_MOD_* + /tmp/state/kbd */
+#include <duneos/dlog.h>
 
 extern int usleep(unsigned int useconds);
 
@@ -282,10 +283,12 @@ static void publish_locks(void)
 
 void app_main(void)
 {
+    dlog_open("kb_iomatrix");
+
     gpio_fd  = open("/dev/gpiochip0", O_RDWR);
-    if (gpio_fd  < 0) duneos_exit(2);
+    if (gpio_fd  < 0) { DLOGE("cannot open /dev/gpiochip0"); duneos_exit(2); }
     input_fd = open(DUNEOS_INPUT_DEV, O_RDWR);
-    if (input_fd < 0) { close(gpio_fd); duneos_exit(3); }
+    if (input_fd < 0) { DLOGE("cannot open %s", DUNEOS_INPUT_DEV); close(gpio_fd); duneos_exit(3); }
 
     /* Configure row select lines as outputs (low by default). */
     for (int i = 0; i < 3; i++) {
@@ -299,7 +302,8 @@ void app_main(void)
         gpio_set_pull(s_col_pins[i], GPIO_PULL_UP);
     }
 
-    read_config();   /* per-modifier latch mode from /flash/etc/kb_iomatrix */
+    read_config();   /* per-modifier latch mode from /etc/kb_iomatrix */
+    DLOGI("ready (%d cols)", DUNEOS_KB_NUM_COLS);
 
     memset(s_prev_state, 0, sizeof(s_prev_state));
     bool cur[DUNEOS_KB_MATRIX_ROWS][DUNEOS_KB_MATRIX_COLS];

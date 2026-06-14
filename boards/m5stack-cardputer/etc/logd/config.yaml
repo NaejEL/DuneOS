@@ -1,0 +1,13 @@
+# DuneOS logd config — /etc/logd/config.yaml (ADR 038)
+#
+# Bounds the userspace log dir (/sd/log on SD, else /log on flash) and persists
+# the kernel log to /sd/log/kernel.log when an SD card is present.
+#
+# By default logd picks backend-aware sizes — leave these commented to get them:
+#   flash:  file_cap 32 KiB,  dir_cap 64 KiB   (tiny shared sysbin partition)
+#   SD:     file_cap 128 KiB, dir_cap 4 MiB    (room for real history)
+#
+# Uncomment to force a fixed cap for whichever backend is active:
+# file_cap_kb: 128     # rotate <app>.log → <app>.log.1 past this size
+# dir_cap_kb: 4096     # whole-dir budget
+interval_s: 30         # housekeeping + kernel.log drain period

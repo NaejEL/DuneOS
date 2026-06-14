@@ -5,3 +5,5 @@ required_abi_version: 1
 permissions: 353
 capabilities:
   - input
+sources:
+  - $SDK/log/dlog.c
