@@ -4,10 +4,10 @@ required_abi_version: 1
 icon: g_shell
 permissions: 352
 # stack_size OVERRIDE: like usb_shell, g_shell runs captured bin apps IN ITS OWN
-# TASK (shared shell_core → duneos_loader_run_captured) + the loader on this
-# stack. Depth the static analyser can't see (ADR 029). 8 KiB covers shell +
-# deepest captured tool + loader.
-stack_size: 8192
+# TASK (shared shell_core → duneos_loader_run_captured) + the loader + a pipeline
+# chain on this stack. A big-buffer tool (grep) through a pipe overflowed 8 KiB.
+# 16 KiB gives margin (ADR 029; backlog "captured-bin stack guard").
+stack_size: 20480
 capabilities:
   - display
 sources:

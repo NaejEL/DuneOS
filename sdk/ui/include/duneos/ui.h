@@ -182,6 +182,7 @@ typedef struct {
     char       *buf;      /* caller storage */
     int         cap;      /* buf capacity incl NUL */
     int         len;      /* current text length */
+    int         pos;      /* cursor index in buf, 0..len */
 } ui_input_t;
 
 void ui_input_init(ui_input_t *in, int x, int y, int w,

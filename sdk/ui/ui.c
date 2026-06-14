@@ -333,30 +333,50 @@ void ui_input_init(ui_input_t *in, int x, int y, int w,
     if (!in) return;
     in->x = x; in->y = y; in->w = w;
     in->prompt = prompt;
-    in->buf = buf; in->cap = cap; in->len = 0;
+    in->buf = buf; in->cap = cap; in->len = 0; in->pos = 0;
     if (buf && cap > 0) buf[0] = '\0';
 }
 
 void ui_input_clear(ui_input_t *in)
 {
     if (!in) return;
-    in->len = 0;
+    in->len = 0; in->pos = 0;
     if (in->buf && in->cap > 0) in->buf[0] = '\0';
 }
 
+/* Editable line with a movable cursor: ← → move, Delete removes under the
+ * cursor, Backspace removes left of it, and printable keys insert at it. */
 ui_input_event_t ui_input_key(ui_input_t *in, uint16_t key)
 {
     if (!in || !in->buf) return UI_INPUT_NONE;
     switch (key) {
     case KEY_ENTER:     return UI_INPUT_SUBMIT;
     case KEY_ESC:       return UI_INPUT_CANCEL;
+    case KEY_LEFT:
+        if (in->pos > 0)      { in->pos--; return UI_INPUT_CHANGED; }
+        return UI_INPUT_NONE;
+    case KEY_RIGHT:
+        if (in->pos < in->len) { in->pos++; return UI_INPUT_CHANGED; }
+        return UI_INPUT_NONE;
     case KEY_BACKSPACE:
-        if (in->len > 0) { in->buf[--in->len] = '\0'; return UI_INPUT_CHANGED; }
+        if (in->pos > 0) {
+            memmove(in->buf + in->pos - 1, in->buf + in->pos, in->len - in->pos);
+            in->len--; in->pos--; in->buf[in->len] = '\0';
+            return UI_INPUT_CHANGED;
+        }
+        return UI_INPUT_NONE;
+    case KEY_DELETE:
+        if (in->pos < in->len) {
+            memmove(in->buf + in->pos, in->buf + in->pos + 1, in->len - in->pos - 1);
+            in->len--; in->buf[in->len] = '\0';
+            return UI_INPUT_CHANGED;
+        }
         return UI_INPUT_NONE;
     default:
         if (key >= 0x20 && key < 0x7f && in->len < in->cap - 1) {
-            in->buf[in->len++] = (char)key;
-            in->buf[in->len]   = '\0';
+            memmove(in->buf + in->pos + 1, in->buf + in->pos, in->len - in->pos);
+            in->buf[in->pos] = (char)key;
+            in->len++; in->pos++; in->buf[in->len] = '\0';
             return UI_INPUT_CHANGED;
         }
         return UI_INPUT_NONE;
@@ -406,15 +426,26 @@ void ui_input_draw(ui_t *ui, const ui_input_t *in)
     }
 
     int avail = cols - plen - 1;            /* reserve one column for the cursor */
-    if (avail < 0) avail = 0;
-    int start = in->len > avail ? in->len - avail : 0;
+    if (avail < 1) avail = 1;
+
+    /* Scroll so the cursor stays on screen: anchor the window's right edge at
+     * the cursor once it runs past `avail`, otherwise start at the beginning. */
+    int start = (in->pos >= avail) ? in->pos - avail + 1 : 0;
     int show  = in->len - start;
+    if (show > avail) show = avail;
 
     char t[64];
     if (show > (int)sizeof(t) - 1) show = (int)sizeof(t) - 1;
-    memcpy(t, in->buf + start, show); t[show] = '\0';
+    if (show > 0) memcpy(t, in->buf + start, show);
+    t[show > 0 ? show : 0] = '\0';
     int tx = in->x + plen * GLYPH_W;
-    gfx_text(g, tx, in->y, t, th->fg, th->bg);
+    if (show > 0) gfx_text(g, tx, in->y, t, th->fg, th->bg);
 
-    gfx_rect(g, tx + show * GLYPH_W, in->y, GLYPH_W, GLYPH_H, th->accent);
+    /* Block cursor at its column; if a glyph sits under it, redraw inverted. */
+    int cx = tx + (in->pos - start) * GLYPH_W;
+    gfx_rect(g, cx, in->y, GLYPH_W, GLYPH_H, th->accent);
+    if (in->pos < in->len) {
+        char cc[2] = { in->buf[in->pos], '\0' };
+        gfx_text(g, cx, in->y, cc, th->bg, th->accent);
+    }
 }

@@ -46,25 +46,40 @@ static int           s_cols = 30;
 
 static char s_cwd[256] = "/sd";    /* required by shell_cmds.c */
 
+#define HIST_DEPTH 16
+static char s_hist[HIST_DEPTH][INPUT_MAX + 1];
+static int  s_hist_count;
+static int  s_hist_nav = -1;       /* -1 = editing a fresh line */
+
 /* ----- output buffer (required by shell_cmds.c) -------------------------- */
 
-static void out_text(const char *text)
+/* Captured-app stdout now streams in arbitrary chunks (the loader hands us each
+ * write as it happens), so the in-progress row must persist across sh_write
+ * calls — wrapping at \n or the column width, flushed explicitly when a command
+ * finishes. sh_out/sh_outln keep their old discrete-message behaviour. */
+static char s_row[MAXCOLS + 1];
+static int  s_rowcol;
+
+static void sh_flush(void)
 {
-    char line[MAXCOLS + 1];
-    int  col = 0;
-    for (const char *p = text; *p; p++) {
-        if (*p == '\r') continue;
-        if (*p == '\n' || col == s_cols) {
-            line[col] = '\0'; ui_textview_push(&s_tv, line); col = 0;
-            if (*p == '\n') continue;
-        }
-        line[col++] = *p;
-    }
-    if (col > 0) { line[col] = '\0'; ui_textview_push(&s_tv, line); }
+    if (s_rowcol > 0) { s_row[s_rowcol] = '\0'; ui_textview_push(&s_tv, s_row); s_rowcol = 0; }
 }
 
-static void sh_out(const char *s)   { out_text(s); }
-static void sh_outln(const char *s) { out_text(s); ui_textview_push(&s_tv, ""); }
+static void sh_write(const char *data, int len)
+{
+    for (int i = 0; i < len; i++) {
+        char c = data[i];
+        if (c == '\r') continue;
+        if (c == '\n' || s_rowcol >= s_cols) {
+            s_row[s_rowcol] = '\0'; ui_textview_push(&s_tv, s_row); s_rowcol = 0;
+            if (c == '\n') continue;
+        }
+        if (s_rowcol < MAXCOLS) s_row[s_rowcol++] = c;
+    }
+}
+
+static void sh_out(const char *s)   { sh_write(s, (int)strlen(s)); sh_flush(); }
+static void sh_outln(const char *s) { sh_out(s); ui_textview_push(&s_tv, ""); }
 
 /* ----- shared command dispatch ------------------------------------------- */
 
@@ -86,6 +101,99 @@ static void redraw_all(void)
     ui_textview_draw(s_ui, &s_tv);
     ui_input_draw(s_ui, &s_in);
     ui_flush(s_ui);
+}
+
+/* ----- history ----------------------------------------------------------- */
+
+static void hist_push(const char *line)
+{
+    if (line[0] == '\0') return;
+    if (s_hist_count > 0 &&
+        strcmp(s_hist[(s_hist_count - 1) % HIST_DEPTH], line) == 0) return;
+    snprintf(s_hist[s_hist_count % HIST_DEPTH], INPUT_MAX + 1, "%s", line);
+    s_hist_count++;
+}
+
+static void hist_load(int idx)
+{
+    snprintf(s_inbuf, INPUT_MAX + 1, "%s", s_hist[idx % HIST_DEPTH]);
+    s_in.len = (int)strlen(s_inbuf);
+    s_in.pos = s_in.len;
+}
+
+/* KEY_UP / KEY_DOWN: walk the ring like a serial shell, oldest kept entry to
+ * the freshly-cleared line. Redraws the input row. */
+static void hist_nav(int up)
+{
+    if (up) {
+        if (s_hist_count == 0) return;
+        int next = (s_hist_nav < 0) ? s_hist_count - 1 : s_hist_nav - 1;
+        if (next < s_hist_count - HIST_DEPTH) next = s_hist_count - HIST_DEPTH;
+        if (next < 0) next = 0;
+        s_hist_nav = next;
+        hist_load(s_hist_nav);
+    } else {
+        if (s_hist_nav < 0) return;
+        if (++s_hist_nav >= s_hist_count) {
+            s_hist_nav = -1; s_inbuf[0] = '\0'; s_in.len = 0; s_in.pos = 0;
+        } else {
+            hist_load(s_hist_nav);
+        }
+    }
+    ui_input_draw(s_ui, &s_in);
+    ui_flush(s_ui);
+}
+
+/* ----- tab completion ---------------------------------------------------- */
+
+/* Extend the input line with the longest common completion of its trailing
+ * token; on an ambiguous second Tab, list the choices into the scrollback.
+ * Gathering is the shared shell_cmds.c engine — only the rendering is ours. */
+static void complete_input(void)
+{
+    int tok_start, base_off;
+    int cnt = shell_completions(s_inbuf, s_in.len, &tok_start, &base_off);
+    if (cnt <= 0) return;
+
+    int typed = s_in.len - (tok_start + base_off);   /* base chars already typed */
+
+    char lcp[128];
+    int  lcl = shell_comp_lcp(lcp, sizeof(lcp));
+    int  add = lcl - typed;
+    for (int k = 0; k < add && s_in.len < INPUT_MAX; k++)
+        s_inbuf[s_in.len++] = lcp[typed + k];
+
+    if (cnt == 1) {
+        int isdir = 0;
+        shell_comp_name(0, &isdir);
+        char sep = isdir ? '/' : ' ';
+        if (s_in.len < INPUT_MAX) s_inbuf[s_in.len++] = sep;
+    }
+    s_inbuf[s_in.len] = '\0';
+    s_in.pos = s_in.len;
+
+    if (cnt > 1 && add <= 0) {
+        char row[MAXCOLS + 1];
+        int  col = 0;
+        for (int i = 0; i < cnt; i++) {
+            int isdir = 0;
+            const char *nm = shell_comp_name(i, &isdir);
+            int nl   = (int)strlen(nm);
+            int need = nl + (isdir ? 1 : 0) + 2;
+            if (col > 0 && col + need > s_cols) {
+                row[col] = '\0'; ui_textview_push(&s_tv, row); col = 0;
+            }
+            for (int j = 0; j < nl && col < MAXCOLS; j++) row[col++] = nm[j];
+            if (isdir && col < MAXCOLS) row[col++] = '/';
+            if (col < MAXCOLS) row[col++] = ' ';
+            if (col < MAXCOLS) row[col++] = ' ';
+        }
+        if (col > 0) { row[col] = '\0'; ui_textview_push(&s_tv, row); }
+        redraw_all();
+    } else {
+        ui_input_draw(s_ui, &s_in);
+        ui_flush(s_ui);
+    }
 }
 
 /* ----- main -------------------------------------------------------------- */
@@ -122,6 +230,10 @@ void app_main(void)
         if (read(s_input, &ev, sizeof(ev)) != (int)sizeof(ev)) continue;
         if (ev.type != INPUT_EV_KEY || ev.value == INPUT_VAL_RELEASE) continue;
 
+        if (ev.code == KEY_TAB) { complete_input(); continue; }
+        if (ev.code == KEY_UP)   { hist_nav(1); continue; }
+        if (ev.code == KEY_DOWN) { hist_nav(0); continue; }
+
         switch (ui_input_key(&s_in, ev.code)) {
         case UI_INPUT_CHANGED:
             ui_input_draw(s_ui, &s_in);
@@ -136,16 +248,19 @@ void app_main(void)
 
             char echo[MAXCOLS + 4];
             snprintf(echo, sizeof(echo), "$ %s", s_inbuf);
-            out_text(echo);
+            sh_out(echo);
 
             char cmd[INPUT_MAX + 1];
             memcpy(cmd, s_inbuf, (size_t)s_in.len + 1);
+            hist_push(cmd);
+            s_hist_nav = -1;
             ui_input_clear(&s_in);
 
             if      (strcmp(cmd, "exit")  == 0) goto done;
             else if (strcmp(cmd, "clear") == 0) ui_textview_clear(&s_tv);
             else                                exec_line(cmd);
 
+            sh_flush();   /* push any trailing partial row from streamed output */
             redraw_all();
             break;
         }
