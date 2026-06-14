@@ -243,6 +243,11 @@ static int tmpfs_fstat(int fd, struct stat *st)
 static int tmpfs_stat(const char *path, struct stat *st)
 {
     const char *name = strip_slash(path);
+    if (name[0] == '\0') {                 /* the mount root "/tmp" itself */
+        memset(st, 0, sizeof(*st));
+        st->st_mode = S_IFDIR | 0777;
+        return 0;
+    }
     tmpfs_inode_t *inode = inode_find(name);
     if (!inode) { errno = ENOENT; return -1; }
     memset(st, 0, sizeof(*st));

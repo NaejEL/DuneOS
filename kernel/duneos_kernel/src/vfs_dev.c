@@ -171,6 +171,11 @@ static int devfs_fstat(int fd, struct stat *st)
 static int devfs_stat(const char *path, struct stat *st)
 {
     const char *name = (*path == '/') ? path + 1 : path;
+    if (name[0] == '\0') {                 /* the mount root "/dev" itself */
+        memset(st, 0, sizeof(*st));
+        st->st_mode = S_IFDIR | 0777;
+        return 0;
+    }
     if (!driver_find(name)) { errno = ENOENT; return -1; }
     memset(st, 0, sizeof(*st));
     st->st_mode = S_IFCHR | 0666;
