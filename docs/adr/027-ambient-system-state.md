@@ -6,7 +6,7 @@
 
 Several pieces of UI want to display *ambient system state* that they do not
 own: a status bar shows battery %, WiFi SSID/RSSI, and the clock; a keyboard
-modifier indicator shows whether Fn/Shift/Opt are locked. The state is produced
+modifier indicator shows whether Fn/Shift/Ctrl are latched. The state is produced
 by one component (battery backend, `wifi` app, `kb_iomatrix`, an RTC) and read by
 many (`launcher`, `g_shell`, `i2cscope` — but *not* the games, which want the
 full panel).
@@ -40,7 +40,7 @@ associations ([[ADR-015]], [[ADR-023]], [[ADR-026]]).
 ```
 /tmp/battery         battery_info_t   (grandfathered — see below)
 /tmp/state/wifi      ambient_wifi_t   state + RSSI dBm + SSID
-/tmp/state/kbd       ambient_kbd_t    fn/shift/opt lock bitmask
+/tmp/state/kbd       ambient_kbd_t    fn/shift/ctrl latch bitmask
 ```
 
 - `/tmp` is tmpfs ([[ADR-005]] path conventions) — writes never touch flash, so a

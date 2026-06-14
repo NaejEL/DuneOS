@@ -26,12 +26,14 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/select.h>
 
 #include "duneos/gfx.h"
 #include "duneos/ui.h"
 #include "duneos/ui_carousel.h"
 #include "duneos/appmeta.h"
 #include "duneos/input_ioctl.h"
+#include "duneos/ambient.h"
 
 extern void duneos_exit(int code);
 extern int  duneos_supervisor_chain(const char *child_path);
@@ -200,6 +202,26 @@ static void launch(const char *path, gfx_ctx_t *gfx, ui_t *ui, int input)
     duneos_exit(0);   /* does not return — supervisor takes over */
 }
 
+/* Repaint the top bar only when the modifier-latch state changed since last
+ * look. One-shot held modifiers (Ctrl/Alt) arm on their physical RELEASE and
+ * emit no key event, so input events alone can't drive the indicator — we poll
+ * the ambient blob on the select() timeout. Comparing first avoids a needless
+ * SPI write of the bar every tick. Returns 1 if it repainted. */
+static int refresh_mods_if_changed(ui_t *ui)
+{
+    static ambient_kbd_t last;
+    static int have_last;
+    ambient_kbd_t kb;
+    int fd = open(AMBIENT_KBD_PATH, O_RDONLY);
+    if (fd < 0) { memset(&kb, 0, sizeof(kb)); }
+    else { if (read(fd, &kb, sizeof(kb)) != (int)sizeof(kb)) memset(&kb, 0, sizeof(kb)); close(fd); }
+    if (have_last && kb.locks == last.locks && kb.oneshot == last.oneshot) return 0;
+    last = kb;
+    have_last = 1;
+    ui_statusbar_top(ui, "DuneOS");
+    return 1;
+}
+
 /* ----- main -------------------------------------------------------------- */
 
 void app_main(void)
@@ -241,9 +263,22 @@ void app_main(void)
     }
 
     for (;;) {
+        /* Block on input, but wake every ~150 ms to refresh the modifier
+         * indicator: one-shot held modifiers arm silently on release (no key
+         * event), so we can't rely on input alone to drive the status bar. */
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(input, &rfds);
+        struct timeval tv = { 0, 150000 };
+        if (select(input + 1, &rfds, NULL, NULL, &tv) <= 0) {
+            refresh_mods_if_changed(ui);
+            continue;
+        }
+
         input_event_t ev;
         if (read(input, &ev, sizeof(ev)) != (int)sizeof(ev)) continue;
-        if (ev.type != INPUT_EV_KEY || ev.value == INPUT_VAL_RELEASE) continue;
+        if (ev.type != INPUT_EV_KEY) continue;
+        if (ev.value == INPUT_VAL_RELEASE) { refresh_mods_if_changed(ui); continue; }
         if (s_count == 0) continue;
 
         switch (ui_carousel_key(&s_car, ev.code)) {
@@ -255,6 +290,7 @@ void app_main(void)
             break;
         case UI_CAROUSEL_CANCEL:   /* launcher is home — Esc does not quit */
         case UI_CAROUSEL_NONE:
+            refresh_mods_if_changed(ui);
             break;
         }
     }

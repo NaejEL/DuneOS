@@ -126,14 +126,20 @@ void ui_statusbar_top(ui_t *ui, const char *title)
     ambient_kbd_t kb;
     if (read_blob(AMBIENT_KBD_PATH, &kb, sizeof(kb)) == 0 && kb.locks) {
         static const struct { uint8_t bit; const char *tag; } mods[] = {
-            { AMBIENT_MOD_OPT,   "OPT" },
+            { AMBIENT_MOD_ALT,   "ALT" },
+            { AMBIENT_MOD_CTRL,  "CTL" },
             { AMBIENT_MOD_SHIFT, "SFT" },
             { AMBIENT_MOD_FN,    "FN"  },
         };
+        /* Green = sticky (toggle, stays until re-tapped); amber = one-shot
+         * (armed for the next key only). */
+        const uint16_t col_toggle  = GFX_RGB(80, 220, 120);
+        const uint16_t col_oneshot = GFX_RGB(240, 170, 40);
         for (unsigned i = 0; i < sizeof(mods) / sizeof(mods[0]); i++) {
             if (!(kb.locks & mods[i].bit)) continue;
+            uint16_t fg = (kb.oneshot & mods[i].bit) ? col_oneshot : col_toggle;
             x -= (int)strlen(mods[i].tag) * 8;
-            gfx_text(g, x, y, mods[i].tag, th->accent, th->bar_bg);
+            gfx_text(g, x, y, mods[i].tag, fg, th->bar_bg);
             x -= pad;
         }
     }

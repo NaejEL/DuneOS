@@ -40,13 +40,15 @@ typedef struct {
     char    ssid[32];    /* NUL-terminated; empty when down */
 } ambient_wifi_t;
 
-/* Modifier-lock bitmask (ADR 027 item 3 — kb_iomatrix sticky Fn/Shift/Opt). */
+/* Modifier-latch bitmask (ADR 027 item 3 — kb_iomatrix sticky Fn/Shift/Ctrl/Alt). */
 enum {
     AMBIENT_MOD_FN    = 1u << 0,
     AMBIENT_MOD_SHIFT = 1u << 1,
-    AMBIENT_MOD_OPT   = 1u << 2,
+    AMBIENT_MOD_CTRL  = 1u << 2,
+    AMBIENT_MOD_ALT   = 1u << 3,
 };
 
 typedef struct {
-    uint8_t locks;       /* OR of AMBIENT_MOD_* — which modifiers are latched */
+    uint8_t locks;       /* OR of AMBIENT_MOD_* — which modifiers are latched   */
+    uint8_t oneshot;     /* subset of `locks` armed in one-shot mode (own colour)*/
 } ambient_kbd_t;
