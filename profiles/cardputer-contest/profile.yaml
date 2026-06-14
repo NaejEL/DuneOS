@@ -11,6 +11,35 @@ apps_flash:
 - usb_shell
 - battery_pub
 - launcher
+# CLI coreutils — land in /flash/bin so the shell is useful with no SD card.
+# grep/sed/find share the ADR 036 regex engine; the rest follow ADR 033.
+- ls
+- cat
+- cp
+- head
+- tail
+- touch
+- wc
+- du
+- df
+- grep
+- sed
+- find
+- mkdir
+- rm
+- mv
+- free
+- ps
+- klog
+- ifconfig
+- ping
+- tail
+- input
+- gpio
+- battery
+- services
+- restart
+- reboot
 
 # Boot order: splash draws once and exits (releasing the display); kb_iomatrix
 # (keyboard) and usb_shell (CDC console for USB-MSC sideloading + logs) come up
