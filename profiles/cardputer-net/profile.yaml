@@ -1,0 +1,64 @@
+name: cardputer-net
+board: m5stack-cardputer
+description: "Headless/network — USB-CDC console + telnet shell + coreutils, no gfx launcher/games"
+
+# Why a separate profile: the no-PSRAM CardPuter can't host a 4th resident shell
+# (telnet, ~20 KiB) AND the gfx launcher + games (~40 KiB of handoff headroom) at
+# once — the RAM is maxed. Dropping splash/launcher/kb_iomatrix frees exactly that
+# room, so telnet fits with no kernel retune. Flash this profile when you want
+# remote access; flash cardputer-contest when you want the games. Both keep the
+# local USB-CDC console (usb_shell).
+#
+# SECURITY: telnet is CLEARTEXT, no auth — anyone on the LAN gets a full shell.
+# Use on a trusted network only. SSH is the encrypted upgrade for PSRAM boards
+# (see docs/backlog.md).
+
+apps_flash:
+- wifi_daemon
+- battery_pub
+- usb_shell
+- telnet_shell
+- logd
+# CLI coreutils (shell PATH)
+- ls
+- logs
+- cat
+- cp
+- head
+- tail
+- touch
+- wc
+- du
+- df
+- grep
+- sed
+- find
+- mkdir
+- rm
+- mv
+- free
+- ps
+- klog
+- ifconfig
+- ping
+- gpio
+- battery
+- services
+- restart
+- reboot
+
+# No splash/launcher: this is a console+network image, not the graphical home.
+init_flash:
+- path: /bin/usb_shell.dap
+  restart: always
+- path: /bin/battery_pub.dap
+  restart: always
+- path: /bin/wifi_daemon.dap
+  restart: always
+- path: /bin/logd.dap
+  restart: always
+- path: /bin/telnet_shell.dap
+  restart: always
+
+apps_sd: []
+init_sd: []

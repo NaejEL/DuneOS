@@ -1,0 +1,13 @@
+name: telnet_shell
+version: "0.1.0"
+required_abi_version: 1
+# NET (16) + FS_READ (32) + FS_WRITE (64) — sockets + running captured bins + dlog.
+permissions: 112
+sources:
+  - $SDK/log/dlog.c
+# stack_size OVERRIDE: hosts captured bins like the other shells, but as a 4th
+# resident shell on the RAM-tight no-PSRAM board it gets a leaner 12 KiB — enough
+# for interactive use and simple pipes; a very deep remote `source` may hit the
+# loader's captured-run stack guard and get a graceful "not enough stack" rather
+# than a crash. 12 K is the practical floor (guard 4 K + run-chain depth ~3.5 K).
+stack_size: 12288
