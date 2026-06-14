@@ -46,7 +46,10 @@ static uint16_t icmp_cksum(const void *data, size_t len)
 
 void app_main(void)
 {
-    static char argbuf[DUNEOS_EXEC_ARGS_BUF_SIZE];
+    /* Stack, not static: read() (inside duneos_bin_args) validates the buffer
+     * against the app's bounds, and a captured bin's static BSS falls outside
+     * them → EFAULT → argc 0 → bogus "usage". (CLAUDE.md hard-won lesson.) */
+    char argbuf[DUNEOS_EXEC_ARGS_BUF_SIZE];
     char *argv[4], *cwd;
     int argc = duneos_bin_args(argbuf, sizeof(argbuf), &cwd, argv, 4);
     (void)cwd;
