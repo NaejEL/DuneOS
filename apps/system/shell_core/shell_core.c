@@ -24,11 +24,11 @@
 
 #define SHELL_PROMPT  "$ "
 #define LINE_MAX_LEN  256
-#define HISTORY_DEPTH 16
+#define HISTORY_DEPTH 8   /* per-shell data pool is RAM (4 resident shells); 8 ≈ 2 KiB */
 
 /* ----- state ------------------------------------------------------------- */
 
-static char s_cwd[256] = "/sd";          /* required by shell_cmds.c */
+static char s_cwd[256] = "/";            /* root landing; required by shell_cmds.c */
 static char s_history[HISTORY_DEPTH][LINE_MAX_LEN];
 static int  s_hist_count = 0;
 static int  s_hist_nav   = -1;
@@ -212,6 +212,11 @@ static int read_line(char *buf, int max, const char *prompt)
     for (;;) {
         char c;
         int r = read(s_fd_r, &c, 1);
+#ifdef SHELL_EOF_ON_ZERO
+        /* On a socket, read()==0 is the peer closing; -1 (EWOULDBLOCK) is the
+         * recv timeout. End the session so the backend can accept() the next. */
+        if (r == 0) { buf[0] = '\0'; return -1; }
+#endif
         if (r <= 0) {
             if (n == 0 && ++idle_ticks >= IDLE_REPRMT) return 0;  /* late host: reprint */
             usleep(1000);
@@ -355,7 +360,8 @@ static void shell_run(int fd_r, int fd_w)
     while (1) {
         build_prompt(prompt, sizeof(prompt));
         int n = read_line(line, sizeof(line), prompt);
-        if (n <= 0) continue;   /* empty line / Ctrl-C — read_line already redrew */
+        if (n < 0) break;       /* connection closed (SHELL_EOF_ON_ZERO backends) */
+        if (n == 0) continue;   /* empty line / Ctrl-C — read_line already redrew */
         history_push(line);
         exec_line(line);
     }

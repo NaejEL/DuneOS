@@ -166,13 +166,13 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const void *app);
  * Configuration paths (Phase 25.5)
  *
  * DuneOS standard: an app's configuration lives at
- *   /flash/etc/<app_name>/config.yaml
+ *   /etc/<app_name>/config.yaml
  *
- * The /etc tree is staged into the LittleFS sysbin, which mounts at /flash —
- * so the physical path is under /flash (a bare /etc has no mount). Apps are
- * free to read from anywhere, but this convention lets users find config in a
- * predictable place (mirrors /etc on Linux, rooted at /flash) and lets `dbt
- * flashimg` provision per-board defaults from `boards/<board>/etc/`.
+ * The /etc tree is staged into the LittleFS sysbin, which mounts at the root
+ * "/" — so /etc resolves directly. Apps are free to read from anywhere, but
+ * this convention lets users find config in a predictable place (mirrors /etc
+ * on Linux) and lets `dbt flashimg` provision per-board defaults from
+ * `boards/<board>/etc/`.
  *
  * duneos_config_path() builds the canonical path string. It does NOT open
  * the file or check that it exists — call open() / stat() afterwards.

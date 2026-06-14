@@ -54,14 +54,42 @@ extern const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_
 #define CWD_MAX       256
 #define APPS_DIR      "/sd/apps"
 #define BIN_DIR       "/sd/bin"
-#define FLASH_BIN_DIR "/flash/bin"
+#define FLASH_BIN_DIR "/bin"
 
 /* ----- path resolution --------------------------------------------------- */
+
+/* Collapse `.`, `..` and `//` on an absolute path, in place. The VFS (FAT /
+ * LittleFS) does not resolve `..` itself, so the shell must do it before any
+ * stat()/open() — otherwise `cd ..`, `cat ../x`, globs, etc. all fail. */
+static void normalize_path(char *p, size_t cap)
+{
+    char out[CWD_MAX];
+    int  oi = 1;
+    out[0] = '/';
+    for (const char *s = p; *s; ) {
+        while (*s == '/') s++;
+        if (!*s) break;
+        const char *start = s;
+        while (*s && *s != '/') s++;
+        int len = (int)(s - start);
+        if (len == 1 && start[0] == '.') continue;
+        if (len == 2 && start[0] == '.' && start[1] == '.') {
+            while (oi > 1 && out[oi - 1] != '/') oi--;
+            if (oi > 1) oi--;                       /* drop the separating '/' */
+            continue;
+        }
+        if (oi > 1 && oi < (int)sizeof(out) - 1) out[oi++] = '/';
+        for (int i = 0; i < len && oi < (int)sizeof(out) - 1; i++) out[oi++] = start[i];
+    }
+    out[oi] = '\0';
+    sh_strlcpy(p, out, cap);
+}
 
 static void resolve_path(const char *arg, char *out, size_t out_sz)
 {
     if (arg[0] == '/') sh_strlcpy(out, arg, out_sz);
     else               snprintf(out, out_sz, "%s/%s", s_cwd, arg);
+    normalize_path(out, out_sz);
 }
 
 /* ----- exec args --------------------------------------------------------- */
@@ -99,7 +127,7 @@ static void sh_emitln(const char *s)
 
 static int cmd_cd(int argc, char **argv)
 {
-    if (argc < 2) { sh_strlcpy(s_cwd, "/sd", CWD_MAX); return 0; }
+    if (argc < 2) { sh_strlcpy(s_cwd, "/", CWD_MAX); return 0; }
     char path[CWD_MAX];
     resolve_path(argv[1], path, sizeof(path));
     if (strcmp(path, "/") != 0) {
@@ -177,7 +205,7 @@ static void cmd_help(void)
     sh_emitln("            break  continue  source FILE");
     sh_emitln("Pipes/redir: cmd1 | cmd2   cmd > file   cmd >> file   cmd < file");
     sh_emitln("Globs:      *  ?  [..]   (expanded against the filesystem)");
-    sh_emitln("External (/flash/bin/ or /sd/bin/):");
+    sh_emitln("External (/bin/ or /sd/bin/):");
     sh_emitln("  ls cat cp head tail touch wc du df grep sed find");
     sh_emitln("  mkdir(-p) rm(-rf) mv  free klog gpio battery");
     sh_emitln("  services restart reboot input ping");
@@ -286,7 +314,7 @@ static int try_run_bin(const char *cmd, int argc, char **argv,
  * daemons with their own data pool, so static storage here is fine.
  */
 
-#define COMP_MAX   48
+#define COMP_MAX   32
 #define COMP_NAME  64
 
 static char s_comp[COMP_MAX][COMP_NAME];
@@ -301,7 +329,7 @@ static void comp_add(const char *name, int isdir)
 {
     if (s_comp_n >= COMP_MAX) return;
     for (int i = 0; i < s_comp_n; i++)
-        if (strcmp(s_comp[i], name) == 0) return;   /* dedup (e.g. /flash + /sd bin) */
+        if (strcmp(s_comp[i], name) == 0) return;   /* dedup (e.g. /bin + /sd/bin) */
     sh_strlcpy(s_comp[s_comp_n], name, COMP_NAME);
     s_comp_isdir[s_comp_n] = (char)isdir;
     s_comp_n++;
@@ -432,7 +460,7 @@ static const char *shell_comp_name(int i, int *isdir)
  * unlike captured bins. Scope: variables, $VAR/${VAR}/$? expansion, '/" quoting,
  * and ; && || sequencing. Control flow (if/while/for) is the next step. */
 
-#define SH_MAXVARS 24
+#define SH_MAXVARS 12
 #define SH_VARNAME 24
 #define SH_VARVAL  192
 

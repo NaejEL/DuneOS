@@ -1363,9 +1363,9 @@ out:
     return err;
 }
 
-/* Search order: flash takes priority over SD, bin/ over apps/. */
+/* Search order: flash (root /bin) takes priority over SD, bin/ over apps/. */
 static const char *const s_scan_dirs[] = {
-    "/flash/bin",
+    "/bin",
     "/sd/bin",
     "/sd/apps",
     NULL,

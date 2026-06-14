@@ -4,7 +4,7 @@
  *   df [-h] [PATH...]
  *     -h  human-readable sizes
  *
- * With no PATH, reports every mount that has block accounting (/flash, /sd).
+ * With no PATH, reports every mount that has block accounting (/, /sd).
  * /tmp and /dev have none and are skipped.
  */
 

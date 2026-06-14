@@ -9,7 +9,7 @@
 
 #include <duneos/bin_args.h>
 
-/* Kernel ABI: list active VFS mount points ("/flash", "/sd", "/tmp", "/dev"). */
+/* Kernel ABI: list active VFS mount points ("/", "/sd", "/tmp", "/dev"). */
 extern int duneos_vfs_list_mounts(char (*out)[32], int max);
 
 static void out(const char *s)           { write(STDOUT_FILENO, s, strlen(s)); }
@@ -50,35 +50,46 @@ static int g_long, g_all, g_human;
 
 static void list_dir(const char *resolved)
 {
-    /* Root is virtual — list mount points, not a real directory. */
+    int shown = 0;
+
+    DIR *dir = opendir(resolved);
+    if (!dir) {
+        /* "/" is a real FS now (LittleFS root), so opendir normally succeeds;
+         * only fall through to the mount-only view if it somehow can't. */
+        if (strcmp(resolved, "/") != 0) {
+            outf("ls: %s: %s\r\n", resolved, strerror(errno));
+            return;
+        }
+    } else {
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != NULL) {
+            if (!g_all && ent->d_name[0] == '.') continue;   /* hide dotfiles */
+
+            int  is_dir = 0;
+            long size   = 0;
+            char fpath[320];
+            snprintf(fpath, sizeof(fpath), "%s/%s", resolved, ent->d_name);
+            struct stat st;
+            if (stat(fpath, &st) == 0) { is_dir = S_ISDIR(st.st_mode); size = (long)st.st_size; }
+
+            print_entry(ent->d_name, is_dir, size, g_long, g_human);
+            shown++;
+        }
+        closedir(dir);
+    }
+
+    /* The overlay mounts (/sd /tmp /dev) are not physical entries in the root
+     * directory — append them so `ls /` shows them like Linux mountpoint dirs. */
     if (strcmp(resolved, "/") == 0) {
         char mounts[8][32];
         int n = duneos_vfs_list_mounts(mounts, 8);
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
+            if (strcmp(mounts[i], "/") == 0) continue;   /* root already listed */
             print_entry(mounts[i] + 1, 1, 0, g_long, g_human);
-        if (!g_long) out("\r\n");
-        return;
+            shown++;
+        }
     }
 
-    DIR *dir = opendir(resolved);
-    if (!dir) { outf("ls: %s: %s\r\n", resolved, strerror(errno)); return; }
-
-    int shown = 0;
-    struct dirent *ent;
-    while ((ent = readdir(dir)) != NULL) {
-        if (!g_all && ent->d_name[0] == '.') continue;   /* hide dotfiles */
-
-        int  is_dir = 0;
-        long size   = 0;
-        char fpath[320];
-        snprintf(fpath, sizeof(fpath), "%s/%s", resolved, ent->d_name);
-        struct stat st;
-        if (stat(fpath, &st) == 0) { is_dir = S_ISDIR(st.st_mode); size = (long)st.st_size; }
-
-        print_entry(ent->d_name, is_dir, size, g_long, g_human);
-        shown++;
-    }
-    closedir(dir);
     if (!g_long && shown) out("\r\n");
 }
 

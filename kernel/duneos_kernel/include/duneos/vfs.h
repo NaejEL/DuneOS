@@ -18,10 +18,13 @@
  * DuneOS VFS initialisation.
  *
  * Mount points after duneos_vfs_init():
- *   /flash — LittleFS on the 'sysbin' partition (always, fatal if missing)
+ *   /      — LittleFS on the 'sysbin' partition, the root FS (always, fatal if
+ *            missing). Holds /bin, /etc, /share, /init.yaml.
  *   /sd    — FatFS on SD card (optional, see DUNEOS_HAS_SD in board_config.h)
  *   /tmp   — RAM-backed ephemeral storage
  *   /dev   — device files (uart, gpio, spi, i2c, …)
+ * /sd, /tmp, /dev are overlay sub-mounts (longest-prefix match wins); every
+ * other path resolves to the root LittleFS.
  */
 esp_err_t duneos_vfs_init(void);
 esp_err_t duneos_vfs_deinit(void);
@@ -40,7 +43,7 @@ bool duneos_vfs_data_available(void);
 bool duneos_vfs_sd_available(void);
 
 /*
- * List active VFS mount points (e.g. "/flash", "/sd", "/tmp", "/dev").
+ * List active VFS mount points (e.g. "/", "/sd", "/tmp", "/dev").
  * Copies up to `max` mount paths into `out` (each slot is char[32]).
  * Returns the count written.
  */
@@ -57,7 +60,7 @@ int duneos_fs_info(const char *path, uint64_t *total, uint64_t *freeb);
 sdmmc_card_t *duneos_vfs_get_sd_card(void);
 
 /*
- * First-boot provisioning: copy embedded firmware blobs to /flash/bin/.
+ * First-boot provisioning: copy embedded firmware blobs to /bin/.
  * No-op when g_duneos_blob_count == 0 (no blobs embedded at build time).
  * Skips individual files that already exist on flash.
  */

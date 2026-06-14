@@ -13,7 +13,7 @@ apps_flash:
   - usb_shell
 
 init_flash:
-  - { path: /flash/bin/usb_shell.dap, restart: always }
+  - { path: /bin/usb_shell.dap, restart: always }
 
 apps_sd: []
 init_sd: []

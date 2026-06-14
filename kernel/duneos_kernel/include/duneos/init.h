@@ -8,11 +8,11 @@
  *
  * init.yaml format:
  *   services:
- *     - path: /flash/bin/usb_shell.dap
+ *     - path: /bin/usb_shell.dap
  *       restart: always
- *     - path: /flash/bin/splash.dap
+ *     - path: /bin/splash.dap
  *       restart: no
- *     - path: /flash/bin/g_shell.dap
+ *     - path: /bin/g_shell.dap
  *       restart: always
  *       after: splash         # don't start until splash has exited
  *     - path: /sd/apps/wifi.dap
@@ -30,8 +30,8 @@
  *              not systemd.
  */
 
-#define DUNEOS_INIT_PATH_FLASH       "/flash/init.yaml"
-#define DUNEOS_INIT_PATH_FLASH_SAFE  "/flash/init.yaml.safe"
+#define DUNEOS_INIT_PATH_FLASH       "/init.yaml"
+#define DUNEOS_INIT_PATH_FLASH_SAFE  "/init.yaml.safe"
 #define DUNEOS_INIT_PATH_SD          "/sd/init.yaml"
 #define DUNEOS_INIT_PATH             DUNEOS_INIT_PATH_SD  /* backward compat alias */
 #define DUNEOS_MAX_SERVICES 8

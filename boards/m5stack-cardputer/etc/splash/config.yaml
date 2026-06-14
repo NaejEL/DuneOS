@@ -1,4 +1,4 @@
-# DuneOS splash config — /flash/etc/splash/config.yaml
+# DuneOS splash config — /etc/splash/config.yaml
 #
 # The splash app blits `logo:` (a .dr raster) centred at boot, then holds for
 # `duration_ms` before handing off to the launcher. If the logo is absent or
@@ -9,5 +9,5 @@
 # It is converted to logo.dr automatically (aspect-preserving, downscaled to fit
 # the board's panel) — no toolchain needed. A full-screen logo is fine: splash
 # streams it row by row, so it costs no extra heap.
-logo: /flash/etc/splash/logo.dr
+logo: /etc/splash/logo.dr
 duration_ms: 2000

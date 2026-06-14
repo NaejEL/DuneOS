@@ -77,7 +77,7 @@ static int launch_autoboot(void)
     duneos_loader_scan(apps, DUNEOS_MAX_APPS, &count);
 
     if (count == 0) {
-        klog_w(TAG, "no apps found in /flash/bin, /sd/bin or /sd/apps");
+        klog_w(TAG, "no apps found in /bin, /sd/bin or /sd/apps");
         return 0;
     }
 

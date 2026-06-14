@@ -24,7 +24,12 @@
 
 static const char *TAG = "duneos/vfs";
 
-#define FLASH_MOUNT_POINT   "/flash"
+/* LittleFS is the root filesystem ("/"). esp_vfs uses "" as the base path for a
+ * root mount; the sub-mounts (/sd, /tmp, /dev) still win via longest-prefix
+ * matching. FLASH_MOUNT_POINT is the prefix used for path building (so
+ * FLASH_MOUNT_POINT "/bin" == "/bin"); FLASH_MOUNT_NAME is the registry/log name. */
+#define FLASH_MOUNT_POINT   ""
+#define FLASH_MOUNT_NAME    "/"
 #define FLASH_PARTITION     "sysbin"
 #define DATA_MOUNT_POINT    "/data"
 #define DATA_PARTITION      "userdata"
@@ -70,13 +75,9 @@ int duneos_vfs_list_mounts(char (*out)[32], int max)
 int duneos_fs_info(const char *path, uint64_t *total, uint64_t *freeb)
 {
     if (!path || !total || !freeb) return -EINVAL;
-    if (strncmp(path, FLASH_MOUNT_POINT, sizeof(FLASH_MOUNT_POINT) - 1) == 0) {
-        size_t t = 0, u = 0;
-        if (esp_littlefs_info(FLASH_PARTITION, &t, &u) != ESP_OK) return -EIO;
-        *total = t;
-        *freeb = (t > u) ? (uint64_t)(t - u) : 0;
-        return 0;
-    }
+
+    /* /sd (FAT) and the overlay mounts are matched first; everything else —
+     * "/", "/bin", "/etc"… — is backed by the root LittleFS. */
     if (strncmp(path, DATA_MOUNT_POINT, sizeof(DATA_MOUNT_POINT) - 1) == 0) {
         size_t t = 0, u = 0;
         if (!s_data_mounted) return -ENODEV;
@@ -92,7 +93,14 @@ int duneos_fs_info(const char *path, uint64_t *total, uint64_t *freeb)
         *freeb = f;
         return 0;
     }
-    return -ENODEV;
+    if (strncmp(path, "/tmp", 4) == 0 || strncmp(path, "/dev", 4) == 0)
+        return -ENODEV;
+
+    size_t t = 0, u = 0;
+    if (esp_littlefs_info(FLASH_PARTITION, &t, &u) != ESP_OK) return -EIO;
+    *total = t;
+    *freeb = (t > u) ? (uint64_t)(t - u) : 0;
+    return 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -124,8 +132,8 @@ esp_err_t duneos_vfs_mount_flash(void)
     }
 
     s_flash_mounted = true;
-    register_mount(FLASH_MOUNT_POINT);
-    klog_i(TAG, "LittleFS mounted at " FLASH_MOUNT_POINT);
+    register_mount(FLASH_MOUNT_NAME);
+    klog_i(TAG, "LittleFS mounted at " FLASH_MOUNT_NAME " (root)");
     return ESP_OK;
 }
 
@@ -177,11 +185,11 @@ esp_err_t duneos_vfs_provision_flash(void)
 {
     if (g_duneos_blob_count == 0) return ESP_OK;
 
-    /* Ensure /flash/bin exists */
+    /* Ensure /bin exists */
     struct stat st;
     if (stat(FLASH_MOUNT_POINT "/bin", &st) != 0) {
         if (mkdir(FLASH_MOUNT_POINT "/bin", 0755) != 0 && errno != EEXIST) {
-            klog_w(TAG, "cannot create /flash/bin: %d", errno);
+            klog_w(TAG, "cannot create /bin: %d", errno);
             return ESP_FAIL;
         }
     }
@@ -383,7 +391,7 @@ esp_err_t duneos_vfs_init(void)
     /* SD is secondary — failure is non-fatal (flash is sufficient) */
     err = duneos_vfs_mount_sd();
     if (err != ESP_OK)
-        klog_w(TAG, "SD unavailable — running from /flash only");
+        klog_w(TAG, "SD unavailable — running from root LittleFS only");
 #endif
 
     err = duneos_vfs_mount_tmp();
@@ -402,9 +410,9 @@ esp_err_t duneos_vfs_init(void)
         write_board_info(SD_MOUNT_POINT "/board.info");
 #endif
 
-    klog_i(TAG, "VFS ready (/flash%s%s /tmp /dev)",
-           s_data_mounted ? " /data" : "",
-           s_sd_mounted ? " /sd" : "");
+    klog_i(TAG, "VFS ready (/ %s%s/tmp /dev)",
+           s_data_mounted ? "/data " : "",
+           s_sd_mounted ? "/sd " : "");
     return ESP_OK;
 }
 

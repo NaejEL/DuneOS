@@ -143,10 +143,10 @@ bool ui_app_icon_path(const char *dap_path, const char *icon_name,
     }
     /* 2. flashed shared theme dir, by manifest icon name */
     if (icon_name && icon_name[0]) {
-        snprintf(out, outsz, "/flash/share/icons/%s.dr", icon_name);
+        snprintf(out, outsz, "/share/icons/%s.dr", icon_name);
         if (file_exists(out)) return true;
     }
     /* 3. OS generic fallback */
-    snprintf(out, outsz, "/flash/share/icons/application.dr");
+    snprintf(out, outsz, "/share/icons/application.dr");
     return file_exists(out);
 }

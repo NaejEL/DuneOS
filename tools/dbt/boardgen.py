@@ -196,7 +196,7 @@ def _storage_block(board: dict, lines: list[str]) -> None:
     has_sd = bool(board.get("sd_card"))
     lines.append("/* ----- storage ----- */")
     lines.append(f"#define DUNEOS_HAS_SD            {1 if has_sd else 0}")
-    lines.append('#define DUNEOS_FLASH_MOUNT       "/flash"')
+    lines.append('#define DUNEOS_FLASH_MOUNT       "/"')
     lines.append('#define DUNEOS_SD_MOUNT          "/sd"')
     lines.append("")
 

@@ -1,4 +1,4 @@
-# DuneOS CLI self-test — run with:  source /flash/etc/selftest.sh
+# DuneOS CLI self-test — run with:  source /etc/selftest.sh
 # Exercises the coreutils + the scripting shell (vars, $?, pipes, redirection,
 # globs, &&/||, if/for/while, test). No arithmetic ($((...))) yet — for loops
 # over explicit word lists are the iteration workhorse.
@@ -63,7 +63,7 @@ ping 127.0.0.1 1
 
 echo "--- presence: every tool ---"
 for t in ls cat cp head tail touch wc du df grep sed find mkdir rm mv free ps gpio klog battery ifconfig ping services restart reboot input; do
-  if test -f /flash/bin/$t.dap; then echo "  $t: ok"; else echo "  $t: MISSING"; fi
+  if test -f /bin/$t.dap; then echo "  $t: ok"; else echo "  $t: MISSING"; fi
 done
 
 echo "--- vars + && / || ---"

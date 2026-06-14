@@ -1,7 +1,7 @@
 /*
  * drview — .dr raster gallery / viewer.
  *
- * Scans /flash/share/icons and /sd for .dr images and shows them as a libui
+ * Scans /share/icons and /sd for .dr images and shows them as a libui
  * coverflow gallery (the .dr files are their own thumbnails); Enter blits the
  * selected one full-screen. A tiny app — all the work is in libui (ui_carousel)
  * and libimage (duneos_image_blit_dr); this is just the plumbing.
@@ -102,7 +102,7 @@ void app_main(void)
     if (!ui) { close(s_input); gfx_close(g); duneos_exit(10); }
     ui_size(ui, &s_sw, &s_sh);
 
-    scan("/flash/share/icons");
+    scan("/share/icons");
     scan("/sd");
 
     int bar_h = 8 + 2 * ui_theme(ui)->pad;

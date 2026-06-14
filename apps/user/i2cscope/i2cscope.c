@@ -39,11 +39,11 @@ static ui_list_t s_menu;
 static const char *const k_menu[] = { "Scan bus", "Xfer bus", "Sniff bus", "Scenarios" };
 #define N_MENU 4
 
-/* Read an integer "<key>: <n>" value from /flash/board.info, or `def`. Keeps
+/* Read an integer "<key>: <n>" value from /board.info, or `def`. Keeps
  * the app board-agnostic — the same .dap reads each board's pins at runtime. */
 static int board_info_int(const char *key, int def)
 {
-    int fd = open("/flash/board.info", O_RDONLY);
+    int fd = open("/board.info", O_RDONLY);
     if (fd < 0) return def;
     char buf[768];
     int n = read(fd, buf, sizeof(buf) - 1);

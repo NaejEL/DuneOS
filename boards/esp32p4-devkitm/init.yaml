@@ -1,5 +1,5 @@
-# DuneOS /flash/init.yaml for esp32p4-devkitm
+# DuneOS /init.yaml for esp32p4-devkitm
 # Services that start at boot, even without an SD card.
 services:
-  # - path: /flash/bin/usb_shell.dap
+  # - path: /bin/usb_shell.dap
   #   restart: always

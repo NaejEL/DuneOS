@@ -1,9 +1,9 @@
-# DuneOS /flash/init.yaml for lilygo-t-embed-cc1101
+# DuneOS /init.yaml for lilygo-t-embed-cc1101
 # Services that start at boot, even without an SD card.
 services:
-  - path: /flash/bin/usb_shell.dap
+  - path: /bin/usb_shell.dap
     restart: always
-  - path: /flash/bin/battery_daemon.dap
+  - path: /bin/battery_daemon.dap
     restart: always
-  - path: /flash/bin/btn_gpio.dap
+  - path: /bin/btn_gpio.dap
     restart: always

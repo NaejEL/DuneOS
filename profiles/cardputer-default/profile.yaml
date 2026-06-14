@@ -1,6 +1,6 @@
 name: cardputer-default
 board: m5stack-cardputer
-description: "CardPuter daily-driver \u2014 USB shell, keyboard, basic utilities"
+description: "CardPuter daily-driver — USB shell, keyboard, basic utilities"
 apps_flash:
 - battery
 - cat
@@ -24,13 +24,13 @@ apps_flash:
 - wifi_daemon
 - splash
 init_flash:
-- path: /flash/bin/kb_iomatrix.dap
+- path: /bin/kb_iomatrix.dap
   restart: always
-- path: /flash/bin/usb_shell.dap
+- path: /bin/usb_shell.dap
   restart: always
-- path: /flash/bin/wifi_daemon.dap
+- path: /bin/wifi_daemon.dap
   restart: always
-- path: /flash/bin/splash.dap
+- path: /bin/splash.dap
   restart: 'no'
 apps_sd:
 - g_shell
