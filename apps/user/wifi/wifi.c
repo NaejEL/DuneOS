@@ -5,7 +5,7 @@
  * the supervisor mailbox (SCAN / JOIN <ssid> / DISCONNECT) and watches the
  * files it publishes: /tmp/state/wifi_scan (binary scan blob with a seq byte
  * for freshness), /tmp/state/wifi (ambient link state) and /tmp/net_status
- * (text, for the IP). Credentials persist in /flash/etc/wifi/known.yaml,
+ * (text, for the IP). Credentials persist in /data/wifi/known.yaml,
  * rewritten whole on every change — so no NET permission is needed here.
  */
 
@@ -32,7 +32,8 @@ extern int dprintf(int fd, const char *fmt, ...);
 #define DAEMON_NAME  "wifi_daemon"
 #define SCAN_PATH    "/tmp/state/wifi_scan"
 #define NET_STATUS   "/tmp/net_status"
-#define KNOWN_PATH   "/flash/etc/wifi/known.yaml"
+#define KNOWN_PATH   "/data/wifi/known.yaml"
+#define KNOWN_SEED   "/flash/etc/wifi/known.yaml"   /* board-provisioned, RO */
 
 #define MAX_AP     16
 #define MAX_KNOWN  16
@@ -134,8 +135,10 @@ static void strip_quotes(char *s)
 
 static void load_known(void)
 {
+    /* /data (reflash-proof) once it exists; else the /flash seed. */
     s_kn = 0;
     int fd = open(KNOWN_PATH, O_RDONLY);
+    if (fd < 0) fd = open(KNOWN_SEED, O_RDONLY);
     if (fd < 0) return;
     int n = (int)read(fd, s_fbuf, sizeof(s_fbuf) - 1);
     close(fd);
@@ -176,9 +179,15 @@ static int find_known(const char *ssid)
 
 static int save_known(void)
 {
-    mkdir("/flash/etc", 0755);
-    mkdir("/flash/etc/wifi", 0755);
+    mkdir("/data/wifi", 0755);
     int fd = open(KNOWN_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        /* Old partition table without /data — fall back to the flash path
+         * (lost on reflash, but saving must never silently fail). */
+        mkdir("/flash/etc", 0755);
+        mkdir("/flash/etc/wifi", 0755);
+        fd = open(KNOWN_SEED, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    }
     if (fd < 0) return -1;
     dprintf(fd, "networks:\n");
     for (int i = 0; i < s_kn; i++)

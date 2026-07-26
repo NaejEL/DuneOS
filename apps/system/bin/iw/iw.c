@@ -30,7 +30,8 @@ extern int usleep(unsigned int usec);
 
 #define USAGE "usage: iw scan | status | join <ssid> [psk] | disconnect | reconnect"
 
-#define KNOWN_YAML     "/flash/etc/wifi/known.yaml"
+#define KNOWN_YAML      "/data/wifi/known.yaml"
+#define KNOWN_YAML_SEED "/flash/etc/wifi/known.yaml"   /* board-provisioned */
 #define NET_STATUS     "/tmp/net_status"
 #define WIFI_SCAN_PATH "/tmp/state/wifi_scan"
 
@@ -197,14 +198,15 @@ static int parse_known(char *buf, known_net_t *nets, int max)
 
 static int update_known(const char *ssid, const char *psk)
 {
-    mkdir("/flash/etc", 0755);
-    mkdir("/flash/etc/wifi", 0755);
+    mkdir("/data/wifi", 0755);
 
     known_net_t nets[MAX_KNOWN];
     int n = 0;
 
     char fbuf[2048];   /* covers 16 full entries, same as the UI's s_fbuf */
+    /* /data once it exists, else seed the first write from the /flash copy */
     int fd = open(KNOWN_YAML, O_RDONLY);
+    if (fd < 0) fd = open(KNOWN_YAML_SEED, O_RDONLY);
     if (fd >= 0) {
         int r = (int)read(fd, fbuf, sizeof(fbuf) - 1);
         close(fd);
@@ -233,6 +235,13 @@ static int update_known(const char *ssid, const char *psk)
     }
 
     fd = open(KNOWN_YAML, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        /* Old partition table without /data — flash fallback (not
+         * reflash-proof, but saving must never silently fail). */
+        mkdir("/flash/etc", 0755);
+        mkdir("/flash/etc/wifi", 0755);
+        fd = open(KNOWN_YAML_SEED, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    }
     if (fd < 0) return -errno;
     int w = (int)write(fd, fbuf, (size_t)o);
     close(fd);

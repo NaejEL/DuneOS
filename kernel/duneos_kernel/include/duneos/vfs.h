@@ -36,6 +36,7 @@ esp_err_t duneos_vfs_mount_dev(void);
 
 /* Runtime availability queries */
 bool duneos_vfs_flash_available(void);
+bool duneos_vfs_data_available(void);
 bool duneos_vfs_sd_available(void);
 
 /*

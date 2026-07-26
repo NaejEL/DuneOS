@@ -10,7 +10,8 @@
  *   RECONNECT     re-enable auto-connect to the best known network
  *   STATUS        refresh /tmp/state/wifi and /tmp/net_status immediately
  *
- * Known networks: /flash/etc/wifi/known.yaml —
+ * Known networks: /data/wifi/known.yaml (reflash-proof; falls back to the
+ * board-provisioned /flash/etc/wifi/known.yaml seed when /data has none) —
  *   networks:
  *     - ssid: MyNet
  *       psk: secret123
@@ -37,7 +38,8 @@
 #include "duneos/libdune.h"
 #include "duneos/wifi.h"
 
-#define KNOWN_YAML     "/flash/etc/wifi/known.yaml"
+#define KNOWN_YAML      "/data/wifi/known.yaml"
+#define KNOWN_YAML_SEED "/flash/etc/wifi/known.yaml"
 #define NET_STATUS     "/tmp/net_status"
 #define WIFI_SCAN_PATH "/tmp/state/wifi_scan"
 
@@ -95,9 +97,9 @@ static void copy_value(const char *src, char *dst, size_t dstsz) {
 }
 
 /* "- ssid:" opens an entry; the next "psk:" line (any indent) completes it. */
-static int load_known_yaml(known_net_t *nets, int max) {
-  int fd = open(KNOWN_YAML, O_RDONLY);
-  if (fd < 0) return 0;
+static int load_known_yaml(const char *path, known_net_t *nets, int max) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) return -1;
 
   char buf[2048]; /* covers 16 full entries, same as the UI's s_fbuf */
   ssize_t n = read(fd, buf, sizeof(buf) - 1);
@@ -178,7 +180,13 @@ static void merge_legacy(known_net_t *nets, int *count, int max) {
 }
 
 static int load_known(known_net_t *nets) {
-  int count = load_known_yaml(nets, MAX_KNOWN);
+  /* /data survives reflashes and is the source of truth once it exists;
+   * the /flash copy is only the board-provisioned seed (dbt stages it from
+   * boards/<board>/etc) for first boot or /data-less partition tables. */
+  int count = load_known_yaml(KNOWN_YAML, nets, MAX_KNOWN);
+  if (count < 0)
+    count = load_known_yaml(KNOWN_YAML_SEED, nets, MAX_KNOWN);
+  if (count < 0) count = 0;
   merge_legacy(nets, &count, MAX_KNOWN);
   return count;
 }
