@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main, 'feature/**']
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run host unit tests
+        run: make -C tests/host test
+
+  kernel-build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.0.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-kernel-${{ hashFiles('tools/duneos-bspgen.py') }}
+
+      - name: Generate board support files
+        run: |
+          echo m5stack-cardputer > .duneos_board
+          . $IDF_PATH/export.sh
+          pip install pyyaml
+          python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml
+
+      # On dev machines the rule is `dbt flash kernel --build-only`, never raw
+      # idf.py — but inside the espressif/idf container idf.py directly is
+      # acceptable: the container IS the pinned toolchain dbt would discover.
+      - name: Build kernel
+        run: |
+          git config --global --add safe.directory '*'
+          . $IDF_PATH/export.sh
+          idf.py build
+
+  apps-build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.0.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-apps-${{ hashFiles('tools/dbt.py') }}
+
+      # dbt's find_compiler() resolves xtensa-esp32s3-elf-gcc from PATH first;
+      # sourcing export.sh is what puts the container's toolchain there, so no
+      # .duneos_idf / IDF_PATH plumbing is needed for app builds.
+      - name: Build contest profile apps
+        run: |
+          git config --global --add safe.directory '*'
+          echo m5stack-cardputer > .duneos_board
+          . $IDF_PATH/export.sh
+          pip install pyyaml
+          python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml
+          python tools/dbt.py system build --profile cardputer-contest

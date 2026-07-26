@@ -1,0 +1,4 @@
+test_re
+test_i2c_decode
+test_known_yaml
+*.tmp
