@@ -27,7 +27,10 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#define DEVFS_MAX_FDS  16
+/* 32: a few daemons + a GUI app + shell redirections coexist comfortably.
+ * The supervisor also reclaims a dead app's fds now, so exhaustion requires
+ * 32 genuinely live device fds — not just a crash-looping leaker. */
+#define DEVFS_MAX_FDS  32
 
 static const char *TAG = "duneos/devfs";
 

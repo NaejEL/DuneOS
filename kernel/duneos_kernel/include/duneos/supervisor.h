@@ -13,8 +13,8 @@
  *   2. duneos_supervisor_launch()  — load + start an app as a FreeRTOS task
  *   3. duneos_supervisor_wait_all() — block until all apps have exited
  *
- * duneos_exit() (in symbols.c) calls duneos_supervisor_app_exited() before
- * deleting the app task. The supervisor task then unloads the ELF sections.
+ * duneos_exit() calls duneos_supervisor_app_exited(), which suspends the app
+ * task; the supervisor deletes it, then unloads the ELF sections.
  *
  * App-to-app messaging is a simple per-app mailbox queue:
  *   duneos_send(dest, data, len) — non-blocking; drops if mailbox full
@@ -118,6 +118,13 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
 
 /* Called by duneos_exit() from within an app task (and by the task wrapper) */
 void duneos_supervisor_app_exited(int code);
+
+/* Open-fd tracking — called by the open/close/dup/socket syscall wrappers
+ * (symbols.c + api.c). The supervisor closes any fd still tracked when the
+ * app's task ends, so a crashing app cannot exhaust the VFS/devfs fd pools.
+ * No-ops for fds 0-2 and for callers that are not app tasks. */
+void duneos_supervisor_track_fd(int fd);
+void duneos_supervisor_untrack_fd(int fd);
 
 /*
  * ADR 016 — true if the calling task is currently inside a captured-mode app

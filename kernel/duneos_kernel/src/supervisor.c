@@ -3,8 +3,17 @@
  *
  * Lifecycle:
  *   supervisor_launch() → xTaskCreate(app_task_entry) → app->entry() runs
- *   app calls duneos_exit(code) → posts to s_exit_queue → vTaskDelete(NULL)
- *   supervisor_task receives → duneos_loader_unload(app) → marks slot free
+ *   app calls duneos_exit(code) → posts to s_exit_queue → vTaskSuspend(NULL)
+ *   supervisor_task receives → vTaskDelete(task) → unload → marks slot free
+ *
+ *   The exiting task suspends instead of self-deleting: a self-deleted task
+ *   parks on FreeRTOS's xTasksWaitingTermination list until the IDLE task
+ *   runs its housekeeping (unlink + portCLEAN_UP_TCB, which also releases
+ *   Xtensa coprocessor ownership). The supervisor outranks IDLE, so it could
+ *   relaunch into the same slot — overwriting slot->tcb while it is still
+ *   linked in the termination list — corrupting kernel lists and hard-
+ *   resetting without a panic. Deleting a suspended (non-running) task from
+ *   the supervisor is synchronous and complete, closing that window.
  *
  *   If app_main() returns without calling duneos_exit(), the task wrapper
  *   treats that as duneos_exit(0).
@@ -39,6 +48,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 #include "xtensa_api.h"       /* xt_set_exception_handler / xt_exc_handler */
@@ -209,6 +219,12 @@ typedef struct app_slot {
     size_t              heap_pool_size;
     multi_heap_handle_t heap_handle;     /* NULL when heap_size == 0 */
 
+    /* Open-fd tracking: bit N set = global VFS fd N was opened by this app
+     * and not yet closed. The supervisor closes leftovers on exit so a
+     * crashing app cannot exhaust the devfs/VFS fd pools (backlog: "Device
+     * fd pool leak on app exit"). fds 0-2 are never tracked. */
+    uint64_t            fd_mask;
+
     /* Phase 20: data pool bounds (from loader, for bounds checking) */
     uintptr_t           data_pool_base;
     size_t              data_pool_size;
@@ -355,8 +371,8 @@ static void app_task_entry(void *arg)
     slot->crashed = false;
     s_loader_ops.run(slot->app);
     /* app_main returned without calling duneos_exit — treat as exit(0).
-     * duneos_supervisor_app_exited deletes the task before returning, so
-     * the exec pool is never accessed again after this call. */
+     * duneos_supervisor_app_exited suspends this task (the supervisor then
+     * deletes it), so the exec pool is never accessed again after this call. */
     duneos_supervisor_app_exited(0);
 }
 
@@ -605,11 +621,17 @@ static void supervisor_task(void *arg)
         }
 
         /* Kill the task before releasing the lock so we stop its execution
-         * before unloading its code. Only needed for forced exits (stack
-         * overflow, WDT, external restart) — in the normal path the app task
-         * already deleted itself via vTaskDelete(NULL). */
-        if (msg.forced) vTaskDelete(msg.task);
+         * before unloading its code. Normal exits arrive suspended (see
+         * duneos_supervisor_app_exited); forced exits (stack overflow, WDT,
+         * external restart) arrive ready-but-preempted. Either way the task
+         * is not running (everything is pinned to Core 0, and we are the
+         * ones running), so this delete is synchronous and complete: the
+         * TCB is unlinked and portCLEAN_UP_TCB has run by the time it
+         * returns — slot->tcb and slot->stack_mem are safe to reuse. */
+        vTaskDelete(msg.task);
 
+        uint64_t fd_mask = slot->fd_mask;
+        slot->fd_mask            = 0;
         slot->force_restart      = false;
         slot->app                = NULL;
         slot->mailbox            = NULL;
@@ -631,39 +653,43 @@ static void supervisor_task(void *arg)
                                     ? " — circuit breaker tripped, restart disabled"
                                     : ""));
 
+        /* Close any fds the app left open BEFORE unloading, so device
+         * drivers release their hardware (SPI CS, GPIO claims, input
+         * queues) before a dependent/restarted service reopens them. A
+         * leaking app must not be able to exhaust the global VFS or devfs
+         * fd pools (EMFILE wedging /dev kernel-wide). */
+        if (fd_mask) {
+            int leaked = 0;
+            for (int fd = 3; fd < 64; fd++) {
+                if (fd_mask & (1ULL << fd)) { close(fd); leaked++; }
+            }
+            klog_w(TAG, "'%s' leaked %d fd(s) — reclaimed", name, leaked);
+        }
+
         /* Free the exiting app FIRST, so by the time the observer launches
          * dependent services (Phase 25.4 `after:`) the slot is fully free
          * and any kernel resources the app held (SPI handles, GPIO claims,
          * heap pool) have been released. Otherwise a dependent service can
          * race the unloading app for the same device.
          *
-         * The 1-tick yield (~10 ms) between the heap operations is empirically
-         * required: without it, the supervisor task at priority 3 monopolises
-         * Core 0 across unload + free + free + observer-launch-×N and the
-         * device hard-reboots. We never saw the panic message — symptom is
-         * a clean reset right after the exiting app's "exited (code N)" log.
-         * Hypothesis: FreeRTOS task-termination housekeeping (IDLE-driven for
-         * statically-allocated tasks) needs a scheduling opportunity before
-         * the next heap free or xTaskCreate. Backlog: "Kernel resilience
-         * under app-crash storms" — find the root cause and remove the yield. */
+         * (Historical note: this block used to interleave vTaskDelay(1)
+         * yields between the heap operations to dodge a hard reset during
+         * crash storms. Root cause was the self-deleting app task parking
+         * on xTasksWaitingTermination until IDLE ran — see the exit
+         * protocol comment at the top of this file. With the suspend+delete
+         * protocol the TCB is fully released before we get here, so the
+         * yields are gone.) */
         s_loader_ops.unload(app);
-        vTaskDelay(1);
         slot_heap_free(slot);           /* free per-app heap pool */
-        vTaskDelay(1);
-        /* Phase 22: free the static stack buffer after the task is deleted.
-         * vTaskDelete (called above for forced exits, or by the task itself)
-         * guarantees the TCB is no longer referenced by FreeRTOS before the
-         * supervisor processes the exit message. */
+        /* Phase 22: free the static stack buffer — the unconditional
+         * vTaskDelete above guarantees the TCB and stack are no longer
+         * referenced by FreeRTOS. */
         if (slot->stack_mem) {
             duneos_supervisor_arena_free(slot->stack_mem);
             slot->stack_mem  = NULL;
             slot->stack_size = 0;
-            vTaskDelay(1);
         }
-        if (mailbox) {
-            vQueueDelete(mailbox);
-            vTaskDelay(1);
-        }
+        if (mailbox) vQueueDelete(mailbox);
 
         if (should_restart) {
             /* Relaunch inherits same policy so restarts persist */
@@ -804,6 +830,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
      * same-app check below keeps comparing against the right thing. */
     slot->active = true;
     slot->chain_child[0] = '\0';   /* fresh slot: no pending handoff */
+    slot->fd_mask = 0;             /* fresh slot: no tracked fds yet */
     char prev_name[DUNEOS_APP_NAME_MAX];
     strlcpy(prev_name, slot->name, sizeof(prev_name));
     {
@@ -964,25 +991,33 @@ void duneos_exit(int code)
     }
 
     duneos_supervisor_app_exited(code);
-    /* duneos_supervisor_app_exited calls vTaskDelete(NULL) and never returns,
-     * but the compiler cannot see that without the noreturn attribute on the
-     * FreeRTOS function.  The loop is unreachable but satisfies noreturn. */
+    /* duneos_supervisor_app_exited suspends this task (the supervisor then
+     * deletes it) and never returns, but the compiler cannot see that.
+     * The loop is unreachable but satisfies noreturn. */
     while (1) {}
 }
 
 void duneos_supervisor_app_exited(int code)
 {
+    TaskHandle_t self = xTaskGetCurrentTaskHandle();
     exit_msg_t msg = {
-        .task   = xTaskGetCurrentTaskHandle(),
+        .task   = self,
         .code   = code,
         .forced = false,
     };
     xQueueSend(s_exit_queue, &msg, portMAX_DELAY);
-    /* Delete ourselves immediately so the scheduler never resumes this task
-     * in app code after the supervisor has processed the exit message and
-     * potentially unloaded (freed) the exec pool.  On SMP the supervisor
-     * can run on Core 1 between the xQueueSend and our return, making the
-     * app's return-from-duneos_exit execute freed/reused code. */
+    /* Park here — the supervisor vTaskDelete()s us while suspended, which
+     * performs the full TCB cleanup synchronously (see the exit protocol
+     * comment at the top of this file). Never resume app code after this
+     * point: the supervisor may already have unloaded the exec pool. The
+     * loop guards against a spurious resume. vTaskSuspend never lets the
+     * scheduler pick us again, so from the app's perspective this does not
+     * return — matching the old vTaskDelete(NULL) semantics. */
+    if (slot_by_task_unsafe(self)) {
+        for (;;) vTaskSuspend(NULL);
+    }
+    /* Not an app task (should not happen) — fall back to self-deletion,
+     * the supervisor will ignore the stale message. */
     vTaskDelete(NULL);
     while (1) {} /* unreachable — prevents compiler from assuming we return */
 }
@@ -1160,6 +1195,34 @@ int duneos_recv(duneos_msg_t *out, uint32_t timeout_ms)
     TickType_t ticks = (timeout_ms == 0) ? 0 : pdMS_TO_TICKS(timeout_ms);
     if (xQueueReceive(mb, out, ticks) != pdTRUE) return -1;
     return (int)out->len;
+}
+
+/* ----- open-fd tracking --------------------------------------------------- */
+
+/* Called by the open/dup/socket syscall wrappers (symbols.c + api.c) with a
+ * freshly returned global VFS fd. Tracks it against the calling task's slot
+ * so the supervisor can reclaim it if the app dies without closing. fds 0-2
+ * (inherited console) and out-of-range fds are ignored. Captured bins run in
+ * the shell's task, so their fds land on the shell's slot — reclaimed when
+ * the shell itself exits (the captured-app contract already requires them to
+ * close what they open). fds opened from an app's pthread children are not
+ * tracked (child tasks have no slot). */
+void duneos_supervisor_track_fd(int fd)
+{
+    if (fd < 3 || fd >= 64) return;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task(xTaskGetCurrentTaskHandle());
+    if (slot) slot->fd_mask |= (1ULL << fd);
+    xSemaphoreGive(s_lock);
+}
+
+void duneos_supervisor_untrack_fd(int fd)
+{
+    if (fd < 3 || fd >= 64) return;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task(xTaskGetCurrentTaskHandle());
+    if (slot) slot->fd_mask &= ~(1ULL << fd);
+    xSemaphoreGive(s_lock);
 }
 
 /* ----- Phase 20: per-app memory API ------------------------------------- */
