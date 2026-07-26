@@ -27,6 +27,7 @@
 #include "freertos/event_groups.h"
 #include "freertos/portmacro.h"
 
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
@@ -158,23 +159,37 @@ int duneos_wifi_sta_connect(const char *ssid, const char *password,
     if (!ssid || !password) { errno = EINVAL; return -1; }
     if (duneos_wifi_init() != 0) return -1;
 
-    xEventGroupClearBits(s_evg, EV_CONNECTED | EV_FAIL);
-
     wifi_config_t wcfg;
     memset(&wcfg, 0, sizeof(wcfg));
-    strlcpy((char *)wcfg.sta.ssid,     ssid,     sizeof(wcfg.sta.ssid));
-    strlcpy((char *)wcfg.sta.password, password, sizeof(wcfg.sta.password));
+    /* Not strlcpy: sta.ssid legitimately holds a full 32-byte SSID and
+     * sta.password a full 64-byte raw PSK, both without NUL terminator. */
+    memcpy(wcfg.sta.ssid, ssid, strnlen(ssid, sizeof(wcfg.sta.ssid)));
+    memcpy(wcfg.sta.password, password,
+           strnlen(password, sizeof(wcfg.sta.password)));
     wcfg.sta.threshold.authmode =
         (password[0] != '\0') ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
 
     esp_wifi_set_config(WIFI_IF_STA, &wcfg);
 
+    esp_wifi_start();
+
     portENTER_CRITICAL(&s_mux);
     s_connecting = true;
     portEXIT_CRITICAL(&s_mux);
 
-    esp_wifi_start();
-    esp_wifi_connect();
+    /* Clear as late as possible so stale DISCONNECTED events from a previous
+     * (aborted) attempt delivered before this point cannot fail this one. */
+    xEventGroupClearBits(s_evg, EV_CONNECTED | EV_FAIL);
+
+    esp_err_t cerr = esp_wifi_connect();
+    if (cerr != ESP_OK) {
+        portENTER_CRITICAL(&s_mux);
+        s_connecting = false;
+        portEXIT_CRITICAL(&s_mux);
+        klog_e(TAG, "esp_wifi_connect: %s", esp_err_to_name(cerr));
+        esp_wifi_disconnect();
+        return -1;
+    }
 
     TickType_t ticks = (timeout_ms == 0) ? portMAX_DELAY
                                          : pdMS_TO_TICKS(timeout_ms);
@@ -203,7 +218,93 @@ int duneos_wifi_sta_connect(const char *ssid, const char *password,
     else
         klog_w(TAG, "connect timeout (%lu ms)", (unsigned long)timeout_ms);
 
+    /* Abort the in-flight attempt: without this a slow association can
+     * complete after we reported failure, leaving the radio connected while
+     * the caller believes it is down (every later retry then fails). */
+    esp_wifi_disconnect();
     return -1;
+}
+
+static int cmp_ap_rssi_desc(const void *a, const void *b)
+{
+    const wifi_ap_record_t *ra = a, *rb = b;
+    return (int)rb->rssi - (int)ra->rssi;
+}
+
+int duneos_wifi_scan(duneos_wifi_ap_t *out, int max)
+{
+    if (!out || max <= 0) return -EINVAL;
+    if (duneos_wifi_init() != 0) return -EIO;
+
+    /* Scan needs the radio up even when nothing has connected yet;
+     * esp_wifi_start() is a no-op if already started. */
+    esp_err_t err = esp_wifi_start();
+    if (err != ESP_OK) {
+        klog_e(TAG, "esp_wifi_start: %s", esp_err_to_name(err));
+        return -EIO;
+    }
+
+    err = esp_wifi_scan_start(NULL, true);
+    if (err == ESP_ERR_WIFI_STATE) return -EBUSY;
+    if (err != ESP_OK) {
+        klog_e(TAG, "scan_start: %s", esp_err_to_name(err));
+        return -EIO;
+    }
+
+    uint16_t n = 0;
+    esp_wifi_scan_get_ap_num(&n);
+    if (n == 0) return 0;
+
+    /* Bound the transient buffer: callers consume at most 16 records and a
+     * dense RF environment can report 50+ APs — an unbounded malloc would
+     * fragment the small no-PSRAM kernel heap.  2x headroom for the dedup
+     * pass; get_ap_records frees the driver's internal list regardless. */
+    if (n > 32) n = 32;
+
+    wifi_ap_record_t *recs = malloc((size_t)n * sizeof(*recs));
+    if (!recs) {
+        esp_wifi_clear_ap_list();
+        return -ENOMEM;
+    }
+
+    err = esp_wifi_scan_get_ap_records(&n, recs);
+    if (err != ESP_OK) {
+        klog_e(TAG, "get_ap_records: %s", esp_err_to_name(err));
+        free(recs);
+        return -EIO;
+    }
+
+    /* Compact in place: drop hidden SSIDs, dedup keeping strongest RSSI. */
+    uint16_t uniq = 0;
+    for (uint16_t i = 0; i < n; i++) {
+        if (recs[i].ssid[0] == '\0') continue;
+        uint16_t j;
+        for (j = 0; j < uniq; j++) {
+            if (strcmp((const char *)recs[j].ssid,
+                       (const char *)recs[i].ssid) == 0)
+                break;
+        }
+        if (j < uniq) {
+            if (recs[i].rssi > recs[j].rssi) recs[j] = recs[i];
+        } else {
+            recs[uniq++] = recs[i];
+        }
+    }
+
+    qsort(recs, uniq, sizeof(*recs), cmp_ap_rssi_desc);
+
+    int count = (uniq < (uint16_t)max) ? (int)uniq : max;
+    for (int i = 0; i < count; i++) {
+        strlcpy(out[i].ssid, (const char *)recs[i].ssid, sizeof(out[i].ssid));
+        out[i].rssi     = recs[i].rssi;
+        out[i].authmode = (uint8_t)recs[i].authmode;
+        out[i].channel  = recs[i].primary;
+    }
+
+    free(recs);
+    klog_i(TAG, "scan: %u found, %u unique, %d returned",
+           (unsigned)n, (unsigned)uniq, count);
+    return count;
 }
 
 int duneos_wifi_sta_disconnect(void)

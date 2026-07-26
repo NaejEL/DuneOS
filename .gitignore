@@ -47,6 +47,7 @@ partitions.csv
 # etc.) ARE committed. Apps that hold credentials list themselves below so
 # the real config stays local; only the .example template is committed.
 boards/*/etc/wifi_daemon/config.yaml
+boards/*/etc/wifi/known.yaml
 
 # Logic-analyzer captures dumped by i2cscope (sniffer) — test artifacts
 *.vcd

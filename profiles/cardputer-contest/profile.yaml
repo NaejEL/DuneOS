@@ -32,6 +32,7 @@ apps_flash:
 - ps
 - klog
 - ifconfig
+- iw
 - ping
 - tail
 - input
@@ -72,5 +73,6 @@ apps_sd:
 - drview
 - snake
 - tetris
+- wifi
 
 init_sd: []

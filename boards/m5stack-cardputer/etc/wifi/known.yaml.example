@@ -1,0 +1,5 @@
+# WiFi networks saved by the wifi app / iw CLI. Credentials — gitignored.
+# Staged into the sysbin image so `dbt system flash` keeps your networks.
+networks:
+  - ssid: MyNetwork
+    psk: MyPassword

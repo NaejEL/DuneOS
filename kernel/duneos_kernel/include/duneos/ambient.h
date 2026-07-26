@@ -37,7 +37,7 @@ enum {
 typedef struct {
     uint8_t state;       /* AMBIENT_WIFI_* */
     int8_t  rssi_dbm;    /* e.g. -78; meaningful only when state == AMBIENT_WIFI_UP */
-    char    ssid[32];    /* NUL-terminated; empty when down */
+    char    ssid[33];    /* NUL-terminated (full 32-char SSID); empty when down */
 } ambient_wifi_t;
 
 /* Modifier-latch bitmask (ADR 027 item 3 — kb_iomatrix sticky Fn/Shift/Ctrl/Alt). */
