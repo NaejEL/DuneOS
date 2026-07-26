@@ -147,3 +147,37 @@ void ui_statusbar_top(ui_t *ui, const char *title)
     if (title && title[0] && x > pad)
         ui_label(ui, pad, y, x - pad, title, UI_ALIGN_LEFT, th->bar_fg, th->bar_bg);
 }
+
+/* Poll every ambient input the bar renders and repaint only when one changed.
+ * Call from the app's idle tick (select() timeout). One-shot modifiers arm on
+ * the physical key RELEASE and emit no input event, so event-driven repaints
+ * alone can never track the indicator — polling the blobs is the only way.
+ * Static snapshot: one bar per app, the widget is compiled into each app. */
+int ui_statusbar_top_poll(ui_t *ui, const char *title)
+{
+    struct snap {
+        ambient_kbd_t  kb;
+        ambient_wifi_t wf;
+        uint8_t        batt_pc, batt_st;
+        char           clk[6];
+    };
+    static struct snap last;
+    static int have_last;
+
+    struct snap cur;
+    memset(&cur, 0, sizeof(cur));
+    read_blob(AMBIENT_KBD_PATH, &cur.kb, sizeof(cur.kb));
+    read_blob(AMBIENT_WIFI_PATH, &cur.wf, sizeof(cur.wf));
+    battery_info_t b;
+    if (read_blob(AMBIENT_BATTERY_PATH, &b, sizeof(b)) == 0) {
+        cur.batt_pc = b.percent;
+        cur.batt_st = (uint8_t)b.status;
+    }
+    clock_hhmm(cur.clk);
+
+    if (have_last && memcmp(&cur, &last, sizeof(cur)) == 0) return 0;
+    last = cur;
+    have_last = 1;
+    ui_statusbar_top(ui, title);
+    return 1;
+}

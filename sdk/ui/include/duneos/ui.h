@@ -115,6 +115,13 @@ void ui_statusbar(ui_t *ui, const char *text);
  */
 void ui_statusbar_top(ui_t *ui, const char *title);
 
+/* Poll the bar's ambient inputs (modifiers, WiFi, battery, clock) and repaint
+ * via ui_statusbar_top only when one changed since the last call. Call it from
+ * the app's idle tick — one-shot modifiers arm on key RELEASE without emitting
+ * an input event, so event-driven repaints alone cannot track the indicator.
+ * Returns 1 if it repainted, 0 otherwise. */
+int ui_statusbar_top_poll(ui_t *ui, const char *title);
+
 /* Clear the screen and draw a centred title + body (split on '\n'). Handy for
  * "Loading…" / error / empty-state screens. body may be NULL. */
 void ui_message(ui_t *ui, const char *title, const char *body);
