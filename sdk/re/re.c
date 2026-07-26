@@ -97,6 +97,11 @@ re_t re_compile(const char *pattern)
         i++;
         ni++;
     }
+    /* Loop left before consuming the whole pattern → program full. A
+     * truncated program silently matches a prefix of what the user wrote;
+     * refuse instead (ADR 036: fail to compile rather than mis-match). */
+    if (pattern[i] != '\0') return NULL;
+
     s_prog[ni].type = RE_UNUSED;
     return s_prog;
 }
