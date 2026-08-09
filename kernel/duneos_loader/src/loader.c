@@ -858,14 +858,31 @@ static esp_err_t apply_relocations(FILE               *f,
                 return ESP_ERR_INVALID_ARG;
             }
 
-            /* Guard against out-of-bounds r_offset — a corrupt or Xtensa-generated
-             * section-end sentinel reloc would write past the data_pool into
-             * adjacent heap metadata, silently corrupting FreeRTOS list structures.
+            /* Guard against an out-of-bounds store — a corrupt or Xtensa-generated
+             * section-end sentinel reloc would write past the section into the
+             * adjacent allocation (heap metadata / a FreeRTOS TCB), silently
+             * corrupting it. This MUST account for the store width: an
+             * `r_offset >= size` check alone let a 4-byte R_XTENSA_32 (or 3-byte
+             * SLOT0_OP) at r_offset in [size-w, size-1] overrun by 1-3 bytes — a
+             * layout-dependent corruption that -Os makes fatal. The width-aware
+             * check still allows a store that ends exactly at the section boundary.
              * Skip rather than abort: if the reloc was needed the app will fault
              * and be killed by the exception handler instead of crashing the kernel. */
-            if (rel->r_offset >= target_sec_size) {
-                klog_d(TAG, "reloc[%d] skip: r_offset=0x%lx >= sec_size=0x%lx (%s)",
-                       j, (unsigned long)rel->r_offset, (unsigned long)target_sec_size,
+            uint32_t rel_width;
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+            switch (rel_type) {
+            case R_XTENSA_32:
+            case R_XTENSA_DIFF32:   rel_width = 4; break;
+            case R_XTENSA_SLOT0_OP: rel_width = 3; break;
+            default:                rel_width = 0; break;  /* ASM_EXPAND etc.: no store */
+            }
+#else
+            rel_width = 4;   /* RISC-V relocs patch up to a 32-bit word */
+#endif
+            if (rel_width && (uint64_t)rel->r_offset + rel_width > target_sec_size) {
+                klog_d(TAG, "reloc[%d] skip: r_offset=0x%lx +%lu > sec_size=0x%lx (%s)",
+                       j, (unsigned long)rel->r_offset, (unsigned long)rel_width,
+                       (unsigned long)target_sec_size,
                        shdr_name(shstrtab, &shdrs[target_idx]));
                 continue;
             }
