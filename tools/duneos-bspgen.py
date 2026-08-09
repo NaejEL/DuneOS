@@ -812,7 +812,9 @@ def main() -> None:
     if not yaml_path.exists():
         die(f"File not found: {yaml_path}")
 
-    with open(yaml_path) as f:
+    # Board YAMLs contain UTF-8 comments (arrows, dashes); never rely on the
+    # Windows locale codepage (cp1252) which rejects some UTF-8 bytes.
+    with open(yaml_path, encoding="utf-8") as f:
         doc = yaml.safe_load(f)
 
     if "board" not in doc:
