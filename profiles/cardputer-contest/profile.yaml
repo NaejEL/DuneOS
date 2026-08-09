@@ -49,6 +49,11 @@ apps_flash:
 # (keyboard) and usb_shell (CDC console for USB-MSC sideloading + logs) come up
 # in parallel; the launcher waits for splash to exit (after: splash) so the
 # display is free, then takes over as the home screen.
+#
+# wifi_daemon is intentionally NOT auto-started here: the WiFi runtime costs
+# ~40-50 KiB of DRAM, and on the no-PSRAM CardPuter that DRAM is the scarce
+# resource (contiguous app arena). The .dap stays staged in /bin so a future
+# "WiFi on demand" path can launch it when a network app actually needs it.
 init_flash:
 - path: /bin/splash.dap
   restart: no
@@ -57,8 +62,6 @@ init_flash:
 - path: /bin/usb_shell.dap
   restart: always
 - path: /bin/battery_pub.dap
-  restart: always
-- path: /bin/wifi_daemon.dap
   restart: always
 - path: /bin/logd.dap
   restart: always
