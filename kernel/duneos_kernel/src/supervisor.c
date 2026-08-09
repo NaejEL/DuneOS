@@ -439,7 +439,23 @@ static void app_exception_handler(XtExcFrame *frame)
         return;
     }
 
-    /* Kernel task or unrecognised — call the original handler (panic/reboot) */
+    /* Kernel task or unrecognised — report and panic. esp_system_abort() raises
+     * an ILLEGAL instruction, which is one of the causes we intercept, so a
+     * naive path recurses into this handler forever and buries the real fault.
+     * Guard against re-entry: print the original cause/PC/VADDR once, then on the
+     * nested abort just spin and let the watchdog reset us. */
+    static volatile bool s_kpanic = false;
+    if (s_kpanic) {
+        esp_rom_printf("[KERN] nested exc cause=%lu pc=0x%08lx — halting\n",
+                       (unsigned long)frame->exccause, (unsigned long)frame->pc);
+        while (1) { }
+    }
+    s_kpanic = true;
+    esp_rom_printf("[KERN] kernel exception cause=%lu pc=0x%08lx vaddr=0x%08lx\n",
+                   (unsigned long)frame->exccause,
+                   (unsigned long)frame->pc,
+                   (unsigned long)frame->excvaddr);
+
     int cause = (int)frame->exccause;
     if (cause >= 0 && cause < XCHAL_EXCCAUSE_NUM && s_orig_exc[cause])
         s_orig_exc[cause](frame);
