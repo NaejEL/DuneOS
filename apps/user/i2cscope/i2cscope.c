@@ -79,11 +79,29 @@ void app_main(void)
     if (!g_gfx) duneos_exit(10);
     g_input = open("/dev/input/event0", O_RDONLY);
     if (g_input < 0) { gfx_close(g_gfx); duneos_exit(11); }
-    g_i2c = open("/dev/i2c-0", O_RDWR);
-    if (g_i2c < 0) { close(g_input); gfx_close(g_gfx); duneos_exit(12); }
-
     g_ui = ui_create(g_gfx);
-    if (!g_ui) { close(g_i2c); close(g_input); gfx_close(g_gfx); duneos_exit(10); }
+    if (!g_ui) { close(g_input); gfx_close(g_gfx); duneos_exit(10); }
+
+    g_i2c = open("/dev/i2c-0", O_RDWR);
+    if (g_i2c < 0) {
+        /* Board without an I2C bus — e.g. CardPuter with the Grove port
+         * reassigned to the radar UART (boards/m5stack-cardputer/board.yaml,
+         * PO decision Q1). Report cleanly instead of dying with a bare code. */
+        ui_message(g_ui, "i2cscope",
+                   "no /dev/i2c-0 on this board\n"
+                   "Grove port is radar UART\n"
+                   "any key = quit");
+        ui_flush(g_ui);
+        for (;;) {
+            input_event_t ev;
+            if (read(g_input, &ev, sizeof(ev)) != (int)sizeof(ev)) break;
+            if (ev.type == INPUT_EV_KEY && ev.value != INPUT_VAL_RELEASE) break;
+        }
+        ui_destroy(g_ui);
+        close(g_input);
+        gfx_close(g_gfx);
+        duneos_exit(12);
+    }
 
     ui_size(g_ui, &g_sw, &g_sh);
     g_bar_h = 8 + 2 * ui_theme(g_ui)->pad;
