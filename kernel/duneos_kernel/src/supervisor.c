@@ -54,6 +54,7 @@
 #include "xtensa_api.h"       /* xt_set_exception_handler / xt_exc_handler */
 #include "xtensa/corebits.h"  /* EXCCAUSE_*, XCHAL_EXCCAUSE_NUM */
 #include "esp_rom_sys.h"
+#include "esp_private/panic_internal.h"  /* g_panic_abort(_details) */
 #endif
 
 static const char *TAG = "duneos/supervisor";
@@ -576,6 +577,9 @@ static void supervisor_task(void *arg)
         char                    rpath[DUNEOS_PATH_MAX];
         strlcpy(name,  slot->name,         sizeof(name));
         strlcpy(rpath, slot->restart_path, sizeof(rpath));
+        uint32_t exc_cause = slot->exc_cause;
+        uint32_t exc_pc    = slot->exc_pc;
+        bool     crashed   = slot->crashed;
         int                     code    = msg.code;
         duneos_app_t           *app     = slot->app;
         QueueHandle_t           mailbox = slot->mailbox;
@@ -652,6 +656,23 @@ static void supervisor_task(void *arg)
                               : (breaker_tripping
                                     ? " — circuit breaker tripped, restart disabled"
                                     : ""));
+        /* The exception handler can only esp_rom_printf (invisible with
+         * console none) — persist the crash site in klog so `klog` shows
+         * it after the fact. PC in kernel IRAM resolves directly with
+         * addr2line against build/duneos.elf. When the "exception" is an
+         * intercepted abort()/assert (PC lands in panic_abort), the panic
+         * handler never ran, so its message never printed — recover it
+         * from g_panic_abort_details. */
+        if (crashed && code == DUNEOS_EXIT_CRASHED) {
+            klog_e(TAG, "'%s' CPU exception: cause=%lu PC=0x%08lx",
+                   name, (unsigned long)exc_cause, (unsigned long)exc_pc);
+            if (g_panic_abort) {
+                klog_e(TAG, "  abort: %s",
+                       g_panic_abort_details ? g_panic_abort_details : "(no details)");
+                g_panic_abort         = false;
+                g_panic_abort_details = NULL;
+            }
+        }
 
         /* Close any fds the app left open BEFORE unloading, so device
          * drivers release their hardware (SPI CS, GPIO claims, input

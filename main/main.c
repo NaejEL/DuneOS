@@ -98,6 +98,10 @@ void app_main(void)
     /* Baseline before DuneOS does anything → IDF/FreeRTOS startup heap cost. */
     duneos_meminfo_mark(0);
 
+    /* First thing: capture esp_rom_printf into the klog ring — panic/assert
+     * output is unreadable otherwise on boards with no UART0 header. */
+    klog_capture_rom_output();
+
 #ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     console_init();
 #endif

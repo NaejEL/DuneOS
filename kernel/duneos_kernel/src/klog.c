@@ -19,6 +19,7 @@
 #include "duneos/klog.h"
 
 #include "esp_log.h"
+#include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 
@@ -42,6 +43,26 @@ static void ring_append(const char *data, size_t len)
         s_ring[s_write_abs & KLOG_RING_MASK] = data[i];
         s_write_abs++;
     }
+}
+
+/* ----- ROM-printf capture ------------------------------------------------- */
+
+/* esp_rom_printf output (_esp_error_check_failed file:line, abort details,
+ * panic dumps) goes to the ROM console — UART0, physically absent on the
+ * CardPuter — so every intercepted-abort diagnosis was flying blind.
+ * Route the ROM channel into the ring: readable post-mortem via `klog`
+ * whenever the system survives (app-kill recovery). Lock-free on purpose:
+ * this runs in exception context where taking s_mux could deadlock; a torn
+ * byte in a panic message beats a hung panic handler. */
+static void rom_putc(char c)
+{
+    s_ring[s_write_abs & KLOG_RING_MASK] = c;
+    s_write_abs++;
+}
+
+void klog_capture_rom_output(void)
+{
+    esp_rom_install_channel_putc(1, rom_putc);
 }
 
 /* ----- public API -------------------------------------------------------- */
