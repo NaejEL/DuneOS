@@ -18,7 +18,13 @@ duneos_last_board.stamp
 __pycache__/
 .vscode/
 .devcontainer/
-.claude/
+
+# Software factory (agents, skill, project settings) is shared;
+# settings.local.json and everything else in .claude/ stays local
+.claude/*
+!.claude/agents/
+!.claude/skills/
+!.claude/settings.json
 *.swp
 *.swo
 *.o

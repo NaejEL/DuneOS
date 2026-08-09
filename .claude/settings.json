@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./build/**)",
+      "Read(./libdune/build/**)",
+      "Read(./managed_components/**)",
+      "Read(./tools/.dbt-venv/**)",
+      "Read(./**/__pycache__/**)",
+      "Read(./.pytest_cache/**)",
+      "Read(./factory-logs/**)",
+      "Read(./.git/objects/**)"
+    ]
+  }
+}
