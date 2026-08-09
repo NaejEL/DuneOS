@@ -1,5 +1,13 @@
+# During the ESP-IDF requirements phase the top-level CMakeLists' variables
+# are not in scope, so DUNEOS_BOARD set at the project level is invisible
+# here. Read .duneos_board directly — same source of truth in both phases.
 if(NOT DEFINED DUNEOS_BOARD)
-    set(DUNEOS_BOARD "esp32s3-devkitc")
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../.duneos_board")
+        file(READ "${CMAKE_CURRENT_LIST_DIR}/../../.duneos_board" DUNEOS_BOARD)
+        string(STRIP "${DUNEOS_BOARD}" DUNEOS_BOARD)
+    else()
+        set(DUNEOS_BOARD "esp32s3-devkitc")
+    endif()
 endif()
 
 # CMAKE_SOURCE_DIR is unreliable during the requirements phase — it may point
