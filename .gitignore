@@ -51,3 +51,6 @@ boards/*/etc/wifi/known.yaml
 
 # Logic-analyzer captures dumped by i2cscope (sniffer) — test artifacts
 *.vcd
+
+# Software-factory CI run logs
+factory-logs/
