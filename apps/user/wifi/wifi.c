@@ -33,7 +33,7 @@ extern int dprintf(int fd, const char *fmt, ...);
 #define SCAN_PATH    "/tmp/state/wifi_scan"
 #define NET_STATUS   "/tmp/net_status"
 #define KNOWN_PATH   "/data/wifi/known.yaml"
-#define KNOWN_SEED   "/flash/etc/wifi/known.yaml"   /* board-provisioned, RO */
+#define KNOWN_SEED   "/etc/wifi/known.yaml"   /* board-provisioned, RO */
 
 #define MAX_AP     16
 #define MAX_KNOWN  16
@@ -103,7 +103,7 @@ static int daemon_running(void)
 static int ensure_daemon(void)
 {
     if (daemon_running()) return 0;
-    if (duneos_supervisor_launch("/flash/bin/" DAEMON_NAME ".dap") != 0 &&
+    if (duneos_supervisor_launch("/bin/" DAEMON_NAME ".dap") != 0 &&
         duneos_supervisor_launch("/sd/bin/" DAEMON_NAME ".dap") != 0)
         return -1;
     for (int i = 0; i < 20; i++) {
@@ -184,8 +184,8 @@ static int save_known(void)
     if (fd < 0) {
         /* Old partition table without /data — fall back to the flash path
          * (lost on reflash, but saving must never silently fail). */
-        mkdir("/flash/etc", 0755);
-        mkdir("/flash/etc/wifi", 0755);
+        mkdir("/etc", 0755);
+        mkdir("/etc/wifi", 0755);
         fd = open(KNOWN_SEED, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     }
     if (fd < 0) return -1;

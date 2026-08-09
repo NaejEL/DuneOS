@@ -24,7 +24,7 @@
  *
  * Example:
  *   duneos_image_t logo;
- *   if (duneos_image_load_dr("/flash/etc/splash/logo.dr", &logo) == 0) {
+ *   if (duneos_image_load_dr("/etc/splash/logo.dr", &logo) == 0) {
  *       gfx_blit(ctx, x, y, logo.width, logo.height, logo.pixels);
  *       duneos_image_free(&logo);
  *   }

@@ -132,7 +132,10 @@ static inline void duneos_bin_err(const char *cmd, const char *msg)
 {
     char b[192];
     int n = snprintf(b, sizeof(b), "%s: %s\r\n", cmd, msg);
-    if (n > 0) write(STDOUT_FILENO, b, (size_t)n);
+    if (n <= 0) return;
+    /* snprintf returns the would-be length — clamp on truncation. */
+    if (n >= (int)sizeof(b)) n = (int)sizeof(b) - 1;
+    write(STDOUT_FILENO, b, (size_t)n);
 }
 
 static inline void duneos_bin_badopt(const char *cmd, char bad, const char *usage)
@@ -140,5 +143,7 @@ static inline void duneos_bin_badopt(const char *cmd, char bad, const char *usag
     char b[192];
     int n = snprintf(b, sizeof(b), "%s: invalid option -- '%c'\r\n%s\r\n",
                      cmd, bad, usage);
-    if (n > 0) write(STDOUT_FILENO, b, (size_t)n);
+    if (n <= 0) return;
+    if (n >= (int)sizeof(b)) n = (int)sizeof(b) - 1;
+    write(STDOUT_FILENO, b, (size_t)n);
 }

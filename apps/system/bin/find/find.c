@@ -118,5 +118,11 @@ void app_main(void)
         duneos_bin_err("find", m);
         return;
     }
-    walk(path, len, 0);
+    int isdir = S_ISDIR(st.st_mode);
+    const char *base = strrchr(path, '/');
+    base = (base && base[1]) ? base + 1 : path;
+    int typeok = (g_type == 0) || (g_type == 'd' && isdir) || (g_type == 'f' && !isdir);
+    if (typeok && (!g_name || globmatch(g_name, base)))
+        emitln(path);
+    if (isdir) walk(path, len, 0);
 }

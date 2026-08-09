@@ -47,6 +47,8 @@ static void show(const char *mount)
     }
     char out[160];
     int  n = snprintf(out, sizeof(out), "%-10s %10s %10s %10s\n", mount, st, su, sa);
+    if (n <= 0) return;
+    if (n >= (int)sizeof(out)) n = (int)sizeof(out) - 1;
     write(STDOUT_FILENO, out, (size_t)n);
 }
 

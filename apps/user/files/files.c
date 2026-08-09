@@ -8,9 +8,9 @@
  * picture for .dr rasters. Reusing the widgets keeps viewers consistent across
  * apps (see also i2cscope).
  *
- * The root "/" is synthetic (DuneOS mounts /flash and /sd, there is no real
- * root dir) — it lists those two mounts. Layout sizes derive from the screen
- * (ADR 024), so the same .dap fits any panel.
+ * The root "/" is the sysbin LittleFS; overlay mounts (/sd /tmp /dev /data)
+ * are not physical entries there, so they are appended like ls does. Layout
+ * sizes derive from the screen (ADR 024), so the same .dap fits any panel.
  */
 
 #include <unistd.h>
@@ -28,6 +28,7 @@
 #include "duneos/image.h"
 
 extern void duneos_exit(int code);
+extern int  duneos_vfs_list_mounts(char (*out)[32], int max);
 
 #define PATH_LEN   256
 #define NAME_LEN   48
@@ -87,24 +88,29 @@ static void add_entry(const char *name, int is_dir)
 static void scan_dir(void)
 {
     s_nent = 0;
+    DIR *d = opendir(s_cwd);
+    if (d) {
+        struct dirent *e;
+        while (s_nent < MAX_ENTS && (e = readdir(d)) != NULL) {
+            if (e->d_name[0] == '\0' ||
+                strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0)
+                continue;
+            char p[PATH_LEN];
+            full_path(e->d_name, p);
+            struct stat st;
+            int is_dir = (stat(p, &st) == 0 && S_ISDIR(st.st_mode));
+            add_entry(e->d_name, is_dir);
+        }
+        closedir(d);
+    }
+    /* Overlay mounts (/sd /tmp /dev /data) are not physical root entries. */
     if (strcmp(s_cwd, "/") == 0) {
-        add_entry("flash", 1);
-        add_entry("sd", 1);
-    } else {
-        DIR *d = opendir(s_cwd);
-        if (d) {
-            struct dirent *e;
-            while (s_nent < MAX_ENTS && (e = readdir(d)) != NULL) {
-                if (e->d_name[0] == '\0' ||
-                    strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0)
-                    continue;
-                char p[PATH_LEN];
-                full_path(e->d_name, p);
-                struct stat st;
-                int is_dir = (stat(p, &st) == 0 && S_ISDIR(st.st_mode));
-                add_entry(e->d_name, is_dir);
-            }
-            closedir(d);
+        char mounts[8][32];
+        int n = duneos_vfs_list_mounts(mounts, 8);
+        for (int i = 0; i < n; i++) {
+            if (strcmp(mounts[i], "/") == 0 || mounts[i][0] != '/') continue;
+            if (strchr(mounts[i] + 1, '/') != NULL) continue;   /* skip nested (/dev/ttyUSB0) */
+            add_entry(mounts[i] + 1, 1);
         }
     }
     ui_list_set_items(&s_list, s_disp_ptr, s_nent);

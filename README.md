@@ -268,9 +268,10 @@ FLASH (8 MB on the CardPuter)              SD CARD (removable, optional)
 │ bootloader + partition table  │         │ /sd/apps/*.dap   user apps    │ ← drag & drop
 │ nvs · phy_init                │         │ /sd/bin/*.dap    CLI tools    │   here over
 │ factory : kernel      (1.5 MB)│         │ /sd/init.yaml    boot extras  │   USB-MSC
-│ sysbin  : LittleFS  →  /flash │         └──────────────────────────────┘
-│            /flash/bin/*.dap   │
-│            /flash/init.yaml   │
+│ sysbin  : LittleFS  →  / root │         └──────────────────────────────┘
+│            /bin/*.dap         │
+│            /init.yaml         │
+│ userdata: LittleFS  →  /data  │
 │ storage : FAT         (5.4 MB)│
 └───────────────────────────────┘
 

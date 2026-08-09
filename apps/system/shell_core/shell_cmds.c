@@ -499,17 +499,25 @@ static void var_set(const char *name, const char *val)
  * turns "too deep" into a graceful refusal, not a crash. */
 static void run_andor(char *seg);          /* defined later (same TU) */
 
+/* $(...) re-enters run_pipeline; per-depth scratch names keep a nested
+ * substitution from unlinking the enclosing pipeline's files mid-flight. */
+static int s_capture_depth = 0;
+
 static void cmd_capture(const char *cmd, char *out, int osz)
 {
     out[0] = '\0';
+    char sub[32];
+    snprintf(sub, sizeof(sub), "/tmp/.cmdsub%d", s_capture_depth);
     char line[280];
-    snprintf(line, sizeof(line), "%s > /tmp/.cmdsub", cmd);
+    snprintf(line, sizeof(line), "%s > %s", cmd, sub);
+    s_capture_depth++;
     run_andor(line);
-    int fd = open("/tmp/.cmdsub", O_RDONLY);
+    s_capture_depth--;
+    int fd = open(sub, O_RDONLY);
     if (fd < 0) return;
     int n = (int)read(fd, out, osz - 1);
     close(fd);
-    unlink("/tmp/.cmdsub");
+    unlink(sub);
     if (n < 0) n = 0;
     out[n] = '\0';
     while (n > 0 && (out[n - 1] == '\n' || out[n - 1] == '\r')) out[--n] = '\0';
@@ -973,7 +981,9 @@ static void run_pipeline(char *stmt)
         p++;
     }
 
-    const char *scratch_a = "/tmp/.pipe0", *scratch_b = "/tmp/.pipe1";
+    char scratch_a[32], scratch_b[32];
+    snprintf(scratch_a, sizeof(scratch_a), "/tmp/.pipe0_%d", s_capture_depth);
+    snprintf(scratch_b, sizeof(scratch_b), "/tmp/.pipe1_%d", s_capture_depth);
     char in_file[64] = "";
     int  status = 0;
 
@@ -1005,8 +1015,8 @@ static void run_pipeline(char *stmt)
         else in_file[0] = '\0';
     }
 
-    unlink("/tmp/.pipe0");
-    unlink("/tmp/.pipe1");
+    unlink(scratch_a);
+    unlink(scratch_b);
     s_status = status;
 }
 

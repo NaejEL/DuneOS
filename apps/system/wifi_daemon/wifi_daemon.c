@@ -11,11 +11,11 @@
  *   STATUS        refresh /tmp/state/wifi and /tmp/net_status immediately
  *
  * Known networks: /data/wifi/known.yaml (reflash-proof; falls back to the
- * board-provisioned /flash/etc/wifi/known.yaml seed when /data has none) —
+ * board-provisioned /etc/wifi/known.yaml seed when /data has none) —
  *   networks:
  *     - ssid: MyNet
  *       psk: secret123
- * Legacy /flash/etc/wifi_daemon/config.yaml (ssid:/password:) is merged in
+ * Legacy /etc/wifi_daemon/config.yaml (ssid:/password:) is merged in
  * as one more known network to ease migration.
  *
  * Published state:
@@ -39,7 +39,7 @@
 #include "duneos/dlog.h"
 
 #define KNOWN_YAML      "/data/wifi/known.yaml"
-#define KNOWN_YAML_SEED "/flash/etc/wifi/known.yaml"
+#define KNOWN_YAML_SEED "/etc/wifi/known.yaml"
 #define NET_STATUS     "/tmp/net_status"
 #define WIFI_SCAN_PATH "/tmp/state/wifi_scan"
 

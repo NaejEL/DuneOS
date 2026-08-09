@@ -31,7 +31,7 @@ extern int usleep(unsigned int usec);
 #define USAGE "usage: iw scan | status | join <ssid> [psk] | disconnect | reconnect"
 
 #define KNOWN_YAML      "/data/wifi/known.yaml"
-#define KNOWN_YAML_SEED "/flash/etc/wifi/known.yaml"   /* board-provisioned */
+#define KNOWN_YAML_SEED "/etc/wifi/known.yaml"   /* board-provisioned */
 #define NET_STATUS     "/tmp/net_status"
 #define WIFI_SCAN_PATH "/tmp/state/wifi_scan"
 
@@ -52,7 +52,7 @@ static void outf(const char *fmt, ...)
 static int send_cmd(const char *cmd)
 {
     if (duneos_send("wifi_daemon", cmd, strlen(cmd) + 1) < 0) {
-        out("iw: wifi_daemon not running (try: run /flash/bin/wifi_daemon.dap)\n");
+        out("iw: wifi_daemon not running (try: run /bin/wifi_daemon.dap)\n");
         return -1;
     }
     return 0;
@@ -238,8 +238,8 @@ static int update_known(const char *ssid, const char *psk)
     if (fd < 0) {
         /* Old partition table without /data — flash fallback (not
          * reflash-proof, but saving must never silently fail). */
-        mkdir("/flash/etc", 0755);
-        mkdir("/flash/etc/wifi", 0755);
+        mkdir("/etc", 0755);
+        mkdir("/etc/wifi", 0755);
         fd = open(KNOWN_YAML_SEED, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     }
     if (fd < 0) return -errno;
