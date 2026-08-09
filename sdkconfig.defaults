@@ -73,3 +73,10 @@ CONFIG_LWIP_TCP_SND_BUF_DEFAULT=2880
 # longer needs a big contiguous block, so the arena can take its 64K. Halves down
 # to 16K if DRAM is tight at boot; skipped on PSRAM boards.
 CONFIG_DUNEOS_APP_ARENA_KB=64
+
+# Every VFS mount consumes one esp_vfs table entry, and lwIP registers its
+# socket fd-range LAZILY on first network use. With /flash /data /sd /tmp
+# /dev /dev/ttyUSB0 + console the default of 8 left lwIP no slot: the first
+# wifi init died in an ESP_ERROR_CHECK abort inside vfs_lwip.c. Headroom for
+# future mounts included.
+CONFIG_VFS_MAX_COUNT=12

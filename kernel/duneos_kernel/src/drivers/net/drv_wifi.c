@@ -22,6 +22,7 @@
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "esp_event.h"
+#include "esp_heap_caps.h"
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -84,12 +85,30 @@ static void on_ip_event(void *arg, esp_event_base_t base,
 /* Public API                                                          */
 /* ------------------------------------------------------------------ */
 
+/* WiFi+lwIP bring-up needs ~45 KiB of internal RAM, and the IDF calls
+ * below (esp_netif_create_default_wifi_sta in particular) ESP_ERROR_CHECK
+ * their allocations — an OOM there is an abort(), not an error return.
+ * A daemon poking WiFi during the boot-time launch crunch must get a
+ * clean -ENOMEM it can back off from, never take the system down. */
+#define WIFI_INIT_MIN_FREE_INTERNAL   (55 * 1024)
+#define WIFI_INIT_MIN_LARGEST_BLOCK   (16 * 1024)
+
 int duneos_wifi_init(void)
 {
     portENTER_CRITICAL(&s_mux);
     bool already = s_initialized;
     portEXIT_CRITICAL(&s_mux);
     if (already) return 0;
+
+    size_t free_int = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    size_t largest  = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (free_int < WIFI_INIT_MIN_FREE_INTERNAL ||
+        largest  < WIFI_INIT_MIN_LARGEST_BLOCK) {
+        klog_w(TAG, "wifi init deferred: internal RAM tight (%zu free, %zu largest)",
+               free_int, largest);
+        errno = ENOMEM;
+        return -1;
+    }
 
     /* NVS: WiFi calibration data is stored here. */
     esp_err_t err = nvs_flash_init();
@@ -111,7 +130,14 @@ int duneos_wifi_init(void)
         return -1;
     }
 
-    esp_netif_create_default_wifi_sta();
+    /* Static, not s_initialized: a failure later in this function leaves
+     * init incomplete, and the netif/handlers must not be created twice
+     * on the retry (duplicate default netif is itself an abort()). */
+    static bool s_netif_created = false;
+    if (!s_netif_created) {
+        esp_netif_create_default_wifi_sta();
+        s_netif_created = true;
+    }
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     err = esp_wifi_init(&cfg);
