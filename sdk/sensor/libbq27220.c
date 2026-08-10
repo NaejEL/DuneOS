@@ -44,21 +44,19 @@ static battery_handle_t *bq27220_op_open(void)
     if (!h) { close(bus); return NULL; }
     h->bus_fd = bus;
 
-    /* Latch the gauge address on the fd — all subsequent transfers use it. */
-    uint16_t addr = DUNEOS_BATTERY_GAUGE_ADDR;
-    ioctl(bus, I2C_SET_ADDR, &addr);
+    /* Latch the gauge address on the fd — used by read()/write(). */
+    ioctl(bus, I2C_SLAVE, (void *)(uintptr_t)DUNEOS_BATTERY_GAUGE_ADDR);
 
     return h;
 }
 
 static int read_reg16(int bus, uint8_t reg, uint16_t *out)
 {
-    i2c_rdwr_t xfer = {
-        .tx_buf = &reg,
-        .tx_len = 1,
-        .rx_buf = (uint8_t *)out,
-        .rx_len = 2,
+    struct i2c_msg msgs[2] = {
+        { .addr = DUNEOS_BATTERY_GAUGE_ADDR, .flags = 0,        .len = 1, .buf = &reg },
+        { .addr = DUNEOS_BATTERY_GAUGE_ADDR, .flags = I2C_M_RD, .len = 2, .buf = (uint8_t *)out },
     };
+    struct i2c_rdwr_ioctl_data xfer = { .msgs = msgs, .nmsgs = 2 };
     if (ioctl(bus, I2C_RDWR, &xfer) < 0) return -errno;
     /* BQ27220 sends data little-endian — no byte-swap needed on LE hosts. */
     return 0;

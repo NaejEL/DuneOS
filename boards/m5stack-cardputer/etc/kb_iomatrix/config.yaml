@@ -1,0 +1,14 @@
+# kb_iomatrix — per-modifier latch behaviour (ADR 027).
+# Edit + re-flash the sysbin to change how the CardPuter modifier keys stick.
+#
+#   momentary : hold to use, never latches (the bare modifier)
+#   toggle    : tap latches until the next tap — navigate/play without holding
+#   oneshot   : tap latches for the NEXT key only (sticky-keys), then clears
+#
+# Latched modifiers show in the status bar (FN / SFT / CTL / ALT, in green).
+# (The Opt key is always a plain momentary modifier and is not configurable.)
+
+fn:    toggle     # arrows/symbols sticky — the main win for nav & games
+shift: toggle     # caps-lock-like
+ctrl:  oneshot    # Ctrl+C without holding, then back to normal
+alt:   oneshot    # Alt+key without holding

@@ -1,8 +1,8 @@
 name: gfx_demo
 version: "0.1.0"
 required_abi_version: 1
+icon: gfx_demo
 permissions: 0
-stack_size: 8192
 # Phase 24.10 STREAM mode — no back-buffer, draws go directly to the
 # display. Only ~600 B of libgfx + libdisp state, so a small slot heap
 # is enough. heap_size > 0 keeps gfx_demo in spawned mode (so the shell

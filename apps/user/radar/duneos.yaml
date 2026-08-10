@@ -1,0 +1,15 @@
+name: radar
+version: "0.1.0"
+required_abi_version: 1
+icon: radar
+permissions: 354          # UART | FS_READ | FS_WRITE | INPUT
+# Spawned mode is mandatory: the UART reader runs in its own pthread (forbidden
+# in captured mode, ADR 016) and the scope canvas (~27 KiB) needs a private
+# heap. No full-screen back-buffer — the PPI wedge is composed in a partial
+# canvas and blitted (Phase 24.10 budget: no PSRAM on the CardPuter).
+heap_size: 40960
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/sensor/libld2450.c

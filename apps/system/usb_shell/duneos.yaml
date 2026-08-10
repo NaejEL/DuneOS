@@ -7,4 +7,11 @@ required_abi_version: 1
 # the shell's mask is NOT transitive.
 #   FS_READ (32) + FS_WRITE (64) = 96
 permissions: 96
-stack_size: 16384
+# stack_size OVERRIDE (dbt auto-sizes everything else): the shell runs captured
+# bin apps (ps, ls, cat, grep…) IN ITS OWN TASK (ADR 016) — plus the loader, plus
+# a pipeline's run_pipeline→run_stage chain, plus the tool's frames, plus the
+# VFS→sink→CDC write chain — all on THIS stack at once. `source` doubles that
+# (the `source` command's chain + each script command's own). 8 KB blew up on a
+# piped grep; 16 KB blew up on `source` of the self-test; 20 KB gives margin.
+# (Root fix is the backlog "captured-bin stack guard".)
+stack_size: 20480

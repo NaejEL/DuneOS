@@ -18,6 +18,7 @@ _VENV_DIR  = _TOOLS_DIR / ".dbt-venv"
 _DEP_MODULE = {
     "littlefs-python": "littlefs",
     "pyyaml": "yaml",
+    "Pillow": "PIL",
 }
 
 # All Python packages required by the dbt package itself.
@@ -27,6 +28,7 @@ _DEPS = [
     "rich",
     "pyyaml",
     "textual",
+    "Pillow",          # img convert + build-time PNG->.dr icons (ADR 023)
 ]
 
 

@@ -1,0 +1,14 @@
+name: files
+version: "0.1.0"
+required_abi_version: 1
+icon: files
+permissions: 288          # FS_READ | INPUT
+heap_size: 8192
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
+  - $SDK/ui/ui_pager.c
+  - $SDK/ui/ui_hexview.c
+  - $SDK/image/libimage.c

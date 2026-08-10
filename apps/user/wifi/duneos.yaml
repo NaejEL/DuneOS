@@ -1,0 +1,14 @@
+name: wifi
+version: "0.1.0"
+required_abi_version: 1
+icon: wifi
+permissions: 352          # FS_READ | FS_WRITE | INPUT
+# heap_size keeps the app in spawned mode: its own task, BSS in the app pool,
+# and it can loop on the daemon's status files without holding the shell task.
+heap_size: 8192
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
+  - $SDK/ui/ui_statusbar.c

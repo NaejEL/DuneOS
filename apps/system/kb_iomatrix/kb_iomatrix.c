@@ -30,9 +30,12 @@ void app_main(void) { duneos_exit(0); }
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/stat.h>           /* mkdir for /tmp/state */
 
 #include <duneos/gpio_ioctl.h>
 #include <duneos/input_ioctl.h>
+#include <duneos/ambient.h>     /* AMBIENT_MOD_* + /tmp/state/kbd */
+#include <duneos/dlog.h>
 
 extern int usleep(unsigned int useconds);
 
@@ -108,10 +111,106 @@ static const uint8_t s_keymap[4][14][LAYERS] = {
     /* col 13 */   {' ',  ' ',  0          } },
 };
 
-#define FN_ROW    2
-#define FN_COL    0
-#define SHIFT_ROW 2
-#define SHIFT_COL 1
+/* ----- configurable sticky modifiers (ADR 027, /flash/etc/kb_iomatrix) ----- */
+/* Each of Fn/Shift/Ctrl/Alt has a latch MODE from config.yaml:
+ *   momentary : hold to use, never latches (the bare modifier)
+ *   toggle    : a tap latches until the next tap (nav/gaming without holding Fn)
+ *   oneshot   : a tap latches for the NEXT key only (sticky-keys), then clears
+ * Fn/Shift select the keymap layer (2 / 1); Ctrl/Alt are held-modifier events
+ * apps consume (KEY_CTRL/KEY_ALT). Opt is left as a plain momentary modifier.
+ * The latched set is published to /tmp/state/kbd for the status bar. */
+
+extern int duneos_config_path(const char *app, char *out, size_t outsz);
+
+typedef enum { MOD_MOMENTARY, MOD_TOGGLE, MOD_ONESHOT } latch_mode_t;
+
+typedef struct {
+    const char  *name;     /* config key                                       */
+    uint8_t      row, col; /* matrix position                                  */
+    uint8_t      code;     /* KEY_* (held event for Ctrl/Alt; wake for Fn/Shift) */
+    uint8_t      abit;     /* AMBIENT_MOD_* for the status bar                 */
+    int8_t       layer;    /* keymap layer when active (Fn=2, Shift=1); -1=held */
+    latch_mode_t mode;     /* from config (default toggle)                     */
+    bool down, used, latch, sent;   /* runtime                                 */
+} modifier_t;
+
+static modifier_t s_mods[] = {
+    { "fn",    2, 0, KEY_FN,    AMBIENT_MOD_FN,     2, MOD_TOGGLE, 0,0,0,0 },
+    { "shift", 2, 1, KEY_SHIFT, AMBIENT_MOD_SHIFT,  1, MOD_TOGGLE, 0,0,0,0 },
+    { "ctrl",  3, 0, KEY_CTRL,  AMBIENT_MOD_CTRL,  -1, MOD_TOGGLE, 0,0,0,0 },
+    { "alt",   3, 2, KEY_ALT,   AMBIENT_MOD_ALT,   -1, MOD_TOGGLE, 0,0,0,0 },
+};
+#define NMODS (int)(sizeof(s_mods) / sizeof(s_mods[0]))
+
+static uint16_t s_pub_locks = 0xffff; /* last published (locks|oneshot<<8); forces 1st write */
+
+static bool is_mod_pos(int r, int c)
+{
+    for (int i = 0; i < NMODS; i++)
+        if (s_mods[i].row == r && s_mods[i].col == c) return true;
+    return false;
+}
+
+/* One modifier's latch state machine for this scan's physical level. A "tap" =
+ * press then release with no other key used during the hold. */
+static void mod_step(modifier_t *m, bool phys)
+{
+    if (phys && !m->down)      { m->down = true; m->used = false; }
+    else if (!phys && m->down) {
+        m->down = false;
+        if (m->mode != MOD_MOMENTARY && !m->used) m->latch = !m->latch;
+    }
+}
+
+static latch_mode_t parse_mode(const char *s)
+{
+    while (*s == ' ' || *s == '\t') s++;
+    if (strncmp(s, "moment",  6) == 0) return MOD_MOMENTARY;
+    if (strncmp(s, "oneshot", 7) == 0 || strncmp(s, "one-shot", 8) == 0) return MOD_ONESHOT;
+    return MOD_TOGGLE;
+}
+
+/* /flash/etc/kb_iomatrix/config.yaml — one "name: mode" line per modifier.
+ * Missing file or keys keep the table defaults. */
+static void read_config(void)
+{
+    char path[64];
+    if (duneos_config_path("kb_iomatrix", path, sizeof(path)) != 0) return;
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return;
+    /* Read the whole file: the comment header alone can exceed a small buffer,
+     * pushing the actual `name: mode` lines past a single short read. Loop so a
+     * partial read() can't truncate the config silently. */
+    char buf[1024];
+    int total = 0;
+    for (;;) {
+        int r = (int)read(fd, buf + total, sizeof(buf) - 1 - total);
+        if (r <= 0) break;
+        total += r;
+        if (total >= (int)sizeof(buf) - 1) break;
+    }
+    close(fd);
+    if (total <= 0) return;
+    buf[total] = '\0';
+
+    for (char *line = buf; line && *line; ) {
+        char *nl = strchr(line, '\n');
+        if (nl) *nl = '\0';
+        char *colon = strchr(line, ':');
+        if (colon) {
+            *colon = '\0';
+            char *name = line;  while (*name == ' ' || *name == '\t') name++;
+            char *end  = name + strlen(name);
+            while (end > name && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r'))
+                *--end = '\0';
+            if (*name && *name != '#')
+                for (int i = 0; i < NMODS; i++)
+                    if (strcmp(s_mods[i].name, name) == 0)
+                        s_mods[i].mode = parse_mode(colon + 1);
+        }
+        line = nl ? nl + 1 : 0;
+    }
+}
 
 static const int s_row_pins[3] = {
     DUNEOS_KB_ROW_A0_PIN,
@@ -157,14 +256,39 @@ static void inject(const input_event_t *ev)
     ioctl(input_fd, INPUT_INJECT_EVENT, (void *)ev);
 }
 
+/* Publish the latched modifiers to /tmp/state/kbd (ADR 027) for the status bar:
+ * `locks` = all latched, `oneshot` = those armed in one-shot mode (own colour).
+ * Only writes on change. */
+static void publish_locks(void)
+{
+    uint8_t locks = 0, oneshot = 0;
+    for (int i = 0; i < NMODS; i++)
+        if (s_mods[i].latch) {
+            locks |= s_mods[i].abit;
+            if (s_mods[i].mode == MOD_ONESHOT) oneshot |= s_mods[i].abit;
+        }
+    uint16_t packed = (uint16_t)locks | ((uint16_t)oneshot << 8);
+    if (packed == s_pub_locks) return;
+    s_pub_locks = packed;
+
+    mkdir(AMBIENT_STATE_DIR, 0755);   /* harmless if it already exists */
+    int fd = open(AMBIENT_KBD_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) return;
+    ambient_kbd_t k = { .locks = locks, .oneshot = oneshot };
+    write(fd, &k, sizeof(k));
+    close(fd);
+}
+
 /* ----- main loop --------------------------------------------------------- */
 
 void app_main(void)
 {
+    dlog_open("kb_iomatrix");
+
     gpio_fd  = open("/dev/gpiochip0", O_RDWR);
-    if (gpio_fd  < 0) duneos_exit(2);
+    if (gpio_fd  < 0) { DLOGE("cannot open /dev/gpiochip0"); duneos_exit(2); }
     input_fd = open(DUNEOS_INPUT_DEV, O_RDWR);
-    if (input_fd < 0) { close(gpio_fd); duneos_exit(3); }
+    if (input_fd < 0) { DLOGE("cannot open %s", DUNEOS_INPUT_DEV); close(gpio_fd); duneos_exit(3); }
 
     /* Configure row select lines as outputs (low by default). */
     for (int i = 0; i < 3; i++) {
@@ -177,6 +301,9 @@ void app_main(void)
         gpio_set_dir (s_col_pins[i], GPIO_DIR_INPUT);
         gpio_set_pull(s_col_pins[i], GPIO_PULL_UP);
     }
+
+    read_config();   /* per-modifier latch mode from /etc/kb_iomatrix */
+    DLOGI("ready (%d cols)", DUNEOS_KB_NUM_COLS);
 
     memset(s_prev_state, 0, sizeof(s_prev_state));
     bool cur[DUNEOS_KB_MATRIX_ROWS][DUNEOS_KB_MATRIX_COLS];
@@ -195,16 +322,66 @@ void app_main(void)
             }
         }
 
-        int layer = cur[FN_ROW][FN_COL]       ? 2 :
-                    cur[SHIFT_ROW][SHIFT_COL] ? 1 : 0;
+        /* --- modifiers: latch state, resolved layer, held events, wake --- */
+        bool edge[NMODS];
+        for (int i = 0; i < NMODS; i++) {
+            bool phys = cur[s_mods[i].row][s_mods[i].col];
+            edge[i] = (phys != s_mods[i].down);
+            mod_step(&s_mods[i], phys);
+        }
 
+        int layer = 0;
+        for (int i = 0; i < NMODS; i++) {
+            if (s_mods[i].layer < 0) continue;
+            bool active = cur[s_mods[i].row][s_mods[i].col] || s_mods[i].latch;
+            if (active && s_mods[i].layer > layer) layer = s_mods[i].layer;
+        }
+
+        /* Publish before the wake events so the foreground reads fresh state. */
+        publish_locks();
+
+        for (int i = 0; i < NMODS; i++) {
+            bool phys   = cur[s_mods[i].row][s_mods[i].col];
+            bool active = phys || s_mods[i].latch;
+            if (s_mods[i].layer < 0) {
+                /* Ctrl/Alt: held-modifier event apps consume (Ctrl+C…). The emit
+                 * also wakes the foreground app to repaint the indicator. */
+                if (active != s_mods[i].sent) {
+                    input_event_t ev = { .type = INPUT_EV_KEY, .code = s_mods[i].code,
+                                         .value = active ? INPUT_VAL_PRESS : INPUT_VAL_RELEASE };
+                    inject(&ev);
+                    s_mods[i].sent = active;
+                }
+            } else if (edge[i]) {
+                /* Fn/Shift change the LAYER of other keys — no event otherwise.
+                 * Emit the (app-ignored) code on a physical edge so the
+                 * foreground app wakes and repaints the indicator. */
+                input_event_t ev = { .type = INPUT_EV_KEY, .code = s_mods[i].code,
+                                     .value = phys ? INPUT_VAL_PRESS : INPUT_VAL_RELEASE };
+                inject(&ev);
+            }
+        }
+
+        /* --- ordinary keys at the resolved layer --- */
+        bool key_pressed = false;
         for (int r = 0; r < DUNEOS_KB_MATRIX_ROWS; r++) {
             for (int c = 0; c < DUNEOS_KB_MATRIX_COLS; c++) {
+                if (is_mod_pos(r, c)) continue;   /* configured modifiers handled above */
                 if (cur[r][c] == s_prev_state[r][c]) continue;
                 s_prev_state[r][c] = cur[r][c];
 
                 uint8_t code = s_keymap[r][c][layer];
+                /* No binding on the Fn/Shift layer → fall through to the base key,
+                 * so Enter / letters / space still work while a layer modifier is
+                 * active (e.g. Fn latched for arrows during a game). */
+                if (code == 0x00 && layer > 0) code = s_keymap[r][c][0];
                 if (code == 0x00) continue;
+
+                if (cur[r][c]) {   /* press → a held modifier was used, not tapped */
+                    key_pressed = true;
+                    for (int i = 0; i < NMODS; i++)
+                        if (s_mods[i].down) s_mods[i].used = true;
+                }
 
                 input_event_t ev = {
                     .time_ms = 0,   /* kernel side fills it from monotonic_us */
@@ -213,6 +390,30 @@ void app_main(void)
                     .value   = cur[r][c] ? INPUT_VAL_PRESS : INPUT_VAL_RELEASE,
                 };
                 inject(&ev);
+            }
+        }
+
+        /* --- one-shot: a tap-latched modifier clears after the next key --- */
+        if (key_pressed) {
+            bool changed = false;
+            for (int i = 0; i < NMODS; i++)
+                if (s_mods[i].mode == MOD_ONESHOT && s_mods[i].latch &&
+                    !cur[s_mods[i].row][s_mods[i].col]) {
+                    s_mods[i].latch = false;
+                    changed = true;
+                }
+            if (changed) {
+                publish_locks();
+                for (int i = 0; i < NMODS; i++) {
+                    if (s_mods[i].layer >= 0) continue;
+                    bool active = cur[s_mods[i].row][s_mods[i].col] || s_mods[i].latch;
+                    if (active != s_mods[i].sent) {
+                        input_event_t ev = { .type = INPUT_EV_KEY, .code = s_mods[i].code,
+                                             .value = active ? INPUT_VAL_PRESS : INPUT_VAL_RELEASE };
+                        inject(&ev);
+                        s_mods[i].sent = active;
+                    }
+                }
             }
         }
 

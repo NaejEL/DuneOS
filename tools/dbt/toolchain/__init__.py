@@ -46,7 +46,9 @@ def _read_board_yaml(board_name: str) -> dict:
         return {}
 
     if _HAVE_YAML:
-        with open(yaml_path) as f:
+        # Board YAMLs contain UTF-8 comments — don't depend on the Windows
+        # locale codepage (cp1252 rejects some UTF-8 continuation bytes).
+        with open(yaml_path, encoding="utf-8") as f:
             return _yaml.safe_load(f) or {}
 
     # Fallback without PyYAML: parse only the fields we need

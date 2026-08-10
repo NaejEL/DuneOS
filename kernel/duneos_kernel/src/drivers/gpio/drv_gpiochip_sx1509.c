@@ -81,13 +81,18 @@ static sx1509_slot_t *slot_from_fd(const duneos_devfd_t *fd)
 static int sx1509_write_reg(sx1509_slot_t *s, uint8_t reg, uint8_t val)
 {
     uint8_t buf[2] = { reg, val };
-    return i2c_bus_write_read(s->bus, s->i2c_addr, buf, 2, NULL, 0);
+    struct i2c_msg m = { .addr = s->i2c_addr, .flags = 0, .len = 2, .buf = buf };
+    return i2c_transfer(&m, 1) == 1 ? 0 : -1;
 }
 
 /* Read a single register (1-byte). */
 static int sx1509_read_reg(sx1509_slot_t *s, uint8_t reg, uint8_t *out)
 {
-    return i2c_bus_write_read(s->bus, s->i2c_addr, &reg, 1, out, 1);
+    struct i2c_msg m[2] = {
+        { .addr = s->i2c_addr, .flags = 0,        .len = 1, .buf = &reg },
+        { .addr = s->i2c_addr, .flags = I2C_M_RD, .len = 1, .buf = out  },
+    };
+    return i2c_transfer(m, 2) == 2 ? 0 : -1;
 }
 
 /* Push the 16-bit shadow `val` to a pair of registers (low_reg = pins 0..7,

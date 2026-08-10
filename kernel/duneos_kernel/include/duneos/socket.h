@@ -5,8 +5,12 @@
  * Apps compiled outside ESP-IDF do not have sys/socket.h or lwIP headers.
  * Include this header in place of any system socket headers.
  *
- * Layout matches ESP-IDF v5.x lwIP (Xtensa little-endian, LWIP_SOCKET_HAVE_SA_LEN=0):
- *   sa_family_t is u16_t — there is NO sin_len / sa_len field.
+ * Layout matches ESP-IDF v6.0.1 lwIP (Xtensa little-endian, LWIP_SOCKET_HAVE_SA_LEN=1):
+ *   sa_family_t is u8_t and every sockaddr begins with a u8_t length byte
+ *   (sin_len / sa_len / s2_len).  This puts sa_family at BYTE OFFSET 1.  Getting
+ *   this wrong makes bind()/connect() fail lwIP's IS_SOCK_ADDR_TYPE_VALID check
+ *   and return ERR_ARG → errno 5 (EIO), because lwIP reads the family one byte
+ *   past where a length-less struct would put it.
  *
  * Requires CONFIG_DUNEOS_DRV_WIFI=y — the kernel exports socket symbols only
  * when the WiFi driver is compiled in.  App manifest must include
@@ -111,7 +115,7 @@
 /* ------------------------------------------------------------------ */
 typedef uint32_t  in_addr_t;
 typedef uint16_t  in_port_t;
-typedef uint16_t  sa_family_t;  /* u16_t — LWIP_SOCKET_HAVE_SA_LEN=0 */
+typedef uint8_t   sa_family_t;  /* u8_t — LWIP_SOCKET_HAVE_SA_LEN=1 */
 typedef uint32_t  socklen_t;
 
 struct in_addr {
@@ -119,12 +123,16 @@ struct in_addr {
 };
 
 struct sockaddr {
+    uint8_t     sa_len;
     sa_family_t sa_family;
     char        sa_data[14];
 };
 
-/* Binary layout: family(2) + port(2) + addr(4) + zero(8) = 16 bytes */
+/* Binary layout: len(1) + family(1) + port(2) + addr(4) + zero(8) = 16 bytes.
+ * sa_len need not be set by the caller (lwIP validates via the addrlen arg),
+ * but the field MUST exist so sin_family lands at byte offset 1. */
 struct sockaddr_in {
+    uint8_t        sin_len;
     sa_family_t    sin_family;
     in_port_t      sin_port;
     struct in_addr sin_addr;
@@ -133,6 +141,7 @@ struct sockaddr_in {
 
 /* Large enough for any supported address family */
 struct sockaddr_storage {
+    uint8_t     s2_len;
     sa_family_t ss_family;
     char        ss_pad[26];
 };

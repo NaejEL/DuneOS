@@ -13,8 +13,8 @@
  *   2. duneos_supervisor_launch()  — load + start an app as a FreeRTOS task
  *   3. duneos_supervisor_wait_all() — block until all apps have exited
  *
- * duneos_exit() (in symbols.c) calls duneos_supervisor_app_exited() before
- * deleting the app task. The supervisor task then unloads the ELF sections.
+ * duneos_exit() calls duneos_supervisor_app_exited(), which suspends the app
+ * task; the supervisor deletes it, then unloads the ELF sections.
  *
  * App-to-app messaging is a simple per-app mailbox queue:
  *   duneos_send(dest, data, len) — non-blocking; drops if mailbox full
@@ -23,7 +23,11 @@
  * All functions are safe to call from any task context after init.
  */
 
-#define DUNEOS_MAX_RUNNING_APPS  4
+/* App slots are allocated dynamically (a grow-only pool) — the number of
+ * concurrent apps is limited only by RAM, not by a fixed count. This value is a
+ * soft hint used to size the exit queue/semaphore and the default `list_slots`
+ * buffer; it is NOT a hard cap on running apps. */
+#define DUNEOS_MAX_RUNNING_APPS  16
 #define DUNEOS_MAILBOX_DEPTH     8
 #define DUNEOS_MSG_DATA_MAX      64
 #define DUNEOS_PATH_MAX          128     /* max length for stored service paths */
@@ -71,6 +75,9 @@ typedef void (*duneos_get_data_pool_fn_t)(const duneos_app_t *app,
 /* ADR 016: callbacks for captured-app exit unwinding. */
 typedef bool      (*duneos_captured_active_fn_t)(void);
 typedef void      (*duneos_captured_longjmp_fn_t)(int code) __attribute__((noreturn));
+/* Exec-pool diagnostics (ADR 008): report the app exec pool's used/size so the
+ * kernel can surface it without including loader.h. */
+typedef void      (*duneos_exec_pool_stats_fn_t)(size_t *used, size_t *size);
 
 typedef struct {
     duneos_load_fn_t             load;
@@ -80,10 +87,24 @@ typedef struct {
     duneos_get_data_pool_fn_t    get_data_pool;
     duneos_captured_active_fn_t  captured_active;   /* may be NULL */
     duneos_captured_longjmp_fn_t captured_longjmp;  /* may be NULL */
+    duneos_exec_pool_stats_fn_t  exec_pool_stats;   /* may be NULL */
 } duneos_loader_ops_t;
 
 /* Called by duneos_loader_init() before any supervisor_launch() */
 void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops);
+
+/*
+ * App memory arena (ADR 008/025). The supervisor reserves one contiguous DRAM
+ * block at boot and serves every per-app backing allocation from it — data
+ * pool, task stack, per-app heap pool — so apps get contiguous memory isolated
+ * from the WiFi/system heap churn. The loader uses these for the app data pool;
+ * the supervisor uses them for stack and heap pool. Each falls back to the
+ * general internal heap when the arena is absent (PSRAM boards / disabled) or
+ * exhausted, so callers never need to special-case it.
+ */
+void *duneos_supervisor_arena_alloc(size_t size);
+void *duneos_supervisor_arena_aligned_alloc(size_t align, size_t size);
+void  duneos_supervisor_arena_free(void *ptr);
 
 /* Start the supervisor (call once from app_main before any launch) */
 esp_err_t duneos_supervisor_init(void);
@@ -97,6 +118,13 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
 
 /* Called by duneos_exit() from within an app task (and by the task wrapper) */
 void duneos_supervisor_app_exited(int code);
+
+/* Open-fd tracking — called by the open/close/dup/socket syscall wrappers
+ * (symbols.c + api.c). The supervisor closes any fd still tracked when the
+ * app's task ends, so a crashing app cannot exhaust the VFS/devfs fd pools.
+ * No-ops for fds 0-2 and for callers that are not app tasks. */
+void duneos_supervisor_track_fd(int fd);
+void duneos_supervisor_untrack_fd(int fd);
 
 /*
  * ADR 016 — true if the calling task is currently inside a captured-mode app
@@ -137,6 +165,35 @@ typedef struct {
 
 /* Fill out[] with up to count slot snapshots; returns number of entries filled. */
 int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+
+/*
+ * Per-app memory snapshot for a `ps`-style view: what each running app *reserves*
+ * vs what it *really uses*. stack_used is the peak (high-water) since the task
+ * started; heap_used is what's currently allocated in the app's per-app heap
+ * pool. The gap between reserved and used is wasted RAM to reclaim (right-size
+ * the manifest stack_size / heap_size).
+ */
+typedef struct {
+    char     name[DUNEOS_APP_NAME_MAX];
+    uint32_t data_size;     /* data pool (.data/.bss/.rodata)          */
+    uint32_t stack_size;    /* reserved task stack                      */
+    uint32_t stack_used;    /* peak stack use (reserved − high-water)   */
+    uint32_t heap_size;     /* reserved per-app heap pool (0 if none)   */
+    uint32_t heap_used;     /* currently allocated in the heap pool     */
+} duneos_proc_mem_t;
+
+/* Fill out[] with up to count per-app memory snapshots; returns entries filled. */
+int duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count);
+
+/*
+ * Navigation-stack handoff (ADR 031). The calling app registers child_path as
+ * its successor and then exits (duneos_exit): the supervisor frees the caller,
+ * launches child_path in its place, and relaunches the caller when the child
+ * exits. Lets a parent (launcher / shell) hand the device — and its RAM — to a
+ * child without staying resident. Returns 0, or -1 if not called from an app
+ * slot. The caller MUST exit shortly after for the handoff to take effect.
+ */
+int duneos_supervisor_chain(const char *child_path);
 
 /* Force-kill and relaunch the named slot regardless of its restart policy.
  * Returns 0 if found and kill queued, -1 if name not found or slot inactive. */

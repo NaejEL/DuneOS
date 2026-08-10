@@ -122,11 +122,25 @@ typedef struct {
     uint32_t                restart_count;
 } duneos_slot_info_t;
 
+/* Per-app memory snapshot — matches supervisor.h's duneos_proc_mem_t.       */
+typedef struct {
+    char     name[64];      /* DUNEOS_APP_NAME_MAX */
+    uint32_t data_size;     /* data pool (.data/.bss/.rodata)        */
+    uint32_t stack_size;    /* reserved task stack                   */
+    uint32_t stack_used;    /* peak stack use (reserved − high-water) */
+    uint32_t heap_size;     /* reserved per-app heap pool (0 if none) */
+    uint32_t heap_used;     /* currently allocated in the heap pool  */
+} duneos_proc_mem_t;
+
 int  duneos_supervisor_launch(const char *path);
 int  duneos_supervisor_running_count(void);
 void duneos_supervisor_wait_for_completion(int target_count);
 int  duneos_supervisor_list_slots(duneos_slot_info_t *out, int count);
+int  duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count);
 int  duneos_supervisor_restart_by_name(const char *name);
+/* Hand off to child_path and exit; the supervisor relaunches us when it exits
+ * (ADR 031). Call then duneos_exit(). Frees our RAM for the child. */
+int  duneos_supervisor_chain(const char *child_path);
 
 /* -------------------------------------------------------------------------
  * VFS queries
@@ -154,9 +168,11 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const void *app);
  * DuneOS standard: an app's configuration lives at
  *   /etc/<app_name>/config.yaml
  *
- * Apps are free to read from anywhere, but this convention lets users find
- * config in a predictable place (mirrors /etc on Linux) and lets `dbt
- * flashimg` provision per-board defaults from `boards/<board>/etc/`.
+ * The /etc tree is staged into the LittleFS sysbin, which mounts at the root
+ * "/" — so /etc resolves directly. Apps are free to read from anywhere, but
+ * this convention lets users find config in a predictable place (mirrors /etc
+ * on Linux) and lets `dbt flashimg` provision per-board defaults from
+ * `boards/<board>/etc/`.
  *
  * duneos_config_path() builds the canonical path string. It does NOT open
  * the file or check that it exists — call open() / stat() afterwards.

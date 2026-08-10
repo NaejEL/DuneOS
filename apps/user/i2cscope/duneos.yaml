@@ -1,0 +1,18 @@
+name: i2cscope
+version: "0.1.0"
+required_abi_version: 1
+permissions: 360          # I2C | FS_READ | FS_WRITE | INPUT
+heap_size: 4096
+icon: i2cscope
+opens: [".scn"]           # ADR 026 — load a scenario file
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
+  - $SDK/i2c/smbus.c
+  - $SDK/proto/i2c_decode.c
+# Runtime data pushed to the SD card on deploy (dbt creates the folder).
+# The scenario engine reads /sd/i2cscope/*.scn.
+data:
+  - { src: scenarios, dst: i2cscope }

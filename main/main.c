@@ -15,6 +15,7 @@
 #include "duneos/loader.h"
 #include "duneos/supervisor.h"
 #include "duneos/init.h"
+#include "duneos/meminfo.h"
 
 static const char *TAG = "duneos";
 
@@ -76,7 +77,7 @@ static int launch_autoboot(void)
     duneos_loader_scan(apps, DUNEOS_MAX_APPS, &count);
 
     if (count == 0) {
-        klog_w(TAG, "no apps found in /flash/bin, /sd/bin or /sd/apps");
+        klog_w(TAG, "no apps found in /bin, /sd/bin or /sd/apps");
         return 0;
     }
 
@@ -94,6 +95,13 @@ static int launch_autoboot(void)
 
 void app_main(void)
 {
+    /* Baseline before DuneOS does anything → IDF/FreeRTOS startup heap cost. */
+    duneos_meminfo_mark(0);
+
+    /* First thing: capture esp_rom_printf into the klog ring — panic/assert
+     * output is unreadable otherwise on boards with no UART0 header. */
+    klog_capture_rom_output();
+
 #ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     console_init();
 #endif
@@ -116,6 +124,10 @@ void app_main(void)
         kernel_idle();
         return;
     }
+
+    /* Baseline after kernel init, before any service → DuneOS kernel cost is
+     * (entry − kernel); everything after is running services (apps + WiFi). */
+    duneos_meminfo_mark(1);
 
     int launched = launch_from_init_yaml();
     if (launched < 0) {

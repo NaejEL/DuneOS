@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "esp_err.h"
 #include "duneos/abi.h"
+#include "duneos/shellpipe.h"   /* duneos_shell_sink_fn */
 
 /*
  * DuneOS ELF loader.
@@ -93,6 +94,19 @@ esp_err_t duneos_loader_run(duneos_app_t *app);
  */
 esp_err_t duneos_loader_run_captured(duneos_app_t *app,
                                       char **out_buf, size_t *out_len);
+
+/*
+ * Like duneos_loader_run_captured() but streams the app's stdout: every write
+ * the app makes is handed to `sink` as it happens, in the caller's task. No
+ * /tmp spool, no whole-output buffer — so output is unbounded by heap, which a
+ * captured `cat` of a large file needs. Same setjmp/exit semantics (ADR 016);
+ * read the exit code with duneos_loader_get_captured_exit_code() afterwards.
+ *
+ * `sink` runs while the app holds fd 1, and may re-enter the VFS (e.g. write to
+ * the console). Pass the shell's chunk writer + its context.
+ */
+esp_err_t duneos_loader_run_captured_streamed(duneos_app_t *app,
+                                              duneos_shell_sink_fn sink, void *ctx);
 
 /*
  * ADR 016 captured-mode handshake — called by the kernel's duneos_exit()

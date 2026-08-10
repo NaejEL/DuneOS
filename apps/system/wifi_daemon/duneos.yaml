@@ -1,5 +1,8 @@
 name: wifi_daemon
 version: "0.1.0"
 required_abi_version: 1
+# NET (16) + FS_READ (32) + FS_WRITE (64) — incl. dlog.
 permissions: 112
 stack_size: 8192
+sources:
+  - $SDK/log/dlog.c

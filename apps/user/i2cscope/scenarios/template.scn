@@ -1,0 +1,21 @@
+# i2cscope scenario template — copy to /sd/i2cscope/<name>.scn and edit.
+#
+# Header:
+#   name <free text shown in the title>
+#   addr 0xNN              7-bit device address
+#
+# Steps:  <type> <reg> <unit> <label...>
+#   byte   1-byte register read (0..255)
+#   word   2-byte little-endian (SMBus word)
+#   sword  2-byte little-endian, signed (e.g. current)
+#   hex    2-byte, shown as 0xXXXX (status/flags)
+#   temp   2-byte 0.1 K, shown as degrees C
+#   unit "-" = no unit
+#
+# Everything is read through the SDK libsmbus over /dev/i2c-0.
+name Template
+addr 0x48
+byte  0x00 -    Config
+word  0x00 raw  Sample
+temp  0x00 -    Probe
+hex   0x01 -    Status

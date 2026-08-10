@@ -49,3 +49,7 @@ void klog_write(char level, const char *tag, const char *fmt, ...)
 size_t klog_ring_read(size_t *abs_pos, char *buf, size_t max_len);
 size_t klog_ring_write_pos(void);
 size_t klog_ring_oldest(void);
+
+/* Route esp_rom_printf (panic/assert/abort output, normally lost on boards
+ * with no UART0 header) into the klog ring. Call once at kernel init. */
+void klog_capture_rom_output(void);

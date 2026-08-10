@@ -4,7 +4,7 @@ name: t-embed-default
 board: lilygo-t-embed-cc1101
 description: "T-Embed daily-driver — USB shell, battery daemon, side button"
 
-# Apps in /flash/bin/. T-Embed has 16 MB flash + 8 MB PSRAM, plenty of room.
+# Apps in /bin/. T-Embed has 16 MB flash + 8 MB PSRAM, plenty of room.
 apps_flash:
   - usb_shell
   - btn_gpio          # KEY_BTN side button via /dev/input/event0
@@ -13,9 +13,9 @@ apps_flash:
   - test_exit
 
 init_flash:
-  - { path: /flash/bin/usb_shell.dap,      restart: always }
-  - { path: /flash/bin/btn_gpio.dap,       restart: always }
-  - { path: /flash/bin/battery_daemon.dap, restart: always }
+  - { path: /bin/usb_shell.dap,      restart: always }
+  - { path: /bin/btn_gpio.dap,       restart: always }
+  - { path: /bin/battery_daemon.dap, restart: always }
 
 apps_sd:
   - g_shell

@@ -1144,7 +1144,7 @@ class ProfileEditorScreen(Screen):
         for n, _ in self._apps:
             staged, restart, after = self._state[n]["flash"]
             if staged and restart is not None:
-                entry = {"path": f"/flash/bin/{n}.dap", "restart": restart}
+                entry = {"path": f"/bin/{n}.dap", "restart": restart}
                 if after:
                     entry["after"] = after
                 init_flash.append(entry)

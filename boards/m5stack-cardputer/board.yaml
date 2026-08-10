@@ -19,6 +19,16 @@ board:
       rx_pin: 44
       default_baud: 115200
 
+    # UART1 — Grove HY2.0 port, repurposed as the HLK-LD2450 mmWave radar
+    # link (PO decision 2026-08-09, Q1/Q2 — specs/SPEC-radar-ld2450.md).
+    # Wiring (Grove pin → sensor): G2/GPIO2 = CardPuter TX → LD2450 RX,
+    # G1/GPIO1 = CardPuter RX ← LD2450 TX. Exposed as /dev/uart1, never a
+    # console candidate. 256000 8N1 is the LD2450 factory baud rate.
+    - id: 1
+      tx_pin: 2
+      rx_pin: 1
+      default_baud: 256000
+
   # Two SPI buses:
   #   id=2 (SPI2_HOST) — SD card, kernel-internal, not user-exposed (role: master)
   #   id=3 (SPI3_HOST) — dedicated to the ST7789 display, exposed as /dev/spi-1
@@ -45,16 +55,18 @@ board:
     spi_id: 2
     cd_pin: -1
 
-  # I2C0 — Grove HY2.0 4-pin connector. SDA=GPIO 2, SCL=GPIO 1 per the
-  # M5Stack CardPuter pinout. Nothing is wired on-board to this bus —
-  # it's for external sensors / displays / etc. plugged into the Grove
-  # port. Enabling the declaration here makes bspgen emit
-  # CONFIG_DUNEOS_DRV_I2C=y so apps like i2cscope can open /dev/i2c-0.
-  i2c:
-    - id: 0
-      sda_pin: 2
-      scl_pin: 1
-      freq_hz: 400000
+  # I2C0 (Grove HY2.0, SDA=GPIO2 / SCL=GPIO1) is DISABLED on this board:
+  # the Grove port is reassigned to UART1 for the HLK-LD2450 radar (PO
+  # decision 2026-08-09, Q1 — specs/SPEC-radar-ld2450.md). GPIO1/2 cannot
+  # serve both roles; while the radar is wired, /dev/i2c-0 does not exist
+  # and i2cscope reports a clean "no I2C bus" error instead of scanning.
+  # To get I2C back, remove the `uart: id 1` entry above, uncomment this
+  # block, and re-run bspgen.
+  # i2c:
+  #   - id: 0
+  #     sda_pin: 2
+  #     scl_pin: 1
+  #     freq_hz: 400000
 
   # Display: ST7789 240×135 served by userspace libst7789 over /dev/spi-1.
   # Pins below are the device-specific GPIOs (CS/DC/RST/BL); the SPI bus

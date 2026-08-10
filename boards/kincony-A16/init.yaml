@@ -1,5 +1,5 @@
-# DuneOS /flash/init.yaml for kincony-A16
+# DuneOS /init.yaml for kincony-A16
 # Headless board — UART console only, no display, no SD.
 services:
-  - path: /flash/bin/uart_shell.dap
+  - path: /bin/uart_shell.dap
     restart: always

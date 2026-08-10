@@ -1,13 +1,12 @@
 #include "duneos/dev_driver.h"
 #include "duneos/driver_init.h"
 #include "duneos/i2c_ioctl.h"
-#include "duneos/klog.h"
 #include "i2c_bus.h"
 
 #include <errno.h>
 #include <stdint.h>
 
-/* Per-fd state: current target address (7-bit). */
+/* Per-fd state: address set with I2C_SLAVE, used by read()/write(). */
 typedef struct {
     uint16_t addr;
 } i2c_priv_t;
@@ -18,21 +17,18 @@ static int i2c_ioctl_cb(duneos_devfd_t *fd, int cmd, void *arg)
 {
     i2c_priv_t *p = (i2c_priv_t *)fd->priv;
     switch (cmd) {
-    case I2C_SET_ADDR:
-        p->addr = *(uint16_t *)arg;
-        return 0;
-    case I2C_SET_SPEED:
-        /* accepted and silently ignored — bus speed is fixed at init time */
+    case I2C_SLAVE:
+        p->addr = (uint16_t)(uintptr_t)arg;     /* address passed by value, Linux-style */
         return 0;
     case I2C_RDWR: {
-        i2c_rdwr_t *xfr = arg;
-        if (i2c_bus_write_read(0, p->addr,
-                               xfr->tx_buf, xfr->tx_len,
-                               xfr->rx_buf, xfr->rx_len) != 0) {
-            errno = EIO; return -1;
-        }
+        struct i2c_rdwr_ioctl_data *d = arg;
+        if (!d || !d->msgs || d->nmsgs == 0) { errno = EINVAL; return -1; }
+        int n = i2c_transfer(d->msgs, (int)d->nmsgs);
+        if (n < (int)d->nmsgs) { errno = EIO; return -1; }
         return 0;
     }
+    case I2C_RESET:
+        return i2c_bus_reinit();
     default:
         errno = ENOTTY;
         return -1;
@@ -41,23 +37,29 @@ static int i2c_ioctl_cb(duneos_devfd_t *fd, int cmd, void *arg)
 
 static ssize_t i2c_write_cb(duneos_devfd_t *fd, const void *buf, size_t len)
 {
+    if (len == 0) return 0;                      /* POSIX no-op; probe via I2C_RDWR */
     i2c_priv_t *p = (i2c_priv_t *)fd->priv;
-    if (i2c_bus_write_read(0, p->addr,
-                           (const uint8_t *)buf, (uint16_t)len,
-                           NULL, 0) != 0) {
-        errno = EIO; return -1;
-    }
+    struct i2c_msg m = {
+        .addr  = p->addr,
+        .flags = 0,
+        .len   = (uint16_t)len,
+        .buf   = (uint8_t *)(uintptr_t)buf,
+    };
+    if (i2c_transfer(&m, 1) != 1) { errno = EIO; return -1; }
     return (ssize_t)len;
 }
 
 static ssize_t i2c_read_cb(duneos_devfd_t *fd, void *buf, size_t len)
 {
+    if (len == 0) return 0;
     i2c_priv_t *p = (i2c_priv_t *)fd->priv;
-    if (i2c_bus_write_read(0, p->addr,
-                           NULL, 0,
-                           (uint8_t *)buf, (uint16_t)len) != 0) {
-        errno = EIO; return -1;
-    }
+    struct i2c_msg m = {
+        .addr  = p->addr,
+        .flags = I2C_M_RD,
+        .len   = (uint16_t)len,
+        .buf   = (uint8_t *)buf,
+    };
+    if (i2c_transfer(&m, 1) != 1) { errno = EIO; return -1; }
     return (ssize_t)len;
 }
 

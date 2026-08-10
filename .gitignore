@@ -18,7 +18,13 @@ duneos_last_board.stamp
 __pycache__/
 .vscode/
 .devcontainer/
-.claude/
+
+# Software factory (agents, skill, project settings) is shared;
+# settings.local.json and everything else in .claude/ stays local
+.claude/*
+!.claude/agents/
+!.claude/skills/
+!.claude/settings.json
 *.swp
 *.swo
 *.o
@@ -47,3 +53,10 @@ partitions.csv
 # etc.) ARE committed. Apps that hold credentials list themselves below so
 # the real config stays local; only the .example template is committed.
 boards/*/etc/wifi_daemon/config.yaml
+boards/*/etc/wifi/known.yaml
+
+# Logic-analyzer captures dumped by i2cscope (sniffer) — test artifacts
+*.vcd
+
+# Software-factory CI run logs
+factory-logs/

@@ -86,19 +86,37 @@ static int api_write(int fd, const void *buf, size_t n)
     return (int)write(fd, buf, n);
 }
 
-/* open() is variadic — wrap with a concrete (path, flags, mode) signature  */
+/* open() is variadic — wrap with a concrete (path, flags, mode) signature.
+ * open/close/dup track fds per app slot so the supervisor can reclaim what
+ * a dying app left open. */
 static int api_open(const char *path, int flags, int mode)
 {
-    return open(path, flags, mode);
+    int fd = open(path, flags, mode);
+    if (fd >= 0) duneos_supervisor_track_fd(fd);
+    return fd;
+}
+
+static int api_close(int fd)
+{
+    duneos_supervisor_untrack_fd(fd);
+    return close(fd);
 }
 
 /* dup/dup2 cannot be taken by address (static inline in ESP-IDF newlib)   */
-static int api_dup(int fd)              { return fcntl(fd, F_DUPFD, 0); }
+static int api_dup(int fd)
+{
+    int nfd = fcntl(fd, F_DUPFD, 0);
+    if (nfd >= 0) duneos_supervisor_track_fd(nfd);
+    return nfd;
+}
 static int api_dup2(int fd, int newfd)
 {
     if (fd == newfd) return newfd;
+    duneos_supervisor_untrack_fd(newfd);
     close(newfd);
-    return fcntl(fd, F_DUPFD, newfd);
+    int nfd = fcntl(fd, F_DUPFD, newfd);
+    if (nfd >= 0) duneos_supervisor_track_fd(nfd);
+    return nfd;
 }
 
 /* dprintf absent from PicoLibc — bridge via vsnprintf + write             */
@@ -206,7 +224,7 @@ static const duneos_api_t s_api = {
 
     .fs = {
         .open     = api_open,
-        .close    = close,
+        .close    = api_close,
         .read     = (ssize_t (*)(int, void *, size_t))    api_read,
         .write    = (ssize_t (*)(int, const void *, size_t)) api_write,
         .lseek    = lseek,

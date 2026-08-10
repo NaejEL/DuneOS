@@ -34,6 +34,8 @@ static volatile int      s_tail = 0;
 static portMUX_TYPE      s_mux  = portMUX_INITIALIZER_UNLOCKED;
 static SemaphoreHandle_t s_data_sem;
 
+static const duneos_dev_driver_t s_drv_input;   /* fwd ref for select notify */
+
 void drv_input_push_event(const input_event_t *ev)
 {
     portENTER_CRITICAL(&s_mux);
@@ -47,6 +49,15 @@ void drv_input_push_event(const input_event_t *ev)
 
     if (was_empty)
         xSemaphoreGive(s_data_sem);
+
+    /* Injected from a userspace daemon task (kb_iomatrix) — wake any select(). */
+    duneos_dev_select_notify(&s_drv_input);
+}
+
+static bool input_readable(duneos_devfd_t *fd)
+{
+    (void)fd;
+    return s_head != s_tail;
 }
 
 /* ----- VFS callbacks ------------------------------------------------------ */
@@ -67,7 +78,15 @@ static ssize_t input_read(duneos_devfd_t *fd, void *buf, size_t len)
         out[count++] = s_ring[s_tail];
         s_tail = (s_tail + 1) % INPUT_RING_SIZE;
     }
+    bool more = (s_head != s_tail);
     portEXIT_CRITICAL(&s_mux);
+
+    /* push_event only gives the semaphore on an empty→non-empty transition.
+     * A reader that drains fewer events than are queued (e.g. one event per
+     * read(), the common case) would otherwise leave the rest stranded with
+     * the semaphore at 0 — a lost wakeup that hangs the next read until a new
+     * empty→non-empty edge. Re-signal so leftover events stay readable. */
+    if (more) xSemaphoreGive(s_data_sem);
 
     return (ssize_t)(count * sizeof(input_event_t));
 }
@@ -106,10 +125,11 @@ static int input_init(void)
 }
 
 static const duneos_dev_driver_t s_drv_input = {
-    .name  = "input/event0",
-    .init  = input_init,
-    .read  = input_read,
-    .ioctl = input_ioctl,
+    .name     = "input/event0",
+    .init     = input_init,
+    .read     = input_read,
+    .ioctl    = input_ioctl,
+    .readable = input_readable,
 };
 
 void drv_input_register(void)

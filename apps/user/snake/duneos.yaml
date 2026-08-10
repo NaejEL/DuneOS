@@ -1,0 +1,12 @@
+name: snake
+version: "0.1.0"
+required_abi_version: 1
+icon: snake
+permissions: 352          # INPUT | FS_READ | FS_WRITE
+heap_size: 8192
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
+  - $SDK/game/libgame.c

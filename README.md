@@ -258,6 +258,72 @@ DuneOS/
 
 No MMU. Isolation is convention + pointer validation at the syscall boundary (`check_user_ptr` / `check_app_writable_ptr`), not hardware-enforced.
 
+## Memory layout & side-loading
+
+### Where things live
+
+```text
+FLASH (8 MB on the CardPuter)              SD CARD (removable, optional)
+┌───────────────────────────────┐         ┌──────────────────────────────┐
+│ bootloader + partition table  │         │ /sd/apps/*.dap   user apps    │ ← drag & drop
+│ nvs · phy_init                │         │ /sd/bin/*.dap    CLI tools    │   here over
+│ factory : kernel      (1.5 MB)│         │ /sd/init.yaml    boot extras  │   USB-MSC
+│ sysbin  : LittleFS  →  / root │         └──────────────────────────────┘
+│            /bin/*.dap         │
+│            /init.yaml         │
+│ userdata: LittleFS  →  /data  │
+│ storage : FAT         (5.4 MB)│
+└───────────────────────────────┘
+
+INTERNAL DRAM (~320 KB on the CardPuter — no PSRAM)
+┌──────────────────────────────────────────────────────────┐
+│ ESP-IDF + FreeRTOS + DuneOS kernel (.data/.bss, heaps)    │
+├──────────────────────────────────────────────────────────┤
+│ App EXEC POOL — 64 KB, IRAM-aliased, SHARED by all apps   │ ← every loaded
+│   [ app A .text/.literal ][ app B .text ][ … ]            │   app's *code*
+├──────────────────────────────────────────────────────────┤
+│ Per running app  (the supervisor holds up to 4 slots):    │
+│   data_pool   .rodata + .data + .bss   (DRAM*, 1 alloc)   │ *PSRAM when the
+│   heap_pool   the manifest's heap_size                    │  board has it,
+│   stack       the manifest's stack_size                   │  else DRAM
+├──────────────────────────────────────────────────────────┤
+│ Kernel heap (malloc) · VFS buffers · 16 KB klog ring      │
+└──────────────────────────────────────────────────────────┘
+```
+
+Key point: app **code** is copied into one shared 64 KB IRAM pool (it does *not*
+run XIP from flash like a monolithic firmware), while app **data** gets a
+private `data_pool` per running instance. That 64 KB ceiling is why DuneOS apps
+stay small and why heavy libraries (e.g. LVGL) are linked into the kernel rather
+than into each `.dap`.
+
+### How side-loading works
+
+Apps ship as **ET_REL ELF objects** (`.dap`) — the same relocatable format
+Flipper Zero uses for `.fap`. There is no firmware rebuild to add one:
+
+1. **Drop it on the device.** USB-MSC exposes the SD card as a USB mass-storage
+   drive, so you drag `.dap` files into `/sd/apps/` from your PC. Unplug — the
+   files are just there.
+2. **Pick it.** The graphical launcher scans `/sd/apps` (reading each `.dap`'s
+   embedded manifest), or a shell runs it by name.
+3. **The loader brings it up at runtime** (`kernel/duneos_loader`):
+   - parse the ELF; copy `.text`/`.literal` into the shared exec pool, and
+     `.rodata`/`.data`/`.bss` into a fresh `data_pool`;
+   - apply the ELF relocations (Xtensa `R_XTENSA_*`);
+   - resolve the app's undefined symbols against the kernel's exported symbol
+     table — POSIX (`open`, `read`, `ioctl`, …) plus the `duneos_api_t` ABI —
+     denying any symbol whose permission bit isn't in the manifest;
+   - start `app_main()` in a fresh FreeRTOS task.
+4. **On `duneos_exit()`** the supervisor unloads: data_pool, heap_pool and stack
+   are freed and the exec-pool region is reclaimed for the next app.
+
+The manifest is a JSON blob in the `.duneos_manifest` ELF section (name,
+`stack_size`, `heap_size`, `permissions`, `capabilities`, `arch`). The loader
+refuses a `.dap` built for a different ISA, or one whose `required_abi_version`
+is newer than the running kernel — so a wrong-board binary fails cleanly instead
+of crashing.
+
 ## References
 
 - [ROADMAP_v2.md](ROADMAP_v2.md) — phase-by-phase plan and current TODO list

@@ -28,6 +28,16 @@ config DUNEOS_DRV_GPIO
         Enable /dev/gpiochip0 for native ESP32 GPIO access via ioctl().
         Uses esp_driver_gpio (gpio_config, gpio_get/set_level, gpio_set_pull_mode).
 
+config DUNEOS_DRV_LOGIC
+    bool "Logic-capture device (/dev/logic0)"
+    default n
+    help
+        Enable /dev/logic0 for synchronous multi-line logic capture (ADR 020).
+        Samples GPIOs at a fixed cadence into transition records — the reliable
+        way to sniff a serial bus (I2C, SPI, bit-bang), unlike per-edge GPIO
+        interrupts which can't keep pace at clock rates. Polled backend in
+        arch/<arch>/hal/hal_logic.c.
+
 config DUNEOS_DRV_I2C
     bool "I2C master bus (/dev/i2c-0)"
     default n
@@ -187,5 +197,34 @@ config DUNEOS_DRV_USB_CDC
         USB virtual serial port. Frees the physical UART for app use.
         The shell can use /dev/ttyUSB0 instead of /dev/uart0 for its console.
         NOTE: same USB-JTAG conflict as DUNEOS_DRV_USB_MSC applies.
+
+endmenu
+
+menu "DuneOS kernel memory"
+
+config DUNEOS_APP_ARENA_KB
+    int "App memory arena size (KiB)"
+    default 96
+    range 0 256
+    help
+        Size of the contiguous DRAM arena the supervisor reserves at boot for
+        ALL per-app backing allocations: data pool (.data/.bss/.rodata), task
+        stack, and per-app heap pool. Reserving it early — before WiFi/lwIP
+        start churning the general heap — and serving every app allocation from
+        a dedicated multi_heap isolates apps from system fragmentation, so the
+        foreground app always finds the contiguous blocks it needs even though
+        total free RAM looks fragmented (ADR 008/025). The companion to the
+        loader exec pool, which already does this for app .text.
+
+        Size it for the peak concurrent app set (boot daemons + one foreground
+        app once the navigation-stack handoff lands; daemons + launcher + one
+        game until then). On a no-PSRAM board this competes with the exec pool
+        and the WiFi/system heap, so do not over-reserve. The supervisor halves
+        down to 16 KiB if DRAM is tight at boot, and apps fall back to the
+        general heap if the arena can't be reserved at all.
+
+        Set 0 to disable the arena (apps allocate from the general heap, the
+        pre-arena behaviour). On PSRAM boards the arena is skipped regardless —
+        app data goes to SPIRAM and fragmentation is a non-issue.
 
 endmenu

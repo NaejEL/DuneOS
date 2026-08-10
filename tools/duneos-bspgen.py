@@ -559,20 +559,23 @@ def generate_partitions(board: dict) -> str:
         f"factory,  app,  factory,  0x{factory_offset:x},   0x{_KERNEL_SIZE:x}",
     ]
 
+    # userdata: LittleFS mounted at /data by the kernel — app-writable state
+    # that must survive `dbt system flash` (which regenerates all of /flash).
+    # Replaces the historical `storage` FAT partition, which nothing mounted.
     if flash_size_mb >= _MIN_FLASH_MB_FOR_SYSBIN:
-        sysbin_offset  = factory_end
-        storage_offset = sysbin_offset + _SYSBIN_SIZE
-        storage_size   = flash_bytes - storage_offset
+        sysbin_offset   = factory_end
+        userdata_offset = sysbin_offset + _SYSBIN_SIZE
+        userdata_size   = flash_bytes - userdata_offset
         lines += [
             f"sysbin,   data, spiffs,   0x{sysbin_offset:x},  0x{_SYSBIN_SIZE:x}",
-            f"storage,  data, fat,      0x{storage_offset:x},  0x{storage_size:x}",
+            f"userdata, data, spiffs,   0x{userdata_offset:x},  0x{userdata_size:x}",
         ]
     else:
         # Flash too small for a dedicated sysbin partition
-        storage_offset = factory_end
-        storage_size   = flash_bytes - storage_offset
+        userdata_offset = factory_end
+        userdata_size   = flash_bytes - userdata_offset
         lines += [
-            f"storage,  data, fat,      0x{storage_offset:x},  0x{storage_size:x}",
+            f"userdata, data, spiffs,   0x{userdata_offset:x},  0x{userdata_size:x}",
         ]
 
     return "\n".join(lines) + "\n"
@@ -670,7 +673,8 @@ def generate_sdkconfig_board(board: dict) -> str:
     # ---- DuneOS drivers ----
     lines += ["# DuneOS kernel drivers", "CONFIG_DUNEOS_DRV_NULL=y",
               "CONFIG_DUNEOS_DRV_UART=y", "CONFIG_DUNEOS_DRV_KLOG=y",
-              "CONFIG_DUNEOS_DRV_GPIO=y", ""]
+              "CONFIG_DUNEOS_DRV_GPIO=y",
+              "CONFIG_DUNEOS_DRV_LOGIC=y", ""]
 
     if board.get("i2c"):
         lines += ["CONFIG_DUNEOS_DRV_I2C=y", ""]
@@ -808,7 +812,9 @@ def main() -> None:
     if not yaml_path.exists():
         die(f"File not found: {yaml_path}")
 
-    with open(yaml_path) as f:
+    # Board YAMLs contain UTF-8 comments (arrows, dashes); never rely on the
+    # Windows locale codepage (cp1252) which rejects some UTF-8 bytes.
+    with open(yaml_path, encoding="utf-8") as f:
         doc = yaml.safe_load(f)
 
     if "board" not in doc:

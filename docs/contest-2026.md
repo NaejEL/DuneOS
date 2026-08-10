@@ -46,6 +46,20 @@ Five apps + a launcher. Each shipped as a `.dap` with an icon, sideloadable via 
 
 **Total dev effort:** ~5-6 weeks. Fits in the 4-week window with the bonus app deferred if needed.
 
+## In-flight polish (2026-06)
+
+Sequenced after the games shipped (snake/tetris flicker-free via [ADR 028](adr/028-offscreen-canvas-partial-rendering.md)). Ordered by dependency — each lower item reuses the foundation laid by the ones above, and no item adds an always-on daemon (RAM is the binding constraint, [ADR 025](adr/025-app-concurrency-ram-limited.md)).
+
+| # | Work | Status | Notes |
+|---|---|---|---|
+| 0 | **Fix boot OOM** — frugal WiFi buffers (`sdkconfig.defaults`) | In progress 2026-06-07 | WiFi+lwIP stack grabs ~40-50 KiB internal RAM on association; with `wifi_daemon` at boot the launcher's `heap_caps_malloc` fails (`ESP_ERR_NO_MEM`). Tune static/dynamic RX/TX buffers + disable AMPDU. The *durable* fix is on-demand WiFi (item 4), not a boot daemon. |
+| 1 | **Ambient state plumbing** — `/tmp/state/*` convention + first producer (battery) | Planned | Foundation for the status bar and the modifier indicator. [ADR 027](adr/027-ambient-system-state.md). |
+| 2 | **`ui_statusbar_top` libui widget** — reads `/tmp/state/*`, drawn opt-in | Planned | launcher / g_shell / i2cscope draw it; games don't. Builds on item 1. |
+| 3 | **Modifier lock (Fn/Shift/Opt)** — toggle in `kb_iomatrix`, publishes `/tmp/state/kbd` | Planned | Indicator via item 2. Makes arrow-heavy apps (waves zoom/pan, nav) usable on the CardPuter keymap. |
+| 4 | **`wifi` config app** — scan/join, save known nets to `/flash/etc/wifi/known.yaml`, start WiFi on-demand, publish `/tmp/state/wifi` | Planned | Seals the OOM fix (no boot daemon) and feeds the status bar. Known networks in flash survive an SD swap. Companion to [ADR 026](adr/026-file-type-associations.md). |
+| 5 | **`edit` — minimalist nano-style text editor** | Planned | Fully independent (no deps on 1-4). Good standalone milestone. |
+| 6 | **`waves` partial rendering** — `gfx_canvas` for the plot region + document zoom keys (↑/↓) | Planned | Pan/zoom currently full-clear-redraw in STREAM (slow + flicker). Apply [ADR 028](adr/028-offscreen-canvas-partial-rendering.md). Polish, once the canvas is proven. |
+
 ## Manifest icon field
 
 Add to `duneos.yaml`:

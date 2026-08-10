@@ -1,30 +1,14 @@
 name: cardputer-default
 board: m5stack-cardputer
-description: "CardPuter daily-driver \u2014 USB shell, keyboard, basic utilities"
+description: "CardPuter daily-driver — USB shell, keyboard, basic utilities"
 apps_flash:
-- kb_iomatrix
-- usb_shell
-- wifi_daemon
-- hello_world
-- test_crash
-- test_exit
-- test_hardening
-init_flash:
-- path: /flash/bin/kb_iomatrix.dap
-  restart: always
-- path: /flash/bin/usb_shell.dap
-  restart: always
-- path: /flash/bin/wifi_daemon.dap
-  restart: always
-- path: /flash/bin/test_hardening.dap
-  restart: always
-apps_sd:
 - battery
 - cat
 - free
 - gpio
 - ifconfig
 - input
+- iw
 - klog
 - ls
 - mkdir
@@ -35,8 +19,25 @@ apps_sd:
 - rm
 - services
 - tail
+- kb_iomatrix
+- usb_shell
+- wifi_daemon
+- splash
+init_flash:
+- path: /bin/kb_iomatrix.dap
+  restart: always
+- path: /bin/usb_shell.dap
+  restart: always
+- path: /bin/wifi_daemon.dap
+  restart: always
+- path: /bin/splash.dap
+  restart: 'no'
+apps_sd:
 - g_shell
 - gfx_demo
 - tcp_client
-- uart_echo
-init_sd: []
+- wifi
+init_sd:
+- path: /sd/apps/g_shell.dap
+  restart: always
+  after: splash

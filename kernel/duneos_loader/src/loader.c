@@ -14,12 +14,14 @@
 #include <errno.h>
 
 #include "duneos/klog.h"
+#include "duneos/shellpipe.h"
 #include "esp_heap_caps.h"
 #include "esp_rom_sys.h"
 #include "cJSON.h"
 
 #include <setjmp.h>
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "freertos/semphr.h"
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
@@ -93,15 +95,21 @@ int duneos_loader_get_captured_exit_code(void)
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
-#define MAX_SECTIONS 512
+/* Upper bound on ELF section-header count — the loader rejects apps above it.
+ * A generous ceiling, not a per-app cost: section_bases is allocated to the
+ * real e_shnum (P2.1, audit §3). Section counts are modest now that apps merge
+ * sections (no -ffunction-sections, audit P0). */
+#define MAX_SECTIONS 1024
 
 struct duneos_app {
     duneos_app_manifest_t manifest;
 
-    /* Runtime base address of each section, indexed by section header index.
-     * NULL for sections not loaded into memory (no SHF_ALLOC, size 0, etc.) */
-    void *section_bases[MAX_SECTIONS];
-    int   section_count;
+    /* Runtime base of each section, indexed by section header index; NULL for
+     * sections not loaded (no SHF_ALLOC, size 0, …). Allocated to e_shnum at
+     * load (section_count entries) and freed on unload — ~4 B/section instead
+     * of a fixed 4 KiB per resident app (P2.1). */
+    void **section_bases;
+    int    section_count;
 
     /* Monolithic pool for all data sections (rodata + data + bss).
      * One contiguous allocation freed in a single heap_caps_free on unload. */
@@ -169,6 +177,12 @@ static size_t   s_exec_pool_used = 0;
 static uint8_t  *s_build_scratch   = NULL;
 static uintptr_t s_build_exec_base = 0;   /* IRAM base of the app's exec block */
 static size_t    s_build_exec_size = 0;
+/* True when s_build_scratch is a malloc'd staging buffer that must be installed
+ * into IRAM and freed (plain ESP32, inverted DIRAM). False when it points
+ * straight at the exec block's linear DRAM alias (ESP32-S2/S3): writes land in
+ * place, so there is nothing to copy or free — and load needs no contiguous DRAM
+ * the size of the app's code. */
+static bool      s_build_scratch_owned = false;
 
 /* Writable address for a load-time store.  Exec-pool addresses are redirected to
  * the DRAM scratch buffer (contiguous, no inversion); everything else (data pool)
@@ -339,17 +353,28 @@ static esp_err_t load_sections(FILE              *f,
         app->exec_block      = iram;
         app->exec_block_size = exec_total;
 
-        /* Stage exec sections in DRAM; build_install_exec() copies the relocated
-         * image into IRAM after relocation (freed in load_app before the app runs). */
         s_build_exec_base = (uintptr_t)iram;
         s_build_exec_size = exec_total;
-        s_build_scratch   = heap_caps_malloc(exec_total,
-                                             MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#ifdef CONFIG_IDF_TARGET_ESP32
+        /* Plain ESP32: DIRAM word order is inverted, so there is no linear DRAM
+         * view of the exec block — stage relocations in a contiguous scratch and
+         * install per-word via the inverting alias (build_install_exec). */
+        s_build_scratch       = heap_caps_malloc(exec_total,
+                                                 MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
         if (!s_build_scratch) {
             klog_e(TAG, "exec staging alloc failed (%zu B)", exec_total);
             return ESP_ERR_NO_MEM;
         }
-        klog_d(TAG, "exec block: %zu B IRAM=%p scratch=%p pool=%zu/%zu",
+        s_build_scratch_owned = true;
+#else
+        /* ESP32-S2/S3: the exec block's DRAM alias is linear (fixed offset, no
+         * word inversion), so relocations write straight through it — in place,
+         * no scratch malloc, no install copy. Load is then bounded by the exec
+         * pool, not by a contiguous DRAM block the size of the app's code. */
+        s_build_scratch       = (uint8_t *)iram_word_dram_alias((uintptr_t)iram);
+        s_build_scratch_owned = false;
+#endif
+        klog_d(TAG, "exec block: %zu B IRAM=%p write=%p pool=%zu/%zu",
                exec_total, iram, (void *)s_build_scratch,
                s_exec_pool_used, s_exec_pool_size);
     }
@@ -364,8 +389,11 @@ static esp_err_t load_sections(FILE              *f,
             app->data_pool = heap_caps_malloc(data_total,
                                                MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
 #else
-        app->data_pool = heap_caps_malloc(data_total,
-                                          MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+        /* No-PSRAM: serve the data pool from the supervisor's app arena, the
+         * contiguous DRAM block reserved at boot and isolated from WiFi/system
+         * heap fragmentation (ADR 008/025). Falls back to the general heap
+         * inside arena_alloc when the arena is absent/exhausted. */
+        app->data_pool = duneos_supervisor_arena_alloc(data_total);
 #endif
         if (!app->data_pool) {
             klog_e(TAG, "data pool alloc failed (%zu B)", data_total);
@@ -466,7 +494,8 @@ static void *symbol_address(const elf32_sym_t  *sym,
         }
         return ptr;
     }
-    if (sym->st_shndx < MAX_SECTIONS && app->section_bases[sym->st_shndx]) {
+    if ((int)sym->st_shndx < app->section_count &&
+        app->section_bases[sym->st_shndx]) {
         return (uint8_t *)app->section_bases[sym->st_shndx] + sym->st_value;
     }
     return NULL;
@@ -829,14 +858,31 @@ static esp_err_t apply_relocations(FILE               *f,
                 return ESP_ERR_INVALID_ARG;
             }
 
-            /* Guard against out-of-bounds r_offset — a corrupt or Xtensa-generated
-             * section-end sentinel reloc would write past the data_pool into
-             * adjacent heap metadata, silently corrupting FreeRTOS list structures.
+            /* Guard against an out-of-bounds store — a corrupt or Xtensa-generated
+             * section-end sentinel reloc would write past the section into the
+             * adjacent allocation (heap metadata / a FreeRTOS TCB), silently
+             * corrupting it. This MUST account for the store width: an
+             * `r_offset >= size` check alone let a 4-byte R_XTENSA_32 (or 3-byte
+             * SLOT0_OP) at r_offset in [size-w, size-1] overrun by 1-3 bytes — a
+             * layout-dependent corruption that -Os makes fatal. The width-aware
+             * check still allows a store that ends exactly at the section boundary.
              * Skip rather than abort: if the reloc was needed the app will fault
              * and be killed by the exception handler instead of crashing the kernel. */
-            if (rel->r_offset >= target_sec_size) {
-                klog_d(TAG, "reloc[%d] skip: r_offset=0x%lx >= sec_size=0x%lx (%s)",
-                       j, (unsigned long)rel->r_offset, (unsigned long)target_sec_size,
+            uint32_t rel_width;
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+            switch (rel_type) {
+            case R_XTENSA_32:
+            case R_XTENSA_DIFF32:   rel_width = 4; break;
+            case R_XTENSA_SLOT0_OP: rel_width = 3; break;
+            default:                rel_width = 0; break;  /* ASM_EXPAND etc.: no store */
+            }
+#else
+            rel_width = 4;   /* RISC-V relocs patch up to a 32-bit word */
+#endif
+            if (rel_width && (uint64_t)rel->r_offset + rel_width > target_sec_size) {
+                klog_d(TAG, "reloc[%d] skip: r_offset=0x%lx +%lu > sec_size=0x%lx (%s)",
+                       j, (unsigned long)rel->r_offset, (unsigned long)rel_width,
+                       (unsigned long)target_sec_size,
                        shdr_name(shstrtab, &shdrs[target_idx]));
                 continue;
             }
@@ -997,6 +1043,12 @@ static esp_err_t extract_manifest(FILE               *f,
  * Public API
  * ---------------------------------------------------------------------- */
 
+static void duneos_loader_exec_pool_stats(size_t *used, size_t *size)
+{
+    if (used) *used = s_exec_pool_used;
+    if (size) *size = s_exec_pool_size;
+}
+
 void duneos_loader_init(void)
 {
     if (!s_loader_lock) s_loader_lock = xSemaphoreCreateMutex();
@@ -1048,6 +1100,7 @@ void duneos_loader_init(void)
         /* ADR 016: captured-mode exit unwinding. */
         .captured_active  = duneos_loader_captured_active,
         .captured_longjmp = duneos_loader_captured_longjmp,
+        .exec_pool_stats  = duneos_loader_exec_pool_stats,
     };
     duneos_supervisor_register_loader(&ops);
 }
@@ -1135,9 +1188,13 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         break;
     }
 
-    /* 5. Allocate app descriptor */
+    /* 5. Allocate app descriptor + the section-base table sized to the real
+     * section count (P2.1: ~4 B/section instead of a fixed 4 KiB array). */
     app = calloc(1, sizeof(duneos_app_t));
     if (!app) { err = ESP_ERR_NO_MEM; goto out; }
+    app->section_count = hdr.e_shnum;
+    app->section_bases = calloc(hdr.e_shnum, sizeof(void *));
+    if (!app->section_bases) { err = ESP_ERR_NO_MEM; goto out; }
 
     /* 6. Manifest */
     err = extract_manifest(f, &hdr, shdrs, shstrtab, &app->manifest);
@@ -1180,18 +1237,20 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Install the relocated image (staged in DRAM scratch) into the IRAM exec
-     * block, then release the scratch buffer.  ISYNC makes the freshly written
-     * instructions visible to the fetch pipeline. */
-    if (app->exec_block_size > 0 && s_build_scratch)
-        build_install_exec((uintptr_t)app->exec_block,
-                            s_build_scratch, app->exec_block_size);
-    if (s_build_scratch) {
+    /* With a malloc'd scratch (plain ESP32), copy the relocated image into the
+     * IRAM exec block and free it. On S2/S3 the relocations already landed in the
+     * exec block via its DRAM alias — nothing to install or free. ISYNC makes the
+     * freshly written instructions visible to the fetch pipeline either way. */
+    if (s_build_scratch_owned) {
+        if (app->exec_block_size > 0 && s_build_scratch)
+            build_install_exec((uintptr_t)app->exec_block,
+                                s_build_scratch, app->exec_block_size);
         heap_caps_free(s_build_scratch);
-        s_build_scratch   = NULL;
-        s_build_exec_base = 0;
-        s_build_exec_size = 0;
     }
+    s_build_scratch       = NULL;
+    s_build_scratch_owned = false;
+    s_build_exec_base     = 0;
+    s_build_exec_size     = 0;
     asm volatile("isync" ::: "memory");
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
 
@@ -1257,13 +1316,14 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
 out:
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Release the transient exec-staging buffer if an error left it held. */
-    if (s_build_scratch) {
+    /* Release the transient exec-staging buffer if an error left it held (only
+     * the malloc'd scratch is owned; the S2/S3 DRAM-alias pointer is not heap). */
+    if (s_build_scratch_owned && s_build_scratch)
         heap_caps_free(s_build_scratch);
-        s_build_scratch   = NULL;
-        s_build_exec_base = 0;
-        s_build_exec_size = 0;
-    }
+    s_build_scratch       = NULL;
+    s_build_scratch_owned = false;
+    s_build_exec_base     = 0;
+    s_build_exec_size     = 0;
 #endif
     fclose(f);
     free(shdrs);
@@ -1320,9 +1380,9 @@ out:
     return err;
 }
 
-/* Search order: flash takes priority over SD, bin/ over apps/. */
+/* Search order: flash (root /bin) takes priority over SD, bin/ over apps/. */
 static const char *const s_scan_dirs[] = {
-    "/flash/bin",
+    "/bin",
     "/sd/bin",
     "/sd/apps",
     NULL,
@@ -1542,13 +1602,104 @@ esp_err_t duneos_loader_run_captured(duneos_app_t *app,
     return ESP_OK;
 }
 
+#define SHELLPIPE_DEV "/dev/shellpipe"
+
+/* Live free bytes on the running task's stack. A captured bin runs on the
+ * shell's stack via a plain call (ADR 016), so it must not dive past the stack
+ * end — that corrupts neighbouring memory before the canary fires (hard reboot).
+ * configUSE_TRACE_FACILITY gives pxStackBase; compare to the current SP. */
+static size_t captured_free_stack(void)
+{
+#if configUSE_TRACE_FACILITY
+    TaskStatus_t ts;
+    vTaskGetInfo(NULL, &ts, pdFALSE, eInvalid);
+    uintptr_t sp   = (uintptr_t)__builtin_frame_address(0);
+    uintptr_t base = (uintptr_t)ts.pxStackBase;
+    return (sp > base) ? (size_t)(sp - base) : 0;
+#else
+    return (size_t)-1;   /* can't measure → don't guard */
+#endif
+}
+
+/* Refuse a captured run when the deepest plausible tool + its VFS write chain
+ * wouldn't fit the remaining stack. A graceful error beats a reboot. */
+#define CAPTURED_MIN_STACK 4096
+
+esp_err_t duneos_loader_run_captured_streamed(duneos_app_t *app,
+                                              duneos_shell_sink_fn sink, void *ctx)
+{
+    if (!app || !app->entry) return ESP_ERR_INVALID_ARG;
+
+    if (!s_captured_lock) {
+        s_captured_lock = xSemaphoreCreateMutex();
+        if (!s_captured_lock) return ESP_ERR_NO_MEM;
+    }
+    if (xSemaphoreTake(s_captured_lock, 0) != pdTRUE) {
+        klog_w(TAG, "stream: refusing nested run");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    size_t freestk = captured_free_stack();
+    if (freestk < CAPTURED_MIN_STACK) {
+        klog_e(TAG, "captured: refusing — %u B stack free < %d (would overflow)",
+               (unsigned)freestk, CAPTURED_MIN_STACK);
+        xSemaphoreGive(s_captured_lock);
+        return ESP_ERR_NO_MEM;
+    }
+
+    duneos_shellpipe_set_sink(sink, ctx);
+
+    /* Route fd 1 to the sink device: close fd 1 to free the slot, then open
+     * /dev/shellpipe so it lands at the lowest free fd (1). The shell does not
+     * use fd 1 itself, so it stays bound to the device after the run. */
+    close(STDOUT_FILENO);
+    int capfd = open(SHELLPIPE_DEV, O_WRONLY);
+    if (capfd < 0) {
+        klog_e(TAG, "stream: open " SHELLPIPE_DEV " failed: errno %d", errno);
+        duneos_shellpipe_set_sink(NULL, NULL);
+        xSemaphoreGive(s_captured_lock);
+        return ESP_FAIL;
+    }
+    if (capfd != STDOUT_FILENO) {
+        close(capfd);
+        klog_e(TAG, "stream: expected fd 1, got %d", capfd);
+        duneos_shellpipe_set_sink(NULL, NULL);
+        xSemaphoreGive(s_captured_lock);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    /* Same setjmp checkpoint as the buffered path so duneos_exit() unwinds here
+     * (ADR 016) instead of vTaskDelete()-ing the shell task. */
+    jmp_buf env;
+    portENTER_CRITICAL(&s_captured_mux);
+    s_captured_jmp  = &env;
+    s_captured_code = 0;
+    portEXIT_CRITICAL(&s_captured_mux);
+
+    if (setjmp(env) == 0)
+        app->entry();
+
+    portENTER_CRITICAL(&s_captured_mux);
+    s_captured_jmp = NULL;
+    portEXIT_CRITICAL(&s_captured_mux);
+
+    close(STDOUT_FILENO);
+    duneos_shellpipe_set_sink(NULL, NULL);
+
+    klog_d(TAG, "stream: done (exit code %d)", s_captured_code);
+    xSemaphoreGive(s_captured_lock);
+    return ESP_OK;
+}
+
 /* Body of the unload; caller must hold s_loader_lock (it mutates the exec-pool
  * bump allocator).  Called directly from load()'s error path (lock already
  * held) and via the public wrapper below. */
 static void unload_locked(duneos_app_t *app)
 {
     if (!app) return;
-    heap_caps_free(app->data_pool);
+    /* Routes to the app arena when the pool came from it, else the general/SPIRAM
+     * heap — arena_free checks the address range. */
+    duneos_supervisor_arena_free(app->data_pool);
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
     /* LIFO reclaim: only possible when this app was the last to allocate. */
     if (app->exec_block_size > 0 && s_exec_pool_used == app->exec_pool_end) {
@@ -1556,6 +1707,7 @@ static void unload_locked(duneos_app_t *app)
         klog_d(TAG, "exec pool reclaimed: pool now %zu B used", s_exec_pool_used);
     }
 #endif
+    free(app->section_bases);
     free(app);
 }
 

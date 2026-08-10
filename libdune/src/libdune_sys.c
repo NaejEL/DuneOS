@@ -154,6 +154,8 @@ const duneos_app_manifest_t *duneos_loader_get_manifest(const void *app)
 int duneos_config_path(const char *app_name, char *out, size_t outsz)
 {
     if (!app_name || !out || outsz == 0) return -1;
+    /* The config tree is staged into the LittleFS sysbin, which mounts at the
+     * root "/" — so the physical path is /etc/<app>/config.yaml. */
     int n = snprintf(out, outsz, "/etc/%s/config.yaml", app_name);
     if (n < 0 || (size_t)n >= outsz) return -1;
     return 0;

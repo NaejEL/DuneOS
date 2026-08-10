@@ -196,7 +196,7 @@ def _storage_block(board: dict, lines: list[str]) -> None:
     has_sd = bool(board.get("sd_card"))
     lines.append("/* ----- storage ----- */")
     lines.append(f"#define DUNEOS_HAS_SD            {1 if has_sd else 0}")
-    lines.append('#define DUNEOS_FLASH_MOUNT       "/flash"')
+    lines.append('#define DUNEOS_FLASH_MOUNT       "/"')
     lines.append('#define DUNEOS_SD_MOUNT          "/sd"')
     lines.append("")
 
@@ -256,5 +256,7 @@ def write_to(build_dir: Path, board_cfg: dict, board_name: str,
              capabilities: list[str]) -> Path:
     build_dir.mkdir(parents=True, exist_ok=True)
     out = build_dir / "_board.h"
-    out.write_text(generate(board_cfg, board_name, capabilities))
+    # encoding="utf-8": the generated header carries non-ASCII glyphs (→) in
+    # comments; Windows' default cp1252 codec can't encode them.
+    out.write_text(generate(board_cfg, board_name, capabilities), encoding="utf-8")
     return out

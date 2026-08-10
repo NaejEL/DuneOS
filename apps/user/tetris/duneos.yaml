@@ -1,0 +1,14 @@
+name: tetris
+version: "0.1.0"
+required_abi_version: 1
+icon: tetris
+permissions: 352          # INPUT | FS_READ | FS_WRITE
+heap_size: 20480          # 14.4 KiB well canvas + contexts + slack; sized to fit
+                          # a post-handoff contiguous block so tetris gets an
+                          # ISOLATED pool (32768 just missed the ~31.7 KiB block)
+capabilities:
+  - display
+sources:
+  - $SDK/display/gfx.c
+  - $SDK/ui/ui.c
+  - $SDK/game/libgame.c

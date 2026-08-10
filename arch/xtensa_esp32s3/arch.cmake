@@ -35,6 +35,7 @@ list(APPEND DUNEOS_KERNEL_SRCS
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_adc.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_time.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_encoder.c"
+    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_logic.c"
 )
 
 # ESP-IDF component deps required by the HAL implementations above.
@@ -44,6 +45,7 @@ list(APPEND DUNEOS_KERNEL_SRCS
 list(APPEND DUNEOS_KERNEL_REQUIRES
     xtensa
     driver
+    esp_hw_support      # hal_logic.c: esp_cpu cycle counter + esp_clk_cpu_freq
     esp_driver_uart
     esp_driver_gpio
     esp_driver_i2c

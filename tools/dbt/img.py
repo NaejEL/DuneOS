@@ -83,8 +83,8 @@ def convert(input_path: Path, output_path: Path,
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(bytes(out))
 
-    print(f"  {input_path.name} → {output_path}")
-    print(f"  {w}×{h} RGB565, {_HEADER_SIZE + w * h * 2} bytes")
+    print(f"  {input_path.name} -> {output_path}")
+    print(f"  {w}x{h} RGB565, {_HEADER_SIZE + w * h * 2} bytes")
 
 
 def cmd_img_convert(args) -> None:

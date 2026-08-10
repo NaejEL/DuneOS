@@ -2,6 +2,5 @@ name: test_hardening
 version: "0.1.0"
 required_abi_version: 2
 permissions: 0
-stack_size: 8192
 heap_size: 4096
 wdt_timeout_ms: 3000

@@ -1,5 +1,6 @@
 #include "duneos/abi.h"
 #include "duneos/supervisor.h"
+#include "duneos/meminfo.h"
 #include "duneos/vfs.h"
 
 #include <string.h>
@@ -14,6 +15,7 @@
 #include <dirent.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/select.h>
 
 #include "duneos/task.h"
 #include "esp_system.h"
@@ -26,6 +28,20 @@
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
 #include "lwip/inet.h"
+#endif
+
+#include "duneos/net.h"   /* duneos_net_info_t + the eth/wifi info getters */
+#include <errno.h>
+
+/* When a transport's driver is absent, still provide its info getter as an
+ * -ENODEV stub so net tools (ifconfig) resolve their symbols and load on any
+ * board, then report that interface as down. */
+#ifndef CONFIG_DUNEOS_DRV_ETH
+int duneos_eth_get_info(duneos_net_info_t *info) { (void)info; return -ENODEV; }
+#endif
+#ifndef CONFIG_DUNEOS_DRV_WIFI
+int duneos_wifi_get_info(duneos_net_info_t *info);
+int duneos_wifi_get_info(duneos_net_info_t *info) { (void)info; return -ENODEV; }
 #endif
 
 /*
@@ -81,21 +97,76 @@ static int duneos_dprintf(int fd, const char *fmt, ...)
     return n;
 }
 
+/* open/close wrappers — track fds per app slot so the supervisor can close
+ * anything a dying app left open (backlog: "Device fd pool leak on app
+ * exit"). open() is variadic; mode is only read when O_CREAT asks for it,
+ * mirroring newlib. */
+static int duneos_open(const char *path, int flags, ...)
+{
+    int mode = 0;
+    if (flags & O_CREAT) {
+        va_list ap;
+        va_start(ap, flags);
+        mode = va_arg(ap, int);
+        va_end(ap);
+    }
+    int fd = open(path, flags, mode);
+    if (fd >= 0) duneos_supervisor_track_fd(fd);
+    return fd;
+}
+
+static int duneos_close(int fd)
+{
+    duneos_supervisor_untrack_fd(fd);
+    return close(fd);
+}
+
 /* dup/dup2 are static inline in ESP-IDF newlib — cannot take their address */
-static int duneos_dup(int fd)  { return fcntl(fd, F_DUPFD, 0); }
+static int duneos_dup(int fd)
+{
+    int nfd = fcntl(fd, F_DUPFD, 0);
+    if (nfd >= 0) duneos_supervisor_track_fd(nfd);
+    return nfd;
+}
 static int duneos_dup2(int fd, int newfd)
 {
     if (fd == newfd) return newfd;
+    duneos_supervisor_untrack_fd(newfd);
     close(newfd);
-    return fcntl(fd, F_DUPFD, newfd);
+    int nfd = fcntl(fd, F_DUPFD, newfd);
+    if (nfd >= 0) duneos_supervisor_track_fd(nfd);
+    return nfd;
 }
 
 /* loader.c (duneos_loader component) — forward-declared to avoid circular include */
 esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app);
 esp_err_t duneos_loader_run(duneos_app_t *app);
 esp_err_t duneos_loader_run_captured(duneos_app_t *app, char **out_buf, size_t *out_len);
+typedef void (*duneos_shell_sink_fn)(const char *data, int len, void *ctx);
+esp_err_t duneos_loader_run_captured_streamed(duneos_app_t *app,
+                                              duneos_shell_sink_fn sink, void *ctx);
+int       duneos_loader_get_captured_exit_code(void);
 void      duneos_loader_unload(duneos_app_t *app);
 const duneos_app_manifest_t *duneos_loader_get_manifest(const duneos_app_t *app);
+
+#ifdef CONFIG_DUNEOS_DRV_WIFI
+/* Socket creators return esp_vfs global fds — track them like open() so the
+ * supervisor reclaims sockets a dying app left behind. close() (routed
+ * through duneos_close) untracks them. */
+static int duneos_socket(int domain, int type, int protocol)
+{
+    int fd = lwip_socket(domain, type, protocol);
+    if (fd >= 0) duneos_supervisor_track_fd(fd);
+    return fd;
+}
+
+static int duneos_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
+{
+    int fd = lwip_accept(s, addr, addrlen);
+    if (fd >= 0) duneos_supervisor_track_fd(fd);
+    return fd;
+}
+#endif /* CONFIG_DUNEOS_DRV_WIFI */
 
 /* Phase 20/22 — syscall wrappers with pointer validation */
 static ssize_t duneos_read(int fd, void *buf, size_t len)
@@ -115,13 +186,16 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* ------------------------------------------------------------------ */
     /* POSIX — file I/O                                                    */
     /* ------------------------------------------------------------------ */
-    SYM("open",         open           ),
-    SYM("close",        close          ),
+    SYM("open",         duneos_open    ),
+    SYM("close",        duneos_close   ),
     SYM("read",         duneos_read    ),
     SYM("write",        duneos_write   ),
     SYM("lseek",        lseek     ),
     SYM("fstat",        fstat     ),
     SYM("stat",         stat      ),
+    /* esp_vfs select — works on /dev fds (gpiochip0, input) AND sockets.
+     * Not the lwIP-only lwip_select; no NET permission needed for device I/O. */
+    SYM("select",       select    ),
     SYM_P("unlink",     unlink,   DUNEOS_PERM_FS_WRITE),
     SYM_P("rename",     rename,   DUNEOS_PERM_FS_WRITE),
     SYM("dup",          duneos_dup ),
@@ -217,6 +291,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* ------------------------------------------------------------------ */
     SYM("esp_restart",           esp_restart               ),
     SYM("esp_get_free_heap_size", esp_get_free_heap_size    ),
+    SYM("duneos_meminfo",        duneos_meminfo            ),
 
     /* ------------------------------------------------------------------ */
     /* DuneOS — lifecycle & IPC                                           */
@@ -230,7 +305,10 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_recv",                         duneos_recv                           ),
     SYM("duneos_service_ready",                duneos_service_ready                  ),
     SYM("duneos_supervisor_list_slots",        duneos_supervisor_list_slots          ),
+    SYM("duneos_supervisor_list_mem",          duneos_supervisor_list_mem            ),
+    SYM("duneos_supervisor_chain",             duneos_supervisor_chain               ),
     SYM("duneos_vfs_list_mounts",              duneos_vfs_list_mounts                ),
+    SYM("duneos_fs_info",                      duneos_fs_info                        ),
     SYM("duneos_vfs_flash_available",          duneos_vfs_flash_available            ),
     SYM("duneos_vfs_sd_available",             duneos_vfs_sd_available               ),
     SYM("duneos_supervisor_restart_by_name",   duneos_supervisor_restart_by_name     ),
@@ -242,6 +320,8 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM("duneos_loader_load",         duneos_loader_load         ),
     SYM("duneos_loader_run",          duneos_loader_run          ),
     SYM("duneos_loader_run_captured", duneos_loader_run_captured ),
+    SYM("duneos_loader_run_captured_streamed", duneos_loader_run_captured_streamed),
+    SYM("duneos_loader_get_captured_exit_code", duneos_loader_get_captured_exit_code),
     SYM("duneos_loader_unload",       duneos_loader_unload       ),
     SYM("duneos_loader_get_manifest", duneos_loader_get_manifest ),
 
@@ -252,7 +332,7 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("duneos_wifi_init",            duneos_wifi_init,            DUNEOS_PERM_NET),
     SYM_P("duneos_wifi_sta_connect",     duneos_wifi_sta_connect,     DUNEOS_PERM_NET),
     SYM_P("duneos_wifi_sta_disconnect",  duneos_wifi_sta_disconnect,  DUNEOS_PERM_NET),
-    SYM_P("duneos_wifi_get_info",        duneos_wifi_get_info,        DUNEOS_PERM_NET),
+    SYM_P("duneos_wifi_scan",            duneos_wifi_scan,            DUNEOS_PERM_NET),
     SYM_P("duneos_netif_wait_ip",        duneos_netif_wait_ip,        DUNEOS_PERM_NET),
 
     /* ------------------------------------------------------------------ */
@@ -260,10 +340,10 @@ static const duneos_symbol_t s_symbol_table[] = {
     /* Apps reference these as "socket", "connect", etc.  The lwip_       */
     /* prefix is the real link-time name in the ESP-IDF binary.           */
     /* ------------------------------------------------------------------ */
-    SYM_P("socket",       lwip_socket,     DUNEOS_PERM_NET),
+    SYM_P("socket",       duneos_socket,   DUNEOS_PERM_NET),
     SYM_P("bind",         lwip_bind,       DUNEOS_PERM_NET),
     SYM_P("listen",       lwip_listen,     DUNEOS_PERM_NET),
-    SYM_P("accept",       lwip_accept,     DUNEOS_PERM_NET),
+    SYM_P("accept",       duneos_accept,   DUNEOS_PERM_NET),
     SYM_P("connect",      lwip_connect,    DUNEOS_PERM_NET),
     SYM_P("send",         lwip_send,       DUNEOS_PERM_NET),
     SYM_P("recv",         lwip_recv,       DUNEOS_PERM_NET),
@@ -278,13 +358,14 @@ static const duneos_symbol_t s_symbol_table[] = {
     SYM_P("inet_ntoa_r",  ip4addr_ntoa_r,  DUNEOS_PERM_NET),
     SYM_P("inet_ntop",    lwip_inet_ntop,  DUNEOS_PERM_NET),
     SYM_P("inet_pton",    lwip_inet_pton,  DUNEOS_PERM_NET),
-    SYM_P("select",       lwip_select,     DUNEOS_PERM_NET),
-    SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),
+    SYM_P("poll",         lwip_poll,       DUNEOS_PERM_NET),  /* sockets only — /dev uses select() */
 #endif /* CONFIG_DUNEOS_DRV_WIFI */
 
-#ifdef CONFIG_DUNEOS_DRV_ETH
+    /* Net info getters — always exported (real driver when present, else an
+     * -ENODEV stub above) so net tools resolve their symbols and load on any
+     * board, then report the interface down instead of failing to start. */
+    SYM_P("duneos_wifi_get_info",        duneos_wifi_get_info,        DUNEOS_PERM_NET),
     SYM_P("duneos_eth_get_info",         duneos_eth_get_info,         DUNEOS_PERM_NET),
-#endif
 
     /* Sentinel */
     { NULL, NULL, 0 },

@@ -1,6 +1,6 @@
-# DuneOS /flash/init.yaml for esp32s3-devkitc
+# DuneOS /init.yaml for esp32s3-devkitc
 # Services that start at boot, even without an SD card.
 # Add board-specific services here; put display/keyboard services in /sd/init.yaml.
 services:
-  # - path: /flash/bin/usb_shell.dap
+  # - path: /bin/usb_shell.dap
   #   restart: always

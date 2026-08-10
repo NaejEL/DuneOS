@@ -55,6 +55,13 @@ _KNOWN_FIELDS = {
     # or a path to an RGB565 asset (e.g. "/flash/icons/clock.rgb").
     # Embedded into the manifest blob verbatim; not interpreted by the kernel.
     "icon",
+    # Deploy-time data: list of { src, dst } — copy app-dir files/dirs onto the
+    # SD card (dst relative to the SD root), creating folders. Lets an app ship
+    # runtime data (e.g. i2cscope scenarios → /sd/i2cscope/). dbt-only.
+    "data",
+    # ADR 026 — file-type associations: list of extensions this app opens
+    # (e.g. [".vcd"]). A resolver matches a file to its handler app.
+    "opens",
 }
 
 _ICON_MAX_LEN = 64

@@ -109,7 +109,7 @@ board:
     b_pin: 5
 
   # Phase 24.7 safe-boot — hold KEY_BTN (side key, GPIO6) at power-on to load
-  # /flash/init.yaml.safe (usb_shell only) instead of the normal init.yaml
+  # /init.yaml.safe (usb_shell only) instead of the normal init.yaml
   # chain. GPIO6 is also wired to a regular button; the recovery check
   # happens before the btn_gpio daemon configures the pin, and is
   # non-destructive (input + pull-up, then daemon reconfigures identically).

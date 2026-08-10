@@ -3,8 +3,17 @@
  *
  * Lifecycle:
  *   supervisor_launch() → xTaskCreate(app_task_entry) → app->entry() runs
- *   app calls duneos_exit(code) → posts to s_exit_queue → vTaskDelete(NULL)
- *   supervisor_task receives → duneos_loader_unload(app) → marks slot free
+ *   app calls duneos_exit(code) → posts to s_exit_queue → vTaskSuspend(NULL)
+ *   supervisor_task receives → vTaskDelete(task) → unload → marks slot free
+ *
+ *   The exiting task suspends instead of self-deleting: a self-deleted task
+ *   parks on FreeRTOS's xTasksWaitingTermination list until the IDLE task
+ *   runs its housekeeping (unlink + portCLEAN_UP_TCB, which also releases
+ *   Xtensa coprocessor ownership). The supervisor outranks IDLE, so it could
+ *   relaunch into the same slot — overwriting slot->tcb while it is still
+ *   linked in the termination list — corrupting kernel lists and hard-
+ *   resetting without a panic. Deleting a suspended (non-running) task from
+ *   the supervisor is synchronous and complete, closing that window.
  *
  *   If app_main() returns without calling duneos_exit(), the task wrapper
  *   treats that as duneos_exit(0).
@@ -12,7 +21,7 @@
  * Messaging:
  *   Each running slot has a FreeRTOS queue (mailbox). duneos_send() looks up
  *   the target slot by name. duneos_recv() looks up the calling task's slot.
- *   Both are O(DUNEOS_MAX_RUNNING_APPS) — fine for a small embedded system.
+ *   Both are O(running apps) over the slot list — fine for an embedded system.
  *
  * Phase 20 — Memory hardening:
  *   - Per-app heap pool (multi_heap_register) for malloc isolation
@@ -24,6 +33,7 @@
 
 #include "duneos/supervisor.h"
 #include "duneos/klog.h"
+#include "duneos/meminfo.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -38,11 +48,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
 #include "xtensa_api.h"       /* xt_set_exception_handler / xt_exc_handler */
 #include "xtensa/corebits.h"  /* EXCCAUSE_*, XCHAL_EXCCAUSE_NUM */
 #include "esp_rom_sys.h"
+#include "esp_private/panic_internal.h"  /* g_panic_abort(_details) */
 #endif
 
 static const char *TAG = "duneos/supervisor";
@@ -54,9 +66,129 @@ void duneos_supervisor_register_loader(const duneos_loader_ops_t *ops)
     s_loader_ops = *ops;
 }
 
+/* ----- app memory arena (ADR 008/025) ----------------------------------- */
+
+/* A contiguous DRAM block reserved at boot for all per-app backing allocations:
+ * the data pool (.data/.bss/.rodata), the task stack, and the per-app heap pool.
+ * Keeping every per-app allocation here leaves the general heap clean for the
+ * kernel, WiFi, and the loader's transient ELF parsing (the section-header table
+ * is ~16 KiB for a multi-section app and must find a contiguous block). Reserved
+ * before WiFi/lwIP churn the general heap, served via a dedicated multi_heap, so
+ * the foreground app gets the contiguous blocks it needs (waves' 18 KiB data
+ * pool, tetris' canvas) regardless of fragmentation. With the handoff (ADR 031)
+ * only one foreground app is resident, so this stays small. Companion to the
+ * loader exec pool (app .text). Skipped on PSRAM boards. */
+#ifndef CONFIG_DUNEOS_APP_ARENA_KB
+#define CONFIG_DUNEOS_APP_ARENA_KB 96
+#endif
+
+static uint8_t            *s_app_arena      = NULL;
+static size_t              s_app_arena_size = 0;
+static multi_heap_handle_t s_app_arena_heap = NULL;
+
+static void app_arena_init(void)
+{
+#if !defined(CONFIG_SPIRAM) && CONFIG_DUNEOS_APP_ARENA_KB > 0
+    size_t want  = (size_t)CONFIG_DUNEOS_APP_ARENA_KB * 1024u;
+    size_t bytes = want;
+    while (bytes >= 16 * 1024u) {
+        s_app_arena = heap_caps_malloc(bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        if (s_app_arena) break;
+        bytes /= 2;
+    }
+    if (!s_app_arena) {
+        klog_w(TAG, "app arena alloc failed — apps use the general heap");
+        return;
+    }
+    s_app_arena_size = bytes;
+    s_app_arena_heap = multi_heap_register(s_app_arena, bytes);
+    if (bytes < want)
+        klog_w(TAG, "app arena reduced to %zu KB (DRAM tight at boot)", bytes / 1024u);
+    klog_i(TAG, "app arena: %zu KB @ %p", bytes / 1024u, (void *)s_app_arena);
+#endif
+}
+
+static inline bool ptr_in_arena(const void *p)
+{
+    uintptr_t base = (uintptr_t)s_app_arena;
+    uintptr_t x    = (uintptr_t)p;
+    return s_app_arena && x >= base && x < base + s_app_arena_size;
+}
+
+void *duneos_supervisor_arena_alloc(size_t size)
+{
+    if (s_app_arena_heap) {
+        void *p = multi_heap_malloc(s_app_arena_heap, size);
+        if (p) return p;   /* arena full → degrade to general heap, don't hard-fail */
+    }
+    return heap_caps_malloc(size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+}
+
+void *duneos_supervisor_arena_aligned_alloc(size_t align, size_t size)
+{
+    if (s_app_arena_heap) {
+        void *p = multi_heap_aligned_alloc(s_app_arena_heap, size, align);
+        if (p) return p;
+    }
+    return heap_caps_aligned_alloc(align, size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+}
+
+void duneos_supervisor_arena_free(void *ptr)
+{
+    if (!ptr) return;
+    if (ptr_in_arena(ptr)) multi_heap_free(s_app_arena_heap, ptr);
+    else heap_caps_free(ptr);
+}
+
+static uint32_t s_ram_entry_free  = 0;   /* INTERNAL free at app_main entry      */
+static uint32_t s_ram_kernel_free = 0;   /* INTERNAL free after kernel init      */
+
+void duneos_meminfo_mark(int phase)
+{
+    uint32_t f = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (phase == 0) s_ram_entry_free = f;
+    else            s_ram_kernel_free = f;
+}
+
+int duneos_meminfo(duneos_meminfo_t *out)
+{
+    if (!out) return -1;
+
+    multi_heap_info_t in;
+    heap_caps_get_info(&in, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    out->internal_total    = (uint32_t)(in.total_free_bytes + in.total_allocated_bytes);
+    out->internal_free     = (uint32_t)in.total_free_bytes;
+    out->internal_largest  = (uint32_t)in.largest_free_block;
+    out->internal_min_free = (uint32_t)in.minimum_free_bytes;
+
+    out->exec_free    = heap_caps_get_free_size(MALLOC_CAP_EXEC);
+    out->exec_largest = heap_caps_get_largest_free_block(MALLOC_CAP_EXEC);
+    out->dma_free     = heap_caps_get_free_size(MALLOC_CAP_DMA);
+    out->dma_largest  = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+
+    size_t used = 0, size = 0;
+    if (s_loader_ops.exec_pool_stats) s_loader_ops.exec_pool_stats(&used, &size);
+    out->exec_pool_used = (uint32_t)used;
+    out->exec_pool_size = (uint32_t)size;
+
+    out->arena_size = (uint32_t)s_app_arena_size;
+    if (s_app_arena_heap) {
+        multi_heap_info_t a;
+        multi_heap_get_info(s_app_arena_heap, &a);
+        out->arena_free    = (uint32_t)a.total_free_bytes;
+        out->arena_largest = (uint32_t)a.largest_free_block;
+    } else {
+        out->arena_free = out->arena_largest = 0;
+    }
+
+    out->internal_entry_free  = s_ram_entry_free;
+    out->internal_kernel_free = s_ram_kernel_free;
+    return 0;
+}
+
 /* ----- internal types ---------------------------------------------------- */
 
-typedef struct {
+typedef struct app_slot {
     duneos_app_t           *app;
     TaskHandle_t            task;
     QueueHandle_t           mailbox;
@@ -66,6 +198,12 @@ typedef struct {
     char                    restart_path[DUNEOS_PATH_MAX];
     uint32_t                restart_count;
     bool                    force_restart;
+
+    /* ADR 031 navigation-stack handoff: when set (via duneos_supervisor_chain),
+     * this slot's NEXT exit launches chain_child in its place instead of
+     * restarting; the supervisor then relaunches this slot's app when the child
+     * exits. Lets a parent (launcher/shell) free its RAM while a child runs. */
+    char                    chain_child[DUNEOS_PATH_MAX];
 
     /* Phase 24.7: circuit breaker — disable restart after too many crashes
      * in a short window. Prevents a bad init.yaml from looping forever and
@@ -82,9 +220,20 @@ typedef struct {
     size_t              heap_pool_size;
     multi_heap_handle_t heap_handle;     /* NULL when heap_size == 0 */
 
+    /* Open-fd tracking: bit N set = global VFS fd N was opened by this app
+     * and not yet closed. The supervisor closes leftovers on exit so a
+     * crashing app cannot exhaust the devfs/VFS fd pools (backlog: "Device
+     * fd pool leak on app exit"). fds 0-2 are never tracked. */
+    uint64_t            fd_mask;
+
     /* Phase 20: data pool bounds (from loader, for bounds checking) */
     uintptr_t           data_pool_base;
     size_t              data_pool_size;
+
+    /* Grow-only slot pool: slots are malloc'd on demand and never freed (stable
+     * addresses keep the lock-free, ISR-context slot lookups safe); an inactive
+     * slot is reused before a new one is allocated. The only ceiling is RAM. */
+    struct app_slot    *next;
 
     /* Phase 20: crash recovery — set by exception/overflow/WDT handlers */
     bool                crashed;    /* prevents double-post from WDT on already-killed slot */
@@ -111,7 +260,10 @@ typedef struct {
 
 /* ----- state ------------------------------------------------------------- */
 
-static app_slot_t        s_slots[DUNEOS_MAX_RUNNING_APPS];
+/* Head of the grow-only slot list (see app_slot.next). Slots are added at the
+ * head; the write is atomic so the lock-free ISR walkers below never observe a
+ * half-linked node. */
+static app_slot_t       *s_slot_head = NULL;
 static QueueHandle_t     s_exit_queue;
 static SemaphoreHandle_t s_all_done;
 /* Counting semaphore — signalled once per app exit handled by supervisor_task.
@@ -127,6 +279,13 @@ static TimerHandle_t     s_wdt_timer;
 /* Phase 25.4: exit observer callback (init.c registers this for `after:`). */
 static duneos_exit_observer_fn s_exit_observer = NULL;
 
+/* ADR 031 handoff watch (depth-1: launcher→game→launcher). When an app named
+ * s_chain_watch_name exits, the supervisor launches s_chain_launch_path (the
+ * parent that handed off). Single slot — nesting a chain inside a chain
+ * overwrites it, which is fine for the launcher/shell use case. */
+static char s_chain_watch_name[DUNEOS_APP_NAME_MAX];
+static char s_chain_launch_path[DUNEOS_PATH_MAX];
+
 /* Minimum pool size accepted by multi_heap_register (internal requirement) */
 #define MULTI_HEAP_MIN_SIZE  64u
 
@@ -140,38 +299,43 @@ static duneos_exit_observer_fn s_exit_observer = NULL;
 
 /* ----- slot helpers ------------------------------------------------------ */
 
-/* Lock-free scan: safe from ISR/exception context (O(4), read-only). */
+/* Lock-free scan: safe from ISR/exception context (read-only; nodes are never
+ * freed, so the walk can't dangle even if a launch links a new node). */
 static app_slot_t *slot_by_task_unsafe(TaskHandle_t t)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (s_slots[i].task == t) return &s_slots[i];
-    }
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (s->task == t) return s;
     return NULL;
 }
 
 static app_slot_t *slot_by_task(TaskHandle_t t)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (s_slots[i].active && s_slots[i].task == t) return &s_slots[i];
-    }
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (s->active && s->task == t) return s;
     return NULL;
 }
 
 static app_slot_t *slot_by_name(const char *name)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (s_slots[i].active && strcmp(s_slots[i].name, name) == 0)
-            return &s_slots[i];
-    }
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (s->active && strcmp(s->name, name) == 0) return s;
     return NULL;
 }
 
+/* Reuse an inactive slot, else grow the pool by one (RAM is the only limit).
+ * Called under s_lock. The new node is fully initialised before being linked at
+ * the head with a single atomic pointer write, so a concurrent lock-free walker
+ * sees either the old list or the new node complete — never a partial link. */
 static app_slot_t *slot_alloc(void)
 {
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        if (!s_slots[i].active) return &s_slots[i];
-    }
-    return NULL;
+    for (app_slot_t *s = s_slot_head; s; s = s->next)
+        if (!s->active) return s;
+
+    app_slot_t *s = calloc(1, sizeof(*s));
+    if (!s) return NULL;
+    s->next     = s_slot_head;
+    s_slot_head = s;
+    return s;
 }
 
 /* ----- forward declarations ---------------------------------------------- */
@@ -208,8 +372,8 @@ static void app_task_entry(void *arg)
     slot->crashed = false;
     s_loader_ops.run(slot->app);
     /* app_main returned without calling duneos_exit — treat as exit(0).
-     * duneos_supervisor_app_exited deletes the task before returning, so
-     * the exec pool is never accessed again after this call. */
+     * duneos_supervisor_app_exited suspends this task (the supervisor then
+     * deletes it), so the exec pool is never accessed again after this call. */
     duneos_supervisor_app_exited(0);
 }
 
@@ -275,7 +439,23 @@ static void app_exception_handler(XtExcFrame *frame)
         return;
     }
 
-    /* Kernel task or unrecognised — call the original handler (panic/reboot) */
+    /* Kernel task or unrecognised — report and panic. esp_system_abort() raises
+     * an ILLEGAL instruction, which is one of the causes we intercept, so a
+     * naive path recurses into this handler forever and buries the real fault.
+     * Guard against re-entry: print the original cause/PC/VADDR once, then on the
+     * nested abort just spin and let the watchdog reset us. */
+    static volatile bool s_kpanic = false;
+    if (s_kpanic) {
+        esp_rom_printf("[KERN] nested exc cause=%lu pc=0x%08lx — halting\n",
+                       (unsigned long)frame->exccause, (unsigned long)frame->pc);
+        while (1) { }
+    }
+    s_kpanic = true;
+    esp_rom_printf("[KERN] kernel exception cause=%lu pc=0x%08lx vaddr=0x%08lx\n",
+                   (unsigned long)frame->exccause,
+                   (unsigned long)frame->pc,
+                   (unsigned long)frame->excvaddr);
+
     int cause = (int)frame->exccause;
     if (cause >= 0 && cause < XCHAL_EXCCAUSE_NUM && s_orig_exc[cause])
         s_orig_exc[cause](frame);
@@ -350,7 +530,7 @@ static void slot_heap_free(app_slot_t *slot)
             if (!pool_ok)
                 klog_e(TAG, "slot_heap_free: per-app heap corrupted before free!");
         }
-        heap_caps_free(slot->heap_pool_buf);
+        duneos_supervisor_arena_free(slot->heap_pool_buf);
         slot->heap_pool_buf  = NULL;
         slot->heap_handle    = NULL;
         slot->heap_pool_size = 0;
@@ -371,8 +551,7 @@ static void wdt_timer_cb(TimerHandle_t timer)
 {
     (void)timer;
     TickType_t now = xTaskGetTickCount();
-    for (int i = 0; i < DUNEOS_MAX_RUNNING_APPS; i++) {
-        app_slot_t *s = &s_slots[i];
+    for (app_slot_t *s = s_slot_head; s; s = s->next) {
         if (!s->active || !s->wdt_timeout_ticks || s->crashed) continue;
         if ((now - s->wdt_last_kick_tick) >= s->wdt_timeout_ticks) {
             s->crashed = true;
@@ -414,14 +593,24 @@ static void supervisor_task(void *arg)
         char                    rpath[DUNEOS_PATH_MAX];
         strlcpy(name,  slot->name,         sizeof(name));
         strlcpy(rpath, slot->restart_path, sizeof(rpath));
+        uint32_t exc_cause = slot->exc_cause;
+        uint32_t exc_pc    = slot->exc_pc;
+        bool     crashed   = slot->crashed;
         int                     code    = msg.code;
         duneos_app_t           *app     = slot->app;
         QueueHandle_t           mailbox = slot->mailbox;
         duneos_restart_policy_t policy  = slot->restart_policy;
+        char                    chain_child[DUNEOS_PATH_MAX];
+        strlcpy(chain_child, slot->chain_child, sizeof(chain_child));
 
         bool should_restart = slot->force_restart ||
                               (policy == DUNEOS_RESTART_ALWAYS) ||
                               (policy == DUNEOS_RESTART_ON_FAILURE && code != 0);
+
+        /* ADR 031: a handoff exit is intentional — never restart the parent here
+         * (it is relaunched after the child exits), and don't count it against
+         * the circuit breaker. */
+        if (chain_child[0]) should_restart = false;
 
         /* Phase 24.7 circuit breaker: if this service is restarting,
          * count it against the recent-crashes window. Trip the breaker
@@ -452,11 +641,17 @@ static void supervisor_task(void *arg)
         }
 
         /* Kill the task before releasing the lock so we stop its execution
-         * before unloading its code. Only needed for forced exits (stack
-         * overflow, WDT, external restart) — in the normal path the app task
-         * already deleted itself via vTaskDelete(NULL). */
-        if (msg.forced) vTaskDelete(msg.task);
+         * before unloading its code. Normal exits arrive suspended (see
+         * duneos_supervisor_app_exited); forced exits (stack overflow, WDT,
+         * external restart) arrive ready-but-preempted. Either way the task
+         * is not running (everything is pinned to Core 0, and we are the
+         * ones running), so this delete is synchronous and complete: the
+         * TCB is unlinked and portCLEAN_UP_TCB has run by the time it
+         * returns — slot->tcb and slot->stack_mem are safe to reuse. */
+        vTaskDelete(msg.task);
 
+        uint64_t fd_mask = slot->fd_mask;
+        slot->fd_mask            = 0;
         slot->force_restart      = false;
         slot->app                = NULL;
         slot->mailbox            = NULL;
@@ -477,6 +672,36 @@ static void supervisor_task(void *arg)
                               : (breaker_tripping
                                     ? " — circuit breaker tripped, restart disabled"
                                     : ""));
+        /* The exception handler can only esp_rom_printf (invisible with
+         * console none) — persist the crash site in klog so `klog` shows
+         * it after the fact. PC in kernel IRAM resolves directly with
+         * addr2line against build/duneos.elf. When the "exception" is an
+         * intercepted abort()/assert (PC lands in panic_abort), the panic
+         * handler never ran, so its message never printed — recover it
+         * from g_panic_abort_details. */
+        if (crashed && code == DUNEOS_EXIT_CRASHED) {
+            klog_e(TAG, "'%s' CPU exception: cause=%lu PC=0x%08lx",
+                   name, (unsigned long)exc_cause, (unsigned long)exc_pc);
+            if (g_panic_abort) {
+                klog_e(TAG, "  abort: %s",
+                       g_panic_abort_details ? g_panic_abort_details : "(no details)");
+                g_panic_abort         = false;
+                g_panic_abort_details = NULL;
+            }
+        }
+
+        /* Close any fds the app left open BEFORE unloading, so device
+         * drivers release their hardware (SPI CS, GPIO claims, input
+         * queues) before a dependent/restarted service reopens them. A
+         * leaking app must not be able to exhaust the global VFS or devfs
+         * fd pools (EMFILE wedging /dev kernel-wide). */
+        if (fd_mask) {
+            int leaked = 0;
+            for (int fd = 3; fd < 64; fd++) {
+                if (fd_mask & (1ULL << fd)) { close(fd); leaked++; }
+            }
+            klog_w(TAG, "'%s' leaked %d fd(s) — reclaimed", name, leaked);
+        }
 
         /* Free the exiting app FIRST, so by the time the observer launches
          * dependent services (Phase 25.4 `after:`) the slot is fully free
@@ -484,33 +709,24 @@ static void supervisor_task(void *arg)
          * heap pool) have been released. Otherwise a dependent service can
          * race the unloading app for the same device.
          *
-         * The 1-tick yield (~10 ms) between the heap operations is empirically
-         * required: without it, the supervisor task at priority 3 monopolises
-         * Core 0 across unload + free + free + observer-launch-×N and the
-         * device hard-reboots. We never saw the panic message — symptom is
-         * a clean reset right after the exiting app's "exited (code N)" log.
-         * Hypothesis: FreeRTOS task-termination housekeeping (IDLE-driven for
-         * statically-allocated tasks) needs a scheduling opportunity before
-         * the next heap free or xTaskCreate. Backlog: "Kernel resilience
-         * under app-crash storms" — find the root cause and remove the yield. */
+         * (Historical note: this block used to interleave vTaskDelay(1)
+         * yields between the heap operations to dodge a hard reset during
+         * crash storms. Root cause was the self-deleting app task parking
+         * on xTasksWaitingTermination until IDLE ran — see the exit
+         * protocol comment at the top of this file. With the suspend+delete
+         * protocol the TCB is fully released before we get here, so the
+         * yields are gone.) */
         s_loader_ops.unload(app);
-        vTaskDelay(1);
         slot_heap_free(slot);           /* free per-app heap pool */
-        vTaskDelay(1);
-        /* Phase 22: free the static stack buffer after the task is deleted.
-         * vTaskDelete (called above for forced exits, or by the task itself)
-         * guarantees the TCB is no longer referenced by FreeRTOS before the
-         * supervisor processes the exit message. */
+        /* Phase 22: free the static stack buffer — the unconditional
+         * vTaskDelete above guarantees the TCB and stack are no longer
+         * referenced by FreeRTOS. */
         if (slot->stack_mem) {
-            heap_caps_free(slot->stack_mem);
+            duneos_supervisor_arena_free(slot->stack_mem);
             slot->stack_mem  = NULL;
             slot->stack_size = 0;
-            vTaskDelay(1);
         }
-        if (mailbox) {
-            vQueueDelete(mailbox);
-            vTaskDelay(1);
-        }
+        if (mailbox) vQueueDelete(mailbox);
 
         if (should_restart) {
             /* Relaunch inherits same policy so restarts persist */
@@ -521,6 +737,34 @@ static void supervisor_task(void *arg)
             xSemaphoreTake(s_lock, portMAX_DELAY);
             s_want_restart--;
             xSemaphoreGive(s_lock);
+        }
+
+        /* ADR 031 navigation-stack handoff: a parent that called
+         * duneos_supervisor_chain() has now exited (freeing its RAM) — launch
+         * the child in its place and arm the watch so the parent is relaunched
+         * when the child exits. Conversely, if the app that just exited is the
+         * watched child, relaunch the parent. Mutually exclusive per exit. */
+        if (chain_child[0]) {
+            const char *cb = strrchr(chain_child, '/');
+            cb = cb ? cb + 1 : chain_child;
+            strlcpy(s_chain_watch_name, cb, sizeof(s_chain_watch_name));
+            char *dot = strchr(s_chain_watch_name, '.');
+            if (dot) *dot = '\0';
+            strlcpy(s_chain_launch_path, rpath, sizeof(s_chain_launch_path));
+            klog_i(TAG, "handoff: '%s' exited → launching '%s'", name, chain_child);
+            if (duneos_supervisor_launch_policy(chain_child, DUNEOS_RESTART_NO) != ESP_OK) {
+                klog_e(TAG, "handoff: child launch failed — relaunching '%s'", name);
+                s_chain_watch_name[0]  = '\0';
+                s_chain_launch_path[0] = '\0';
+                duneos_supervisor_launch_policy(rpath, DUNEOS_RESTART_ALWAYS);
+            }
+        } else if (s_chain_watch_name[0] && strcmp(name, s_chain_watch_name) == 0) {
+            char parent[DUNEOS_PATH_MAX];
+            strlcpy(parent, s_chain_launch_path, sizeof(parent));
+            s_chain_watch_name[0]  = '\0';
+            s_chain_launch_path[0] = '\0';
+            klog_i(TAG, "handoff: '%s' exited → relaunching '%s'", name, parent);
+            duneos_supervisor_launch_policy(parent, DUNEOS_RESTART_ALWAYS);
         }
 
         /* Phase 25.4: notify registered observers (init.c uses this for the
@@ -538,11 +782,16 @@ static void supervisor_task(void *arg)
 
 esp_err_t duneos_supervisor_init(void)
 {
-    memset(s_slots, 0, sizeof(s_slots));
+    s_slot_head = NULL;   /* slots are allocated lazily on first launch */
     s_active_count = 0;
 
     s_lock = xSemaphoreCreateMutex();
     if (!s_lock) return ESP_ERR_NO_MEM;
+
+    /* Reserve the app arena NOW — before any app launches and before WiFi/lwIP
+     * start fragmenting the general heap. This is the whole point: grab a big
+     * contiguous block while one still exists. */
+    app_arena_init();
 
     s_exit_queue = xQueueCreate(DUNEOS_MAX_RUNNING_APPS, sizeof(exit_msg_t));
     if (!s_exit_queue) return ESP_ERR_NO_MEM;
@@ -591,7 +840,7 @@ esp_err_t duneos_supervisor_init(void)
     if (!s_wdt_timer) return ESP_ERR_NO_MEM;
     xTimerStart(s_wdt_timer, 0);
 
-    klog_d(TAG, "supervisor ready (max %d concurrent apps)", DUNEOS_MAX_RUNNING_APPS);
+    klog_d(TAG, "supervisor ready (app slots grow on demand, RAM-limited)");
     return ESP_OK;
 }
 
@@ -604,11 +853,33 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     app_slot_t *slot = slot_alloc();
     if (!slot) {
         xSemaphoreGive(s_lock);
-        klog_e(TAG, "no free app slots (max %d)", DUNEOS_MAX_RUNNING_APPS);
+        klog_e(TAG, "cannot allocate an app slot — out of memory");
         return ESP_ERR_NO_MEM;
     }
-    /* Pre-mark active to prevent a concurrent launch from grabbing this slot */
+    /* Pre-mark active to prevent a concurrent launch from grabbing this slot.
+     * Name the slot NOW from the path basename — the manifest name only lands
+     * after the (slower) load below, but the exit observer's `after:` matching
+     * and the `services` listing need a stable, non-blank name for the whole
+     * time the slot is active. Without this, an app that exits quickly (e.g.
+     * splash) can be observed with a blank name, so `after: splash` never
+     * matches and the dependent service is never released.
+     * Stash the previous occupant's name first so the circuit-breaker's
+     * same-app check below keeps comparing against the right thing. */
     slot->active = true;
+    slot->chain_child[0] = '\0';   /* fresh slot: no pending handoff */
+    slot->fd_mask = 0;             /* fresh slot: no tracked fds yet */
+    char prev_name[DUNEOS_APP_NAME_MAX];
+    strlcpy(prev_name, slot->name, sizeof(prev_name));
+    {
+        const char *base = strrchr(path, '/');
+        base = base ? base + 1 : path;
+        size_t n = 0;
+        while (base[n] && base[n] != '.' && n + 1 < sizeof(slot->name)) {
+            slot->name[n] = base[n];
+            n++;
+        }
+        slot->name[n] = '\0';
+    }
     xSemaphoreGive(s_lock);
 
     duneos_app_t *app = NULL;
@@ -624,8 +895,8 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
      * the same app, but RESET when the slot starts hosting a different app
      * (manual launch of something new). Compare against the existing
      * slot->name BEFORE we overwrite it. */
-    bool same_app_as_before = (slot->name[0] != '\0' &&
-                               strcmp(slot->name, m->name) == 0);
+    bool same_app_as_before = (prev_name[0] != '\0' &&
+                               strcmp(prev_name, m->name) == 0);
 
     strlcpy(slot->name, m->name, sizeof(slot->name));
     strlcpy(slot->restart_path, path, sizeof(slot->restart_path));
@@ -649,8 +920,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
     slot->heap_handle    = NULL;
     slot->heap_pool_size = 0;
     if (m->heap_size >= MULTI_HEAP_MIN_SIZE) {
-        slot->heap_pool_buf = heap_caps_malloc(m->heap_size,
-                                                MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        slot->heap_pool_buf = duneos_supervisor_arena_alloc(m->heap_size);
         if (slot->heap_pool_buf) {
             slot->heap_pool_size = m->heap_size;
             slot->heap_handle    = multi_heap_register(slot->heap_pool_buf,
@@ -681,8 +951,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
      * xTaskCreateStaticPinnedToCore requires an external stack buffer and a
      * StaticTask_t (TCB) that both outlive the task — both live in app_slot_t.
      * Aligning to 16 bytes satisfies Xtensa's CALL0/CALL8 ABI requirements. */
-    slot->stack_mem  = heap_caps_aligned_alloc(16, stack,
-                                                MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    slot->stack_mem  = duneos_supervisor_arena_aligned_alloc(16, stack);
     slot->stack_size = stack;
     if (!slot->stack_mem) {
         s_loader_ops.unload(app);
@@ -716,7 +985,7 @@ esp_err_t duneos_supervisor_launch_policy(const char *path,
         xSemaphoreGive(s_lock);
         s_loader_ops.unload(app);
         slot_heap_free(slot);
-        heap_caps_free(slot->stack_mem);
+        duneos_supervisor_arena_free(slot->stack_mem);
         slot->stack_mem = NULL;
         if (slot->mailbox) vQueueDelete(slot->mailbox);
         slot->active = false;
@@ -759,25 +1028,33 @@ void duneos_exit(int code)
     }
 
     duneos_supervisor_app_exited(code);
-    /* duneos_supervisor_app_exited calls vTaskDelete(NULL) and never returns,
-     * but the compiler cannot see that without the noreturn attribute on the
-     * FreeRTOS function.  The loop is unreachable but satisfies noreturn. */
+    /* duneos_supervisor_app_exited suspends this task (the supervisor then
+     * deletes it) and never returns, but the compiler cannot see that.
+     * The loop is unreachable but satisfies noreturn. */
     while (1) {}
 }
 
 void duneos_supervisor_app_exited(int code)
 {
+    TaskHandle_t self = xTaskGetCurrentTaskHandle();
     exit_msg_t msg = {
-        .task   = xTaskGetCurrentTaskHandle(),
+        .task   = self,
         .code   = code,
         .forced = false,
     };
     xQueueSend(s_exit_queue, &msg, portMAX_DELAY);
-    /* Delete ourselves immediately so the scheduler never resumes this task
-     * in app code after the supervisor has processed the exit message and
-     * potentially unloaded (freed) the exec pool.  On SMP the supervisor
-     * can run on Core 1 between the xQueueSend and our return, making the
-     * app's return-from-duneos_exit execute freed/reused code. */
+    /* Park here — the supervisor vTaskDelete()s us while suspended, which
+     * performs the full TCB cleanup synchronously (see the exit protocol
+     * comment at the top of this file). Never resume app code after this
+     * point: the supervisor may already have unloaded the exec pool. The
+     * loop guards against a spurious resume. vTaskSuspend never lets the
+     * scheduler pick us again, so from the app's perspective this does not
+     * return — matching the old vTaskDelete(NULL) semantics. */
+    if (slot_by_task_unsafe(self)) {
+        for (;;) vTaskSuspend(NULL);
+    }
+    /* Not an app task (should not happen) — fall back to self-deletion,
+     * the supervisor will ignore the stale message. */
     vTaskDelete(NULL);
     while (1) {} /* unreachable — prevents compiler from assuming we return */
 }
@@ -837,17 +1114,61 @@ void duneos_supervisor_wait_for_completion(int target_count)
 int duneos_supervisor_list_slots(duneos_slot_info_t *out, int count)
 {
     if (!out || count <= 0) return 0;
-    int n = count < DUNEOS_MAX_RUNNING_APPS ? count : DUNEOS_MAX_RUNNING_APPS;
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    for (int i = 0; i < n; i++) {
-        out[i].active        = s_slots[i].active;
-        out[i].restart_policy= s_slots[i].restart_policy;
-        out[i].restart_count = s_slots[i].restart_count;
-        strlcpy(out[i].name, s_slots[i].active ? s_slots[i].name : "",
-                sizeof(out[i].name));
+    int n = 0;
+    for (app_slot_t *s = s_slot_head; s && n < count; s = s->next) {
+        if (!s->active) continue;            /* list running apps only */
+        out[n].active        = s->active;
+        out[n].restart_policy= s->restart_policy;
+        out[n].restart_count = s->restart_count;
+        strlcpy(out[n].name, s->name, sizeof(out[n].name));
+        n++;
     }
     xSemaphoreGive(s_lock);
     return n;
+}
+
+int duneos_supervisor_list_mem(duneos_proc_mem_t *out, int count)
+{
+    if (!out || count <= 0) return 0;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    int n = 0;
+    for (app_slot_t *s = s_slot_head; s && n < count; s = s->next) {
+        if (!s->active) continue;
+        strlcpy(out[n].name, s->name, sizeof(out[n].name));
+        out[n].data_size  = (uint32_t)s->data_pool_size;
+        out[n].stack_size = (uint32_t)s->stack_size;
+
+        /* Real peak stack use = reserved − lowest-ever free (high-water mark).
+         * uxTaskGetStackHighWaterMark returns StackType_t units; scale to bytes. */
+        uint32_t free_min = s->task
+            ? (uint32_t)uxTaskGetStackHighWaterMark(s->task) * (uint32_t)sizeof(StackType_t)
+            : 0;
+        out[n].stack_used = (free_min && s->stack_size > free_min)
+            ? s->stack_size - free_min : 0;
+
+        out[n].heap_size = (uint32_t)s->heap_pool_size;
+        out[n].heap_used = 0;
+        if (s->heap_handle) {
+            multi_heap_info_t hi;
+            multi_heap_get_info(s->heap_handle, &hi);
+            out[n].heap_used = (uint32_t)hi.total_allocated_bytes;
+        }
+        n++;
+    }
+    xSemaphoreGive(s_lock);
+    return n;
+}
+
+int duneos_supervisor_chain(const char *child_path)
+{
+    if (!child_path) return -1;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
+    if (!slot) { xSemaphoreGive(s_lock); return -1; }
+    strlcpy(slot->chain_child, child_path, sizeof(slot->chain_child));
+    xSemaphoreGive(s_lock);
+    return 0;
 }
 
 int duneos_supervisor_restart_by_name(const char *name)
@@ -911,6 +1232,34 @@ int duneos_recv(duneos_msg_t *out, uint32_t timeout_ms)
     TickType_t ticks = (timeout_ms == 0) ? 0 : pdMS_TO_TICKS(timeout_ms);
     if (xQueueReceive(mb, out, ticks) != pdTRUE) return -1;
     return (int)out->len;
+}
+
+/* ----- open-fd tracking --------------------------------------------------- */
+
+/* Called by the open/dup/socket syscall wrappers (symbols.c + api.c) with a
+ * freshly returned global VFS fd. Tracks it against the calling task's slot
+ * so the supervisor can reclaim it if the app dies without closing. fds 0-2
+ * (inherited console) and out-of-range fds are ignored. Captured bins run in
+ * the shell's task, so their fds land on the shell's slot — reclaimed when
+ * the shell itself exits (the captured-app contract already requires them to
+ * close what they open). fds opened from an app's pthread children are not
+ * tracked (child tasks have no slot). */
+void duneos_supervisor_track_fd(int fd)
+{
+    if (fd < 3 || fd >= 64) return;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task(xTaskGetCurrentTaskHandle());
+    if (slot) slot->fd_mask |= (1ULL << fd);
+    xSemaphoreGive(s_lock);
+}
+
+void duneos_supervisor_untrack_fd(int fd)
+{
+    if (fd < 3 || fd >= 64) return;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    app_slot_t *slot = slot_by_task(xTaskGetCurrentTaskHandle());
+    if (slot) slot->fd_mask &= ~(1ULL << fd);
+    xSemaphoreGive(s_lock);
 }
 
 /* ----- Phase 20: per-app memory API ------------------------------------- */

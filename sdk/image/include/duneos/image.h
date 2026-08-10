@@ -32,6 +32,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "duneos/gfx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,6 +65,20 @@ int  duneos_image_load_dr(const char *path, duneos_image_t *out);
  * image (no-op).
  */
 void duneos_image_free(duneos_image_t *img);
+
+/*
+ * Read just the .dr header (no pixel data, no allocation). Fills *w and *h.
+ * Returns 0 on success, -1 open failed, -2 header malformed.
+ */
+int duneos_image_info_dr(const char *path, uint16_t *w, uint16_t *h);
+
+/*
+ * Stream a .dr straight to the display, one row at a time — only a single-row
+ * buffer is used, so a full-screen image costs ~no heap (unlike _load_dr, which
+ * mallocs the whole bitmap). Blits the image's top-left at (x, y). Same return
+ * codes as _load_dr. Ideal for boot/full-screen art on low-RAM boards.
+ */
+int duneos_image_blit_dr(gfx_ctx_t *gfx, int x, int y, const char *path);
 
 #ifdef __cplusplus
 }

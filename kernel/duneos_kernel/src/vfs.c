@@ -3,6 +3,7 @@
 
 #include "esp_vfs_fat.h"
 #include "esp_littlefs.h"
+#include "esp_partition.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "sdmmc_cmd.h"
@@ -23,14 +24,22 @@
 
 static const char *TAG = "duneos/vfs";
 
-#define FLASH_MOUNT_POINT   "/flash"
+/* LittleFS is the root filesystem ("/"). esp_vfs uses "" as the base path for a
+ * root mount; the sub-mounts (/sd, /tmp, /dev) still win via longest-prefix
+ * matching. FLASH_MOUNT_POINT is the prefix used for path building (so
+ * FLASH_MOUNT_POINT "/bin" == "/bin"); FLASH_MOUNT_NAME is the registry/log name. */
+#define FLASH_MOUNT_POINT   ""
+#define FLASH_MOUNT_NAME    "/"
 #define FLASH_PARTITION     "sysbin"
+#define DATA_MOUNT_POINT    "/data"
+#define DATA_PARTITION      "userdata"
 #define SD_MOUNT_POINT      "/sd"
 #define SD_MAX_FILES        8
 
 static sdmmc_card_t *s_card          = NULL;
 static bool          s_initialized   = false;
 static bool          s_flash_mounted = false;
+static bool          s_data_mounted  = false;
 static bool          s_sd_mounted    = false;
 
 /* -------------------------------------------------------------------------
@@ -61,11 +70,45 @@ int duneos_vfs_list_mounts(char (*out)[32], int max)
     return n;
 }
 
+/* Total + free bytes of the filesystem backing `path` (for `df`). 0 on success,
+ * -errno otherwise. /tmp and /dev have no block accounting (-ENODEV). */
+int duneos_fs_info(const char *path, uint64_t *total, uint64_t *freeb)
+{
+    if (!path || !total || !freeb) return -EINVAL;
+
+    /* /sd (FAT) and the overlay mounts are matched first; everything else —
+     * "/", "/bin", "/etc"… — is backed by the root LittleFS. */
+    if (strncmp(path, DATA_MOUNT_POINT, sizeof(DATA_MOUNT_POINT) - 1) == 0) {
+        size_t t = 0, u = 0;
+        if (!s_data_mounted) return -ENODEV;
+        if (esp_littlefs_info(DATA_PARTITION, &t, &u) != ESP_OK) return -EIO;
+        *total = t;
+        *freeb = (t > u) ? (uint64_t)(t - u) : 0;
+        return 0;
+    }
+    if (strncmp(path, SD_MOUNT_POINT, sizeof(SD_MOUNT_POINT) - 1) == 0) {
+        uint64_t t = 0, f = 0;
+        if (esp_vfs_fat_info(SD_MOUNT_POINT, &t, &f) != ESP_OK) return -EIO;
+        *total = t;
+        *freeb = f;
+        return 0;
+    }
+    if (strncmp(path, "/tmp", 4) == 0 || strncmp(path, "/dev", 4) == 0)
+        return -ENODEV;
+
+    size_t t = 0, u = 0;
+    if (esp_littlefs_info(FLASH_PARTITION, &t, &u) != ESP_OK) return -EIO;
+    *total = t;
+    *freeb = (t > u) ? (uint64_t)(t - u) : 0;
+    return 0;
+}
+
 /* -------------------------------------------------------------------------
  * Public availability queries
  * ---------------------------------------------------------------------- */
 
 bool          duneos_vfs_flash_available(void) { return s_flash_mounted; }
+bool          duneos_vfs_data_available(void)  { return s_data_mounted;  }
 bool          duneos_vfs_sd_available(void)    { return s_sd_mounted;    }
 sdmmc_card_t *duneos_vfs_get_sd_card(void)     { return s_card;          }
 
@@ -89,8 +132,48 @@ esp_err_t duneos_vfs_mount_flash(void)
     }
 
     s_flash_mounted = true;
-    register_mount(FLASH_MOUNT_POINT);
-    klog_i(TAG, "LittleFS mounted at " FLASH_MOUNT_POINT);
+    register_mount(FLASH_MOUNT_NAME);
+    klog_i(TAG, "LittleFS mounted at " FLASH_MOUNT_NAME " (root)");
+    return ESP_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * User data (LittleFS) — app-writable state that survives a reflash
+ *
+ * `dbt system flash` regenerates the whole /flash image, so anything an app
+ * writes there (wifi known.yaml, scores, prefs) dies on every firmware
+ * update. /data lives on its own `userdata` partition that no flashing flow
+ * touches. Formatted on first mount (the partition ships as raw/FAT space
+ * on tables generated before 2026-07); absent partition = old table, non-
+ * fatal, apps fall back to /flash.
+ * ---------------------------------------------------------------------- */
+
+static esp_err_t duneos_vfs_mount_data(void)
+{
+    if (esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
+                                 ESP_PARTITION_SUBTYPE_ANY,
+                                 DATA_PARTITION) == NULL) {
+        klog_w(TAG, "no '" DATA_PARTITION "' partition — /data unavailable "
+                    "(re-run bspgen + reflash kernel to get one)");
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    esp_vfs_littlefs_conf_t conf = {
+        .base_path              = DATA_MOUNT_POINT,
+        .partition_label        = DATA_PARTITION,
+        .format_if_mount_failed = true,
+        .dont_mount             = false,
+    };
+
+    esp_err_t err = esp_vfs_littlefs_register(&conf);
+    if (err != ESP_OK) {
+        klog_e(TAG, "/data mount failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    s_data_mounted = true;
+    register_mount(DATA_MOUNT_POINT);
+    klog_i(TAG, "LittleFS mounted at " DATA_MOUNT_POINT);
     return ESP_OK;
 }
 
@@ -102,11 +185,11 @@ esp_err_t duneos_vfs_provision_flash(void)
 {
     if (g_duneos_blob_count == 0) return ESP_OK;
 
-    /* Ensure /flash/bin exists */
+    /* Ensure /bin exists */
     struct stat st;
     if (stat(FLASH_MOUNT_POINT "/bin", &st) != 0) {
         if (mkdir(FLASH_MOUNT_POINT "/bin", 0755) != 0 && errno != EEXIST) {
-            klog_w(TAG, "cannot create /flash/bin: %d", errno);
+            klog_w(TAG, "cannot create /bin: %d", errno);
             return ESP_FAIL;
         }
     }
@@ -256,6 +339,17 @@ static void write_board_info(const char *path)
 #endif
     );
     write(fd, buf, n);
+
+#ifdef CONFIG_DUNEOS_DRV_I2C
+    /* I2C0 pins, so apps (e.g. i2cscope's bus sniffer) can find SCL/SDA at
+     * runtime instead of hardcoding board-specific GPIO numbers. */
+    n = snprintf(buf, sizeof(buf),
+        "i2c0_scl: %d\n"
+        "i2c0_sda: %d\n",
+        (int)DUNEOS_I2C0_SCL_PIN, (int)DUNEOS_I2C0_SDA_PIN);
+    write(fd, buf, n);
+#endif
+
     close(fd);
 }
 #endif
@@ -290,11 +384,14 @@ esp_err_t duneos_vfs_init(void)
     /* Copy firmware-embedded blobs to /flash/bin/ on first boot */
     duneos_vfs_provision_flash();
 
+    /* /data is best-effort — old partition tables simply don't have it */
+    duneos_vfs_mount_data();
+
 #if DUNEOS_HAS_SD
     /* SD is secondary — failure is non-fatal (flash is sufficient) */
     err = duneos_vfs_mount_sd();
     if (err != ESP_OK)
-        klog_w(TAG, "SD unavailable — running from /flash only");
+        klog_w(TAG, "SD unavailable — running from root LittleFS only");
 #endif
 
     err = duneos_vfs_mount_tmp();
@@ -313,8 +410,9 @@ esp_err_t duneos_vfs_init(void)
         write_board_info(SD_MOUNT_POINT "/board.info");
 #endif
 
-    klog_i(TAG, "VFS ready (/flash%s /tmp /dev)",
-           s_sd_mounted ? " /sd" : "");
+    klog_i(TAG, "VFS ready (/ %s%s/tmp /dev)",
+           s_data_mounted ? "/data " : "",
+           s_sd_mounted ? "/sd " : "");
     return ESP_OK;
 }
 
@@ -330,6 +428,11 @@ esp_err_t duneos_vfs_deinit(void)
         s_sd_mounted = false;
     }
 #endif
+
+    if (s_data_mounted) {
+        esp_vfs_littlefs_unregister(DATA_PARTITION);
+        s_data_mounted = false;
+    }
 
     if (s_flash_mounted) {
         esp_vfs_littlefs_unregister(FLASH_PARTITION);

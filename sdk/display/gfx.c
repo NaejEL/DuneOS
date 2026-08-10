@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { GFX_BACKEND_DISP, GFX_BACKEND_FB0 } gfx_backend_t;
+typedef enum { GFX_BACKEND_DISP, GFX_BACKEND_FB0, GFX_BACKEND_NONE } gfx_backend_t;
 
 struct gfx_ctx {
     gfx_backend_t  backend;
@@ -98,10 +98,48 @@ void gfx_close(gfx_ctx_t *ctx)
     if (!ctx) return;
     if (ctx->backend == GFX_BACKEND_FB0)
         close(ctx->fd);
-    else
+    else if (ctx->backend == GFX_BACKEND_DISP)
         disp_close(ctx->disp);
+    /* GFX_BACKEND_NONE (offscreen canvas): no device to close. */
     if (ctx->buf) free(ctx->buf);
     free(ctx);
+}
+
+/* ---- offscreen canvas (partial rendering) ------------------------------- */
+
+/* An offscreen canvas is just a BUFFERED gfx_ctx with no backing device: all
+ * the gfx_* primitives already draw into ctx->buf with ctx->width as stride,
+ * so a canvas reuses every drawing op unchanged. The app draws a moving region
+ * into the canvas in RAM, then pushes it to the live display in ONE blit — the
+ * TFT_eSPI/LVGL sprite model. No full-screen clear on the panel ⇒ no flicker.
+ * RAM cost is w*h*2 bytes, so size the canvas to the region that moves, not the
+ * whole screen. */
+gfx_ctx_t *gfx_canvas_new(int w, int h)
+{
+    if (w <= 0 || h <= 0) return NULL;
+    gfx_ctx_t *ctx = malloc(sizeof(*ctx));
+    if (!ctx) return NULL;
+    ctx->buf = malloc((size_t)w * h * sizeof(uint16_t));
+    if (!ctx->buf) { free(ctx); return NULL; }
+    memset(ctx->buf, 0, (size_t)w * h * sizeof(uint16_t));
+    ctx->width   = (uint16_t)w;
+    ctx->height  = (uint16_t)h;
+    ctx->backend = GFX_BACKEND_NONE;
+    ctx->mode    = GFX_MODE_BUFFERED;
+    return ctx;
+}
+
+void gfx_canvas_present(gfx_ctx_t *display, const gfx_ctx_t *canvas, int x, int y)
+{
+    if (!display || !canvas) return;
+    gfx_blit(display, x, y, canvas->width, canvas->height, canvas->buf);
+}
+
+void gfx_canvas_free(gfx_ctx_t *canvas)
+{
+    if (!canvas) return;
+    if (canvas->buf) free(canvas->buf);
+    free(canvas);
 }
 
 void gfx_get_info(const gfx_ctx_t *ctx, uint16_t *w, uint16_t *h)

@@ -39,6 +39,26 @@ int duneos_wifi_sta_connect(const char *ssid, const char *password,
  */
 int duneos_wifi_sta_disconnect(void);
 
+typedef struct {
+    char    ssid[33];    /* NUL-terminated */
+    int8_t  rssi;        /* dBm */
+    uint8_t authmode;    /* 0 = open, nonzero = secured (esp wifi_auth_mode_t value) */
+    uint8_t channel;
+} duneos_wifi_ap_t;
+
+/*
+ * Blocking scan (~2 s).  Fills out[] with up to max records, deduplicated
+ * by SSID (keeping the strongest RSSI), sorted by RSSI descending; hidden
+ * SSIDs are skipped.
+ *
+ * Calls duneos_wifi_init() internally; works whether or not the STA is
+ * associated.
+ *
+ * Returns the number of APs written (>= 0) or -errno.
+ * -EBUSY if a connect attempt is in flight.
+ */
+int duneos_wifi_scan(duneos_wifi_ap_t *out, int max);
+
 /*
  * Populate *info with current connection details (IP, GW, netmask, SSID, RSSI).
  * Returns 0 if connected with a valid IP, -1 if not connected.

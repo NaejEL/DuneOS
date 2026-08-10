@@ -34,3 +34,10 @@ int duneos_hal_i2c_write_read(duneos_hal_i2c_t *h,
                                uint16_t        addr,
                                const uint8_t  *tx_buf, uint16_t tx_len,
                                      uint8_t  *rx_buf, uint16_t rx_len);
+
+/*
+ * Probe a 7-bit address: emit START + address and check for ACK, with no data
+ * phase and without caching a device handle (so a full bus scan does not
+ * exhaust the device table). Returns 0 if a device ACKs, -1 otherwise.
+ */
+int duneos_hal_i2c_probe(duneos_hal_i2c_t *h, uint16_t addr);

@@ -1,0 +1,86 @@
+name: cardputer-contest
+board: m5stack-cardputer
+description: "Contest 2026 — graphical launcher home, sideloadable apps on /sd/apps"
+
+# Flash (sysbin, mounted at root "/"): the home launcher + the services it
+# needs. These boot from /bin so the device comes up to the launcher even with
+# no SD card inserted.
+apps_flash:
+- wifi_daemon
+- splash
+- kb_iomatrix
+- usb_shell
+- battery_pub
+- launcher
+- logd
+# CLI coreutils — land in /bin so the shell is useful with no SD card.
+# grep/sed/find share the ADR 036 regex engine; the rest follow ADR 033.
+- ls
+- logs
+- cat
+- cp
+- head
+- tail
+- touch
+- wc
+- du
+- df
+- grep
+- sed
+- find
+- mkdir
+- rm
+- mv
+- free
+- ps
+- klog
+- ifconfig
+- iw
+- ping
+- tail
+- input
+- gpio
+- battery
+- services
+- restart
+- reboot
+
+# Boot order: splash draws once and exits (releasing the display); kb_iomatrix
+# (keyboard) and usb_shell (CDC console for USB-MSC sideloading + logs) come up
+# in parallel; the launcher waits for splash to exit (after: splash) so the
+# display is free, then takes over as the home screen.
+#
+# wifi_daemon is intentionally NOT auto-started here: the WiFi runtime costs
+# ~40-50 KiB of DRAM, and on the no-PSRAM CardPuter that DRAM is the scarce
+# resource (contiguous app arena). The .dap stays staged in /bin so a future
+# "WiFi on demand" path can launch it when a network app actually needs it.
+init_flash:
+- path: /bin/splash.dap
+  restart: no
+- path: /bin/kb_iomatrix.dap
+  restart: always
+- path: /bin/usb_shell.dap
+  restart: always
+- path: /bin/battery_pub.dap
+  restart: always
+- path: /bin/logd.dap
+  restart: always
+- path: /bin/launcher.dap
+  restart: always
+  after: splash
+
+# SD: the launchable app set. Drag-and-drop more .dap here over USB MSC and
+# they appear in the launcher grid. Demo apps for now; snake / tetris /
+# i2cscope / lua join this list as they are written.
+apps_sd:
+- g_shell
+- gfx_demo
+- i2cscope
+- files
+- waves
+- drview
+- snake
+- tetris
+- wifi
+
+init_sd: []

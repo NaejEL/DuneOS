@@ -33,7 +33,7 @@ def _list_boards() -> list[tuple[str, str]]:
         desc = ""
         if _have_yaml:
             try:
-                with open(yaml_path) as f:
+                with open(yaml_path, encoding="utf-8") as f:
                     doc = yaml.safe_load(f)
                 board = doc.get("board", {})
                 parts = []
