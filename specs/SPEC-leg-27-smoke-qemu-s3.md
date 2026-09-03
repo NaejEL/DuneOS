@@ -28,13 +28,26 @@ emulated SD card (SDMMC/SPI-SD support in QEMU S3 is unconfirmed), no display, k
 peripheral mock. Peripheral mocks belong to the **Linux simulator of ADR 007 (Phase 26)**, not to
 QEMU.
 
+**Shape fixed by [ADR 039](../docs/adr/039-qemu-test-bench.md)** (Proposed, 2026-09-03): a QEMU
+target is an ordinary board, not a mode of an existing one. Two boards are created,
+`esp32s3-qemu` and `esp32s3-qemu-psram`, declaring only what QEMU models — UART, flash,
+`has_sd: false`, no display and no keyboard. The pair exists because `loader.c` allocates app
+sections under `#ifdef CONFIG_SPIRAM`, and only the DRAM branch is exercised today. PSRAM is
+emulated (`ssi_psram`, quad by default, octal driven from `CONFIG_SPIRAM_MODE_OCT` —
+`qemu_ext.py:305-307`), and bspgen already emits that symbol from a `psram:` section, so no new
+glue is needed between `board.yaml` and the QEMU arguments.
+
 ## Scope
 
-Add a `dbt` subcommand that builds the image, launches QEMU on the ESP32-S3 target in
-non-interactive mode, captures serial output, and returns a CI-usable verdict.
+Create the two boards above, then add a `dbt` subcommand that builds the image, launches QEMU on
+the ESP32-S3 target in non-interactive mode, captures serial output, and returns a CI-usable
+verdict.
 
 Project convention requires going through `dbt` rather than bare `idf.py`: the subcommand is added
-to the parser in `tools/dbt/cli.py` alongside `flash`, `flashimg` and `system`.
+to the parser in `tools/dbt/cli.py` alongside `flash`, `flashimg` and `system`. The emulator itself
+is launched through **`plugin.run_qemu()`** on the toolchain plugin, beside the `build_kernel` /
+`flash_kernel` / `monitor` methods introduced in Phase 21 — the shape Phase 28.5 already plans for
+the extended plugin interface, so that the SDK decoupling does not have to redo it.
 
 ## Acceptance criteria
 
@@ -61,7 +74,16 @@ to the parser in `tools/dbt/cli.py` alongside `flash`, `flashimg` and `system`.
    detected and reported as a failure, not as silence.
 9. The command works on a machine with no hardware attached: it reads neither `.duneos_port` nor any
    physical serial device.
-10. A CI job runs this smoke test on `m5stack-cardputer` and fails if the exit code is non-zero.
+10. `boards/esp32s3-qemu/board.yaml` and `boards/esp32s3-qemu-psram/board.yaml` exist, declare no
+    peripheral QEMU does not model, and run through `duneos-bspgen.py` producing the four generated
+    files without a hand edit. The PSRAM board yields `CONFIG_SPIRAM=y` in its `sdkconfig.board`,
+    the other `CONFIG_SPIRAM=n`.
+11. The emulator is launched through `plugin.run_qemu()` on the toolchain plugin, not by a direct
+    `idf.py qemu` call from `tools/dbt/`.
+12. A CI job runs this smoke test on **both** QEMU boards and fails if either exit code is non-zero.
+    Because switching `.duneos_board` requires a fullclean (`sdkconfig` is board-specific and CMake
+    raises FATAL_ERROR on an unclean switch), each board builds in its own build directory or its
+    own job.
 
 ## Out of scope
 
@@ -73,9 +95,15 @@ replacing the host tests.
 ## Risks
 
 QEMU ESP32-S3 does not faithfully emulate the whole SoC: some drivers declared in `init.yaml` may
-fail to initialise under emulation without this being a code defect. Should that happen, the answer
-is to use a reduced profile for the smoke test and document it — **not** to relax assertions until
+fail to initialise under emulation without this being a code defect. The dedicated boards are the
+structural answer — they declare no such driver in the first place. Should a gap remain anyway, the
+answer is to narrow the board or the profile and document it — **not** to relax assertions until
 they no longer prove anything.
+
+Bench scope is bounded and must be stated when reporting a green run: it proves the loader, the VFS
+and the boot sequence, **not** the CardPuter. It says nothing about the shipping board's display,
+keyboard or SD path. Closing that gap is step two of ADR 039 (a `qemu:` field on the real boards),
+deliberately not committed to here.
 
 Second risk: a test that merely looks for a string in the output can pass even though the system
 panicked immediately afterwards. Criterion 8 explicitly requires detecting panic and reboot, failing

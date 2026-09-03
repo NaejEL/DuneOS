@@ -115,12 +115,14 @@ re-read at the source by an independent validator. Two estimate corrections were
 lowered in severity, and LEG-05 corrected (the claim "only function above 200 lines" was false —
 `supervisor_task` is about 213).
 
-## ADR to be written
+## ADR
 
 The structural decision taken at arbitration — **minimal QEMU bench before hardening, peripheral
-mocks deferred to the Phase 26 Linux simulator** — deserves an ADR adjacent to ADR 007. It sets a
+mocks deferred to the Phase 26 Linux simulator** — is recorded in
+[ADR 039](docs/adr/039-qemu-test-bench.md) (Proposed, 2026-09-03), adjacent to ADR 007. It sets a
 durable boundary between two testing means (QEMU for boot and the loader, Linux simulator for
 peripherals) that later contributors will need to know in order not to cross it inadvertently.
 
-That ADR **is not written by this roadmap**: it is only flagged here, and remains to be drafted by
-the maintainer.
+ADR 039 also fixes the shape LEG-27 must implement: QEMU targets are ordinary boards
+(`esp32s3-qemu`, `esp32s3-qemu-psram`) declaring only what QEMU models, driven from dbt through
+`plugin.run_qemu()`.
