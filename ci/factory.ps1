@@ -1,5 +1,5 @@
-# Cycle CI headless de l'usine logicielle DuneOS.
-# Usage : pwsh -File ci/factory.ps1 <specs/SPEC-*.md> [-Yolo]
+# Headless CI cycle of the DuneOS software factory.
+# Usage: pwsh -File ci/factory.ps1 <specs/SPEC-*.md> [-Yolo]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$Spec,
@@ -8,12 +8,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not (Test-Path -Path $Spec -PathType Leaf)) {
-    Write-Error "Spec introuvable : $Spec"
+    Write-Error "Spec not found: $Spec"
     exit 1
 }
-$approved = Select-String -Path $Spec -Pattern '^Statut : APPROUVEE$' -Quiet
+$approved = Select-String -Path $Spec -Pattern '^Status: APPROVED$' -Quiet
 if (-not $approved) {
-    Write-Error "'$Spec' n'est pas approuvée (ligne 'Statut : APPROUVEE' absente). La gate humaine se joue en session interactive : /factory-run `"<besoin>`""
+    Write-Error "'$Spec' is not approved (line 'Status: APPROVED' missing). The human gate happens in an interactive session: /factory-run `"<requirement>`""
     exit 1
 }
 
@@ -37,5 +37,5 @@ if ($Yolo) {
 & claude @args *> $log
 $rc = $LASTEXITCODE
 
-Write-Host "Log : $log (exit code claude : $rc)"
+Write-Host "Log: $log (claude exit code: $rc)"
 exit $rc
