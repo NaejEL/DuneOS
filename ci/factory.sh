@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Cycle CI headless de l'usine logicielle DuneOS.
-# Usage : ci/factory.sh <specs/SPEC-*.md> [--yolo]
+# Headless CI cycle of the DuneOS software factory.
+# Usage: ci/factory.sh <specs/SPEC-*.md> [--yolo]
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 <chemin-spec-approuvee> [--yolo]" >&2
+    echo "Usage: $0 <approved-spec-path> [--yolo]" >&2
     exit 2
 }
 
@@ -13,19 +13,19 @@ YOLO=0
 for arg in "$@"; do
     case "$arg" in
         --yolo) YOLO=1 ;;
-        -*) echo "Option inconnue : $arg" >&2; usage ;;
+        -*) echo "Unknown option: $arg" >&2; usage ;;
         *) [ -n "$SPEC" ] && usage; SPEC="$arg" ;;
     esac
 done
 [ -n "$SPEC" ] || usage
 
 if [ ! -f "$SPEC" ]; then
-    echo "Erreur : spec introuvable : $SPEC" >&2
+    echo "Error: spec not found: $SPEC" >&2
     exit 1
 fi
-if ! grep -q '^Statut : APPROUVEE$' "$SPEC"; then
-    echo "Erreur : $SPEC n'est pas approuvée (ligne 'Statut : APPROUVEE' absente)." >&2
-    echo "La gate humaine se joue en session interactive : /factory-run \"<besoin>\"" >&2
+if ! grep -q '^Status: APPROVED$' "$SPEC"; then
+    echo "Error: $SPEC is not approved (line 'Status: APPROVED' missing)." >&2
+    echo "The human gate happens in an interactive session: /factory-run \"<requirement>\"" >&2
     exit 1
 fi
 
@@ -49,5 +49,5 @@ claude "${ARGS[@]}" > "$LOG" 2>&1
 RC=$?
 set -e
 
-echo "Log : $LOG (exit code claude : $RC)"
+echo "Log: $LOG (claude exit code: $RC)"
 exit "$RC"

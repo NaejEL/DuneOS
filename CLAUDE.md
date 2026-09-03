@@ -244,7 +244,7 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 - **UART0 (GPIO43/44) on the CardPuter has no physical header** — inaccessible. Never route klog or console to UART0.
 - **`dprintf` through a `va_list`-accepting function pointer is UB in C** — libdune's `dprintf` uses `vsnprintf` + `write()` instead.
 - **`__duneos_api_ptr` must be in `.data`, not `.bss`** — `libdune_ptr.c` initialises it to `(const duneos_api_t *)0` explicitly. A BSS symbol has `SHN_COMMON` and the loader's DEFINED-symbol scan skips it.
-- **cJSON est vendorisé dans `duneos_loader/src/`** — ESP-IDF v6.0.1 ne fournit plus `json` comme composant intégré. Ne jamais remettre `json` ou `espressif__cjson` dans les REQUIRES du loader.
+- **cJSON is vendored in `duneos_loader/src/`** — ESP-IDF v6.0.1 no longer ships `json` as a built-in component. Never put `json` or `espressif__cjson` back into the loader's REQUIRES.
 - **`duneos_slot_info_t` in libdune.h must stay in sync with supervisor.h** — both hardcode `64` instead of `DUNEOS_APP_NAME_MAX`. If the kernel struct changes, both must be updated + `DUNEOS_ABI_VERSION` bumped.
 - **Xtensa stack alignment for `xTaskCreateStaticPinnedToCore`** — stack buffer must be 16-byte aligned: `heap_caps_aligned_alloc(16, size, MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)`. `StaticTask_t` TCB must outlive the task.
 - **`RINGBUF_TYPE_BYTEBUF` + counting semaphore is wrong for CDC RX** — `vRingbufferReturnItem` advances by the contiguous block size, not `maxSize`. Bytes after the first in a multi-byte USB packet are silently dropped. Use `xStreamBufferCreate(size, 1)` instead.
