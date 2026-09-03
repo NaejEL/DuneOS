@@ -8,7 +8,15 @@ ROOT    := ../..
 
 TESTS   := test_re test_i2c_decode test_known_yaml
 
-all: $(TESTS)
+# Host-compilable kernel units with no test of their own yet: compiled here so
+# the host build breaks the moment they regain a target-only dependency.
+HOSTUNITS := elf_parse.o
+
+all: $(TESTS) $(HOSTUNITS)
+
+elf_parse.o: $(ROOT)/kernel/duneos_loader/src/elf_parse.c \
+             $(ROOT)/kernel/duneos_loader/include/duneos/elf_parse.h
+	$(CC) $(CFLAGS) -I$(ROOT)/kernel/duneos_loader/include -c $< -o $@
 
 test_re: test_re.c $(ROOT)/sdk/re/re.c tassert.h
 	$(CC) $(CFLAGS) -I$(ROOT)/sdk/re/include test_re.c $(ROOT)/sdk/re/re.c -o $@
@@ -27,6 +35,6 @@ test: all
 	exit $$rc
 
 clean:
-	rm -f $(TESTS) known_yaml_test_*.tmp
+	rm -f $(TESTS) $(HOSTUNITS) known_yaml_test_*.tmp
 
 .PHONY: all test clean

@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: APPROVED
 
 # SPEC-leg-25 — Extract the ELF parser/validator into a pure host-compilable unit
 
@@ -53,9 +53,18 @@ the supervisor.
 6. `loader.c` consumes this unit and **no longer contains a copy** of the extracted logic: the
    current duplication between `duneos_loader_load()` (l.1158) and `read_manifest_from_file()`
    (l.1367) disappears, leaving a single implementation.
-7. The kernel builds for the `m5stack-cardputer` board with no new warning, and observable behaviour
-   is unchanged: loading, running and unloading a valid `.dap` yields the same result as before the
-   extraction, and rejected files are rejected for the same reasons.
+7. The kernel builds for the `m5stack-cardputer` board with no new warning, and behaviour is
+   unchanged at constant semantics: loading, running and unloading a valid `.dap` yields the same
+   result as before the extraction, and rejected files are rejected for the same reasons.
+
+   **Evidence admitted for this criterion (PO ruling, 2026-09-03):** LEG-27 does not exist yet and
+   the maintainer has no hardware, so the runtime half cannot be executed. This criterion is
+   therefore proven **statically**: a clean kernel build, plus a diff review establishing
+   equivalence — every extracted function keeps its control flow, its rejection conditions and its
+   ordering, and the error codes it now returns map one-to-one onto the previously emitted
+   `ESP_ERR_*`/log paths. The Verifier must state plainly which part it could not execute rather
+   than approving on evidence it does not hold. Runtime verification is deferred to LEG-27, which
+   replays this criterion on the QEMU bench.
 8. The extracted unit is compiled by both the kernel build and the host build: both consume the same
    source file, and no copy is made for testing.
 
