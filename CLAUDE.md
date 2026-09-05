@@ -37,7 +37,8 @@ python ../../../tools/dbt.py deploy E:\   # E: = SD card drive
 # Inspect built ELF
 python ../../../tools/dbt.py info
 
-# Build sysbin image + flash it (LittleFS image with /flash/init.yaml + embedded apps)
+# Build sysbin image + flash it (LittleFS image with /init.yaml + embedded apps; the
+# image mounts at the root, so its paths carry no /flash prefix)
 python tools/dbt.py flashimg                # uses .duneos_port
 
 # Interactive TUI (board picker, init editor, build/flash actions)
@@ -202,7 +203,7 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 | Phase 27 — VFS native + networking | Not started | Native `duneos_vfs` replacing `esp_vfs`; `poll()`/`select()`; `hal_net.h`; WiFi rewrite; BSD sockets. Migrates `vfs.h` to `int`/-errno. |
 | Phase 28.5 — ESP-IDF de-coupling | Not started | Split `main/main.c` into SDK-agnostic core + per-SDK `entry_<sdk>.c`. Prerequisite for Phase 29. |
 
-**Boot order:** `/flash` (LittleFS, fatal if absent) → SD (optional). Init: `/flash/init.yaml` then `/sd/init.yaml`. App scan: `/flash/bin/` → `/sd/bin/` → `/sd/apps/`. Error convention (ADR 001): `int`, return 0 on success, -errno on failure.
+**Boot order:** flash LittleFS (fatal if absent) → SD (optional). The flash filesystem mounts at the **root**, not at `/flash` (`vfs.c`: `FLASH_MOUNT_POINT ""`), so its paths carry no prefix. Init: `/init.yaml` then `/sd/init.yaml` (`init.h:33-35`). App scan: `/bin` → `/sd/bin` → `/sd/apps` (`loader.c`, `s_scan_dirs`). Error convention (ADR 001): `int`, return 0 on success, -errno on failure.
 
 ## Key Technical Decisions
 
