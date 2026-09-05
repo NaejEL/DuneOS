@@ -443,6 +443,49 @@ A Yocto without Yocto's complexity. The central concept is the **profile**: a YA
 
 ---
 
+### Phase 25.9 — Config layering: get `sdkconfig.defaults` out of the root 🔵 OPPORTUNISTIC
+
+**Not a milestone. Do it in slices, whenever a phase already touches a config line** — the point is
+to arrive at Phase 26 with less to untangle, not to spend a sprint here.
+
+`sdkconfig.defaults` holds 28 `CONFIG_*` lines at the repository root, and every board pays all of
+them. That was fine while every target was an ESP32. It stops being fine for two reasons, and
+[ADR 040](docs/adr/040-config-layering.md) records the rule:
+
+- **A value can be a project policy or a board measurement, and the two do not belong together.**
+  LEG-37 is the worked example: `main_task_stack` is a per-board figure measured on hardware (the
+  CardPuter peaks at 3764 B where ESP-IDF defaults to 3584; an `esp32c3` will not need the same
+  number, because RISC-V does not spill a register window per call frame the way Xtensa does), while
+  `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK` is a policy that should hold everywhere. It is not free —
+  ESP-IDF's Kconfig help states the usable stack "decreases by up to 60 bytes" per task — but the cost
+  is uniform across boards rather than derived from any one of them, which is what puts it at the root.
+  Putting the first at the root makes every board pay one board's maximum.
+- **`sdkconfig.defaults` is an ESP-IDF artefact.** RP2040 (Phase 29) has no such file, and neither
+  will the Linux simulator that Phase 26's `pthread_osal.c` unblocks. Anything expressed only as a
+  Kconfig symbol has to be re-expressed for each new SDK; anything expressed in `board.yaml` is
+  translated by the generator, which is the shape [ADR 015](docs/adr/015-declarative-driven-architecture.md)
+  already established for `console:`, `psram:` and `qemu:`.
+
+**Rough shape of the sort** (28 lines today: 12 `ESP_*`, 7 `LWIP_*`, 3 `FREERTOS_*`, 2 `VFS_*`,
+2 `FATFS_*`, 1 `LOG_*`, 1 `DUNEOS_*`). Each line lands in exactly one of:
+
+| Where | What | Example |
+|---|---|---|
+| root — **policy** | true for every board; any cost is uniform, not derived from one target | stack-overflow watchpoint, log level |
+| `board.yaml` — **measurement or capability** | a number derived from *this* board, or a peripheral it has | `main_task_stack`, PSRAM, console, SD |
+| `arch.cmake` — **architecture** | true for an ISA/SDK family, not for one board | anything conditioned on Xtensa vs RISC-V |
+| delete | inherited, no longer justified by anything | to be found by reading each line's history |
+
+**How to make progress without a sprint**: when a phase edits a `CONFIG_*` line for its own reasons,
+classify it and move it then. Do not migrate lines nobody is touching — an untested move is worse
+than a misplaced line, since the failure mode is a board that silently loses a setting.
+
+**What this buys Phase 26**: the OSAL has to answer "what is target-specific?" for every primitive it
+abstracts. Every line already sorted is one fewer to sort under the pressure of a rewrite, and the
+`board.yaml` ones are the ones that survive the arrival of a second SDK unchanged.
+
+---
+
 ### Phase 26 — OSAL and scheduler portability
 
 **Swapped with the former Phase 26 (native VFS).** Reason: the OSAL is a smaller API surface, unblocks `dbt sim` sooner, validates the abstraction on 2 Espressif arches (Phase 28) before the riskier VFS rewrite, and provides the primitives (mutex, sem) the native VFS will use in Phase 27.

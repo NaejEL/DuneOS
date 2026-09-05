@@ -903,6 +903,10 @@ def cmd_qemu(args) -> None:
     build_dir.mkdir(parents=True, exist_ok=True)
     sdkconfig = build_dir / "sdkconfig"
 
+    # Run after bspgen: the fragment must be current before it can be compared.
+    from .sdkconfig_check import enforce as enforce_sdkconfig
+    enforce_sdkconfig(board, sdkconfig)
+
     if not getattr(args, "no_build", False):
         print("\nBuilding kernel…")
         with _as_config_error("kernel build could not start"):

@@ -14,12 +14,16 @@ These files are gitignored — run bspgen once per board before building.
 
 The output path defaults to  boards/<board_name>/board_config.h  next to the YAML.
 
-YAML schema (all keys under the top-level 'board:' key):
+YAML schema (all keys under the top-level 'board:' key).
+Any top-level key not in KNOWN_BOARD_KEYS is a hard error — see that set.
   name          string   Board identifier (directory name, no spaces)
   cpu           string   esp32s3 | esp32 | esp32s2 | esp32c3
   flash_size_mb int
   psram_size_mb int      0 if no PSRAM
   psram_type    string   opi | qspi   (ignored if psram_size_mb == 0)
+  main_task_stack int    Bytes for main_task on this board (multiple of 4).
+                         Omit to keep the SDK default. Per-board measurement,
+                         never a project-wide default — ADR 040.
   uart:
     - id: N
       tx_pin: N
@@ -89,6 +93,7 @@ The tool also generates two additional files alongside board_config.h:
 """
 
 import argparse
+import difflib
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -121,9 +126,52 @@ SECONDARY_CONSOLE_CPUS = {"esp32s3", "esp32c3", "esp32c5",
                           "esp32c6", "esp32h2", "esp32p4"}
 
 
+# Every top-level key board.yaml may carry. An unknown key is an error, not a
+# no-op: `main_task_stac: 4608` used to generate cleanly and leave the board on
+# the SDK default, i.e. a typo that bricks a board with exit code 0. Keys are
+# listed here even when bspgen itself ignores them, because other consumers read
+# the same file (dbt's toolchain plugin reads `arch`/`sdk`, boardgen reads the
+# peripheral blocks) and because a board may legitimately declare hardware no
+# generator models yet — `lora`/`rfid` on lilygo-t-embed-cc1101 are exactly that.
+KNOWN_BOARD_KEYS = {
+    # identity / toolchain selection
+    "name", "cpu", "arch", "sdk", "qemu",
+    # memory and flash
+    "flash_size_mb", "psram_size_mb", "psram_type", "main_task_stack",
+    # console and boot
+    "console", "recovery_pin",
+    # buses and peripherals
+    "uart", "i2c", "spi", "usb", "gpio_expanders",
+    "sd_card", "has_sd", "display", "leds", "buttons", "encoder",
+    "keyboard", "keyboard_matrix", "battery", "network", "wifi",
+    # declared hardware not modelled by any generator yet
+    "lora", "rfid",
+    # untyped escape hatch (ADR 040)
+    "kconfig",
+}
+
+
 def die(msg: str) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def kconfig_symbol(entry) -> str:
+    """Symbol name declared by a raw `kconfig:` entry, or "" if there is none.
+
+    Entries are hand-written strings, so `CONFIG_X=y`, ` CONFIG_X = 8192 ` and
+    `# CONFIG_X is not set` are all forms a board.yaml can legitimately contain
+    and Kconfig accepts. A prefix match on the raw string misses every one but
+    the first — which let a leading space smuggle an override past the
+    collision guard below.
+    """
+    text = str(entry).strip()
+    if text.startswith("#"):
+        body = text.lstrip("#").strip()
+        if body.endswith("is not set"):
+            return body[: -len("is not set")].strip()
+        return ""
+    return text.split("=", 1)[0].strip()
 
 
 def validate(board: dict, yaml_path: Path) -> None:
@@ -132,6 +180,17 @@ def validate(board: dict, yaml_path: Path) -> None:
             die(f"'{yaml_path}' is missing required field: board.{k}")
     if board["cpu"] not in VALID_CPUS:
         die(f"Unknown cpu '{board['cpu']}'. Valid: {', '.join(sorted(VALID_CPUS))}")
+
+    unknown = sorted(k for k in board if k not in KNOWN_BOARD_KEYS)
+    if unknown:
+        hints = []
+        for k in unknown:
+            close = difflib.get_close_matches(k, sorted(KNOWN_BOARD_KEYS), n=1, cutoff=0.7)
+            hints.append(f"board.{k}" + (f" (did you mean 'board.{close[0]}'?)" if close else ""))
+        die(f"'{yaml_path}' declares unknown board key(s): {', '.join(hints)}.\n"
+            f"       Unknown keys are refused rather than ignored: a typo in a typed key "
+            f"generates cleanly and silently leaves the board on the SDK default.\n"
+            f"       Valid keys: {', '.join(sorted(KNOWN_BOARD_KEYS))}")
 
     if "sd_card" in board:
         sd = board["sd_card"]
@@ -680,6 +739,30 @@ def generate_sdkconfig_board(board: dict) -> str:
             lines += ["CONFIG_ESP_CONSOLE_SECONDARY_NONE=y"]
         lines += [""]
 
+    # ---- Main task stack ----
+    # `main_task_stack: N` declares the depth main_task actually needs on THIS
+    # board. It is a per-board measurement, not a project-wide policy: the peak
+    # is a property of (architecture x that board's boot workload) — Xtensa
+    # spills a register window per call frame and RISC-V does not, and a board
+    # with no SD never walks the sdspi mount path. Declaring it in
+    # sdkconfig.defaults would make every board pay one board's maximum
+    # (ADR 040). Omitting the key leaves ESP-IDF's own default in force.
+    stack = board.get("main_task_stack")
+    if stack is not None:
+        # A silently coerced value here is a stack overflow on a board nobody
+        # measured, so every rejection names the board and the value.
+        if isinstance(stack, bool) or not isinstance(stack, int):
+            die(f"board.main_task_stack on board '{name}' must be an integer "
+                f"number of bytes, got {type(stack).__name__} ({stack!r})")
+        if stack <= 0:
+            die(f"board.main_task_stack on board '{name}' must be positive, "
+                f"got {stack}")
+        if stack % 4 != 0:
+            die(f"board.main_task_stack on board '{name}' must be a multiple "
+                f"of 4 bytes (stack words are 4-byte aligned), got {stack}")
+        lines += ["# Main task stack (measured on this board — see board.yaml)",
+                  f"CONFIG_ESP_MAIN_TASK_STACK_SIZE={stack}", ""]
+
     # ---- Emulator target ----
     # `qemu: true` means "this board only ever runs under an emulator". Its one
     # effect is the loader's exec write path (SPEC-leg-29): qemu-xtensa does not
@@ -813,7 +896,17 @@ def generate_sdkconfig_board(board: dict) -> str:
 
     # ---- Raw Kconfig overrides ----
     # board.yaml kconfig: list is emitted verbatim — use for board-specific
-    # tuning that bspgen doesn't model structurally (e.g. stack sizes).
+    # tuning that bspgen doesn't model structurally. Prefer a typed key when one
+    # exists (main_task_stack), since only those get validated.
+    # This block is emitted last, so a raw entry would silently outrank a typed
+    # key that declares the same symbol — refuse the ambiguity instead.
+    if stack is not None:
+        for kv in board.get("kconfig", []):
+            if kconfig_symbol(kv) == "CONFIG_ESP_MAIN_TASK_STACK_SIZE":
+                die(f"board '{name}' sets the main task stack twice: "
+                    f"main_task_stack={stack} and a raw kconfig entry "
+                    f"({str(kv)!r}). The raw list is emitted last and would win. "
+                    "Keep main_task_stack and drop the raw entry.")
     for kv in board.get("kconfig", []):
         lines.append(str(kv))
     if board.get("kconfig"):

@@ -9,8 +9,8 @@ across 396 tracked files. 24 raw findings, 24 confirmed by adversarial validatio
 No `critical` finding: no committed secrets, no tracked build artefacts, no observed data loss.
 Priority criterion chosen at arbitration: **risk first**.
 
-**Revision of 2026-09-05 — 8 IDs added, total now 35 (24 audit findings + 3 enablers +
-8 bench-derived).** LEG-28/29/30 are defects the Milestone 0 bench found while being built, fixed
+**Revision of 2026-09-05 — 10 IDs added, total now 37 (24 audit findings + 3 enablers +
+10 found by building and running, not by the audit sweep).** LEG-28/29/30 are defects the Milestone 0 bench found while being built, fixed
 in the same pull request; LEG-31/32/33 are findings from the same work, specced but not yet
 executed. None came from the original audit sweep: they came from *running* the thing the audit
 asked for. See "What the bench cost and what it found" under Milestone 0.
@@ -103,6 +103,28 @@ single file dropped on the SD card triggers it, without launching an app.
 | LEG-04 | `calloc` exposed to apps without `n * size` overflow detection (`supervisor.c:1287-1295`) | major | XS | — | [specs/SPEC-leg-04-calloc-overflow.md](specs/SPEC-leg-04-calloc-overflow.md) | TODO |
 | LEG-34 | No section extent check: `sh_offset + sh_size` may wrap past `UINT32_MAX` or run past EOF and is still read (`loader.c:448`); `duneos_elf_io_t` carries no file size | major | S | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EXTENT` | TODO |
 | LEG-35 | A zero-size `.symtab` is not refused by the validator: `symcount = 0`, `malloc(0)`, and the image is rejected only later by an `app_main not found` message that names the wrong cause (`loader.c:1156`, `:1293`) | minor | XS | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EMPTY-SYMTAB` | TODO |
+| LEG-36 | `dbt flash sysbin` ignores the active profile and stages every built app (71 files, 1263 KiB) into a 1024 KiB partition, failing with a raw `LittleFSError -28` traceback; `dbt system flash` stages the same board's profile correctly (35 apps, 500 KiB per `dbt system size`). Two commands disagree on what belongs in the image, and the one that is wrong is the one whose name suggests it | major | S | — | — | TODO |
+| LEG-37 | `main_task` runs the whole boot — LittleFS mount, SD mount, and the loader scan of every `.dap` — on the 3584 B ESP-IDF default stack, with no measured margin. Adding one call frame to the loader path overflowed it into the adjacent heap: TLSF free-list corruption and a watchdog reboot loop, never a clean stack-overflow report. Fixed by raising the stack to 6144 B; the margin itself is still unmeasured and no test covers it | major | S | — | — | FIXED |
+
+**LEG-37 was found the hard way, and it is the most important entry in this table.** Merging LEG-25/27/28/29/01 bricked a working
+CardPuter into a reboot loop. Bisecting on hardware isolated LEG-25 — the ELF parser extraction whose commit message says
+"extraction at constant behaviour" — and a control build proved it was not a pre-existing bug: baseline clean, LEG-25 corrupt,
+same board, same SD, same heap poisoning. The extraction added one struct local and one call frame on a path that reaches
+`lfs_bd_crc`, and 3584 B left nothing to absorb it. The failure mode is what makes it costly: no stack-overflow message, just a
+corrupted heap detected thousands of instructions later, at a different place on each boot. `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK`
+named it in one run — that flag belongs in the diagnostic playbook.
+
+**What no bench caught, and why.** ADR 039 bounds the QEMU bench to "the loader, the VFS and the boot sequence, not the CardPuter":
+no display, no SD, no TinyUSB, and a different stack watermark. The host corpus runs the parser with a host-sized stack. Both did
+exactly what they were specified to do. What was missing is a rule, not a tool: a change that alters what a physical board links or
+how deep it recurses must be run on that board before it reaches `main`.
+
+**LEG-36 was found by flashing a real CardPuter**, not by any test: `dbt flash sysbin` produced an image 239 KiB over its
+partition. Two aggravating details belong with the finding. `tools/dbt/flashimg.py:29` hardcodes `_SYSBIN_SIZE = 0x100000` with the
+comment "must match partitions.csv" — an unlinked duplicate of the partition table, the same class of defect `loader_limits.h`
+removed on the loader side. And the failure surfaces as a Python traceback from inside the LittleFS binding, although the staged size
+is known before a single byte is written and `dbt system size` already reports the correct figure; a one-line pre-flight would say
+"staging 1263 KiB > partition 1024 KiB" instead.
 
 **LEG-34 and LEG-35 were found by the LEG-26 corpus, not by the audit sweep**, and are deliberately
 outside SPEC-leg-01's scope: that spec bounds indices and string offsets, while these two need a

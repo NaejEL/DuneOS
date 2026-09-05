@@ -1406,6 +1406,28 @@ class DbtApp(App):
             return False
         return True
 
+    def _check_sdkconfig(self, board: str) -> bool:
+        """False (with an error modal) when the build dir holds a stale Kconfig.
+
+        Same refusal as the CLI, routed through the TUI's own error channel:
+        `enforce()` prints and raises SystemExit, which would tear down the app
+        from a worker thread instead of telling the user what to do.
+        """
+        from .sdkconfig_check import (check_build_sdkconfig, default_sources,
+                                      format_conflicts)
+        sdkconfig = DUNEOS_ROOT / "sdkconfig"
+        conflicts = check_build_sdkconfig(board, sdkconfig)
+        if not conflicts:
+            return True
+        body = format_conflicts(conflicts, sdkconfig, default_sources(board))
+        for line in body.splitlines():
+            self.call_from_thread(self._log_ansi, line)
+        # ErrorModal interpolates its body into a markup string, and a path may
+        # legitimately contain square brackets.
+        from rich.markup import escape as _escape
+        self.call_from_thread(self._err, "Stale cached sdkconfig", _escape(body))
+        return False
+
     # -- Profile (Phase 25) ──────────────────────────────────────────────────
 
     def _run_profile_pick(self) -> None:
@@ -1481,6 +1503,12 @@ class DbtApp(App):
                     f"boards/{board}/board.yaml — exit {rc}")
                 return
             self.call_from_thread(self._log, "[#3fb950]✓[/#3fb950]  BSP generated")
+
+            # After bspgen (the fragment must be current before it is compared)
+            # and before the build: a cached sdkconfig outranks it, silently.
+            # Also guards the flash, which reuses whatever the build produced.
+            if not self._check_sdkconfig(board):
+                return
 
             env = self._idf_env()
             self.call_from_thread(self._log, "  idf.py build …")
