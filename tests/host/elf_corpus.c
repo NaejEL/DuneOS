@@ -351,12 +351,12 @@ const elf_corpus_case_t elf_corpus[] = {
 
     { "sh_offset_size_overflow", "sh_offset + sh_size wraps and escapes the file",
       mut_sh_offset_size_overflow, elf_corpus_probe_open,
-      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "UNPLANNED:BL-ELF-EXTENT",
+      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "UNPLANNED:LEG-34/BL-ELF-EXTENT",
       "no spec bounds sh_offset + sh_size against the file size; loader.c:448 reads at\n       sh_offset. Converting this case needs an API change: duneos_elf_io_t carries no\n       file size, so duneos_elf_image_open() cannot check a section extent. See\n       docs/backlog.md BL-ELF-EXTENT" },
 
     { "symtab_size_zero", "symtab sh_size is 0 on a table required to be non-empty",
       mut_symtab_size_zero, elf_corpus_probe_open,
-      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "UNPLANNED:BL-ELF-EMPTY-SYMTAB",
+      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "UNPLANNED:LEG-35/BL-ELF-EMPTY-SYMTAB",
       "no spec rejects an empty symtab; loader.c:1156 derives symcount 0 and malloc(0),\n       and the image is refused only later by the app_main-not-found check at loader.c:1293.\n       duneos_elf_image_open() never inspects a non-shstrtab section, so converting this\n       case means either a new check in the unit or a probe reproducing the loader read.\n       See docs/backlog.md BL-ELF-EMPTY-SYMTAB" },
 };
 

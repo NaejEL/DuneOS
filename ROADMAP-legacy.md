@@ -9,8 +9,8 @@ across 396 tracked files. 24 raw findings, 24 confirmed by adversarial validatio
 No `critical` finding: no committed secrets, no tracked build artefacts, no observed data loss.
 Priority criterion chosen at arbitration: **risk first**.
 
-**Revision of 2026-09-05 — 6 IDs added, total now 33 (24 audit findings + 3 enablers +
-6 bench-derived).** LEG-28/29/30 are defects the Milestone 0 bench found while being built, fixed
+**Revision of 2026-09-05 — 8 IDs added, total now 35 (24 audit findings + 3 enablers +
+8 bench-derived).** LEG-28/29/30 are defects the Milestone 0 bench found while being built, fixed
 in the same pull request; LEG-31/32/33 are findings from the same work, specced but not yet
 executed. None came from the original audit sweep: they came from *running* the thing the audit
 asked for. See "What the bench cost and what it found" under Milestone 0.
@@ -101,6 +101,15 @@ single file dropped on the SD card triggers it, without launching an app.
 | LEG-02 | `sh_link` unbounded before indexing `shdrs` (now `loader.c:1165`) | major | XS | LEG-01, LEG-26 | [specs/SPEC-leg-01-harden-elf-validation.md](specs/SPEC-leg-01-harden-elf-validation.md) | TODO |
 | LEG-03 | `sh_name` / `st_name` offsets unbounded before `strcmp` (now `elf_parse.c:115`, `loader.c:493`, `:1257`, `:1280`) | major | S | LEG-01, LEG-26 | [specs/SPEC-leg-01-harden-elf-validation.md](specs/SPEC-leg-01-harden-elf-validation.md) | TODO |
 | LEG-04 | `calloc` exposed to apps without `n * size` overflow detection (`supervisor.c:1287-1295`) | major | XS | — | [specs/SPEC-leg-04-calloc-overflow.md](specs/SPEC-leg-04-calloc-overflow.md) | TODO |
+| LEG-34 | No section extent check: `sh_offset + sh_size` may wrap past `UINT32_MAX` or run past EOF and is still read (`loader.c:448`); `duneos_elf_io_t` carries no file size | major | S | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EXTENT` | TODO |
+| LEG-35 | A zero-size `.symtab` is not refused by the validator: `symcount = 0`, `malloc(0)`, and the image is rejected only later by an `app_main not found` message that names the wrong cause (`loader.c:1156`, `:1293`) | minor | XS | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EMPTY-SYMTAB` | TODO |
+
+**LEG-34 and LEG-35 were found by the LEG-26 corpus, not by the audit sweep**, and are deliberately
+outside SPEC-leg-01's scope: that spec bounds indices and string offsets, while these two need a
+section-extent notion the pure unit does not have (`duneos_elf_io_t` has no file size). Both are
+covered on the bench today as expected failures marked `UNPLANNED`, and the suite prints their count
+separately, so they stay visible until specced. They have no spec yet — only the backlog entries
+linked above.
 
 **Anchors re-verified 2026-09-05 against `main`.** LEG-25's extraction (`8f1d3e6`) moved this code:
 the `e_shstrndx` site is now single rather than duplicated, in the new host-compilable
