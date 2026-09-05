@@ -1,6 +1,6 @@
 # ADR 039 — QEMU boards as the hardware-free test bench
 
-**Status:** Proposed · 2026-09-03
+**Status:** Accepted · 2026-09-03 (accepted 2026-09-05, once SPEC-leg-27/28/29/30 shipped the bench described here)
 
 ## Context
 
