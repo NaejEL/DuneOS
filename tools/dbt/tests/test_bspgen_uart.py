@@ -138,6 +138,8 @@ def test_qemu_boards_generate_with_the_secondary_console_off():
             board = yaml.safe_load(f)["board"]
         assert board["console"] == "uart"
         frag = BSPGEN.generate_sdkconfig_board(board)
+        # Asserted on the freshly generated fragment only: boards/*/sdkconfig.board
+        # is a bspgen artefact and gitignored, so it is absent from a clean
+        # checkout and reading it would make this test pass only on a machine
+        # where the generator had already been run for both QEMU boards.
         assert "CONFIG_ESP_CONSOLE_SECONDARY_NONE=y" in frag
-        generated = (REPO_ROOT / "boards" / name / "sdkconfig.board").read_text()
-        assert "CONFIG_ESP_CONSOLE_SECONDARY_NONE=y" in generated
