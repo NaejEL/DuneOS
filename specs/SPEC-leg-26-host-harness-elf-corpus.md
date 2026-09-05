@@ -83,8 +83,9 @@ None
    into an observation instead of losing the suite.
 2. **Expected-failure mechanism.** Markers live in the `xfail_owner` field of
    `tests/host/elf_corpus.c` and name the finding that must delete them (`LEG-01`, `LEG-02`,
-   `LEG-03`). Those three are **findings inside one approved spec**,
-   `specs/SPEC-leg-01-harden-elf-validation.md` — not three specs; its criterion 1 removes all four
+   `LEG-03`). Those three are **findings inside one spec**,
+   `specs/SPEC-leg-01-harden-elf-validation.md` (`Status: PROPOSED` today — what makes it the owner
+   is that it exists and names the fix, not its status) — not three specs; its criterion 1 removes all four
    `LEG-*` markers in a single change. A marked case that starts passing is reported as `XPASS` and
    **fails the suite**, so a stale marker turns CI red and cannot become a permanent mask. The
    number of expected failures is printed on every run.
@@ -100,7 +101,8 @@ None
    the Risks section forbids. For them the return code is the whole assertion (criterion 3), and it
    is precisely what changes when they are fixed.
 4. **Defects outside SPEC-leg-01.** Two criterion-2 cases (`sh_offset + sh_size` overflow, zero
-   `sh_size` on a table expected non-empty) are not covered by any approved spec. Neither can be
+   `sh_size` on a table expected non-empty) are not covered by any spec at all — only by a
+   `docs/backlog.md` entry, which is exactly what the `UNPLANNED` prefix means. Neither can be
    converted by SPEC-leg-01 as written: `duneos_elf_image_open()` never inspects a non-shstrtab
    section's extent and `duneos_elf_io_t` carries no file size, so the unit under test structurally
    cannot produce the expected rejection without an API change. That is stated in each case's

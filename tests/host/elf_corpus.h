@@ -64,11 +64,13 @@ typedef struct {
      * Expected-failure marker. NULL means the case must hold on every commit.
      * Otherwise: the finding id whose fix makes the case pass and which MUST
      * delete this marker. LEG-01/02/03 are three findings inside the single
-     * approved spec specs/SPEC-leg-01-harden-elf-validation.md, not three
-     * specs — its criterion 1 removes all four LEG-* markers in one change.
-     * An owner starting with "UNPLANNED" flags a defect no approved spec covers
-     * yet; it carries a docs/backlog.md id so the marker has a tracked home, and
-     * the driver counts those separately so they cannot rot here.
+     * spec specs/SPEC-leg-01-harden-elf-validation.md, not three specs — its
+     * criterion 1 removes all four LEG-* markers in one change. (That spec is
+     * Status: PROPOSED today; what makes it the owner is that it exists and
+     * names the fix, not its status.)
+     * An owner starting with "UNPLANNED" flags a defect no spec covers at all;
+     * it carries a docs/backlog.md id so the marker has a tracked home, and the
+     * driver counts those separately so they cannot rot here.
      */
     const char *xfail_owner;
     const char *defect;

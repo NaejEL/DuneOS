@@ -17,9 +17,11 @@
  * delete it in the same change, and CI turns red until it does. Deleting a case
  * outright is caught instead by the two size pins in elf_corpus.h.
  *
- * LEG-01, LEG-02 and LEG-03 are three FINDINGS inside one approved spec,
+ * LEG-01, LEG-02 and LEG-03 are three FINDINGS inside one spec,
  * specs/SPEC-leg-01-harden-elf-validation.md — not three specs. Its criterion 1
  * covers all three, so the four LEG-* markers below all go in a single change.
+ * An UNPLANNED owner, by contrast, means no spec covers the defect at all —
+ * only a docs/backlog.md entry does.
  */
 
 #include <errno.h>
@@ -66,7 +68,13 @@ static void test_validate_direct(void)
 
 /* ------------------------------------------------------------ corpus driver */
 
-typedef enum { OUT_PASS, OUT_FAIL, OUT_CRASH } outcome_t;
+/*
+ * OUT_ERROR is not an observation about the case: it means the harness could
+ * not run it at all (fork/waitpid failed). It must never be absorbed by an
+ * expected-failure marker, or a runner too loaded to fork would report six
+ * XFAILs and exit 0 having executed nothing.
+ */
+typedef enum { OUT_PASS, OUT_FAIL, OUT_CRASH, OUT_ERROR } outcome_t;
 
 static int child_run(const elf_corpus_case_t *c)
 {
@@ -108,7 +116,7 @@ static outcome_t run_isolated(const elf_corpus_case_t *c, int *signo)
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork");
-        return OUT_CRASH;
+        return OUT_ERROR;
     }
     if (pid == 0) {
         _exit(child_run(c) ? 1 : 0);
@@ -116,7 +124,7 @@ static outcome_t run_isolated(const elf_corpus_case_t *c, int *signo)
 
     int status = 0;
     while (waitpid(pid, &status, 0) < 0) {
-        if (errno != EINTR) { perror("waitpid"); return OUT_CRASH; }
+        if (errno != EINTR) { perror("waitpid"); return OUT_ERROR; }
     }
     if (WIFSIGNALED(status)) {
         *signo = WTERMSIG(status);
@@ -160,11 +168,22 @@ int main(int argc, char **argv)
     test_validate_direct();
 
     int passed = 0, failed = 0, xfailed = 0, xpassed = 0, unplanned = 0;
+    int errored = 0;
 
     for (size_t i = 0; i < elf_corpus_count; i++) {
         const elf_corpus_case_t *c = &elf_corpus[i];
         int signo = 0;
         outcome_t o = run_isolated(c, &signo);
+
+        if (o == OUT_ERROR) {
+            errored++;
+            fprintf(stderr,
+                    "  ERROR %s — the harness could not run this case (see the "
+                    "fork/waitpid message above). Not an observation about the "
+                    "case, and not absorbed by its expected-failure marker.\n",
+                    c->name);
+            continue;
+        }
 
         if (c->xfail_owner == NULL) {
             if (o == OUT_PASS) {
@@ -195,12 +214,15 @@ int main(int argc, char **argv)
     }
 
     printf("elf corpus: %zu cases, %d passed, %d expected failures, "
-           "%d unexpected passes, %d hard failures\n",
-           elf_corpus_count, passed, xfailed, xpassed, failed);
+           "%d unexpected passes, %d hard failures, %d not run\n",
+           elf_corpus_count, passed, xfailed, xpassed, failed, errored);
 
     int marked = xfailed + xpassed;
     int pin    = 0;
-    if (marked != ELF_CORPUS_EXPECTED_XFAILS) {
+    /* A case the harness could not run leaves its marker uncounted, so the pin
+     * would misfire with a message about deleting markers. Report the real
+     * cause instead. */
+    if (errored == 0 && marked != ELF_CORPUS_EXPECTED_XFAILS) {
         pin = 1;
         fprintf(stderr,
                 "  PIN %d expected-failure marker(s) present, "
@@ -212,10 +234,10 @@ int main(int argc, char **argv)
     }
     if (unplanned > 0) {
         printf("elf corpus: %d expected failure(s) marked UNPLANNED — "
-               "no approved spec removes them yet; each names its docs/backlog.md "
+               "no spec covers them yet; each names its docs/backlog.md "
                "id\n", unplanned);
     }
 
     int rc = t_report("test_elf_validate");
-    return (rc || failed || xpassed || pin) ? 1 : 0;
+    return (rc || failed || xpassed || pin || errored) ? 1 : 0;
 }

@@ -357,7 +357,7 @@ const elf_corpus_case_t elf_corpus[] = {
     { "symtab_size_zero", "symtab sh_size is 0 on a table required to be non-empty",
       mut_symtab_size_zero, elf_corpus_probe_open,
       -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "UNPLANNED:BL-ELF-EMPTY-SYMTAB",
-      "no spec rejects an empty symtab; loader.c:1156 derives symcount 0 and malloc(0).\n       duneos_elf_image_open() never inspects a non-shstrtab section, so converting this\n       case means either a new check in the unit or a probe reproducing the loader read.\n       See docs/backlog.md BL-ELF-EMPTY-SYMTAB" },
+      "no spec rejects an empty symtab; loader.c:1156 derives symcount 0 and malloc(0),\n       and the image is refused only later by the app_main-not-found check at loader.c:1293.\n       duneos_elf_image_open() never inspects a non-shstrtab section, so converting this\n       case means either a new check in the unit or a probe reproducing the loader read.\n       See docs/backlog.md BL-ELF-EMPTY-SYMTAB" },
 };
 
 const size_t elf_corpus_count = sizeof(elf_corpus) / sizeof(elf_corpus[0]);
