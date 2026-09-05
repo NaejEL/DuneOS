@@ -6,7 +6,8 @@ CFLAGS  += -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L
 
 ROOT    := ../..
 
-TESTS   := test_re test_i2c_decode test_known_yaml test_elf_validate
+TESTS   := test_re test_i2c_decode test_known_yaml test_elf_validate \
+           test_elf_scan
 
 ELF_INC := -I$(ROOT)/kernel/duneos_loader/include
 ELF_SRC := $(ROOT)/kernel/duneos_loader/src/elf_parse.c
@@ -42,6 +43,10 @@ test_known_yaml: test_known_yaml.c known_yaml_cases.h tassert.h
 
 test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h
 	$(CC) $(CFLAGS) $(ELF_INC) test_elf_validate.c elf_corpus.c $(ELF_SRC) -o $@
+
+test_elf_scan: test_elf_scan.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
+               $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h
+	$(CC) $(CFLAGS) $(ELF_INC) test_elf_scan.c elf_corpus.c $(ELF_SRC) -o $@
 
 test: all
 	@rc=0; \
@@ -80,7 +85,8 @@ fuzz-run: fuzz_elf_validate test_elf_validate
 
 clean:
 	rm -f $(TESTS) $(HOSTUNITS) known_yaml_test_*.tmp fuzz_elf_validate \
+	      elf_scan_*/* \
 	      .fuzzprobe .fuzzprobe.c fuzz_ran.marker
-	rm -rf $(FUZZ_CORPUS) $(FUZZ_ARTIFACTS)
+	rm -rf $(FUZZ_CORPUS) $(FUZZ_ARTIFACTS) elf_scan_*
 
 .PHONY: all test clean fuzz fuzz-run

@@ -37,6 +37,9 @@ typedef enum {
     DUNEOS_ELF_REJ_SHDR_READ,           /* section header table read failed    */
     DUNEOS_ELF_REJ_SHSTRTAB_READ,       /* section name string table read fail */
     DUNEOS_ELF_REJ_NOMEM,               /* allocation failed                   */
+    DUNEOS_ELF_REJ_SHSTRNDX,            /* e_shstrndx >= e_shnum               */
+    DUNEOS_ELF_REJ_SH_LINK,             /* sh_link   >= e_shnum                */
+    DUNEOS_ELF_REJ_SH_NAME,             /* sh_name   >= shstrtab size          */
 } duneos_elf_reject_t;
 
 /*
@@ -54,8 +57,19 @@ typedef struct {
  */
 typedef struct {
     elf32_hdr_t   hdr;
-    elf32_shdr_t *shdrs;      /* hdr.e_shnum entries                        */
-    char         *shstrtab;   /* section names, NUL-terminated by open()    */
+    elf32_shdr_t *shdrs;          /* hdr.e_shnum entries                    */
+    char         *shstrtab;       /* section names, NUL-terminated by open()*/
+    size_t        shstrtab_size;  /* bytes of shstrtab, excluding that NUL  */
+
+    /*
+     * Which value tripped the check named by *why, so the caller can log the
+     * offending field with its value and the bound it broke. Only meaningful
+     * for the reject reasons that carry one; survives the failure path of
+     * duneos_elf_image_open() alongside hdr.
+     */
+    uint32_t      reject_index;   /* section header index, when applicable   */
+    uint32_t      reject_value;   /* the out-of-range value read from file   */
+    uint32_t      reject_bound;   /* the limit it had to stay under          */
 } duneos_elf_image_t;
 
 /* Section classes the loader places in memory. */
@@ -84,6 +98,12 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
  * for every reject reason past DUNEOS_ELF_REJ_HEADER_READ.
  * On success the caller owns *out and must release it with
  * duneos_elf_image_close(). On failure *out is already released.
+ *
+ * Every index and offset the section header table carries is bounded here, so
+ * a successfully opened image guarantees, for all its sections:
+ *   sh_name < shstrtab_size — duneos_elf_section_name() never returns NULL;
+ *   sh_link < e_shnum for the section types whose sh_link is a section index.
+ * A caller indexing shdrs with a value it read itself still bounds it itself.
  */
 int duneos_elf_image_open(const duneos_elf_io_t *io,
                           uint16_t               expect_machine,
@@ -94,8 +114,24 @@ int duneos_elf_image_open(const duneos_elf_io_t *io,
 /* Free the buffers owned by img and reset it. Safe on a zeroed image. */
 void duneos_elf_image_close(duneos_elf_image_t *img);
 
-/* String table accessors. */
-const char *duneos_elf_string(const char *strtab, uint32_t offset);
+/*
+ * String table accessors. Both return NULL when the offset is not strictly
+ * inside the table, so an offset read from the file can never produce a start
+ * pointer past its end. Callers must handle NULL — the string is untrusted
+ * input, not an internal invariant.
+ *
+ * CALLER CONTRACT: only the START offset is bounded here. Nothing stops a
+ * string from running to the end of the table, so strtab must hold strtab_size
+ * usable bytes FOLLOWED BY a NUL terminator the caller wrote itself — i.e. an
+ * allocation of strtab_size + 1 bytes whose last byte is '\0', not counted in
+ * strtab_size. Without it, the strcmp()/strlen() the caller runs on the result
+ * reads past the buffer. The two producers in tree do exactly that:
+ *   - duneos_elf_image_open() for shstrtab, elf_parse.c ("shstrtab[sh_size]");
+ *   - the symbol string table read in loader.c ("strtab[str_sh->sh_size]").
+ * A caller that only NULL-checks the result may pass an unterminated buffer.
+ */
+const char *duneos_elf_string(const char *strtab, size_t strtab_size,
+                              uint32_t offset);
 const char *duneos_elf_section_name(const duneos_elf_image_t *img,
                                     const elf32_shdr_t       *sh);
 

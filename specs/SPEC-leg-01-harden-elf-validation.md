@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: APPROVED
 
 # SPEC-leg-01 — Bound every index and offset read from an ELF file
 

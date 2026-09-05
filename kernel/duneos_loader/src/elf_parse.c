@@ -33,6 +33,44 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
         *why = DUNEOS_ELF_REJ_NO_SECTIONS;
         return -EINVAL;
     }
+    if (hdr->e_shstrndx >= hdr->e_shnum) {
+        *why = DUNEOS_ELF_REJ_SHSTRNDX;
+        return -EINVAL;
+    }
+    return 0;
+}
+
+/*
+ * Section types whose sh_link is a section header index. Every other type
+ * leaves sh_link at 0 or gives it an unrelated meaning, so bounding it there
+ * would reject well-formed objects for a field nothing indexes with.
+ */
+static int sh_link_is_section_index(uint32_t sh_type)
+{
+    return sh_type == SHT_SYMTAB || sh_type == SHT_RELA || sh_type == SHT_REL;
+}
+
+static int check_section_table(duneos_elf_image_t *img, duneos_elf_reject_t *why)
+{
+    for (uint16_t i = 0; i < img->hdr.e_shnum; i++) {
+        const elf32_shdr_t *sh = &img->shdrs[i];
+
+        if (sh->sh_name >= img->shstrtab_size) {
+            *why = DUNEOS_ELF_REJ_SH_NAME;
+            img->reject_index = i;
+            img->reject_value = sh->sh_name;
+            img->reject_bound = (uint32_t)img->shstrtab_size;
+            return -EINVAL;
+        }
+        if (sh_link_is_section_index(sh->sh_type) &&
+            sh->sh_link >= img->hdr.e_shnum) {
+            *why = DUNEOS_ELF_REJ_SH_LINK;
+            img->reject_index = i;
+            img->reject_value = sh->sh_link;
+            img->reject_bound = img->hdr.e_shnum;
+            return -EINVAL;
+        }
+    }
     return 0;
 }
 
@@ -72,6 +110,7 @@ int duneos_elf_image_open(const duneos_elf_io_t *io,
         goto fail;
     }
 
+    /* e_shstrndx was bounded by duneos_elf_validate(). */
     const elf32_shdr_t *ss = &out->shdrs[out->hdr.e_shstrndx];
     out->shstrtab = malloc((size_t)ss->sh_size + 1u);
     if (!out->shstrtab) {
@@ -85,14 +124,24 @@ int duneos_elf_image_open(const duneos_elf_io_t *io,
         goto fail;
     }
     out->shstrtab[ss->sh_size] = '\0';
+    out->shstrtab_size = ss->sh_size;
+
+    rc = check_section_table(out, why);
+    if (rc != 0) goto fail;
 
     return 0;
 
 fail: {
-        /* Preserve the header for the caller's diagnostic; drop the buffers. */
-        elf32_hdr_t saved = out->hdr;
+        /* Preserve the diagnostic fields for the caller; drop the buffers. */
+        elf32_hdr_t saved_hdr   = out->hdr;
+        uint32_t    saved_index = out->reject_index;
+        uint32_t    saved_value = out->reject_value;
+        uint32_t    saved_bound = out->reject_bound;
         duneos_elf_image_close(out);
-        out->hdr = saved;
+        out->hdr          = saved_hdr;
+        out->reject_index = saved_index;
+        out->reject_value = saved_value;
+        out->reject_bound = saved_bound;
         return rc;
     }
 }
@@ -104,15 +153,17 @@ void duneos_elf_image_close(duneos_elf_image_t *img)
     memset(img, 0, sizeof(*img));
 }
 
-const char *duneos_elf_string(const char *strtab, uint32_t offset)
+const char *duneos_elf_string(const char *strtab, size_t strtab_size,
+                              uint32_t offset)
 {
+    if (!strtab || offset >= strtab_size) return NULL;
     return strtab + offset;
 }
 
 const char *duneos_elf_section_name(const duneos_elf_image_t *img,
                                     const elf32_shdr_t       *sh)
 {
-    return duneos_elf_string(img->shstrtab, sh->sh_name);
+    return duneos_elf_string(img->shstrtab, img->shstrtab_size, sh->sh_name);
 }
 
 sec_kind_t duneos_elf_classify_section(const char *name, uint32_t flags)
