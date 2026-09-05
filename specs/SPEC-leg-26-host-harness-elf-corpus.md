@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: APPROVED
 
 # SPEC-leg-26 — Host bench: ELF validation tests, malformed-ELF corpus and fuzz target
 
@@ -73,3 +73,46 @@ ignored.
 ## Open questions
 
 None
+
+## Implementation decisions (recorded during the build)
+
+1. **Crash isolation.** Some corpus cases read out of bounds today rather than returning an error
+   (ASan reports the faulting read at `elf_parse.c:76`, where `ss->sh_size` is dereferenced through
+   the out-of-range `shdrs[e_shstrndx]` address formed on the preceding line), which aborts under
+   ASan. Each case therefore runs in a forked child; the driver turns a signal or a non-zero exit
+   into an observation instead of losing the suite.
+2. **Expected-failure mechanism.** Markers live in the `xfail_owner` field of
+   `tests/host/elf_corpus.c` and name the finding that must delete them (`LEG-01`, `LEG-02`,
+   `LEG-03`). Those three are **findings inside one spec**,
+   `specs/SPEC-leg-01-harden-elf-validation.md` (`Status: PROPOSED` today — what makes it the owner
+   is that it exists and names the fix, not its status) — not three specs; its criterion 1 removes all four
+   `LEG-*` markers in a single change. A marked case that starts passing is reported as `XPASS` and
+   **fails the suite**, so a stale marker turns CI red and cannot become a permanent mask. The
+   number of expected failures is printed on every run.
+3. **How much a case may assert about the reject reason.** The `why_mode` field is a three-state
+   choice, and the third state exists to keep the XPASS mechanism live. `WHY_EXACT` demands a named
+   `duneos_elf_reject_t`; `WHY_ANY` demands only that a rejection carry some reason.
+   `WHY_UNOBSERVED` is for the two LEG-03 cases, whose defect is reached through a string accessor
+   *after* `duneos_elf_image_open()` has already returned 0: `why` is structurally
+   `DUNEOS_ELF_REJ_NONE` there and says nothing about the accessor — for `st_name_past_strtab`
+   unconditionally so, since the symbol string table is read from raw bytes outside the image.
+   Demanding a reason on those cases would keep them failing after the defect is fixed, so the
+   marker could never flip to `XPASS` and the fix would land unreported — exactly the permanent mask
+   the Risks section forbids. For them the return code is the whole assertion (criterion 3), and it
+   is precisely what changes when they are fixed.
+4. **Defects outside SPEC-leg-01.** Two criterion-2 cases (`sh_offset + sh_size` overflow, zero
+   `sh_size` on a table expected non-empty) are not covered by any spec at all — only by a
+   `docs/backlog.md` entry, which is exactly what the `UNPLANNED` prefix means. Neither can be
+   converted by SPEC-leg-01 as written: `duneos_elf_image_open()` never inspects a non-shstrtab
+   section's extent and `duneos_elf_io_t` carries no file size, so the unit under test structurally
+   cannot produce the expected rejection without an API change. That is stated in each case's
+   `defect` string, and each carries a tracked owner — `UNPLANNED:BL-ELF-EXTENT` and
+   `UNPLANNED:BL-ELF-EMPTY-SYMTAB`, matching the two `docs/backlog.md` entries that own them — so
+   the markers have a home instead of rotting. They are counted separately in the test output rather
+   than silently attributed to LEG-01/02/03.
+5. **Fuzzing in CI.** Separate `fuzz-elf` job, 120 s bound with a 25 s per-input timeout; crash
+   reproducers are uploaded as an artifact. The job is `continue-on-error` **only** while the
+   LEG-01/02/03 defects stand — SPEC-leg-01 criterion 4 removes that flag. Because
+   `continue-on-error` would also hide a runner with no clang, a second step that is **not**
+   `continue-on-error` asserts the `fuzz_elf_validate` binary exists and that the run reached its
+   completion marker, so "ran clean" is distinguishable from "never built".
