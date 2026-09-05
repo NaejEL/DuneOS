@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .constants import DUNEOS_ROOT
+from .constants import DUNEOS_ROOT, write_board_file
 
 _BOARD_FILE = DUNEOS_ROOT / ".duneos_board"
 _PORT_FILE  = DUNEOS_ROOT / ".duneos_port"
@@ -345,7 +345,7 @@ def ensure_board(console=None) -> str:
     _msg(console, "\n[yellow]Board not configured.[/yellow] Choose one:\n",
                   "\nBoard not configured. Choose one:\n")
     board = prompt_board(console)
-    _BOARD_FILE.write_text(board + "\n")
+    write_board_file(board)
     _msg(console, f"[green]✓ Board set:[/green] {board}", f"✓ Board set: {board}")
     return board
 
@@ -385,7 +385,7 @@ def cmd_setup(args) -> None:
     _msg(console, "[bold]Step 1/3 — Target board[/bold]\n",
                   "Step 1/3 — Target board\n")
     board = prompt_board(console)
-    _BOARD_FILE.write_text(board + "\n")
+    write_board_file(board)
     _msg(console, f"\n[green]✓[/green] Board: [bold]{board}[/bold]\n",
                   f"\n✓ Board: {board}\n")
 

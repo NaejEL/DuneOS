@@ -1,0 +1,7 @@
+name: qemu_smoke
+version: "0.1.0"
+required_abi_version: 1
+# UART (2) | FS_READ (32) | FS_WRITE (64) — drains /dev/klog and writes its
+# entry marker to /dev/uart0, a channel independent of where fd 1 points.
+permissions: 98
+stack_size: 8192

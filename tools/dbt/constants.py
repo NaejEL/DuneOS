@@ -1,9 +1,36 @@
+import os
+import tempfile
 from pathlib import Path
 
 DUNEOS_ROOT       = Path(__file__).resolve().parent.parent.parent
 SDK_DIR           = DUNEOS_ROOT / "sdk"
 SDK_INCLUDE       = DUNEOS_ROOT / "kernel" / "duneos_kernel" / "include"
 LIBDUNE_DIR       = DUNEOS_ROOT / "libdune"
+
+BOARD_FILE        = DUNEOS_ROOT / ".duneos_board"
+
+
+def write_board_file(board: str, path: "Path | None" = None) -> None:
+    """Set the active board, atomically.
+
+    CMakeLists.txt reads .duneos_board on every configure and falls back to a
+    hardcoded default when the file is ABSENT, then aborts with FATAL_ERROR if
+    that default differs from the board the build dir was configured for. A
+    plain truncate-and-write (or a delete-and-recreate) opens a window where a
+    concurrent configure sees no file and takes the fallback — which surfaces
+    as "Board changed: 'X' → 'esp32s3-devkitc'" and reads exactly like a bench
+    defect. os.replace() is atomic on POSIX and Windows, so a reader gets
+    either the old content or the new one.
+    """
+    target = Path(path) if path is not None else BOARD_FILE
+    fd, tmp = tempfile.mkstemp(dir=str(target.parent), prefix=".duneos_board.")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(board + "\n")
+        os.replace(tmp, target)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 MANIFEST_YAML_FILE = "duneos.yaml"
 MANIFEST_JSON_FILE = "manifest.json"   # deprecated — read-only compat

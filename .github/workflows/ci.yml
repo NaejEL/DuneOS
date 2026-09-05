@@ -14,6 +14,22 @@ jobs:
       - name: Run host unit tests
         run: make -C tests/host test
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The dbt unit tests are the only executable proof of the `dbt qemu`
+      # verdict logic (SPEC-leg-27 criteria 5 and 8), which no other job runs.
+      # The general Python-CI story — a deliberately failing test proving the
+      # gate bites, an explicit collection root — belongs to SPEC-leg-08.
+      - name: Run dbt Python unit tests
+        run: |
+          python -m pip install --upgrade pip
+          # pyyaml: duneos-bspgen.py sys.exit()s at import time without it,
+          # which would abort collection rather than fail a test.
+          python -m pip install pytest pyyaml
+          python -m pytest tools/dbt/tests -q
+
   kernel-build:
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0.1
@@ -43,6 +59,51 @@ jobs:
           git config --global --add safe.directory '*'
           . $IDF_PATH/export.sh
           idf.py build
+
+  # Hardware-free boot + loader smoke test (ADR 039 / SPEC-leg-27).
+  # One job per board: sdkconfig is board-specific and CMake aborts on an
+  # unclean switch, so each board gets its own build dir AND its own sdkconfig
+  # (dbt qemu passes -D SDKCONFIG=<build-dir>/sdkconfig).
+  #
+  # BOTH LEGS GATE. `esp32s3-qemu` exercises the loader's DRAM allocation
+  # branch, `esp32s3-qemu-psram` the `#ifdef CONFIG_SPIRAM` one, and a
+  # regression in either turns CI red the day it lands. `fail-fast: false` so
+  # one red leg still reports the other.
+  #
+  # The PSRAM leg was diagnostic-only (`continue-on-error`) until SPEC-leg-30:
+  # `idf.py qemu` hardcodes `-m 32M` for every ESP32-S3 and ESP-IDF maps
+  # whatever it detects, which filled the chip's whole external-memory vaddr
+  # window and left the flash mmap of the partition table with nothing.
+  # `dbt qemu` now sizes the machine from the board's own `psram_size_mb`.
+  qemu-smoke:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.0.1
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [esp32s3-qemu, esp32s3-qemu-psram]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Python deps
+        run: |
+          . $IDF_PATH/export.sh
+          pip install pyyaml littlefs-python
+
+      # No qemu install step and no PATH surgery on purpose: `dbt qemu`
+      # resolves qemu-system-xtensa from the IDF tools tree and installs it
+      # itself when absent. That is criterion 1 of SPEC-leg-27, and CI is
+      # where it gets exercised from a cold cache.
+      - name: Boot ${{ matrix.board }} under QEMU
+        run: |
+          git config --global --add safe.directory '*'
+          echo ${{ matrix.board }} > .duneos_board
+          . $IDF_PATH/export.sh
+          python tools/duneos-bspgen.py boards/${{ matrix.board }}/board.yaml
+          python tools/dbt.py qemu --board ${{ matrix.board }} \
+                                   --build-dir build-${{ matrix.board }}
 
   apps-build:
     runs-on: ubuntu-latest

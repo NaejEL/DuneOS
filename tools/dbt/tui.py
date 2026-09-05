@@ -27,7 +27,7 @@ from textual.widgets import (
 from textual.widgets.option_list import Option
 from rich.text import Text
 
-from .constants import DUNEOS_ROOT
+from .constants import DUNEOS_ROOT, write_board_file
 from .setup import _BOARD_FILE, _PORT_FILE, _list_boards, _list_ports, find_idf_root
 from .manifest import find_apps
 from .flashimg import _stage, _create_image, _find_esptool, _get_sysbin_offset, _get_board_name
@@ -701,7 +701,7 @@ class ProfilePickScreen(Screen):
         cfg = load_profile(name)
         board_file = DUNEOS_ROOT / ".duneos_board"
         if not board_file.exists() or board_file.read_text().strip() != cfg["board"]:
-            board_file.write_text(cfg["board"] + "\n")
+            write_board_file(cfg["board"])
         self.dismiss(name)
 
 

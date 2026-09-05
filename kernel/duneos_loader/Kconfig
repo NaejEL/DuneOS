@@ -12,4 +12,25 @@ menu "DuneOS Loader"
             chip-specific and can land allocations in the data-cache region.
             Set this large enough for the biggest .dap you expect to load.
 
+    config DUNEOS_TARGET_QEMU
+        bool "Target is an emulator, not real silicon"
+        depends on IDF_TARGET_ARCH_XTENSA
+        default n
+        help
+            Declare that this build only ever runs under an emulator. Set from
+            `qemu: true` in board.yaml by duneos-bspgen; never set it by hand,
+            and never on a board that exists physically.
+
+            Its single effect is in the loader: qemu-xtensa's esp32s3 machine
+            does not alias the IRAM and DRAM windows of internal SRAM, so the
+            loader writes an app's relocated .text straight at the exec (IRAM)
+            address instead of through the DRAM alias real silicon requires.
+            That write path is INCORRECT on hardware — IRAM is 32-bit-access-
+            only there and the loader stores unaligned bytes into the
+            instruction stream. See SPEC-leg-29 and docs/qemu-test-bench.md.
+
+            The meaning is deliberately narrow: "internal SRAM is not
+            dual-mapped here". It is not a general "relax things on the
+            emulator" switch.
+
 endmenu

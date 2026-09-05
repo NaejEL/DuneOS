@@ -84,3 +84,62 @@ def test_cardputer_board_yaml_declares_radar_uart():
     assert uarts[1]["rx_pin"] == 1
     assert uarts[1]["default_baud"] == 256000
     assert "i2c" not in board
+
+
+# ---------------------------------------------------------------------------
+# Secondary console (SPEC-leg-27 criterion 7b)
+#
+# ESP-IDF binds stdout (fd 1) to CONFIG_ESP_CONSOLE_SECONDARY_*, which defaults
+# to USB-Serial-JTAG on the chips that have one. A board declaring `console:
+# uart` says UART is its only console, so an app's write(1, …) must not be
+# routed to a peripheral that may not exist (QEMU models no USB-Serial-JTAG).
+# ---------------------------------------------------------------------------
+
+def test_explicit_console_uart_suppresses_the_secondary_console():
+    board = dict(BASE_BOARD)
+    board["console"] = "uart"
+    frag = BSPGEN.generate_sdkconfig_board(board)
+    assert "CONFIG_ESP_CONSOLE_UART_DEFAULT=y" in frag
+    assert "CONFIG_ESP_CONSOLE_SECONDARY_NONE=y" in frag
+
+
+def test_default_console_leaves_the_secondary_console_alone():
+    """No `console:` key = no statement about the secondary console. Boards
+    such as esp32s3-devkitc keep IDF's USB-Serial-JTAG stdout mirror."""
+    frag = BSPGEN.generate_sdkconfig_board(dict(BASE_BOARD))
+    assert "CONFIG_ESP_CONSOLE_UART_DEFAULT=y" in frag
+    assert "CONFIG_ESP_CONSOLE_SECONDARY" not in frag
+
+
+def test_no_secondary_symbol_on_a_chip_without_usb_serial_jtag():
+    """CONFIG_ESP_CONSOLE_SECONDARY_* does not exist in the esp32/esp32s2
+    Kconfig; emitting it there would only produce an unknown-symbol warning."""
+    for cpu in ("esp32", "esp32s2"):
+        board = dict(BASE_BOARD)
+        board["cpu"] = cpu
+        board["console"] = "uart"
+        frag = BSPGEN.generate_sdkconfig_board(board)
+        assert "CONFIG_ESP_CONSOLE_SECONDARY" not in frag
+
+
+def test_non_uart_consoles_emit_no_secondary_symbol():
+    for console in ("usb_jtag", "usb_cdc", "none"):
+        board = dict(BASE_BOARD)
+        board["console"] = console
+        frag = BSPGEN.generate_sdkconfig_board(board)
+        assert "CONFIG_ESP_CONSOLE_SECONDARY" not in frag
+
+
+def test_qemu_boards_generate_with_the_secondary_console_off():
+    import yaml
+    for name in ("esp32s3-qemu", "esp32s3-qemu-psram"):
+        with open(REPO_ROOT / "boards" / name / "board.yaml",
+                  encoding="utf-8") as f:
+            board = yaml.safe_load(f)["board"]
+        assert board["console"] == "uart"
+        frag = BSPGEN.generate_sdkconfig_board(board)
+        # Asserted on the freshly generated fragment only: boards/*/sdkconfig.board
+        # is a bspgen artefact and gitignored, so it is absent from a clean
+        # checkout and reading it would make this test pass only on a machine
+        # where the generator had already been run for both QEMU boards.
+        assert "CONFIG_ESP_CONSOLE_SECONDARY_NONE=y" in frag

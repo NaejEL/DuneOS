@@ -115,6 +115,11 @@ VALID_CPUS = {"esp32", "esp32s2", "esp32s3",
 XTENSA_CPUS = {"esp32", "esp32s2", "esp32s3"}
 RISCV_CPUS  = VALID_CPUS - XTENSA_CPUS
 
+# Chips carrying a USB-Serial-JTAG unit, i.e. the only ones for which ESP-IDF
+# defines CONFIG_ESP_CONSOLE_SECONDARY_*. esp32 and esp32s2 have none.
+SECONDARY_CONSOLE_CPUS = {"esp32s3", "esp32c3", "esp32c5",
+                          "esp32c6", "esp32h2", "esp32p4"}
+
 
 def die(msg: str) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
@@ -664,7 +669,40 @@ def generate_sdkconfig_board(board: dict) -> str:
         lines += ["# Console — none (klog redirected to USB CDC via esp_log_set_vprintf)",
                   "CONFIG_ESP_CONSOLE_NONE=y", ""]
     else:
-        lines += ["# Console", "CONFIG_ESP_CONSOLE_UART_DEFAULT=y", ""]
+        lines += ["# Console", "CONFIG_ESP_CONSOLE_UART_DEFAULT=y"]
+        # An explicit `console: uart` is a statement that UART is the ONLY console
+        # the board has. On chips with a USB-Serial-JTAG unit, ESP-IDF otherwise
+        # keeps CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG=y and binds stdout
+        # (fd 1) to that secondary peripheral, so an application's write(1, …)
+        # never reaches the UART. Boards that merely default to "uart" without
+        # saying so keep IDF's secondary console untouched.
+        if board.get("console") and board["cpu"] in SECONDARY_CONSOLE_CPUS:
+            lines += ["CONFIG_ESP_CONSOLE_SECONDARY_NONE=y"]
+        lines += [""]
+
+    # ---- Emulator target ----
+    # `qemu: true` means "this board only ever runs under an emulator". Its one
+    # effect is the loader's exec write path (SPEC-leg-29): qemu-xtensa does not
+    # alias the IRAM and DRAM views of internal SRAM. Never declare it on a
+    # board that exists physically.
+    # The key is strictly boolean: `qemu: "false"` as a YAML string is truthy in
+    # Python and would silently arm the emulator write path.
+    qemu = board.get("qemu", False)
+    if not isinstance(qemu, bool):
+        die(f"board.qemu must be a boolean, got {type(qemu).__name__} "
+            f"({qemu!r}); quote nothing — write `qemu: true` or omit the key")
+    if qemu:
+        # kernel/duneos_loader/Kconfig declares DUNEOS_TARGET_QEMU with
+        # `depends on IDF_TARGET_ARCH_XTENSA`, so on any other architecture the
+        # symbol would be written into sdkconfig.board and dropped by Kconfig
+        # with no diagnostic — a board silently running the wrong write path.
+        if board["cpu"] not in XTENSA_CPUS:
+            die(f"board.qemu is only supported on Xtensa CPUs, not '{board['cpu']}': "
+                "CONFIG_DUNEOS_TARGET_QEMU depends on IDF_TARGET_ARCH_XTENSA in "
+                "kernel/duneos_loader/Kconfig. Widen that dependency, and give the "
+                "loader a RISC-V exec write path, before declaring it here.")
+        lines += ["# Emulator target (no IRAM/DRAM SRAM alias)",
+                  "CONFIG_DUNEOS_TARGET_QEMU=y", ""]
 
     # ---- Memory protection (must be off for dynamic code loading) ----
     lines += ["# Dynamic app loading requires no MEMPROT",

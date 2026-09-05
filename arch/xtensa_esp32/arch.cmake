@@ -26,12 +26,26 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
     list(APPEND DUNEOS_KERNEL_SRCS
         "${_S3_HAL}/hal_uart.c"
         "${_S3_HAL}/hal_gpio.c"
-        "${_S3_HAL}/hal_i2c.c"
-        "${_S3_HAL}/hal_spi.c"
-        "${_S3_HAL}/hal_adc.c"
         "${_S3_HAL}/hal_time.c"
-        "${_S3_HAL}/hal_encoder.c"
     )
+
+    # Kept in sync with arch/xtensa_esp32s3/arch.cmake — same WHOLE_ARCHIVE
+    # over-link defect, same guards.
+    if(CONFIG_DUNEOS_DRV_I2C)
+        list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_i2c.c")
+    endif()
+
+    if(CONFIG_DUNEOS_DRV_SPI)
+        list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_spi.c")
+    endif()
+
+    if(CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE)
+        list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_adc.c")
+    endif()
+
+    if(CONFIG_DUNEOS_DRV_INPUT_ENCODER)
+        list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_encoder.c")
+    endif()
     list(APPEND DUNEOS_KERNEL_REQUIRES
         xtensa
         driver

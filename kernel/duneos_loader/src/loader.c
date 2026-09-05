@@ -1,5 +1,6 @@
 #include "duneos/loader.h"
 #include "duneos/elf.h"
+#include "duneos/elf_parse.h"
 #include "duneos/supervisor.h"
 #include "duneos/api.h"
 
@@ -214,105 +215,88 @@ static inline void *to_write_ptr(const void *addr) { return (void *)addr; }
 
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
 
-static esp_err_t read_at(FILE *f, long offset, void *buf, size_t len)
+/* duneos_elf_io_t backend: the loader reads app images from a stdio stream.
+ * The pure parser never sees the FILE * — it only calls through this. */
+static int file_read_at(void *ctx, long offset, void *buf, size_t len)
 {
-    if (fseek(f, offset, SEEK_SET) != 0) return ESP_ERR_INVALID_ARG;
-    if (fread(buf, 1, len, f) != len)    return ESP_ERR_INVALID_SIZE;
-    return ESP_OK;
-}
-
-static const char *shdr_name(const char *shstrtab, const elf32_shdr_t *sh)
-{
-    return shstrtab + sh->sh_name;
+    FILE *f = (FILE *)ctx;
+    if (fseek(f, offset, SEEK_SET) != 0) return -EIO;
+    if (fread(buf, 1, len, f) != len)    return -EIO;
+    return 0;
 }
 
 /* -------------------------------------------------------------------------
- * ELF validation
+ * ELF validation diagnostics
+ *
+ * duneos_elf_parse is silent by design (it must stay host-compilable, with no
+ * klog). It reports which check failed; the messages naming the offending
+ * field and its value are emitted here.
  * ---------------------------------------------------------------------- */
 
-static esp_err_t elf_validate(const elf32_hdr_t *hdr)
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+#define LOADER_EXPECT_MACHINE EM_XTENSA
+#elif defined(CONFIG_IDF_TARGET_ARCH_RISCV)
+#define LOADER_EXPECT_MACHINE EM_RISCV
+#else
+#define LOADER_EXPECT_MACHINE 0
+#endif
+
+static void elf_log_reject(const elf32_hdr_t *hdr, duneos_elf_reject_t why)
 {
-    if (memcmp(hdr->e_ident, ELF_MAGIC, ELF_MAGIC_SIZE) != 0) {
+    switch (why) {
+    case DUNEOS_ELF_REJ_MAGIC:
         klog_e(TAG, "not an ELF file — ident: %02x %02x %02x %02x",
                  hdr->e_ident[0], hdr->e_ident[1],
                  hdr->e_ident[2], hdr->e_ident[3]);
-        return ESP_ERR_INVALID_ARG;
-    }
-    if (hdr->e_ident[EI_CLASS] != ELFCLASS32) {
+        break;
+    case DUNEOS_ELF_REJ_CLASS:
         klog_e(TAG, "not a 32-bit ELF (EI_CLASS=0x%02x)", hdr->e_ident[EI_CLASS]);
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-    if (hdr->e_ident[EI_DATA] != ELFDATA2LSB) {
+        break;
+    case DUNEOS_ELF_REJ_DATA:
         klog_e(TAG, "not little-endian ELF (EI_DATA=0x%02x, expected 0x01)",
                  hdr->e_ident[EI_DATA]);
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-    if (hdr->e_type != ET_REL) {
+        break;
+    case DUNEOS_ELF_REJ_TYPE:
         klog_e(TAG, "e_type=%u — only ET_REL (1) supported", hdr->e_type);
-        return ESP_ERR_NOT_SUPPORTED;
-    }
+        break;
+    case DUNEOS_ELF_REJ_MACHINE:
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    if (hdr->e_machine != EM_XTENSA) {
         klog_e(TAG, "e_machine=%u — expected EM_XTENSA (94)", hdr->e_machine);
-        return ESP_ERR_NOT_SUPPORTED;
-    }
 #elif defined(CONFIG_IDF_TARGET_ARCH_RISCV)
-    if (hdr->e_machine != EM_RISCV) {
         klog_e(TAG, "e_machine=%u — expected EM_RISCV (243)", hdr->e_machine);
-        return ESP_ERR_NOT_SUPPORTED;
-    }
 #endif
-    if (hdr->e_shoff == 0 || hdr->e_shnum == 0) {
+        break;
+    case DUNEOS_ELF_REJ_NO_SECTIONS:
         klog_e(TAG, "no section headers");
-        return ESP_ERR_INVALID_ARG;
+        break;
+    default:
+        break;
     }
-    return ESP_OK;
 }
 
-/* -------------------------------------------------------------------------
- * Section classification
- *
- * With -ffunction-sections the compiler emits .text.funcname, .literal.funcname
- * etc. rather than a single .text.  We match by prefix.
- * Literal pools (.literal.*) are executable data adjacent to code — we load
- * them the same way as .text (both have SHF_ALLOC | SHF_EXECINSTR).
- * ---------------------------------------------------------------------- */
-
-typedef enum {
-    SEC_IGNORE,
-    SEC_TEXT,       /* .text* and .literal* */
-    SEC_DATA,       /* .data* */
-    SEC_RODATA,     /* .rodata* */
-    SEC_BSS,        /* .bss* */
-} sec_kind_t;
-
-static sec_kind_t classify_section(const char *name, uint32_t flags)
+/* Map the parser's -errno onto the esp_err_t values duneos_loader_load has
+ * always returned for each rejection path. */
+static esp_err_t elf_rc_to_esp(int rc)
 {
-    if (!(flags & SHF_ALLOC)) return SEC_IGNORE;
-
-    if (strncmp(name, ".text",    5) == 0) return SEC_TEXT;
-    if (strncmp(name, ".literal", 8) == 0) return SEC_TEXT;
-    if (strncmp(name, ".rodata",  7) == 0) return SEC_RODATA;
-    if (strncmp(name, ".data",    5) == 0) return SEC_DATA;
-    if (strncmp(name, ".bss",     4) == 0) return SEC_BSS;
-
-    /* Xtensa-specific tool sections — not needed at runtime */
-    if (strncmp(name, ".xt.",    4) == 0) return SEC_IGNORE;
-    if (strncmp(name, ".xtensa", 7) == 0) return SEC_IGNORE;
-
-    return SEC_IGNORE;
+    switch (rc) {
+    case 0:        return ESP_OK;
+    case -ENOTSUP: return ESP_ERR_NOT_SUPPORTED;
+    case -ENOMEM:  return ESP_ERR_NO_MEM;
+    default:       return ESP_ERR_INVALID_ARG;   /* -EINVAL and -EIO alike */
+    }
 }
 
 /* -------------------------------------------------------------------------
  * Section loading
  * ---------------------------------------------------------------------- */
 
-static esp_err_t load_sections(FILE              *f,
-                                const elf32_hdr_t  *hdr,
-                                const elf32_shdr_t *shdrs,
-                                const char         *shstrtab,
-                                duneos_app_t       *app)
+static esp_err_t load_sections(const duneos_elf_io_t    *io,
+                                const duneos_elf_image_t *img,
+                                duneos_app_t             *app)
 {
+    const elf32_hdr_t  *hdr   = &img->hdr;
+    const elf32_shdr_t *shdrs = img->shdrs;
+
     app->section_count = hdr->e_shnum;
 
     /* --- Pass 1: measure total section sizes ---
@@ -324,9 +308,9 @@ static esp_err_t load_sections(FILE              *f,
 #endif
     for (int i = 0; i < hdr->e_shnum; i++) {
         const elf32_shdr_t *sh   = &shdrs[i];
-        const char         *name = shdr_name(shstrtab, sh);
+        const char         *name = duneos_elf_section_name(img, sh);
         if (sh->sh_size == 0) continue;
-        sec_kind_t kind = classify_section(name, sh->sh_flags);
+        sec_kind_t kind = duneos_elf_classify_section(name, sh->sh_flags);
         if (kind == SEC_IGNORE) continue;
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
         if (kind == SEC_TEXT) {
@@ -355,7 +339,26 @@ static esp_err_t load_sections(FILE              *f,
 
         s_build_exec_base = (uintptr_t)iram;
         s_build_exec_size = exec_total;
-#ifdef CONFIG_IDF_TARGET_ESP32
+#if defined(CONFIG_DUNEOS_TARGET_QEMU)
+        /* Emulator-only write path (SPEC-leg-29, option 1). qemu-xtensa's
+         * esp32s3 machine maps the IRAM and DRAM windows as two separate
+         * memories instead of two views of one SRAM: a store through the DRAM
+         * alias never becomes visible at the IRAM address, so the loaded app
+         * would execute zeroes. On an emulator IRAM accepts byte stores, so
+         * relocations are written straight at the exec address.
+         *
+         * TRADE-OFF, deliberate and bounded: this is a second write path that
+         * only ever compiles into a board that never runs on silicon. The
+         * QEMU bench therefore cannot catch a break in the hardware alias
+         * arithmetic (iram_word_dram_alias / build_install_exec) — a periodic
+         * hardware run stays the only proof of that path. Everything else the
+         * loader does (parse, relocate, resolve, scan, launch) is identical in
+         * both builds. Never enable this symbol on a real board: IRAM is
+         * 32-bit-access-only on ESP32-S3 and the unaligned byte stores below
+         * would raise LoadStoreError. */
+        s_build_scratch       = (uint8_t *)iram;
+        s_build_scratch_owned = false;
+#elif defined(CONFIG_IDF_TARGET_ESP32)
         /* Plain ESP32: DIRAM word order is inverted, so there is no linear DRAM
          * view of the exec block — stage relocations in a contiguous scratch and
          * install per-word via the inverting alias (build_install_exec). */
@@ -411,12 +414,12 @@ static esp_err_t load_sections(FILE              *f,
 
     for (int i = 0; i < hdr->e_shnum; i++) {
         const elf32_shdr_t *sh   = &shdrs[i];
-        const char         *name = shdr_name(shstrtab, sh);
+        const char         *name = duneos_elf_section_name(img, sh);
         app->section_bases[i]    = NULL;
 
         if (sh->sh_size == 0) continue;
 
-        sec_kind_t kind = classify_section(name, sh->sh_flags);
+        sec_kind_t kind = duneos_elf_classify_section(name, sh->sh_flags);
         if (kind == SEC_IGNORE) continue;
 
         void *mem;
@@ -442,7 +445,8 @@ static esp_err_t load_sections(FILE              *f,
             /* Read via write pointer: on Xtensa, fread cannot target IRAM
              * addresses (D-bus restriction); to_write_ptr() converts exec
              * pool IRAM addresses to their DRAM alias. */
-            if (read_at(f, sh->sh_offset, to_write_ptr(mem), sh->sh_size) != ESP_OK) {
+            if (io->read(io->ctx, (long)sh->sh_offset,
+                         to_write_ptr(mem), sh->sh_size) != 0) {
                 klog_e(TAG, "read failed: '%s'", name);
                 return ESP_ERR_INVALID_ARG;
             }
@@ -486,7 +490,7 @@ static void *symbol_address(const elf32_sym_t  *sym,
         return (void *)(uintptr_t)sym->st_value;
     }
     if (sym->st_shndx == SHN_UNDEF) {
-        const char *name = strtab + sym->st_name;
+        const char *name = duneos_elf_string(strtab, sym->st_name);
         if (!name[0]) return NULL;  /* symbol index 0 — always null, skip silently */
         void *ptr = resolve_symbol(name, &app->manifest);
         if (!ptr) {
@@ -802,16 +806,15 @@ static esp_err_t apply_riscv_reloc(uint32_t *insn,
 
 #endif /* CONFIG_IDF_TARGET_ARCH_RISCV */
 
-static esp_err_t apply_relocations(FILE               *f,
-                                    const elf32_hdr_t  *hdr,
-                                    const elf32_shdr_t *shdrs,
-                                    const char         *shstrtab,
-                                    const elf32_sym_t  *symtab,
-                                    int                 symcount,
-                                    const char         *strtab,
-                                    duneos_app_t       *app)
+static esp_err_t apply_relocations(const duneos_elf_io_t    *io,
+                                    const duneos_elf_image_t *img,
+                                    const elf32_sym_t        *symtab,
+                                    int                       symcount,
+                                    const char               *strtab,
+                                    duneos_app_t             *app)
 {
-    (void)f;
+    const elf32_hdr_t  *hdr   = &img->hdr;
+    const elf32_shdr_t *shdrs = img->shdrs;
 
     for (int i = 0; i < hdr->e_shnum; i++) {
         const elf32_shdr_t *rsh = &shdrs[i];
@@ -828,7 +831,7 @@ static esp_err_t apply_relocations(FILE               *f,
         elf32_rela_t *relas = malloc(rsh->sh_size);
         if (!relas) return ESP_ERR_NO_MEM;
 
-        if (read_at(f, rsh->sh_offset, relas, rsh->sh_size) != ESP_OK) {
+        if (io->read(io->ctx, (long)rsh->sh_offset, relas, rsh->sh_size) != 0) {
             free(relas);
             return ESP_ERR_INVALID_ARG;
         }
@@ -836,8 +839,8 @@ static esp_err_t apply_relocations(FILE               *f,
         uint32_t target_sec_size = shdrs[target_idx].sh_size;
 
         klog_d(TAG, "  rela %-28s → %-20s (%d entries)",
-                 shdr_name(shstrtab, rsh),
-                 shdr_name(shstrtab, &shdrs[target_idx]),
+                 duneos_elf_section_name(img, rsh),
+                 duneos_elf_section_name(img, &shdrs[target_idx]),
                  nentries);
 
 #ifdef CONFIG_IDF_TARGET_ARCH_RISCV
@@ -883,7 +886,7 @@ static esp_err_t apply_relocations(FILE               *f,
                 klog_d(TAG, "reloc[%d] skip: r_offset=0x%lx +%lu > sec_size=0x%lx (%s)",
                        j, (unsigned long)rel->r_offset, (unsigned long)rel_width,
                        (unsigned long)target_sec_size,
-                       shdr_name(shstrtab, &shdrs[target_idx]));
+                       duneos_elf_section_name(img, &shdrs[target_idx]));
                 continue;
             }
 
@@ -961,17 +964,15 @@ static uint32_t json_u32(const cJSON *root, const char *key, uint32_t dflt)
     return (uint32_t)v;
 }
 
-static esp_err_t extract_manifest(FILE               *f,
-                                   const elf32_hdr_t  *hdr,
-                                   const elf32_shdr_t *shdrs,
-                                   const char         *shstrtab,
-                                   duneos_app_manifest_t *out)
+static esp_err_t extract_manifest(const duneos_elf_io_t    *io,
+                                   const duneos_elf_image_t *img,
+                                   duneos_app_manifest_t    *out)
 {
-    for (int i = 0; i < hdr->e_shnum; i++) {
-        if (strcmp(shdr_name(shstrtab, &shdrs[i]),
+    for (int i = 0; i < img->hdr.e_shnum; i++) {
+        if (strcmp(duneos_elf_section_name(img, &img->shdrs[i]),
                    DUNEOS_MANIFEST_SECTION) != 0) continue;
 
-        const elf32_shdr_t *sh = &shdrs[i];
+        const elf32_shdr_t *sh = &img->shdrs[i];
         if (sh->sh_size < 2 || sh->sh_size > 4096) {
             klog_e(TAG, "manifest section size invalid: %lu",
                    (unsigned long)sh->sh_size);
@@ -980,7 +981,7 @@ static esp_err_t extract_manifest(FILE               *f,
 
         char *raw = malloc(sh->sh_size + 1);
         if (!raw) return ESP_ERR_NO_MEM;
-        if (read_at(f, sh->sh_offset, raw, sh->sh_size) != ESP_OK) {
+        if (io->read(io->ctx, (long)sh->sh_offset, raw, sh->sh_size) != 0) {
             free(raw);
             return ESP_ERR_INVALID_ARG;
         }
@@ -1120,59 +1121,43 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (s_loader_lock) xSemaphoreTake(s_loader_lock, portMAX_DELAY);
 
     esp_err_t    err     = ESP_FAIL;
-    elf32_hdr_t  hdr;
-    elf32_shdr_t *shdrs    = NULL;
-    char         *shstrtab = NULL;
+    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f };
+    duneos_elf_image_t  img;
+    duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
+    const elf32_hdr_t  *hdr = &img.hdr;
+    const elf32_shdr_t *shdrs  = NULL;   /* img.shdrs, once the image is open */
     elf32_sym_t  *symtab   = NULL;
     char         *strtab   = NULL;
     int           symcount = 0;
     duneos_app_t *app      = NULL;
 
-    /* 1. ELF header */
-    if (read_at(f, 0, &hdr, sizeof(hdr)) != ESP_OK) {
-        klog_e(TAG, "cannot read ELF header");
-        err = ESP_ERR_INVALID_ARG;
-        goto out;
-    }
-    err = elf_validate(&hdr);
-    if (err != ESP_OK) goto out;
-
-    if (hdr.e_shnum > MAX_SECTIONS) {
-        klog_e(TAG, "too many sections: %u (max %d)", hdr.e_shnum, MAX_SECTIONS);
-        err = ESP_ERR_NOT_SUPPORTED;
-        goto out;
-    }
-
-    klog_d(TAG, "loading '%s' (%u sections)", path, hdr.e_shnum);
-
-    /* 2. Section header table */
-    shdrs = malloc(hdr.e_shnum * sizeof(elf32_shdr_t));
-    if (!shdrs) { err = ESP_ERR_NO_MEM; goto out; }
-    if (read_at(f, hdr.e_shoff, shdrs, hdr.e_shnum * sizeof(elf32_shdr_t)) != ESP_OK) {
-        err = ESP_ERR_INVALID_ARG;
+    /* 1-3. ELF header, validation, section header table, section name strings */
+    int prc = duneos_elf_image_open(&io, LOADER_EXPECT_MACHINE, MAX_SECTIONS,
+                                    &img, &why);
+    if (prc != 0) {
+        elf_log_reject(&img.hdr, why);
+        if (why == DUNEOS_ELF_REJ_HEADER_READ)
+            klog_e(TAG, "cannot read ELF header");
+        else if (why == DUNEOS_ELF_REJ_TOO_MANY_SECTIONS)
+            klog_e(TAG, "too many sections: %u (max %d)",
+                   img.hdr.e_shnum, MAX_SECTIONS);
+        err = elf_rc_to_esp(prc);
         goto out;
     }
 
-    /* 3. Section name string table */
-    {
-        const elf32_shdr_t *ss = &shdrs[hdr.e_shstrndx];
-        shstrtab = malloc(ss->sh_size + 1);
-        if (!shstrtab) { err = ESP_ERR_NO_MEM; goto out; }
-        if (read_at(f, ss->sh_offset, shstrtab, ss->sh_size) != ESP_OK) {
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
-        }
-        shstrtab[ss->sh_size] = '\0';
-    }
+    shdrs = img.shdrs;
+
+    klog_d(TAG, "loading '%s' (%u sections)", path, hdr->e_shnum);
 
     /* 4. Symbol table + string table */
-    for (int i = 0; i < hdr.e_shnum; i++) {
+    for (int i = 0; i < hdr->e_shnum; i++) {
         if (shdrs[i].sh_type != SHT_SYMTAB) continue;
 
         symcount = shdrs[i].sh_size / sizeof(elf32_sym_t);
         symtab   = malloc(shdrs[i].sh_size);
         if (!symtab) { err = ESP_ERR_NO_MEM; goto out; }
-        if (read_at(f, shdrs[i].sh_offset, symtab, shdrs[i].sh_size) != ESP_OK) {
+        if (io.read(io.ctx, (long)shdrs[i].sh_offset,
+                    symtab, shdrs[i].sh_size) != 0) {
             err = ESP_ERR_INVALID_ARG;
             goto out;
         }
@@ -1180,7 +1165,8 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         const elf32_shdr_t *str_sh = &shdrs[shdrs[i].sh_link];
         strtab = malloc(str_sh->sh_size + 1);
         if (!strtab) { err = ESP_ERR_NO_MEM; goto out; }
-        if (read_at(f, str_sh->sh_offset, strtab, str_sh->sh_size) != ESP_OK) {
+        if (io.read(io.ctx, (long)str_sh->sh_offset,
+                    strtab, str_sh->sh_size) != 0) {
             err = ESP_ERR_INVALID_ARG;
             goto out;
         }
@@ -1192,12 +1178,12 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
      * section count (P2.1: ~4 B/section instead of a fixed 4 KiB array). */
     app = calloc(1, sizeof(duneos_app_t));
     if (!app) { err = ESP_ERR_NO_MEM; goto out; }
-    app->section_count = hdr.e_shnum;
-    app->section_bases = calloc(hdr.e_shnum, sizeof(void *));
+    app->section_count = hdr->e_shnum;
+    app->section_bases = calloc(hdr->e_shnum, sizeof(void *));
     if (!app->section_bases) { err = ESP_ERR_NO_MEM; goto out; }
 
     /* 6. Manifest */
-    err = extract_manifest(f, &hdr, shdrs, shstrtab, &app->manifest);
+    err = extract_manifest(&io, &img, &app->manifest);
     if (err != ESP_OK) goto out;
 
     if (app->manifest.required_abi_version > DUNEOS_ABI_VERSION) {
@@ -1228,12 +1214,11 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     }
 
     /* 7. Load sections */
-    err = load_sections(f, &hdr, shdrs, shstrtab, app);
+    err = load_sections(&io, &img, app);
     if (err != ESP_OK) goto out;
 
     /* 8. Apply relocations */
-    err = apply_relocations(f, &hdr, shdrs, shstrtab,
-                             symtab, symcount, strtab, app);
+    err = apply_relocations(&io, &img, symtab, symcount, strtab, app);
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
@@ -1268,8 +1253,9 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
      * on Xtensa, though data sections are never in the exec pool.           */
     for (int i = 0; i < symcount; i++) {
         const elf32_sym_t *sym = &symtab[i];
-        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr.e_shnum) continue;
-        if (strcmp(strtab + sym->st_name, DUNEOS_API_SYMBOL) != 0)        continue;
+        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr->e_shnum) continue;
+        if (strcmp(duneos_elf_string(strtab, sym->st_name),
+                   DUNEOS_API_SYMBOL) != 0)                              continue;
 
         void *section_base = app->section_bases[sym->st_shndx];
         if (!section_base) {
@@ -1290,8 +1276,8 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     /* 9. Locate app_main */
     for (int i = 0; i < symcount; i++) {
         const elf32_sym_t *sym = &symtab[i];
-        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr.e_shnum) continue;
-        if (strcmp(strtab + sym->st_name, "app_main") != 0) continue;
+        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr->e_shnum) continue;
+        if (strcmp(duneos_elf_string(strtab, sym->st_name), "app_main") != 0) continue;
 
         void *base = app->section_bases[sym->st_shndx];
         if (!base) {
@@ -1326,8 +1312,7 @@ out:
     s_build_exec_size     = 0;
 #endif
     fclose(f);
-    free(shdrs);
-    free(shstrtab);
+    duneos_elf_image_close(&img);
     free(symtab);
     free(strtab);
     if (app) unload_locked(app);   /* lock already held */
@@ -1349,34 +1334,24 @@ static esp_err_t read_manifest_from_file(const char            *path,
     FILE *f = fopen(path, "rb");
     if (!f) return ESP_ERR_NOT_FOUND;
 
-    esp_err_t    err  = ESP_FAIL;
-    elf32_hdr_t  hdr;
-    elf32_shdr_t *shdrs    = NULL;
-    char         *shstrtab = NULL;
+    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f };
+    duneos_elf_image_t  img;
+    duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
 
-    if (read_at(f, 0, &hdr, sizeof(hdr)) != ESP_OK) goto out;
-    if (elf_validate(&hdr) != ESP_OK)                goto out;
-    if (hdr.e_shnum > MAX_SECTIONS)                  goto out;
-
-    shdrs = malloc(hdr.e_shnum * sizeof(elf32_shdr_t));
-    if (!shdrs) { err = ESP_ERR_NO_MEM; goto out; }
-    if (read_at(f, hdr.e_shoff, shdrs,
-                hdr.e_shnum * sizeof(elf32_shdr_t)) != ESP_OK) goto out;
-
-    {
-        const elf32_shdr_t *ss = &shdrs[hdr.e_shstrndx];
-        shstrtab = malloc(ss->sh_size + 1);
-        if (!shstrtab) { err = ESP_ERR_NO_MEM; goto out; }
-        if (read_at(f, ss->sh_offset, shstrtab, ss->sh_size) != ESP_OK) goto out;
-        shstrtab[ss->sh_size] = '\0';
+    esp_err_t err;
+    int prc = duneos_elf_image_open(&io, LOADER_EXPECT_MACHINE, MAX_SECTIONS,
+                                    &img, &why);
+    if (prc != 0) {
+        /* Scan path: only the validation rejections were ever reported here —
+         * the caller logs a "cannot read manifest" line for the rest. */
+        elf_log_reject(&img.hdr, why);
+        err = elf_rc_to_esp(prc);
+    } else {
+        err = extract_manifest(&io, &img, out);
     }
 
-    err = extract_manifest(f, &hdr, shdrs, shstrtab, out);
-
-out:
     fclose(f);
-    free(shdrs);
-    free(shstrtab);
+    duneos_elf_image_close(&img);
     return err;
 }
 
