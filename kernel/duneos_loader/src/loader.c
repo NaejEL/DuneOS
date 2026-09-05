@@ -1,6 +1,7 @@
 #include "duneos/loader.h"
 #include "duneos/elf.h"
 #include "duneos/elf_parse.h"
+#include "duneos/loader_limits.h"
 #include "duneos/supervisor.h"
 #include "duneos/api.h"
 
@@ -96,11 +97,8 @@ int duneos_loader_get_captured_exit_code(void)
  * Internal app descriptor
  * ---------------------------------------------------------------------- */
 
-/* Upper bound on ELF section-header count — the loader rejects apps above it.
- * A generous ceiling, not a per-app cost: section_bases is allocated to the
- * real e_shnum (P2.1, audit §3). Section counts are modest now that apps merge
- * sections (no -ffunction-sections, audit P0). */
-#define MAX_SECTIONS 1024
+/* Shared with the host harness — see <duneos/loader_limits.h>. */
+#define MAX_SECTIONS DUNEOS_LOADER_MAX_SECTIONS
 
 struct duneos_app {
     duneos_app_manifest_t manifest;
@@ -234,15 +232,17 @@ static int file_read_at(void *ctx, long offset, void *buf, size_t len)
  * ---------------------------------------------------------------------- */
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-#define LOADER_EXPECT_MACHINE EM_XTENSA
+#define LOADER_EXPECT_MACHINE DUNEOS_LOADER_MACHINE_XTENSA
 #elif defined(CONFIG_IDF_TARGET_ARCH_RISCV)
-#define LOADER_EXPECT_MACHINE EM_RISCV
+#define LOADER_EXPECT_MACHINE DUNEOS_LOADER_MACHINE_RISCV
 #else
 #define LOADER_EXPECT_MACHINE 0
 #endif
 
-static void elf_log_reject(const elf32_hdr_t *hdr, duneos_elf_reject_t why)
+static void elf_log_reject(const duneos_elf_image_t *img, duneos_elf_reject_t why)
 {
+    const elf32_hdr_t *hdr = &img->hdr;
+
     switch (why) {
     case DUNEOS_ELF_REJ_MAGIC:
         klog_e(TAG, "not an ELF file — ident: %02x %02x %02x %02x",
@@ -268,6 +268,23 @@ static void elf_log_reject(const elf32_hdr_t *hdr, duneos_elf_reject_t why)
         break;
     case DUNEOS_ELF_REJ_NO_SECTIONS:
         klog_e(TAG, "no section headers");
+        break;
+    case DUNEOS_ELF_REJ_SHSTRNDX:
+        klog_e(TAG, "e_shstrndx=%u out of range (e_shnum=%u)",
+               hdr->e_shstrndx, hdr->e_shnum);
+        break;
+    case DUNEOS_ELF_REJ_SH_LINK:
+        klog_e(TAG, "section %lu: sh_link=%lu out of range (e_shnum=%lu)",
+               (unsigned long)img->reject_index,
+               (unsigned long)img->reject_value,
+               (unsigned long)img->reject_bound);
+        break;
+    case DUNEOS_ELF_REJ_SH_NAME:
+        klog_e(TAG, "section %lu: sh_name=%lu past the section name table "
+                    "(%lu B)",
+               (unsigned long)img->reject_index,
+               (unsigned long)img->reject_value,
+               (unsigned long)img->reject_bound);
         break;
     default:
         break;
@@ -484,13 +501,19 @@ static void *resolve_symbol(const char *name,
 /* Compute the runtime address of an ELF symbol. */
 static void *symbol_address(const elf32_sym_t  *sym,
                              const char         *strtab,
+                             size_t              strtab_size,
                              const duneos_app_t *app)
 {
     if (sym->st_shndx == SHN_ABS) {
         return (void *)(uintptr_t)sym->st_value;
     }
     if (sym->st_shndx == SHN_UNDEF) {
-        const char *name = duneos_elf_string(strtab, sym->st_name);
+        const char *name = duneos_elf_string(strtab, strtab_size, sym->st_name);
+        if (!name) {
+            klog_e(TAG, "st_name=%lu past the symbol string table (%lu B)",
+                   (unsigned long)sym->st_name, (unsigned long)strtab_size);
+            return NULL;
+        }
         if (!name[0]) return NULL;  /* symbol index 0 — always null, skip silently */
         void *ptr = resolve_symbol(name, &app->manifest);
         if (!ptr) {
@@ -811,6 +834,7 @@ static esp_err_t apply_relocations(const duneos_elf_io_t    *io,
                                     const elf32_sym_t        *symtab,
                                     int                       symcount,
                                     const char               *strtab,
+                                    size_t                    strtab_size,
                                     duneos_app_t             *app)
 {
     const elf32_hdr_t  *hdr   = &img->hdr;
@@ -891,7 +915,7 @@ static esp_err_t apply_relocations(const duneos_elf_io_t    *io,
             }
 
             const elf32_sym_t *sym = &symtab[sym_idx];
-            void *S = symbol_address(sym, strtab, app);
+            void *S = symbol_address(sym, strtab, strtab_size, app);
 
             /* Write via D-bus-safe alias; PC stays at exec address for offset math.
              * to_write_ptr is called on the final per-byte address, not the section
@@ -969,8 +993,18 @@ static esp_err_t extract_manifest(const duneos_elf_io_t    *io,
                                    duneos_app_manifest_t    *out)
 {
     for (int i = 0; i < img->hdr.e_shnum; i++) {
-        if (strcmp(duneos_elf_section_name(img, &img->shdrs[i]),
-                   DUNEOS_MANIFEST_SECTION) != 0) continue;
+        /* duneos_elf_image_open() bounds every sh_name, but this strcmp is the
+         * site that would dereference the result: guard it here rather than
+         * borrow a distant unit's invariant that a refactor could move. */
+        const char *sname = duneos_elf_section_name(img, &img->shdrs[i]);
+        if (!sname) {
+            klog_w(TAG, "section %d: sh_name=%lu past the section name table "
+                        "(%lu B) — skipped",
+                   i, (unsigned long)img->shdrs[i].sh_name,
+                   (unsigned long)img->shstrtab_size);
+            continue;
+        }
+        if (strcmp(sname, DUNEOS_MANIFEST_SECTION) != 0) continue;
 
         const elf32_shdr_t *sh = &img->shdrs[i];
         if (sh->sh_size < 2 || sh->sh_size > 4096) {
@@ -1128,6 +1162,7 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     const elf32_shdr_t *shdrs  = NULL;   /* img.shdrs, once the image is open */
     elf32_sym_t  *symtab   = NULL;
     char         *strtab   = NULL;
+    size_t        strtab_size = 0;
     int           symcount = 0;
     duneos_app_t *app      = NULL;
 
@@ -1135,11 +1170,11 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     int prc = duneos_elf_image_open(&io, LOADER_EXPECT_MACHINE, MAX_SECTIONS,
                                     &img, &why);
     if (prc != 0) {
-        elf_log_reject(&img.hdr, why);
+        elf_log_reject(&img, why);
         if (why == DUNEOS_ELF_REJ_HEADER_READ)
             klog_e(TAG, "cannot read ELF header");
         else if (why == DUNEOS_ELF_REJ_TOO_MANY_SECTIONS)
-            klog_e(TAG, "too many sections: %u (max %d)",
+            klog_e(TAG, "too many sections: %u (max %u)",
                    img.hdr.e_shnum, MAX_SECTIONS);
         err = elf_rc_to_esp(prc);
         goto out;
@@ -1162,6 +1197,16 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
             goto out;
         }
 
+        /* duneos_elf_image_open() already bounds sh_link, but this is the site
+         * that indexes with it: the guard belongs where the index is used, not
+         * borrowed from a distant unit's invariant. */
+        if (shdrs[i].sh_link >= (uint32_t)hdr->e_shnum) {
+            klog_e(TAG, "section %d: sh_link=%lu out of range (e_shnum=%u)",
+                   i, (unsigned long)shdrs[i].sh_link, hdr->e_shnum);
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
+        }
+
         const elf32_shdr_t *str_sh = &shdrs[shdrs[i].sh_link];
         strtab = malloc(str_sh->sh_size + 1);
         if (!strtab) { err = ESP_ERR_NO_MEM; goto out; }
@@ -1171,7 +1216,21 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
             goto out;
         }
         strtab[str_sh->sh_size] = '\0';
+        strtab_size = str_sh->sh_size;
         break;
+    }
+
+    /* Every st_name is bounded once here, so the three lookups below (API table
+     * injection, app_main, and relocation symbol resolution) never carry an
+     * offset that escapes the string table. */
+    for (int i = 0; i < symcount; i++) {
+        if (symtab[i].st_name >= strtab_size) {
+            klog_e(TAG, "symbol %d: st_name=%lu past the string table (%lu B)",
+                   i, (unsigned long)symtab[i].st_name,
+                   (unsigned long)strtab_size);
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
+        }
     }
 
     /* 5. Allocate app descriptor + the section-base table sized to the real
@@ -1218,7 +1277,8 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (err != ESP_OK) goto out;
 
     /* 8. Apply relocations */
-    err = apply_relocations(&io, &img, symtab, symcount, strtab, app);
+    err = apply_relocations(&io, &img, symtab, symcount, strtab,
+                            strtab_size, app);
     if (err != ESP_OK) goto out;
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
@@ -1254,8 +1314,17 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     for (int i = 0; i < symcount; i++) {
         const elf32_sym_t *sym = &symtab[i];
         if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr->e_shnum) continue;
-        if (strcmp(duneos_elf_string(strtab, sym->st_name),
-                   DUNEOS_API_SYMBOL) != 0)                              continue;
+        /* The st_name bound above makes this non-NULL, but the strcmp is the
+         * site that dereferences it: guard where it is used. */
+        const char *sym_name = duneos_elf_string(strtab, strtab_size,
+                                                 sym->st_name);
+        if (!sym_name) {
+            klog_w(TAG, "symbol %d: st_name=%lu past the string table (%lu B) "
+                        "— skipped",
+                   i, (unsigned long)sym->st_name, (unsigned long)strtab_size);
+            continue;
+        }
+        if (strcmp(sym_name, DUNEOS_API_SYMBOL) != 0)                    continue;
 
         void *section_base = app->section_bases[sym->st_shndx];
         if (!section_base) {
@@ -1277,7 +1346,17 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     for (int i = 0; i < symcount; i++) {
         const elf32_sym_t *sym = &symtab[i];
         if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr->e_shnum) continue;
-        if (strcmp(duneos_elf_string(strtab, sym->st_name), "app_main") != 0) continue;
+        /* Same contract as the injection loop: bounded above, checked here,
+         * where the pointer is actually dereferenced. */
+        const char *sym_name = duneos_elf_string(strtab, strtab_size,
+                                                 sym->st_name);
+        if (!sym_name) {
+            klog_w(TAG, "symbol %d: st_name=%lu past the string table (%lu B) "
+                        "— skipped",
+                   i, (unsigned long)sym->st_name, (unsigned long)strtab_size);
+            continue;
+        }
+        if (strcmp(sym_name, "app_main") != 0) continue;
 
         void *base = app->section_bases[sym->st_shndx];
         if (!base) {
@@ -1344,7 +1423,7 @@ static esp_err_t read_manifest_from_file(const char            *path,
     if (prc != 0) {
         /* Scan path: only the validation rejections were ever reported here —
          * the caller logs a "cannot read manifest" line for the rest. */
-        elf_log_reject(&img.hdr, why);
+        elf_log_reject(&img, why);
         err = elf_rc_to_esp(prc);
     } else {
         err = extract_manifest(&io, &img, out);
@@ -1374,11 +1453,7 @@ esp_err_t duneos_loader_scan(duneos_app_info_t *list, int max, int *found)
 
         struct dirent *ent;
         while ((ent = readdir(dir)) != NULL && *found < max) {
-            size_t len = strlen(ent->d_name);
-            if (len < 5) continue;
-            const char *ext = ent->d_name + len - 4;
-            if (strcasecmp(ext, ".elf") != 0 && strcasecmp(ext, ".dap") != 0)
-                continue;
+            if (!duneos_loader_name_is_app(ent->d_name)) continue;
 
             duneos_app_info_t *info = &list[*found];
             snprintf(info->path, sizeof(info->path),

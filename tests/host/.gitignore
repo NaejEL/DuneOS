@@ -10,3 +10,5 @@ fuzz_artifacts/
 .fuzzprobe
 .fuzzprobe.c
 fuzz_ran.marker
+test_elf_scan
+elf_scan_*/

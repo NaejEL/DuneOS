@@ -63,14 +63,19 @@ typedef struct {
     /*
      * Expected-failure marker. NULL means the case must hold on every commit.
      * Otherwise: the finding id whose fix makes the case pass and which MUST
-     * delete this marker. LEG-01/02/03 are three findings inside the single
-     * spec specs/SPEC-leg-01-harden-elf-validation.md, not three specs — its
-     * criterion 1 removes all four LEG-* markers in one change. (That spec is
-     * Status: PROPOSED today; what makes it the owner is that it exists and
-     * names the fix, not its status.)
+     * delete this marker — a marker outliving its fix is caught by the XPASS
+     * rule in test_elf_validate.c.
+     *
      * An owner starting with "UNPLANNED" flags a defect no spec covers at all;
      * it carries a docs/backlog.md id so the marker has a tracked home, and the
-     * driver counts those separately so they cannot rot here.
+     * driver counts those separately so they cannot rot here. The two markers
+     * left are both of that kind:
+     *   "UNPLANNED:LEG-34/BL-ELF-EXTENT"      — sh_offset + sh_size overflow;
+     *   "UNPLANNED:LEG-35/BL-ELF-EMPTY-SYMTAB" — zero-sized symtab accepted.
+     * Both are out of SPEC-leg-01's scope: that spec bounded the section-header
+     * indices and string-table offsets, not section extents against file size
+     * nor symbol-table sizing. Whoever writes the spec that fixes one deletes
+     * its marker and decrements ELF_CORPUS_EXPECTED_XFAILS in the same change.
      */
     const char *xfail_owner;
     const char *defect;
@@ -88,7 +93,7 @@ typedef struct {
  * like the markers themselves.
  */
 #define ELF_CORPUS_EXPECTED_CASES  17
-#define ELF_CORPUS_EXPECTED_XFAILS 6
+#define ELF_CORPUS_EXPECTED_XFAILS 2
 
 extern const elf_corpus_case_t elf_corpus[];
 extern const size_t            elf_corpus_count;

@@ -230,13 +230,12 @@ static void mut_symtab_size_zero(elf_corpus_image_t *img)
 /* ------------------------------------------------------------- extra probes */
 
 /*
- * LEG-03 surface. duneos_elf_section_name() returns shstrtab + sh_name with no
- * bound on sh_name; a hardened accessor reports the out-of-range offset instead
- * of handing back a pointer past the table, so the probe wants a rejection.
- *
- * duneos_elf_image_open() succeeds here, so `why` stays DUNEOS_ELF_REJ_NONE and
- * says nothing about the accessor. Hence ELF_CORPUS_WHY_UNOBSERVED on both
- * LEG-03 cases: the return code is the whole assertion.
+ * LEG-03 surface. duneos_elf_section_name() is bounded by the section name
+ * table size and returns NULL for an offset past it. Since the fix,
+ * duneos_elf_image_open() also bounds every sh_name up front, so this probe is
+ * rejected before the accessor is reached and `why` does name the check — the
+ * accessor call below is kept so the probe still fails if that bound is ever
+ * moved out of open() without the accessor keeping its own.
  */
 static int probe_section_name(const elf_corpus_image_t *img,
                               duneos_elf_reject_t      *why)
@@ -258,8 +257,11 @@ static int probe_section_name(const elf_corpus_image_t *img,
 /*
  * LEG-03 surface, symbol side. The symbol string table is read by loader.c, not
  * by the image; the probe reproduces that read from the raw bytes and then goes
- * through the same accessor the loader uses on sym->st_name. Nothing in this
- * path can ever set a reject reason — see probe_section_name above.
+ * through the same accessor the loader uses on sym->st_name. This is the case
+ * that exercises the bounded accessor directly: duneos_elf_image_open() never
+ * inspects symtab contents, so it succeeds and leaves DUNEOS_ELF_REJ_NONE
+ * behind — hence ELF_CORPUS_WHY_UNOBSERVED, the return code is the whole
+ * assertion.
  */
 static int probe_symbol_name(const elf_corpus_image_t *img,
                              duneos_elf_reject_t      *why)
@@ -275,7 +277,7 @@ static int probe_symbol_name(const elf_corpus_image_t *img,
         (const elf32_sym_t *)(const void *)(img->bytes + OFF_SYMTAB) + 1;
     const char *strtab = (const char *)img->bytes + OFF_STRTAB;
 
-    const char *name = duneos_elf_string(strtab, sym->st_name);
+    const char *name = duneos_elf_string(strtab, SZ_STRTAB, sym->st_name);
     rc = (name == NULL) ? -EINVAL : 0;
 
     duneos_elf_image_close(&parsed);
@@ -331,23 +333,19 @@ const elf_corpus_case_t elf_corpus[] = {
 
     { "shstrndx_ge_shnum", "e_shstrndx indexes past the section header table",
       mut_shstrndx_ge_shnum, elf_corpus_probe_open,
-      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "LEG-01",
-      "elf_parse.c:76 reads ss->sh_size through shdrs[e_shstrndx] (address formed at\n       l.75) with no e_shstrndx < e_shnum check" },
+      -EINVAL, DUNEOS_ELF_REJ_SHSTRNDX, ELF_CORPUS_WHY_EXACT, NULL, NULL },
 
     { "sh_link_ge_shnum", "symtab sh_link indexes past the section header table",
       mut_sh_link_ge_shnum, elf_corpus_probe_open,
-      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_ANY, "LEG-02",
-      "loader.c:1165 indexes shdrs[shdrs[i].sh_link] unbounded; no unit-level check exists" },
+      -EINVAL, DUNEOS_ELF_REJ_SH_LINK, ELF_CORPUS_WHY_EXACT, NULL, NULL },
 
     { "sh_name_past_shstrtab", "sh_name offset lies past the section name table",
       mut_sh_name_past_shstrtab, probe_section_name,
-      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_UNOBSERVED, "LEG-03",
-      "elf_parse.c:109 duneos_elf_string() returns strtab + offset with no size bound" },
+      -EINVAL, DUNEOS_ELF_REJ_SH_NAME, ELF_CORPUS_WHY_EXACT, NULL, NULL },
 
     { "st_name_past_strtab", "st_name offset lies past the symbol string table",
       mut_st_name_past_strtab, probe_symbol_name,
-      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_UNOBSERVED, "LEG-03",
-      "elf_parse.c:109 duneos_elf_string() returns strtab + offset with no size bound" },
+      -EINVAL, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_UNOBSERVED, NULL, NULL },
 
     { "sh_offset_size_overflow", "sh_offset + sh_size wraps and escapes the file",
       mut_sh_offset_size_overflow, elf_corpus_probe_open,
