@@ -99,10 +99,13 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
  * On success the caller owns *out and must release it with
  * duneos_elf_image_close(). On failure *out is already released.
  *
- * Every index and offset the section header table carries is bounded here, so
- * a successfully opened image guarantees, for all its sections:
+ * The section header table's name and link indices are bounded here, so a
+ * successfully opened image guarantees, for all its sections:
  *   sh_name < shstrtab_size — duneos_elf_section_name() never returns NULL;
  *   sh_link < e_shnum for the section types whose sh_link is a section index.
+ * NOT bounded: section extents. Nothing here checks sh_offset + sh_size against
+ * the file size, so a caller reading a section's bytes must handle a short or
+ * failing read rather than trust the extent (tracked as BL-ELF-EXTENT).
  * A caller indexing shdrs with a value it read itself still bounds it itself.
  */
 int duneos_elf_image_open(const duneos_elf_io_t *io,
