@@ -110,7 +110,7 @@ void app_main(void)
      * which brings up TinyUSB and CDC.  Log the banner after that so the
      * message reliably reaches /dev/ttyACM0 in USB CDC console mode. */
     if (duneos_vfs_init() != ESP_OK) {
-        klog_e(TAG, "VFS init failed — sysbin partition missing or corrupt");
+        klog_e(TAG, "VFS init failed — see the error above; kernel idle");
         kernel_idle();
         return;
     }

@@ -1,0 +1,40 @@
+# esp32s3-qemu-psram — hardware-free test bench board, PSRAM variant (ADR 039).
+#
+# Identical to esp32s3-qemu except for the PSRAM declaration. The pair exists
+# because loader.c allocates app sections under `#ifdef CONFIG_SPIRAM`: without
+# this board only the DRAM branch would ever be exercised.
+#
+# QEMU models an `ssi_psram` device in quad mode by default (octal is selected
+# from CONFIG_SPIRAM_MODE_OCT), so `psram_type: qspi` needs no extra QEMU
+# argument — bspgen emits CONFIG_SPIRAM_MODE_QUAD=y and idf.py qemu does the
+# rest.
+#
+# The SIZE below does reach the emulator: `idf.py qemu` hardcodes `-m 32M` for
+# every ESP32-S3, and 32 MiB of mapped PSRAM fills the chip's whole 32 MiB
+# external-memory data vaddr window, leaving the flash mmap of the partition
+# table with nothing. `dbt qemu` reads `psram_size_mb` from here and sizes the
+# machine to match (SPEC-leg-30) — ESP-IDF v6.0.1 offers no Kconfig that caps
+# what esp_psram maps, so the declaration has to travel this way.
+board:
+  name: "esp32s3-qemu-psram"
+  arch: xtensa-esp32s3
+  sdk: esp-idf
+  cpu: esp32s3
+  flash_size_mb: 8
+  psram_size_mb: 8
+  psram_type: qspi
+
+  # Emulator target, never silicon — see esp32s3-qemu/board.yaml and SPEC-leg-29.
+  qemu: true
+
+  console: uart
+
+  has_sd: false
+
+  wifi: false
+
+  uart:
+    - id: 0
+      tx_pin: 43
+      rx_pin: 44
+      default_baud: 115200

@@ -339,7 +339,26 @@ static esp_err_t load_sections(const duneos_elf_io_t    *io,
 
         s_build_exec_base = (uintptr_t)iram;
         s_build_exec_size = exec_total;
-#ifdef CONFIG_IDF_TARGET_ESP32
+#if defined(CONFIG_DUNEOS_TARGET_QEMU)
+        /* Emulator-only write path (SPEC-leg-29, option 1). qemu-xtensa's
+         * esp32s3 machine maps the IRAM and DRAM windows as two separate
+         * memories instead of two views of one SRAM: a store through the DRAM
+         * alias never becomes visible at the IRAM address, so the loaded app
+         * would execute zeroes. On an emulator IRAM accepts byte stores, so
+         * relocations are written straight at the exec address.
+         *
+         * TRADE-OFF, deliberate and bounded: this is a second write path that
+         * only ever compiles into a board that never runs on silicon. The
+         * QEMU bench therefore cannot catch a break in the hardware alias
+         * arithmetic (iram_word_dram_alias / build_install_exec) — a periodic
+         * hardware run stays the only proof of that path. Everything else the
+         * loader does (parse, relocate, resolve, scan, launch) is identical in
+         * both builds. Never enable this symbol on a real board: IRAM is
+         * 32-bit-access-only on ESP32-S3 and the unaligned byte stores below
+         * would raise LoadStoreError. */
+        s_build_scratch       = (uint8_t *)iram;
+        s_build_scratch_owned = false;
+#elif defined(CONFIG_IDF_TARGET_ESP32)
         /* Plain ESP32: DIRAM word order is inverted, so there is no linear DRAM
          * view of the exec block — stage relocations in a contiguous scratch and
          * install per-word via the inverting alias (build_install_exec). */

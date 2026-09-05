@@ -127,7 +127,20 @@ esp_err_t duneos_vfs_mount_flash(void)
 
     esp_err_t err = esp_vfs_littlefs_register(&conf);
     if (err != ESP_OK) {
-        klog_e(TAG, "LittleFS mount failed: %s", esp_err_to_name(err));
+        /* esp_littlefs returns ESP_ERR_NOT_FOUND only when
+         * esp_partition_find_first() came back NULL, i.e. the partition table
+         * has no such entry — which says nothing about the contents of the
+         * flash. Reporting that as corruption sends the reader looking for a
+         * bad image instead of a bad table or a failed flash mmap. A genuinely
+         * unreadable filesystem surfaces as an LFS error (-84 and friends),
+         * and format_if_mount_failed then reformats it. */
+        if (err == ESP_ERR_NOT_FOUND) {
+            klog_e(TAG, "no '" FLASH_PARTITION "' partition in the partition "
+                        "table — the entry is missing or could not be mapped");
+        } else {
+            klog_e(TAG, "'" FLASH_PARTITION "' found but LittleFS mount "
+                        "failed: %s", esp_err_to_name(err));
+        }
         return err;
     }
 

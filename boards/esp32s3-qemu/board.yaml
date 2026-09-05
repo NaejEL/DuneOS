@@ -1,0 +1,40 @@
+# esp32s3-qemu — hardware-free test bench board (ADR 039).
+#
+# Not a physical product: this board describes exactly what Espressif's
+# qemu-xtensa models for the ESP32-S3 machine, and nothing else. No SD, no
+# display, no keyboard, no I2C/SPI, no WiFi — boot therefore falls through to
+# /flash alone, which is the path `dbt qemu` exercises (mount → scan /bin →
+# load a .dap → run → exit).
+#
+# Sibling board esp32s3-qemu-psram is the same configuration with PSRAM on,
+# so the loader's `#ifdef CONFIG_SPIRAM` allocation branch is covered too.
+board:
+  name: "esp32s3-qemu"
+  arch: xtensa-esp32s3
+  sdk: esp-idf
+  cpu: esp32s3
+  flash_size_mb: 8
+  # No PSRAM — exercises the loader's DRAM allocation branch.
+  psram_size_mb: 0
+
+  # This board is an emulator target, never silicon (SPEC-leg-29). Narrow
+  # meaning: internal SRAM is not dual-mapped here, so the loader writes app
+  # .text at the IRAM address instead of through the DRAM alias. Not a general
+  # "relax things under QEMU" switch.
+  qemu: true
+
+  # UART0 is the machine's serial device; QEMU wires it to stdio, and that is
+  # the only channel the smoke test reads.
+  console: uart
+
+  # QEMU models no SD controller for the ESP32-S3 machine, and none is wired.
+  has_sd: false
+
+  # No radio in the emulator — the WiFi driver would have nothing to attach to.
+  wifi: false
+
+  uart:
+    - id: 0
+      tx_pin: 43
+      rx_pin: 44
+      default_baud: 115200

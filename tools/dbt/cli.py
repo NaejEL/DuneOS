@@ -15,6 +15,7 @@ Direct CLI commands:
     dbt info                    Show ELF sections, symbols, relocations
     dbt new <name>              Create a new app from template
     dbt buildall [path]         Build all system apps (+ deploy if path given)
+    dbt qemu                    Boot under QEMU and assert boot + .dap load
     dbt clean / cleanall        Remove build artefacts
 """
 
@@ -22,7 +23,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_YAML_FILE, DUNEOS_ROOT
+from .constants import (APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_YAML_FILE, DUNEOS_ROOT,
+                        write_board_file)
 from .manifest import load_manifest, find_apps, _is_bin_app
 from .toolchain import get_board_plugin
 from .builder import build_single, clean_single, run
@@ -31,6 +33,7 @@ from .flashimg import cmd_flashimg
 from .setup import cmd_setup
 from .kernel import cmd_flash_kernel
 from .bspgen import cmd_bspgen
+from .qemu import cmd_qemu, DEFAULT_TIMEOUT_S as DEFAULT_QEMU_TIMEOUT_S
 from .img import cmd_img_convert, cmd_img_splash
 
 
@@ -337,7 +340,7 @@ def cmd_system_use(args) -> None:
     cfg = load_profile(args.name)
     board_file = DUNEOS_ROOT / ".duneos_board"
     if not board_file.exists() or board_file.read_text().strip() != cfg["board"]:
-        board_file.write_text(cfg["board"] + "\n")
+        write_board_file(cfg["board"])
         print(f"  .duneos_board updated to '{cfg['board']}'")
     print(f"Active profile: {args.name}  (board: {cfg['board']})")
 
@@ -605,6 +608,36 @@ def main() -> None:
     p_flashimg.add_argument("--safe", action="store_true",
                             help="Replace init.yaml with usb_shell-only (recovery mode)")
     p_flashimg.set_defaults(func=cmd_flashimg)
+
+    # --- qemu (LEG-27 — hardware-free boot + loader smoke test) ---
+    p_qemu = sub.add_parser(
+        "qemu",
+        help="Boot the image under QEMU and assert the boot + .dap load sequence",
+    )
+    p_qemu.add_argument("--board", default=None,
+                        help="Board to run (must match .duneos_board)")
+    p_qemu.add_argument("--build-dir", dest="build_dir", default=None,
+                        help="Build directory (default: build-<board>)")
+    p_qemu.add_argument("--timeout", type=float, default=DEFAULT_QEMU_TIMEOUT_S,
+                        help=f"Seconds before the run is declared a timeout "
+                             f"(default: {DEFAULT_QEMU_TIMEOUT_S:g})")
+    p_qemu.add_argument("--no-build", dest="no_build", action="store_true",
+                        help="Skip dbt's own kernel and app build steps. The "
+                             "app is then genuinely not rebuilt; the kernel "
+                             "still is, because idf.py's 'qemu' action "
+                             "declares dependencies=['all']")
+    p_qemu.add_argument("--quiet", action="store_true",
+                        help="Do not echo the captured serial output")
+    p_qemu.add_argument("--gdb-port", dest="gdb_port", type=int, default=None,
+                        help="TCP port for QEMU's GDB server, used for the "
+                             "post-mortem report on a failed run (default: a "
+                             "free ephemeral port chosen at launch, so a "
+                             "leftover emulator cannot make the run look like "
+                             "a firmware failure)")
+    p_qemu.add_argument("--no-gdb-diag", dest="no_gdb_diag", action="store_true",
+                        help="Skip the post-mortem backtrace + klog ring dump "
+                             "taken when a run does not pass")
+    p_qemu.set_defaults(func=cmd_qemu)
 
     # --- system <verb> (Phase 25 — declarative image recipes) ---
     p_system = sub.add_parser(

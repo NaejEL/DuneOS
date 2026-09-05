@@ -19,9 +19,11 @@ Plugin interface (each plugin module must export):
     cflags(board_cfg, tc=None) -> list[str]
     ldflags(board_cfg) -> list[str]
     linker_script(board_dir) -> Path | None
-    build_kernel(board_dir, build_dir, port) -> int
+    build_kernel(board_dir, build_dir, port, sdkconfig=None) -> int
     flash_kernel(build_dir, port, baud) -> int
     monitor(port) -> None
+    run_qemu(build_dir, flash_image, timeout_s, consume, sdkconfig=None,
+             psram_mb=0) -> (status, returncode)   # ADR 039 — emulator
 """
 
 from importlib import import_module

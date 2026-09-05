@@ -160,7 +160,7 @@ services:
 
 
 def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
-           profile: dict | None = None) -> int:
+           profile: dict | None = None, no_init: bool = False) -> int:
     """
     Copy built .dap files to staging_dir/bin/ and stage init.yaml.
 
@@ -217,9 +217,15 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
                 shutil.copy2(icon_src, icons_dir / f"{icon_name}.dr")
                 print(f"  staged → /share/icons/{icon_name}.dr")
 
-    # Stage init.yaml — three sources:
+    # Stage init.yaml — three sources (or none at all):
     dest_init = staging_dir / "init.yaml"
-    if safe_mode:
+    if no_init:
+        # Leaving /flash without an init.yaml is what makes the kernel take the
+        # legacy autoboot path (scan /bin → select → launch). The QEMU smoke
+        # bench needs exactly that path, since it is the one that exercises the
+        # loader's scan of /flash/bin.
+        print("  [no-init] /init.yaml omitted — kernel will autoboot from /bin")
+    elif safe_mode:
         dest_init.write_text(_SAFE_INIT_YAML)
         print(f"  staged → /init.yaml  (SAFE MODE — usb_shell only)")
     elif profile is not None:
@@ -352,7 +358,7 @@ def _install_default_icons(staging_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def cmd_flashimg(args) -> None:
-    board_name = _get_board_name()
+    board_name = getattr(args, "board", None) or _get_board_name()
 
     if getattr(args, "build", False):
         print("Building system apps…")
@@ -366,7 +372,8 @@ def cmd_flashimg(args) -> None:
                 print(f"  [FAIL] {app_dir.name}")
         print()
 
-    staging_dir = DUNEOS_ROOT / "build" / "sysbin_staging"
+    out_dir = Path(getattr(args, "out_dir", None) or (DUNEOS_ROOT / "build"))
+    staging_dir = out_dir / "sysbin_staging"
     if staging_dir.exists():
         shutil.rmtree(staging_dir)
 
@@ -377,14 +384,20 @@ def cmd_flashimg(args) -> None:
         print("  [SAFE MODE] init.yaml replaced with usb_shell-only.")
     elif profile is not None:
         print(f"  Profile-driven staging: '{profile['name']}'")
-    n = _stage(staging_dir, board_name, safe_mode=safe, profile=profile)
+    n = _stage(staging_dir, board_name, safe_mode=safe, profile=profile,
+               no_init=getattr(args, "no_init", False))
     print(f"  {n} app(s) staged\n")
 
-    out_path = DUNEOS_ROOT / "build" / "sysbin.bin"
-    print(f"Creating LittleFS image → {out_path.relative_to(DUNEOS_ROOT)}")
+    out_path = out_dir / "sysbin.bin"
+    print(f"Creating LittleFS image → {out_path}")
     _create_image(staging_dir, out_path)
     size_kb = out_path.stat().st_size // 1024
     print(f"  {size_kb} KB  ({_SYSBIN_SIZE // 1024} KB partition)\n")
+
+    # image_only stops before any serial resolution: `dbt qemu` must never
+    # read .duneos_port, let alone touch a physical device.
+    if getattr(args, "image_only", False):
+        return
 
     port = _find_port(getattr(args, "port", None))
 

@@ -30,13 +30,32 @@ endif()
 list(APPEND DUNEOS_KERNEL_SRCS
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_uart.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_gpio.c"
-    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_i2c.c"
-    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_spi.c"
-    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_adc.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_time.c"
-    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_encoder.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_logic.c"
 )
+
+# Peripheral HALs are gated on the symbol that already gates their sole consumer.
+# The kernel component is registered WHOLE_ARCHIVE, so an unguarded SRCS entry is
+# force-linked on every board and drags in the ESP-IDF component it calls together
+# with that component's .init_array constructors — esp_adc's adc_hw_calibration()
+# busy-waits forever under qemu-xtensa on a board that has no ADC at all.
+# Guard SRCS only: CONFIG_* is empty during the ESP-IDF requirements phase, so the
+# same guard on DUNEOS_KERNEL_REQUIRES would hide headers from boards that need them.
+if(CONFIG_DUNEOS_DRV_I2C)
+    list(APPEND DUNEOS_KERNEL_SRCS "${CMAKE_CURRENT_LIST_DIR}/hal/hal_i2c.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_SPI)
+    list(APPEND DUNEOS_KERNEL_SRCS "${CMAKE_CURRENT_LIST_DIR}/hal/hal_spi.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_BATTERY_ADC_SIMPLE)
+    list(APPEND DUNEOS_KERNEL_SRCS "${CMAKE_CURRENT_LIST_DIR}/hal/hal_adc.c")
+endif()
+
+if(CONFIG_DUNEOS_DRV_INPUT_ENCODER)
+    list(APPEND DUNEOS_KERNEL_SRCS "${CMAKE_CURRENT_LIST_DIR}/hal/hal_encoder.c")
+endif()
 
 # ESP-IDF component deps required by the HAL implementations above.
 # These are ARCH-SCOPED: a RISC-V arch.cmake would list different deps here.

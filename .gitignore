@@ -1,4 +1,7 @@
 build/
+# Per-board build dirs (dbt qemu: build-esp32s3-qemu, build-esp32s3-qemu-psram),
+# each holding its own sdkconfig so two boards don't clobber one another
+build-*/
 
 # Per-developer board/port selection
 .duneos_board
