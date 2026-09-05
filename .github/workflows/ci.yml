@@ -30,6 +30,69 @@ jobs:
           python -m pip install pytest pyyaml
           python -m pytest tools/dbt/tests -q
 
+  # Time-bounded libFuzzer run on the ELF validation entry point (SPEC-leg-26
+  # criteria 7 and 8). Separate job on purpose: `host-tests` must never depend
+  # on a libFuzzer-capable toolchain being present.
+  #
+  # Duration: 120 s per run, plus a 25 s per-input timeout. Long enough to
+  # re-derive the known defects from the seeded corpus, short enough not to
+  # gate a PR on a fuzzing budget.
+  #
+  # Crash handling: libFuzzer writes the reproducer under
+  # tests/host/fuzz_artifacts/ and exits non-zero. The artifact is uploaded on
+  # every run so a crash is reproducible locally with
+  # `./fuzz_elf_validate <artifact>`.
+  #
+  # WHY continue-on-error, and when it goes away: on the current commit the
+  # loader has the known out-of-bounds reads documented as expected failures in
+  # tests/host/elf_corpus.c (LEG-01/02/03). The fuzzer finds them within
+  # seconds, so a gating job would be permanently red for already-planned bugs.
+  # SPEC-leg-01 criterion 4 requires this run to be crash-free once the
+  # hardening lands: remove `continue-on-error` in that same change.
+  fuzz-elf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fuzz the ELF validation entry point
+        continue-on-error: true
+        run: |
+          make -C tests/host fuzz-run FUZZ_SECONDS=120
+          echo "fuzz-run completed" > tests/host/fuzz_ran.marker
+
+      # WHY this step is NOT continue-on-error: without it a runner with no
+      # clang, or a clang with no compiler-rt fuzzer runtime, makes the step
+      # above swallow the Makefile's actionable error message and the job goes
+      # green having fuzzed nothing. Asserting the binary and the marker exist
+      # separates "ran clean" from "never built" — a broken fuzz job is visible
+      # while a genuine crash stays non-blocking until SPEC-leg-01 lands.
+      #
+      # With the marker absent, a reproducer under tests/host/fuzz_artifacts/
+      # is what tells a crash (the interesting outcome, non-blocking today
+      # because the fuzzer re-derives the known LEG-01/02/03 OOBs in seconds)
+      # from a run that simply broke after building.
+      - name: Assert the fuzz target actually built and ran
+        if: always()
+        run: |
+          test -x tests/host/fuzz_elf_validate \
+            || { echo "::error::fuzz_elf_validate was never built — see the fuzz step log"; exit 1; }
+          if [ -f tests/host/fuzz_ran.marker ]; then
+            echo "fuzz run completed with no crash"
+          elif [ -n "$(ls -A tests/host/fuzz_artifacts 2>/dev/null)" ]; then
+            echo "::warning::fuzzer found a crash — reproducer uploaded in fuzz-elf-artifacts; run './fuzz_elf_validate <artifact>' to reproduce. Non-blocking until SPEC-leg-01 lands."
+          else
+            echo "::error::fuzz binary built but the run failed without producing a reproducer — the fuzz run itself broke, see the fuzz step log"
+            exit 1
+          fi
+
+      - name: Upload fuzzing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-elf-artifacts
+          path: tests/host/fuzz_artifacts/
+          if-no-files-found: ignore
+
   kernel-build:
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0.1

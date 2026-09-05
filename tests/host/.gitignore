@@ -3,3 +3,10 @@ test_i2c_decode
 test_known_yaml
 *.tmp
 elf_parse.o
+test_elf_validate
+fuzz_elf_validate
+fuzz_corpus/
+fuzz_artifacts/
+.fuzzprobe
+.fuzzprobe.c
+fuzz_ran.marker
