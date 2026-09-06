@@ -13,6 +13,28 @@ from dbt import sdkconfig_check as sc
 
 SYMBOL = "CONFIG_ESP_MAIN_TASK_STACK_SIZE"
 WATCHPOINT = "CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK"
+BOARD = "m5stack-cardputer"
+
+
+@pytest.fixture
+def declared_root(tmp_path, monkeypatch):
+    """A source layer the guard can read, standing in for the repo root.
+
+    `boards/*/sdkconfig.board` is a bspgen artefact and is gitignored, so a
+    test resolving the CardPuter's 4608 through the real tree passes only on a
+    machine that has already run bspgen and fails on a clean checkout or in CI.
+    That the board.yaml value reaches the fragment is asserted by
+    test_bspgen_main_task_stack.py; what belongs here is the guard's own
+    behaviour, so the layer is built rather than borrowed — the shape
+    test_tui_sdkconfig_guard.py's fake_root already uses.
+    """
+    (tmp_path / "boards" / BOARD).mkdir(parents=True)
+    (tmp_path / "sdkconfig.defaults").write_text(
+        f"{WATCHPOINT}=y\n", encoding="utf-8")
+    (tmp_path / "boards" / BOARD / "sdkconfig.board").write_text(
+        f"{SYMBOL}=4608\n", encoding="utf-8")
+    monkeypatch.setattr(sc, "DUNEOS_ROOT", tmp_path)
+    return tmp_path
 
 
 # --- parsing -----------------------------------------------------------------
@@ -95,7 +117,7 @@ def test_a_missing_source_file_is_skipped(tmp_path):
     assert merged == {WATCHPOINT: "y"}
 
 
-def test_both_layers_are_checked_for_the_active_board():
+def test_both_layers_are_checked_for_the_active_board(declared_root):
     """The root policy file is as droppable as the board fragment, so the guard
     must cover both — a build dir with the watchpoint off is the case that was
     armed across every build directory in the tree."""
@@ -108,7 +130,7 @@ def test_both_layers_are_checked_for_the_active_board():
 
 # --- end to end on a build directory -----------------------------------------
 
-def test_a_stale_build_directory_is_refused(tmp_path):
+def test_a_stale_build_directory_is_refused(tmp_path, declared_root):
     stale = tmp_path / "sdkconfig"
     stale.write_text(f"{SYMBOL}=3584\n# {WATCHPOINT} is not set\n")
     conflicts = sc.check_build_sdkconfig("m5stack-cardputer", stale)
@@ -129,7 +151,7 @@ def test_an_unconfigured_build_directory_passes(tmp_path):
                                     tmp_path / "sdkconfig") == []
 
 
-def test_enforce_exits_and_names_symbol_stale_value_and_remedy(tmp_path):
+def test_enforce_exits_and_names_symbol_stale_value_and_remedy(tmp_path, declared_root):
     stale = tmp_path / "sdkconfig"
     stale.write_text(f"{SYMBOL}=3584\n")
     printed = []

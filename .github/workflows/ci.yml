@@ -27,7 +27,10 @@ jobs:
           python -m pip install --upgrade pip
           # pyyaml: duneos-bspgen.py sys.exit()s at import time without it,
           # which would abort collection rather than fail a test.
-          python -m pip install pytest pyyaml
+          # textual: test_tui_sdkconfig_guard.py imports dbt.tui. A missing
+          # import here is not one red test — it is a collection error that
+          # aborts the whole run, so every dbt test would go unrun.
+          python -m pip install pytest pyyaml textual
           python -m pytest tools/dbt/tests -q
 
   # Time-bounded libFuzzer run on the ELF validation entry point (SPEC-leg-26

@@ -904,8 +904,11 @@ def cmd_qemu(args) -> None:
     sdkconfig = build_dir / "sdkconfig"
 
     # Run after bspgen: the fragment must be current before it can be compared.
+    # enforce() exits 1, which is EXIT_ASSERT here — a stale cached Kconfig is a
+    # bench configuration problem, so it must reach CI as EXIT_CONFIG.
     from .sdkconfig_check import enforce as enforce_sdkconfig
-    enforce_sdkconfig(board, sdkconfig)
+    with _as_config_error("stale cached sdkconfig"):
+        enforce_sdkconfig(board, sdkconfig)
 
     if not getattr(args, "no_build", False):
         print("\nBuilding kernel…")
