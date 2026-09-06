@@ -26,6 +26,13 @@ Frame sizes, measured with `xtensa-esp32s3-elf-objdump` on the built
 So **~64 B of stack per nesting level**, and cJSON will happily take 1000 of
 them — about **64 KiB**.
 
+**480 B is the floor, not the one-nesting-level case.** A manifest *is* a JSON
+object, so `cJSON_ParseWithLength(32) + cJSON_ParseWithLengthOpts(80) +
+parse_value(32) + parse_object(32) + parse_value(32) + parse_string(48)` is
+unavoidable: even a flat `{"name":"x"}` reaches
+`load(160) + extract_manifest(64) + 320 = 544 B` on this path. Every further
+nesting level adds 64 B on top of that, with no bound below 1000.
+
 The boot scan parses the manifest of **every** `.dap` it finds, on `main_task`,
 whose measured peak on the m5stack-cardputer is **3684 B of 4608 B, leaving 924 B**
 (measured on hardware 2026-09-06). At 64 B per level, roughly **14 further
