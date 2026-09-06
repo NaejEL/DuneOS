@@ -33,7 +33,8 @@ from .flashimg import cmd_flashimg
 from .setup import cmd_setup
 from .kernel import cmd_flash_kernel
 from .bspgen import cmd_bspgen
-from .qemu import cmd_qemu, DEFAULT_TIMEOUT_S as DEFAULT_QEMU_TIMEOUT_S
+from .qemu import (cmd_qemu, DEFAULT_TIMEOUT_S as DEFAULT_QEMU_TIMEOUT_S,
+                   PAYLOADS as QEMU_PAYLOADS)
 from .img import cmd_img_convert, cmd_img_splash
 
 
@@ -626,6 +627,11 @@ def main() -> None:
                              "app is then genuinely not rebuilt; the kernel "
                              "still is, because idf.py's 'qemu' action "
                              "declares dependencies=['all']")
+    p_qemu.add_argument("--payload", default=None,
+                        choices=[pl.app for pl in QEMU_PAYLOADS],
+                        help="Run a single payload instead of all of them. "
+                             "Each payload is a separate boot: autoboot "
+                             "launches the one app staged into /flash/bin")
     p_qemu.add_argument("--quiet", action="store_true",
                         help="Do not echo the captured serial output")
     p_qemu.add_argument("--gdb-port", dest="gdb_port", type=int, default=None,

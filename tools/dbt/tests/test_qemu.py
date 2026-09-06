@@ -923,3 +923,104 @@ def test_a_reworded_esp_psram_line_is_reported_rather_than_ignored():
     m.feed("I (79) esp_psram: PSRAM device found, size 8 MB\n")
     assert m.psram_found_mb is None
     assert m.psram_check_unavailable is not None
+
+
+# ---------------------------------------------------------------------------
+# Payloads — SPEC-leg-04 (qemu_calloc)
+#
+# The bench is the only executable path for the calloc overflow guard, so what
+# is pinned here is that a red payload actually reddens `dbt qemu`: a verdict
+# nobody reads is not a verdict.
+# ---------------------------------------------------------------------------
+
+CALLOC_GOOD_LOG = """\
+ESP-ROM:esp32s3-20210327
+rst:0x1 (POWERON),boot:0x8 (SPI_FAST_FLASH_BOOT)
+I (31) boot: ESP-IDF v6.0.1 2nd stage bootloader
+<<<DUNEOS-QEMU-CALLOC app_main entered>>>
+<<<DUNEOS-QEMU-CALLOC klog begin>>>
+[I][vfs] LittleFS mounted at / (root)
+[I][loader]   [0] qemu_calloc  v0.1.0  /bin/qemu_calloc.dap
+[I][loader] scan: 1 app(s) found
+[I][duneos] autoboot: launching 'qemu_calloc' v0.1.0
+<<<DUNEOS-QEMU-CALLOC klog end>>>
+qemu_calloc: slot-heap overflow(SIZE_MAX/2, 4) -> 0x0
+qemu_calloc: fallback probe(16384) -> 0x3fca1234 (want non-NULL)
+<<<DUNEOS-QEMU-CALLOC every check passed>>>
+"""
+
+CALLOC_MARKER = "<<<DUNEOS-QEMU-CALLOC every check passed>>>"
+CALLOC_LABEL  = "qemu_calloc passed every calloc-overflow check (SPEC-leg-04)"
+
+
+def _calloc_matcher() -> "qemu.SmokeMatcher":
+    p = next(p for p in qemu.PAYLOADS if p.app == qemu.CALLOC_APP)
+    return qemu.SmokeMatcher(assertions=p.assertions, progress=p.progress,
+                             app_failures=p.app_failures)
+
+
+def test_the_calloc_payload_is_part_of_the_bench():
+    apps = [p.app for p in qemu.PAYLOADS]
+    assert qemu.SMOKE_APP in apps
+    assert qemu.CALLOC_APP in apps
+
+
+def test_every_payload_has_a_source_directory_and_a_manifest():
+    for p in qemu.PAYLOADS:
+        app_dir = REPO_ROOT / "apps" / "user" / p.app
+        assert (app_dir / "duneos.yaml").is_file(), p.app
+        assert list(app_dir.glob("*.c")), p.app
+
+
+def test_each_payload_asserts_on_its_own_app_not_another():
+    for p in qemu.PAYLOADS:
+        joined = " ".join(pat for _, pat in p.assertions)
+        assert p.app in joined
+        for other in qemu.PAYLOADS:
+            if other.app != p.app:
+                assert other.app not in joined
+
+
+def test_a_good_calloc_run_matches_every_assertion():
+    m = _calloc_matcher()
+    m.feed(CALLOC_GOOD_LOG)
+    assert m.missing == []
+    assert not m.panicked
+    assert qemu.verdict("complete", m, 10.0) == (qemu.EXIT_OK,
+                                                 "PASS: every assertion matched")
+
+
+def test_a_failed_calloc_check_fails_the_run():
+    """Criterion 7: the app withholds its marker when a check fails, and that
+    is what has to reach the exit code."""
+    m = _calloc_matcher()
+    m.feed(CALLOC_GOOD_LOG.replace(
+        CALLOC_MARKER,
+        "<<<DUNEOS-QEMU-CALLOC FAILED: overflowing product did not return NULL>>>"))
+    assert m.missing == [CALLOC_LABEL]
+    code, message = qemu.verdict("timeout", m, 10.0)
+    assert code != qemu.EXIT_OK
+    assert CALLOC_LABEL in message
+
+
+def test_a_calloc_payload_exiting_non_zero_is_seen_as_an_app_failure():
+    m = _calloc_matcher()
+    c = qemu.SmokeConsumer(m, settle_s=0.0)
+    log = CALLOC_GOOD_LOG.replace(CALLOC_MARKER, "") + (
+        "E (323) duneos/supervisor: 'qemu_calloc' exited (code 1)\n")
+    assert c(log) == "appfail"
+    code, _ = qemu.verdict("appfail", m, 10.0)
+    assert code == qemu.EXIT_ASSERT
+
+
+def test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one():
+    """A qemu_smoke boot log leaves every app-specific calloc assertion
+    missing. The two board-level ones (/flash mounted, scan completed) are
+    deliberately app-agnostic and do match."""
+    m = _calloc_matcher()
+    m.feed(GOOD_LOG)
+    assert m.missing == [
+        f"/flash/bin scanned (found {qemu.CALLOC_APP}.dap)",
+        f"{qemu.CALLOC_APP}.dap loaded and launched",
+        CALLOC_LABEL,
+    ]

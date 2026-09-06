@@ -26,6 +26,7 @@ import socket
 import sys
 import time
 from pathlib import Path
+from typing import NamedTuple
 
 from .constants import DUNEOS_ROOT
 
@@ -34,6 +35,10 @@ from .constants import DUNEOS_ROOT
 # ---------------------------------------------------------------------------
 
 SMOKE_APP        = "qemu_smoke"
+# SPEC-leg-04. `duneos_supervisor_app_calloc` needs FreeRTOS, a supervisor slot
+# and the ESP-IDF heap, so tests/host/ cannot reach it: this payload is the
+# only place the overflow guard is executed rather than reviewed.
+CALLOC_APP       = "qemu_calloc"
 QEMU_BOARDS      = ("esp32s3-qemu", "esp32s3-qemu-psram")
 DEFAULT_TIMEOUT_S = 180.0
 # Keep reading after the last assertion matched: a panic one line later would
@@ -90,15 +95,24 @@ def qemu_startup_failure(text: str) -> str | None:
 
 # (label, regex). Order is the boot order, and it is the order failures are
 # reported in — the first missing one is where the system stopped.
-ASSERTIONS: tuple[tuple[str, str], ...] = (
-    ("/flash mounted",
-     r"LittleFS mounted at / \(root\)"),
-    (f"/flash/bin scanned (found {SMOKE_APP}.dap)",
-     rf"\[\d+\]\s+{SMOKE_APP}\s+v\S+\s+/bin/{SMOKE_APP}\.dap"),
-    ("scan completed",
-     r"scan: [1-9]\d* app\(s\) found"),
-    (f"{SMOKE_APP}.dap loaded and launched",
-     rf"autoboot: launching '{SMOKE_APP}'"),
+#
+# Every payload boots the same way — one app staged into /flash/bin, autoboot
+# launching it — so the boot half is generated per payload and only the last
+# assertion, the payload's own verdict marker, differs.
+def _boot_assertions(app: str) -> tuple[tuple[str, str], ...]:
+    return (
+        ("/flash mounted",
+         r"LittleFS mounted at / \(root\)"),
+        (f"/flash/bin scanned (found {app}.dap)",
+         rf"\[\d+\]\s+{app}\s+v\S+\s+/bin/{app}\.dap"),
+        ("scan completed",
+         r"scan: [1-9]\d* app\(s\) found"),
+        (f"{app}.dap loaded and launched",
+         rf"autoboot: launching '{app}'"),
+    )
+
+
+ASSERTIONS: tuple[tuple[str, str], ...] = _boot_assertions(SMOKE_APP) + (
     # The marker is printed by app_main immediately *before* duneos_exit(0),
     # so it proves the loaded code ran — it says nothing about what the exit
     # itself did. The label is worded to claim only that. Everything after the
@@ -106,6 +120,14 @@ ASSERTIONS: tuple[tuple[str, str], ...] = (
     # of this bench's reach: those lines land in the ring with no reader left.
     (f"{SMOKE_APP} app_main ran to its duneos_exit(0) call",
      r"<<<DUNEOS-QEMU-SMOKE app_main reached duneos_exit\(0\)>>>"),
+)
+
+# qemu_calloc emits this only after every one of its checks passed; a single
+# failed check makes it print a FAILED line and exit 1 instead, so this
+# assertion missing is what carries a broken guard into dbt qemu's exit code.
+CALLOC_ASSERTIONS: tuple[tuple[str, str], ...] = _boot_assertions(CALLOC_APP) + (
+    (f"{CALLOC_APP} passed every calloc-overflow check (SPEC-leg-04)",
+     r"<<<DUNEOS-QEMU-CALLOC every check passed>>>"),
 )
 
 # Which of these actually reach the emulated UART, and which are insurance:
@@ -120,7 +142,7 @@ ASSERTIONS: tuple[tuple[str, str], ...] = (
 #   esp_rom_printf output, and `klog_capture_rom_output()`
 #   (kernel/duneos_kernel/src/klog.c) redirects that channel into the ring
 #   buffer. They only show up when a reader is still draining the ring —
-#   i.e. while qemu_smoke is alive. They are kept because they cost nothing
+#   i.e. while the payload is alive. They are kept because they cost nothing
 #   and do fire in that window, not because they can be relied on.
 #
 # Consequence to keep in mind when reading a red run: a panic that halts
@@ -154,7 +176,20 @@ BOOT_BANNER = r"rst:0x[0-9a-fA-F]+"
 # DuneOS does: ESP-IDF's own ROM-path early logs, ESP-IDF's stdout-path logs,
 # and klog level 'E' (the one level klog.c forwards to ESP_LOG). Reading the
 # last marker reached tells a reader which half of the boot to investigate.
-PROGRESS_MARKERS: tuple[tuple[str, str], ...] = (
+#
+# Only the last entry names the payload, so the list is generated per payload
+# the way the assertions are.
+def _progress_markers(app: str, entry_marker: str) -> tuple[tuple[str, str], ...]:
+    return _COMMON_PROGRESS_MARKERS + (
+        # Written by the payload to /dev/uart0 as its first instruction, so it
+        # does not depend on where a supervisor-launched app's fd 1 points.
+        # Seen without the stdout markers = the app ran and its stdout goes
+        # nowhere.
+        (f"{app} app_main entered (via /dev/uart0)", entry_marker),
+    )
+
+
+_COMMON_PROGRESS_MARKERS: tuple[tuple[str, str], ...] = (
     ("ROM bootloader ran",            r"ESP-ROM:esp32"),
     ("2nd stage bootloader ran",      r"boot: ESP-IDF"),
     ("app image loaded from flash",   r"boot: Loaded app from partition"),
@@ -169,28 +204,34 @@ PROGRESS_MARKERS: tuple[tuple[str, str], ...] = (
     # covers — anchored on it, the marker could never fire.
     ("DuneOS klog error channel alive (level E reached the console)",
      r"^E \(\d+\) duneos"),
-    # Written by the payload to /dev/uart0 as its first instruction, so it
-    # does not depend on where a supervisor-launched app's fd 1 points. Seen
-    # without the stdout markers = the app ran and its stdout goes nowhere.
-    (f"{SMOKE_APP} app_main entered (via /dev/uart0)",
-     r"<<<DUNEOS-QEMU-SMOKE app_main entered>>>"),
 )
+
+PROGRESS_MARKERS: tuple[tuple[str, str], ...] = _progress_markers(
+    SMOKE_APP, r"<<<DUNEOS-QEMU-SMOKE app_main entered>>>")
+CALLOC_PROGRESS_MARKERS: tuple[tuple[str, str], ...] = _progress_markers(
+    CALLOC_APP, r"<<<DUNEOS-QEMU-CALLOC app_main entered>>>")
 
 # The supervisor reports a dying app at level 'E', which does reach the
 # console. Seeing it means the loader ran and the payload died — a different
 # failure from "nothing ever started", and no reason to sit out the timeout.
-APP_FAILURE_PATTERNS: tuple[tuple[str, str], ...] = (
-    (f"{SMOKE_APP} exited non-zero",
-     rf"'{SMOKE_APP}' exited \(code (?!0\))\d+\)"),
-    (f"{SMOKE_APP} hit a CPU exception",
-     rf"'{SMOKE_APP}' CPU exception: cause=\d+ PC=0x[0-9a-fA-F]+"),
-    # Same klog-prefix correction as the progress marker above. Every klog_e()
-    # in kernel/duneos_loader/src/loader.c is an abort of a load or a run;
-    # a green run emits no loader line at level E at all (verified on both QEMU
-    # boards), so making this pattern live cannot turn a pass into a failure.
-    ("the loader refused the app",
-     r"^E \(\d+\) duneos/loader: "),
-)
+def _app_failures(app: str) -> tuple[tuple[str, str], ...]:
+    return (
+        (f"{app} exited non-zero",
+         rf"'{app}' exited \(code (?!0\))\d+\)"),
+        (f"{app} hit a CPU exception",
+         rf"'{app}' CPU exception: cause=\d+ PC=0x[0-9a-fA-F]+"),
+        # Same klog-prefix correction as the progress marker above. Every
+        # klog_e() in kernel/duneos_loader/src/loader.c is an abort of a load
+        # or a run; a green run emits no loader line at level E at all
+        # (verified on both QEMU boards), so making this pattern live cannot
+        # turn a pass into a failure.
+        ("the loader refused the app",
+         r"^E \(\d+\) duneos/loader: "),
+    )
+
+
+APP_FAILURE_PATTERNS: tuple[tuple[str, str], ...] = _app_failures(SMOKE_APP)
+CALLOC_APP_FAILURE_PATTERNS: tuple[tuple[str, str], ...] = _app_failures(CALLOC_APP)
 
 # Boot-log signatures of a board/emulator mismatch rather than a firmware
 # fault. No source change fixes these, and left unnamed they surface as five
@@ -211,6 +252,30 @@ CONFIG_FAILURE_PATTERNS: tuple[tuple[str, str], ...] = (
 # — a future QEMU whose ssi_psram model reports a different size then fails
 # loudly here rather than silently re-defining the board.
 PSRAM_DETECTED = r"esp_psram: Found (\d+)MB PSRAM device"
+
+
+class Payload(NamedTuple):
+    """One app staged into /flash/bin, booted once, asserted on once.
+
+    Autoboot launches the single app it finds, so a payload is a whole QEMU
+    run: `dbt qemu` boots the same kernel once per payload rather than trying
+    to make several apps share one boot. The exit code is the worst of them.
+    """
+
+    app:          str
+    purpose:      str
+    assertions:   tuple[tuple[str, str], ...]
+    progress:     tuple[tuple[str, str], ...]
+    app_failures: tuple[tuple[str, str], ...]
+
+
+PAYLOADS: tuple[Payload, ...] = (
+    Payload(SMOKE_APP, "boot + loader smoke test (LEG-27)",
+            ASSERTIONS, PROGRESS_MARKERS, APP_FAILURE_PATTERNS),
+    Payload(CALLOC_APP, "calloc() overflow guard (SPEC-leg-04)",
+            CALLOC_ASSERTIONS, CALLOC_PROGRESS_MARKERS,
+            CALLOC_APP_FAILURE_PATTERNS),
+)
 
 
 def declared_psram_mb(board_cfg: dict) -> int:
@@ -783,12 +848,16 @@ def _board_file_changed_under_run(snapshot: str) -> None:
     )
 
 
-def _build_sysbin(board: str, build_dir: Path) -> Path:
+def _build_sysbin(board: str, build_dir: Path, app: str = SMOKE_APP) -> Path:
     """Build the LittleFS image through the existing flashimg path.
 
     Staging is profile-driven so exactly one app ships, and `no_init` leaves
     /flash without an init.yaml: the kernel then takes the autoboot path, which
     is the one that scans /flash/bin and is what this bench must exercise.
+
+    One app per image is not an accident to be relaxed: autoboot launches the
+    app the loader's scan happens to return first, so staging two payloads
+    would make which one runs depend on directory order.
     """
     from .flashimg import cmd_flashimg
 
@@ -804,16 +873,17 @@ def _build_sysbin(board: str, build_dir: Path) -> Path:
     a.no_init    = True
     a.out_dir    = build_dir
     a.profile    = {
-        "name":        "qemu-smoke",
+        "name":        f"qemu-{app}",
         "board":       board,
-        "apps_flash":  [SMOKE_APP],
+        "apps_flash":  [app],
         "init_flash":  [],
     }
     cmd_flashimg(a)
     return build_dir / "sysbin.bin"
 
 
-def _write_flash_image(build_dir: Path, board: str, sysbin: Path) -> Path:
+def _write_flash_image(build_dir: Path, board: str, sysbin: Path,
+                       app: str = SMOKE_APP) -> Path:
     from .flashimg import _get_sysbin_offset
 
     flash_args = build_dir / "flash_args"
@@ -835,7 +905,7 @@ def _write_flash_image(build_dir: Path, board: str, sysbin: Path) -> Path:
         parts.append((offset, blob.read_bytes()))
     parts.append((_get_sysbin_offset(board), sysbin.read_bytes()))
 
-    out = build_dir / "qemu_flash_duneos.bin"
+    out = build_dir / f"qemu_flash_{app}.bin"
     out.write_bytes(compose_flash_image(parts, size))
     print(f"  flash image → {out}  ({size // (1024 * 1024)} MB)")
     return out
@@ -862,6 +932,17 @@ def cmd_qemu(args) -> None:
         print(f"  [warn] '{board}' is not one of the QEMU boards "
               f"({', '.join(QEMU_BOARDS)}) — it may declare hardware the "
               f"emulator does not model.")
+
+    requested = getattr(args, "payload", None)
+    if requested:
+        payloads = tuple(p for p in PAYLOADS if p.app == requested)
+        if not payloads:
+            _config_error(
+                f"unknown payload '{requested}' — known payloads: "
+                f"{', '.join(p.app for p in PAYLOADS)}"
+            )
+    else:
+        payloads = PAYLOADS
 
     build_dir = Path(getattr(args, "build_dir", None) or (DUNEOS_ROOT / f"build-{board}"))
     if not build_dir.is_absolute():
@@ -919,24 +1000,62 @@ def cmd_qemu(args) -> None:
             _board_file_changed_under_run(active)
             sys.exit(EXIT_BUILD)
 
-        print(f"\nBuilding {SMOKE_APP}…")
-        with _as_config_error("cross-compiler not found"):
-            tc = plugin.find_compiler(arch, cpu)
-        if not build_single(DUNEOS_ROOT / "apps" / "user" / SMOKE_APP,
-                            plugin, arch, cpu, board_cfg, tc):
-            sys.exit(EXIT_BUILD)
-
-    print("\nBuilding flash image…")
-    with _as_config_error("flash image could not be built"):
-        sysbin = _build_sysbin(board, build_dir)
-    flash_image = _write_flash_image(build_dir, board, sysbin)
+        for payload in payloads:
+            print(f"\nBuilding {payload.app}…")
+            with _as_config_error("cross-compiler not found"):
+                tc = plugin.find_compiler(arch, cpu)
+            if not build_single(DUNEOS_ROOT / "apps" / "user" / payload.app,
+                                plugin, arch, cpu, board_cfg, tc):
+                sys.exit(EXIT_BUILD)
 
     psram_mb = declared_psram_mb(board_cfg)
     if psram_mb:
         print(f"  board declares {psram_mb} MiB PSRAM — the emulator is sized "
               f"to match")
 
-    matcher  = SmokeMatcher(psram_declared_mb=psram_mb)
+    results: list[tuple[Payload, int, str]] = []
+    for payload in payloads:
+        code, message = _run_payload(payload, plugin, board, build_dir,
+                                     sdkconfig, board_cfg, psram_mb,
+                                     timeout_s, args)
+        results.append((payload, code, message))
+
+    # Every payload runs even after one fails: a red calloc run says nothing
+    # about whether the boot smoke test still passes, and knowing both is what
+    # separates "the guard broke" from "the image no longer boots".
+    worst = next((c for _, c, _ in results if c != 0), EXIT_OK)
+    if len(results) > 1:
+        print("\n" + "=" * 60)
+        print("  payload summary")
+        for payload, code, message in results:
+            print(f"  [{'PASS' if code == 0 else 'FAIL'}] {payload.app} — "
+                  f"{payload.purpose}")
+            if code != 0:
+                print(f"         {message}")
+        print("=" * 60)
+    if worst != 0:
+        _board_file_changed_under_run(active)
+    sys.exit(worst)
+
+
+def _run_payload(payload: Payload, plugin, board: str, build_dir: Path,
+                 sdkconfig: Path, board_cfg: dict, psram_mb: int,
+                 timeout_s: float, args) -> tuple[int, str]:
+    """Stage one payload into /flash/bin, boot it, and score its assertions.
+
+    The kernel image is shared across payloads; only the LittleFS image and the
+    composed flash image are rebuilt, because the payload *is* the /flash/bin
+    content the autoboot path picks up.
+    """
+    print(f"\nBuilding flash image for {payload.app} ({payload.purpose})…")
+    with _as_config_error("flash image could not be built"):
+        sysbin = _build_sysbin(board, build_dir, payload.app)
+    flash_image = _write_flash_image(build_dir, board, sysbin, payload.app)
+
+    matcher  = SmokeMatcher(assertions=payload.assertions,
+                            progress=payload.progress,
+                            app_failures=payload.app_failures,
+                            psram_declared_mb=psram_mb)
     echo     = not getattr(args, "quiet", False)
     consumer = SmokeConsumer(matcher, settle_s=DEFAULT_SETTLE_S)
 
@@ -950,6 +1069,8 @@ def cmd_qemu(args) -> None:
         gdb_port = None
     else:
         requested = getattr(args, "gdb_port", None)
+        # Re-picked per payload: the previous QEMU has only just been killed,
+        # and its listening socket may still be in TIME_WAIT.
         gdb_port = int(requested) if requested else pick_gdb_port()
     post_mortem: list[str] = []
 
@@ -962,7 +1083,7 @@ def cmd_qemu(args) -> None:
             _post_mortem(plugin, build_dir, gdb_port, matcher)
         )
 
-    print(f"\nRunning QEMU (timeout {timeout_s:g}s)…\n")
+    print(f"\nRunning QEMU for {payload.app} (timeout {timeout_s:g}s)…\n")
     status, rc = plugin.run_qemu(build_dir, flash_image, timeout_s, consume,
                                  sdkconfig=sdkconfig, gdb_port=gdb_port,
                                  before_kill=inspect, psram_mb=psram_mb)
@@ -974,7 +1095,8 @@ def cmd_qemu(args) -> None:
 
     code, message = verdict(status, matcher, timeout_s, settled=consumer.settled)
     print("\n" + "=" * 60)
-    for label, _ in ASSERTIONS:
+    print(f"  payload: {payload.app} — {payload.purpose}")
+    for label, _ in payload.assertions:
         mark = "ok  " if label in matcher.matched else "MISS"
         print(f"  [{mark}] {label}")
     print("  --- boot progress (diagnostics, never assertions) ---")
@@ -1001,9 +1123,7 @@ def cmd_qemu(args) -> None:
     print("=" * 60)
     for line in post_mortem:
         print(line)
-    if code != 0:
-        _board_file_changed_under_run(active)
-    sys.exit(code)
+    return code, message
 
 
 def _post_mortem(plugin, build_dir: Path, gdb_port: int,
