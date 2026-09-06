@@ -82,7 +82,7 @@ static void *call_calloc(size_t n, size_t size)
     return calloc(vn, vsize);
 }
 
-/* Returns 0 when every byte of `p[0..len)` is zero. */
+/* Returns 1 when every byte of `p[0..len)` is zero, 0 otherwise. */
 static int all_zero(const unsigned char *p, size_t len)
 {
     for (size_t i = 0; i < len; i++)
