@@ -22,8 +22,9 @@
 #include <stdint.h>
 
 #define AMBIENT_BATTERY_PATH  "/tmp/battery"      /* battery_info_t (grandfathered) */
-#define AMBIENT_WIFI_PATH     "/tmp/state/wifi"   /* ambient_wifi_t */
-#define AMBIENT_KBD_PATH      "/tmp/state/kbd"    /* ambient_kbd_t  */
+#define AMBIENT_WIFI_PATH     "/tmp/state/wifi"   /* ambient_wifi_t  */
+#define AMBIENT_KBD_PATH      "/tmp/state/kbd"    /* ambient_kbd_t   */
+#define AMBIENT_STACK_PATH    "/tmp/state/stack"  /* ambient_stack_t */
 
 /* The /tmp/state directory producers create before their first write. */
 #define AMBIENT_STATE_DIR     "/tmp/state"
@@ -52,3 +53,14 @@ typedef struct {
     uint8_t locks;       /* OR of AMBIENT_MOD_* — which modifiers are latched   */
     uint8_t oneshot;     /* subset of `locks` armed in one-shot mode (own colour)*/
 } ambient_kbd_t;
+
+/*
+ * Boot-time stack watermark of main_task (LEG-37). Written once by the kernel,
+ * right after the init.yaml launch — the deepest point of boot — and never
+ * updated afterwards, so a reader gets the boot peak and not a live figure.
+ * Producer: main/main.c. Consumer: apps/system/bin/free.
+ */
+typedef struct {
+    uint32_t total;      /* main_task stack size, bytes                        */
+    uint32_t peak;       /* high-water mark at the end of boot, bytes used     */
+} ambient_stack_t;

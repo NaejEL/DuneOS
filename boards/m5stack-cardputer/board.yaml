@@ -20,15 +20,24 @@ board:
   # Measured 2026-09-05 on this board (one SD card, 35 apps in /bin): with the
   # stack temporarily raised to 12288 B so the measurement could not itself
   # overflow, uxTaskGetStackHighWaterMark(NULL) after service launch reported
-  # 8524 B free => peak 12288 - 8524 = 3764 B, against ESP-IDF's 3584 B default.
+  # 8524 B free. NOTE the denominator: ESP-IDF creates main_task with
+  # ESP_TASK_MAIN_STACK = CONFIG_ESP_MAIN_TASK_STACK_SIZE + TASK_EXTRA_STACK_SIZE
+  # (esp_task.h:57), and TASK_EXTRA_STACK_SIZE is 512 unless
+  # CONFIG_LIBC_NEWLIB_NANO_FORMAT is set, which it is not here (picolibc). So
+  # the real stack was 12288 + 512 = 12800 B and the peak 12800 - 8524 = 4276 B,
+  # against ESP-IDF's 3584 + 512 = 4096 B default.
   # The board was overflowing by 180 B, silently, into the adjacent heap.
   # That measurement was taken with CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK
   # OFF. The same change turns it on project-wide, and ESP-IDF's Kconfig help
   # says the watchpoint's alignment requirement "decreases the usable stack
   # size by up to 60 bytes" per task. So the arithmetic here is on the USABLE
   # stack, not the declared one:
-  #   4608 declared - 60 watchpoint = 4548 usable
-  #   4548 usable   - 3764 measured =  784 B margin (21% over the peak)
+  #   4608 + 512 extra = 5120 real  - 60 watchpoint = 5060 usable
+  #   5060 usable                      - 4276 measured =  784 B margin (18%)
+  # The 784 B is unchanged from the earlier write-up of this derivation, which
+  # used 4548 - 3764: both the declared size and the peak were understated by
+  # the same 512 B, so the errors cancelled in the margin and only the
+  # denominator was wrong. Quote 5120, not 4608, when budgeting from this.
   # for LittleFS state and SD presence, which move the peak. 4608 is kept: 784 B
   # is over four Xtensa register-window spills (16-64 B each), and the next step
   # up would cost 512 B of DRAM on a board with no PSRAM. The watchpoint is what

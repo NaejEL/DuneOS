@@ -2,8 +2,13 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "esp_err.h"
+#include "esp_task.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
@@ -16,6 +21,7 @@
 #include "duneos/supervisor.h"
 #include "duneos/init.h"
 #include "duneos/meminfo.h"
+#include "duneos/ambient.h"
 
 static const char *TAG = "duneos";
 
@@ -67,6 +73,41 @@ static int launch_from_init_yaml(void)
      * an exit observer for the `after:` dependency mechanism. Returns the
      * total number of scheduled services (immediate + deferred). */
     return duneos_init_run(&cfg);
+}
+
+/* LEG-37: main_task runs the whole boot — the LittleFS and SD mounts and the
+ * loader scan of every .dap — and an overflow here lands in the adjacent heap,
+ * surfacing as TLSF corruption thousands of instructions later rather than as a
+ * stack report. The init.yaml launch is the deepest point, so the mark is taken
+ * right after it. It is published as ambient state (ADR 027) rather than logged:
+ * the margin stays one `free` away instead of costing a line on every boot.
+ * Same StackType_t scaling as supervisor.c uses for app slots.
+ *
+ * The total is ESP_TASK_MAIN_STACK, NOT CONFIG_ESP_MAIN_TASK_STACK_SIZE: ESP-IDF
+ * creates main_task with the Kconfig value plus TASK_EXTRA_STACK_SIZE
+ * (esp_task.h:57, app_startup.c:81), which is 512 B unless
+ * CONFIG_LIBC_NEWLIB_NANO_FORMAT is set — this is a picolibc build and never
+ * sets it. uxTaskGetStackHighWaterMark() reports free space against that real
+ * size, so subtracting the Kconfig value instead understates both the stack and
+ * the peak by 512 B. */
+static void publish_boot_stack_mark(void)
+{
+    size_t free_bytes = uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t);
+    uint32_t total    = (uint32_t)ESP_TASK_MAIN_STACK;
+
+    ambient_stack_t st = {
+        .total = total,
+        .peak  = (free_bytes < (size_t)total) ? (uint32_t)(total - free_bytes) : 0,
+    };
+
+    mkdir(AMBIENT_STATE_DIR, 0755);
+    int fd = open(AMBIENT_STACK_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        klog_w(TAG, "cannot publish %s: %s", AMBIENT_STACK_PATH, strerror(errno));
+        return;
+    }
+    write(fd, &st, sizeof(st));
+    close(fd);
 }
 
 /* Legacy single-app boot: scan /sd/apps/, honour /sd/autoboot if present. */
@@ -134,6 +175,12 @@ void app_main(void)
         /* init.yaml absent or unparseable — fall back to legacy autoboot */
         launched = launch_autoboot();
     }
+
+    /* Before the "nothing to run" bail-out: launch_autoboot() also returns 0
+     * when duneos_supervisor_launch() fails, which happens only after a full
+     * duneos_loader_load() — the deepest chain of the boot. Publishing after
+     * the bail-out would lose the mark on exactly the boots that reach furthest. */
+    publish_boot_stack_mark();
 
     if (launched == 0) {
         klog_w(TAG, "nothing to run");
