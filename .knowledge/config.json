@@ -38,5 +38,5 @@
   "min_name_len": 4,
   "rg_path": null,
   "languages": null,
-  "hooks": "off"
+  "hooks": "commit"
 }
