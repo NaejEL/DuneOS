@@ -45,3 +45,20 @@ End your answer with a summary: files created/modified (absolute paths), accepta
 - Disabling, ignoring or working around a test, a warning or an error to "make it pass": no `NoWarn`, no skipped test, no suppressed warning, no `#ifdef 0`, no commented-out code. A warning is a symptom: fix the root cause.
 - Touching bspgen-generated files other than by re-generating them.
 - Committing (`git commit`, `git push`) — review and commit belong to the user.
+
+<!-- rgkb:debut -->
+## Code index (rgkb)
+
+This repository carries a local knowledge base under `.knowledge/`, versioned in git and
+queried through the `mcp__rgkb__*` tools (equivalent CLI:
+`python .claude/rgkb/rgkb.py <command>`).
+
+- Locate yourself before writing: run `mcp__rgkb__definition` and `mcp__rgkb__neighbors` on
+  every symbol the spec names, to find the real insertion point and the existing callers
+  rather than creating a duplicate.
+- Read `mcp__rgkb__notes` on the files you are about to modify: the known traps are recorded
+  there, and rediscovering them costs a cycle.
+- After your modifications, **reindex** (`mcp__rgkb__reindex`, or
+  `python .claude/rgkb/rgkb.py index`) so the Verifier works on an up-to-date index.
+- Record no interpretation as a note: you report, you do not conclude.
+<!-- rgkb:fin -->

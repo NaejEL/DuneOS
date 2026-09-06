@@ -1,0 +1,3 @@
+index.sqlite binary -diff -merge
+*.jsonl text eol=lf
+*.json text eol=lf

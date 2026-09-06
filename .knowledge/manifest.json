@@ -1,0 +1,21 @@
+{
+  "config_digest": "c3d79f8e23a728669b290d32d1730d714ae45ef76d780f046478fea7e1f10317",
+  "counts": {
+    "edges": 6802,
+    "files": 426,
+    "notes": 0,
+    "symbols": 3055
+  },
+  "digest": "509d41f5a4cc76124cc4cd0788a2786da1061b11e7e47afabe356f90da099463",
+  "languages": [
+    "cpp",
+    "markdown",
+    "other",
+    "powershell",
+    "python",
+    "shell",
+    "yaml"
+  ],
+  "schema": 1,
+  "tool_version": "1.0.0"
+}

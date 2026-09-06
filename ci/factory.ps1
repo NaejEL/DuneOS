@@ -29,6 +29,9 @@ if ($Yolo) {
         '--permission-mode', 'acceptEdits',
         '--allowedTools',
         'Read', 'Glob', 'Grep', 'Write', 'Edit',
+        'mcp__rgkb__search', 'mcp__rgkb__definition', 'mcp__rgkb__symbols',
+        'mcp__rgkb__neighbors', 'mcp__rgkb__file_card', 'mcp__rgkb__notes',
+        'mcp__rgkb__status', 'Bash(python .claude/rgkb/rgkb.py *)',
         'Bash(git *)', 'Bash(python *)', 'Bash(idf.py *)',
         'PowerShell(git *)', 'PowerShell(python *)', 'PowerShell(idf.py *)'
     )

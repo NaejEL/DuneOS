@@ -1,5 +1,18 @@
 {
+  "enabledMcpjsonServers": [
+    "rgkb"
+  ],
   "permissions": {
+    "allow": [
+      "mcp__rgkb__search",
+      "mcp__rgkb__definition",
+      "mcp__rgkb__symbols",
+      "mcp__rgkb__neighbors",
+      "mcp__rgkb__file_card",
+      "mcp__rgkb__notes",
+      "mcp__rgkb__status",
+      "Bash(python .claude/rgkb/rgkb.py *)"
+    ],
     "deny": [
       "Read(./build/**)",
       "Read(./libdune/build/**)",
@@ -8,7 +21,9 @@
       "Read(./**/__pycache__/**)",
       "Read(./.pytest_cache/**)",
       "Read(./factory-logs/**)",
-      "Read(./.git/objects/**)"
+      "Read(./.git/objects/**)",
+      "Read(./.knowledge/index.sqlite)",
+      "Read(./.knowledge/graph.json)"
     ]
   }
 }

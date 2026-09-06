@@ -28,6 +28,8 @@ __pycache__/
 !.claude/agents/
 !.claude/skills/
 !.claude/settings.json
+# rgkb code-index server — shared so the .knowledge/ base is usable after a clone
+!.claude/rgkb/
 *.swp
 *.swo
 *.o

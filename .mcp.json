@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rgkb": {
+      "command": "python",
+      "args": [".claude/rgkb/rgkb.py", "mcp"]
+    }
+  }
+}

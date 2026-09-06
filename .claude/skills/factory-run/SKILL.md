@@ -50,3 +50,25 @@ Present to the user, as text (no report file):
 - suggested next action: review of the diff by the user (`git diff`), then a commit **by them** — never commit on their behalf.
 
 On failure (headless gate, 3 iterations without APPROVED, or user abandonment), the report states it clearly with the remaining issues, and the session ends in error.
+
+<!-- rgkb:debut -->
+## Code index (rgkb)
+
+The repository carries a versioned knowledge base under `.knowledge/` (rgkb). Two anchor
+points in the cycle above, without renumbering its steps:
+
+- **Before the Plan phase (step 2)** — the first phase that spends: run
+  `python .claude/rgkb/rgkb.py status`. If the index is stale, run
+  `python .claude/rgkb/rgkb.py index` before launching a single subagent. A plan drawn from a
+  stale index is a wrong plan, and it is the most expensive error in the chain.
+- **At the final report (step 5)**, after the user has approved: offer to record what the
+  cycle taught that the code does not say — an architecture decision and its reason, a trap
+  hit, an acquired result and its figure, an area of the repository not to touch without
+  care — with `mcp__rgkb__note_add`. `subject` = the file path or symbol name concerned when
+  there is one, otherwise a stable free-form subject; `source` = the spec name
+  (`SPEC-x.md`); one or two `tags`. **One to three notes per cycle, no more**: a knowledge
+  base that records everything stops being read. Never record what the index finds on its own
+  ("class X is in file Y").
+- **In the final report**: list the notes added with their `n-…` identifiers, and remind the
+  user that `.knowledge/` is part of what has to be committed.
+<!-- rgkb:fin -->
