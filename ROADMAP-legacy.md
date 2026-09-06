@@ -9,8 +9,8 @@ across 396 tracked files. 24 raw findings, 24 confirmed by adversarial validatio
 No `critical` finding: no committed secrets, no tracked build artefacts, no observed data loss.
 Priority criterion chosen at arbitration: **risk first**.
 
-**Revision of 2026-09-05 — 10 IDs added, total now 37 (24 audit findings + 3 enablers +
-10 found by building and running, not by the audit sweep).** LEG-28/29/30 are defects the Milestone 0 bench found while being built, fixed
+**Revision of 2026-09-06 — 11 IDs added, total now 38 (24 audit findings + 3 enablers +
+11 found by building, running and reviewing — not by the audit sweep).** LEG-28/29/30 are defects the Milestone 0 bench found while being built, fixed
 in the same pull request; LEG-31/32/33 are findings from the same work, specced but not yet
 executed. None came from the original audit sweep: they came from *running* the thing the audit
 asked for. See "What the bench cost and what it found" under Milestone 0.
@@ -196,6 +196,7 @@ migrated to LEG-20's batch, where the `/flash/...` documentation sweep lives.
 | ID | Finding | Reason |
 |---|---|---|
 | LEG-24 | `arch/riscv32/` without `arch.cmake` or `hal/`: an `esp32c3-devkitc` build would proceed with no arch HAL | Severity lowered at arbitration: acknowledged and documented STUB (CLAUDE.md, Phase 28 not started). To reopen when Phase 28 opens. |
+| LEG-38 | A test that reads a gitignored build artefact is green only on the machine that produced it. Shipped twice: `tests/host/test_bspgen_uart.py` (PR #5) and `tools/dbt/tests/test_sdkconfig_check.py` (PR #7), both caught by a human reading a diff. Compounded by a collection-time `ImportError` that aborted the whole dbt suite while the job looked green — 202 tests unrun | major | S | — | [specs/SPEC-leg-38-tests-must-not-read-generated-files.md](specs/SPEC-leg-38-tests-must-not-read-generated-files.md) | TODO |
 
 ## Findings rejected at validation
 
