@@ -68,14 +68,14 @@ typedef struct {
      *
      * An owner starting with "UNPLANNED" flags a defect no spec covers at all;
      * it carries a docs/backlog.md id so the marker has a tracked home, and the
-     * driver counts those separately so they cannot rot here. The two markers
-     * left are both of that kind:
-     *   "UNPLANNED:LEG-34/BL-ELF-EXTENT"      — sh_offset + sh_size overflow;
+     * driver counts those separately so they cannot rot here. The one marker
+     * left is of that kind:
      *   "UNPLANNED:LEG-35/BL-ELF-EMPTY-SYMTAB" — zero-sized symtab accepted.
-     * Both are out of SPEC-leg-01's scope: that spec bounded the section-header
-     * indices and string-table offsets, not section extents against file size
-     * nor symbol-table sizing. Whoever writes the spec that fixes one deletes
-     * its marker and decrements ELF_CORPUS_EXPECTED_XFAILS in the same change.
+     * It is out of SPEC-leg-01's scope (which bounded the section-header indices
+     * and string-table offsets) and out of SPEC-leg-34's (which bounded section
+     * extents against the image size): neither covers symbol-table sizing.
+     * Whoever writes the spec that fixes it deletes the marker and decrements
+     * ELF_CORPUS_EXPECTED_XFAILS in the same change.
      */
     const char *xfail_owner;
     const char *defect;
@@ -92,8 +92,8 @@ typedef struct {
  * and its markers are deleted; that change must update this constant, exactly
  * like the markers themselves.
  */
-#define ELF_CORPUS_EXPECTED_CASES  17
-#define ELF_CORPUS_EXPECTED_XFAILS 2
+#define ELF_CORPUS_EXPECTED_CASES  22
+#define ELF_CORPUS_EXPECTED_XFAILS 1
 
 extern const elf_corpus_case_t elf_corpus[];
 extern const size_t            elf_corpus_count;

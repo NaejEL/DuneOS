@@ -40,15 +40,25 @@ typedef enum {
     DUNEOS_ELF_REJ_SHSTRNDX,            /* e_shstrndx >= e_shnum               */
     DUNEOS_ELF_REJ_SH_LINK,             /* sh_link   >= e_shnum                */
     DUNEOS_ELF_REJ_SH_NAME,             /* sh_name   >= shstrtab size          */
+    DUNEOS_ELF_REJ_SH_OFFSET,           /* sh_offset > image size              */
+    DUNEOS_ELF_REJ_SH_SIZE,             /* sh_size   > size - sh_offset        */
+    DUNEOS_ELF_REJ_SH_LINK_TYPE,        /* sh_link names a section of the wrong
+                                         * type (SHT_SYMTAB -> SHT_STRTAB)    */
 } duneos_elf_reject_t;
 
 /*
  * Injected byte source. read() must fill len bytes at offset, and return
  * 0 on success or -errno on failure (short read included).
+ *
+ * size is the number of bytes the image holds. It is not a hint the reader may
+ * disagree with: it is what bounds every section extent, so a caller that
+ * cannot know the size of its backing store cannot use this unit. The kernel
+ * takes it from the file, the host tests from their buffer.
  */
 typedef struct {
     int   (*read)(void *ctx, long offset, void *buf, size_t len);
     void   *ctx;
+    size_t  size;
 } duneos_elf_io_t;
 
 /*
@@ -102,10 +112,17 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
  * The section header table's name and link indices are bounded here, so a
  * successfully opened image guarantees, for all its sections:
  *   sh_name < shstrtab_size — duneos_elf_section_name() never returns NULL;
- *   sh_link < e_shnum for the section types whose sh_link is a section index.
- * NOT bounded: section extents. Nothing here checks sh_offset + sh_size against
- * the file size, so a caller reading a section's bytes must handle a short or
- * failing read rather than trust the extent (tracked as BL-ELF-EXTENT).
+ *   sh_link < e_shnum for the section types whose sh_link is a section index,
+ *   and an SHT_SYMTAB's sh_link names an SHT_STRTAB — so a caller sizing an
+ *   allocation from shdrs[symtab->sh_link].sh_size gets a section whose size
+ *   IS bounded by the checks below;
+ *   sh_offset <= io->size for EVERY section;
+ *   sh_size <= io->size - sh_offset for every section that occupies file
+ *   bytes, so its extent never escapes the image and never wraps.
+ *   SHT_NOBITS and SHT_NULL are exempt from THAT bound only: their sh_size is
+ *   a memory size the file cannot bound (a .bss larger than the object is
+ *   well-formed), so a caller placing one in memory must bound it against the
+ *   memory it has — the loader does that in load_sections().
  * A caller indexing shdrs with a value it read itself still bounds it itself.
  */
 int duneos_elf_image_open(const duneos_elf_io_t *io,

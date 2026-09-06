@@ -51,9 +51,16 @@ jobs:
   # failures in tests/host/elf_corpus.c (LEG-01/02/03); the fuzzer found them
   # within seconds, so a gating job would have been permanently red for
   # already-planned bugs. SPEC-leg-01 criterion 4 required this run to be
-  # crash-free once the hardening landed. It has: the guards are in place
-  # (elf_parse.c:36 e_shstrndx, :65-72 sh_link, :58-64 sh_name, loader.c:1200
-  # and :1223) and the run is clean, so the flag is gone and this job gates.
+  # crash-free once the hardening landed. It has, and the guards are in place:
+  # duneos_elf_validate() bounds e_shstrndx (elf_parse.c:36-39),
+  # check_section_table() bounds sh_name (:131-137) and sh_link (:138-145), and
+  # duneos_loader_load() re-bounds sh_link at the indexing site (loader.c:1292)
+  # and every st_name (:1329). SPEC-leg-34 added the image-extent bound on top.
+  # The run is clean, so the flag is gone and this job gates.
+  #
+  # These line numbers drift with every change to those two files: the function
+  # and the field are the anchor, the numbers are a convenience — re-check them
+  # whenever elf_parse.c or loader.c moves.
   fuzz-elf:
     runs-on: ubuntu-latest
     steps:
