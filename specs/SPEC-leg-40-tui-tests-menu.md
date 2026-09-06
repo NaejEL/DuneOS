@@ -1,6 +1,6 @@
 # LEG-40 — TUI Tests menu: run the gates and watch them live
 Status: PROPOSED
-Depends on: LEG-39 (`dbt test` must exist first)
+Depends on: LEG-17 (`dbt test` must exist first — LEG-39 was merged into it)
 
 ## Context
 
@@ -13,7 +13,7 @@ architectural: `_stream()` (`tui.py:1379`) runs a `Popen` and pushes output
 line-by-line into a `RichLog` (`:1274`) from an `@work(thread=True)` worker.
 That IS "see the build and the result live". The TUI never implements an
 operation itself — it shells to `dbt` (`self._stream([sys.executable, dbt,
-"buildall"])`). So it needs `dbt test` to exist before it can call it.
+"buildall"])`). So it needs LEG-17's `dbt test` to exist before it can call it.
 
 ## Scope
 
@@ -64,7 +64,7 @@ operation itself — it shells to `dbt` (`self._stream([sys.executable, dbt,
 
 ## Out of scope
 
-- Any change to what the gates do (LEG-39 owns the runner) — EXCEPT the
+- Any change to what the gates do (LEG-17 owns the runner) — EXCEPT the
   `.duneos_board` coupling above, which is in scope precisely because the
   gate cannot be exposed safely without it.
 - Editing/authoring tests from the TUI.

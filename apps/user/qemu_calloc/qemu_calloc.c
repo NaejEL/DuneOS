@@ -48,7 +48,9 @@ extern void duneos_exit(int code);
  * it cannot be served from it. */
 #define SLOT_POOL_BYTES  4096u
 #define CHECK_SMALL      512u
-#define CHECK_BIG        16384u
+/* Four times the pool, so the slot heap must refuse it and the global heap
+ * must serve it — derived, not restated, so the two cannot drift apart. */
+#define CHECK_BIG        (4u * SLOT_POOL_BYTES)
 
 static const char *s_failure;   /* first failed check, NULL while all pass */
 
