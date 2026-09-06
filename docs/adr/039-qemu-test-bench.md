@@ -23,7 +23,7 @@ What the ground already offers, verified 2026-09-02:
 
 **Two boards, because the loader branches on PSRAM.** `loader.c` allocates app sections under `#ifdef CONFIG_SPIRAM` — SPIRAM on PSRAM boards, DRAM otherwise. Only the DRAM branch is exercised today, the CardPuter being the daily driver and the T-Embed rarely flashed. The pair covers both.
 
-**dbt drives the emulator through the toolchain plugin**, as `plugin.run_qemu()`, alongside the existing `build_kernel`/`flash_kernel`/`monitor` from Phase 21. This is deliberately the shape [Phase 28.5](../../ROADMAP_v2.md) already plans for the extended plugin interface, so the SDK decoupling does not have to redo it.
+**dbt drives the emulator through the toolchain plugin**, as `plugin.run_qemu()`, alongside the existing `build_kernel`/`flash_kernel`/`monitor` from Phase 21. This is deliberately the shape [Phase 28.5](../../ROADMAP.md) already plans for the extended plugin interface, so the SDK decoupling does not have to redo it.
 
 **The emulator's missing SRAM alias is answered by a board-scoped compile-time guard** (SPEC-leg-29, decided 2026-09-04). `qemu-xtensa`'s `esp32s3` machine maps the IRAM (`0x40…`) and DRAM (`0x3fc…`) windows of internal SRAM as two *separate memories* rather than two views of one, confirmed bidirectionally under GDB. The loader writes an app's relocated `.text` through the DRAM alias — the only way that works on silicon — and executes at the IRAM address, so under emulation it executes zeroes and dies with `cause=0` four words in.
 

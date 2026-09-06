@@ -56,7 +56,7 @@ Default if none apply: **userspace** — driver lives as a library in `sdk/<cate
 
 ## Consequences
 
-**Three existing drifts to correct** (tracked as Phase 24 "Driver placement debt" in ROADMAP_v2):
+**Three existing drifts to correct** (tracked as Phase 24 "Driver placement debt" in ROADMAP.md):
 
 1. **`drv_battery_bq27220.c` is in the kernel** but fails criteria 1-4. It's a periodic I2C read. Move to `sdk/sensor/libbq27220.c` (userspace) + a `apps/system/bin/battery.dap` daemon if board.yaml declares `battery: bq27220`. The `/dev/battery0` device node remains for compatibility, served by the daemon.
 

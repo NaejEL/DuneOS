@@ -46,19 +46,20 @@ jobs:
   # every run so a crash is reproducible locally with
   # `./fuzz_elf_validate <artifact>`.
   #
-  # WHY continue-on-error, and when it goes away: on the current commit the
-  # loader has the known out-of-bounds reads documented as expected failures in
-  # tests/host/elf_corpus.c (LEG-01/02/03). The fuzzer finds them within
-  # seconds, so a gating job would be permanently red for already-planned bugs.
-  # SPEC-leg-01 criterion 4 requires this run to be crash-free once the
-  # hardening lands: remove `continue-on-error` in that same change.
+  # This step used to carry `continue-on-error: true`. WHY it existed: the
+  # loader then had the known out-of-bounds reads documented as expected
+  # failures in tests/host/elf_corpus.c (LEG-01/02/03); the fuzzer found them
+  # within seconds, so a gating job would have been permanently red for
+  # already-planned bugs. SPEC-leg-01 criterion 4 required this run to be
+  # crash-free once the hardening landed. It has: the guards are in place
+  # (elf_parse.c:36 e_shstrndx, :65-72 sh_link, :58-64 sh_name, loader.c:1200
+  # and :1223) and the run is clean, so the flag is gone and this job gates.
   fuzz-elf:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Fuzz the ELF validation entry point
-        continue-on-error: true
         run: |
           make -C tests/host fuzz-run FUZZ_SECONDS=120
           echo "fuzz-run completed" > tests/host/fuzz_ran.marker
@@ -67,13 +68,14 @@ jobs:
       # clang, or a clang with no compiler-rt fuzzer runtime, makes the step
       # above swallow the Makefile's actionable error message and the job goes
       # green having fuzzed nothing. Asserting the binary and the marker exist
-      # separates "ran clean" from "never built" — a broken fuzz job is visible
-      # while a genuine crash stays non-blocking until SPEC-leg-01 lands.
+      # separates "ran clean" from "never built" — a broken fuzz job stays
+      # visible rather than hiding behind a crash that already turned the step
+      # above red.
       #
       # With the marker absent, a reproducer under tests/host/fuzz_artifacts/
-      # is what tells a crash (the interesting outcome, non-blocking today
-      # because the fuzzer re-derives the known LEG-01/02/03 OOBs in seconds)
-      # from a run that simply broke after building.
+      # is what tells a crash from a run that simply broke after building. Both
+      # now fail the job (the fuzz step gates since SPEC-leg-01 landed); this
+      # step exists to say which of the two happened.
       - name: Assert the fuzz target actually built and ran
         if: always()
         run: |
@@ -82,7 +84,7 @@ jobs:
           if [ -f tests/host/fuzz_ran.marker ]; then
             echo "fuzz run completed with no crash"
           elif [ -n "$(ls -A tests/host/fuzz_artifacts 2>/dev/null)" ]; then
-            echo "::warning::fuzzer found a crash — reproducer uploaded in fuzz-elf-artifacts; run './fuzz_elf_validate <artifact>' to reproduce. Non-blocking until SPEC-leg-01 lands."
+            echo "::error::fuzzer found a crash — the fuzz step above already failed the job. Reproducer uploaded in fuzz-elf-artifacts; run './fuzz_elf_validate <artifact>' to reproduce."
           else
             echo "::error::fuzz binary built but the run failed without producing a reproducer — the fuzz run itself broke, see the fuzz step log"
             exit 1

@@ -4,7 +4,7 @@
 serial output that the boot sequence went all the way through the ELF loader:
 
 ```
-/flash mounted → /flash/bin scanned → qemu_smoke.dap loaded → the app's own exit marker
+/flash mounted → /bin scanned → qemu_smoke.dap loaded → the app's own exit marker
 ```
 
 Shape and rationale: [ADR 039](adr/039-qemu-test-bench.md). Scope: `SPEC-leg-27`.
@@ -217,8 +217,8 @@ app's drain stays because it is the channel the *assertions* travel on, and beca
 assertion must not be satisfiable by a debugger reading kernel memory — criterion 6 requires
 the payload's own code to have run.
 
-The image ships **no `/flash/init.yaml`**, on purpose: the kernel then takes the autoboot path,
-which is the one that scans `/flash/bin` — the code path this bench exists to exercise.
+The image ships **no `/init.yaml`**, on purpose: the kernel then takes the autoboot path,
+which is the one that scans `/bin` — the code path this bench exists to exercise.
 
 ## Blockers — where each board stands
 
@@ -256,7 +256,7 @@ sets. Boot stops there — before `main_task`, before `app_main`, with no panic 
 which is exactly the observed trace. DuneOS links `esp_adc` unconditionally
 (`arch/xtensa_esp32s3/arch.cmake:35` and `:55`) even for a board that declares no ADC, so
 every board was affected under emulation. Verified by removing both lines: the boot then runs
-to completion (`main_task: Calling app_main()`, `/flash` mounted, `/flash/bin` scanned,
+to completion (`main_task: Calling app_main()`, `/flash` mounted, `/bin` scanned,
 `qemu_smoke` found and launched).
 
 *Resolution (SPEC-leg-28, 2026-09-04).* `arch.cmake` now guards its

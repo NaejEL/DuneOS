@@ -2,6 +2,12 @@
 
 **Status:** Accepted · 2026-05-19
 
+> **Note added 2026-09-06 — the literal paths below have changed; the decision has not.**
+> The flash filesystem mounts at the **root**, not at `/flash` (`vfs.c`: `FLASH_MOUNT_POINT ""`),
+> so the real paths are `/bin`, `/sd/bin`, `/sd/apps` and `/init.yaml` → `/sd/init.yaml`.
+> `/flash` survives as the mount's registry name (`FLASH_MOUNT_NAME "/"`). The Context below is
+> left as written: it records what was true when the decision was taken.
+
 ## Context
 
 DuneOS today mounts `/flash` (LittleFS in the `sysbin` partition), `/sd` (FatFS on a hardware SD slot), `/tmp` (heap-backed tmpfs), and `/dev` (devfs). The kernel boots from flash even without an SD card (Phase 19). Apps are loaded from `/flash/bin/` → `/sd/bin/` → `/sd/apps/`, init.yaml from `/flash/init.yaml` → `/sd/init.yaml`.

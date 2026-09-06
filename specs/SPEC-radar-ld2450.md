@@ -65,7 +65,7 @@ The user bought an HLK-LD2450 mmWave sensor (24 GHz radar, UART 256000 baud 8N1)
 ## Out of scope
 
 - Hand-editing bspgen-generated files (`sdkconfig.board`, `board_config.h`, `partitions.csv`, `idf_target.txt`).
-- Frozen phases 26-29 (`docs/contest-2026.md`): no OSAL, no native VFS, no network rework.
+- Phases 26-29: no OSAL, no native VFS, no network rework. (The constraint stands on its own — those phases are simply not done. The contest freeze that used to justify it lapsed on 2026-08-31.)
 - Bumping `DUNEOS_ABI_VERSION`: no new exported symbol and no ABI struct change expected.
 - LD2450 configuration commands other than multi-target tracking (filter zones, sensor baud rate, Bluetooth, firmware).
 - Recording/exporting tracks, persistent history on SD.

@@ -43,6 +43,12 @@ python tools/dbt.py flashimg                # uses .duneos_port
 
 # Interactive TUI (board picker, init editor, build/flash actions)
 python tools/dbt.py tui
+
+# --- Tests. Run these; there is no other gate. ---
+make -C tests/host test                      # C host suites (elf_validate, elf_scan, i2c_decode, known_yaml, re)
+python -m pytest tools/dbt/tests -q          # Python tooling (dbt, bspgen)
+python tools/dbt.py qemu --board esp32s3-qemu --build-dir build-esp32s3-qemu
+                                             # hardware-free boot + loader smoke test (ADR 039)
 ```
 
 ## Repository Structure
@@ -56,7 +62,11 @@ DuneOS/
 │   │   ├── Kconfig                  # CONFIG_DUNEOS_DRV_* driver selection options
 │   │   └── src/
 │   │       ├── init.c / klog.c / supervisor.c / task.c / vfs.c / vfs_tmp.c / vfs_dev.c / symbols.c / api.c
-│   │       └── drivers/             # drv_null, drv_uart, drv_klog, drv_i2c, i2c_bus, drv_gpio, drv_battery_adc_simple
+│   │       └── drivers/             # drv_null/uart/klog/i2c/spi/shellpipe, i2c_bus, gpio/ (drv_gpio +
+│   │                                #   gpiochip sx1509/pcf8574/mcp23017), input/ (drv_input, enc_quadrature,
+│   │                                #   hal_encoder_fallback), display/ (drv_fb_st7789, st7789_hw), logic/,
+│   │                                #   net/ (drv_wifi, drv_eth, drv_raw80211), usb/ (drv_usb, drv_usb_cdc),
+│   │                                #   battery/drv_battery_adc_simple
 │   └── duneos_loader/
 │       ├── include/duneos/loader.h  # scan/select/load/run/unload/run_captured API
 │       └── src/loader.c            # Full ET_REL loader: parse, relocate, resolve, run
@@ -64,15 +74,22 @@ DuneOS/
 │   ├── xtensa_esp32s3/
 │   │   ├── hal/hal_*.c             # ESP-IDF HAL impl for uart/gpio/i2c/spi/adc/time
 │   │   └── reloc/loader_reloc_xtensa.c  # STUB — Phase 28 extraction target
-│   └── riscv32/                    # STUB — Phase 28 (ESP32-C6 + P4)
+│   ├── xtensa_esp32/               # plain ESP32 (kincony-A16): hal_eth.c + hal_phy.c (RMII/MDIO)
+│   └── riscv32/reloc/              # 24-line comment STUB. No arch.cmake, no hal/ (LEG-24).
+│                                   #   RISC-V relocations themselves live in loader.c:735 today —
+│                                   #   Phase 28 extracts them here, it does not write them.
 ├── third_party/cjson/ littlefs/    # Pure-C git submodules (no IDF dep)
 ├── libdune/src/                    # libdune.a: libdune_ptr/fs/mem/thread/time/sys.c (public header in duneos_kernel)
 ├── boards/<name>/
 │   ├── board.yaml                  # Source of truth — hand-edited
 │   ├── board_config.h / sdkconfig.board / partitions.csv / idf_target.txt  # bspgen-generated, never hand-edit
 │   └── init.yaml                   # Boot services — hand-edited
-├── apps/system/                    # shell_core, usb_shell, wifi_daemon, bin/ (ships with DuneOS)
-├── apps/user/                      # g_shell, gfx_demo, test_exit, hello_world, uart_echo, tcp_client
+├── apps/system/                    # shell_core, usb_shell, uart_shell, telnet_shell, wifi_daemon,
+│                                   #   battery_daemon, battery_pub, logd, kb_iomatrix, btn_gpio,
+│                                   #   bin/ (28 commands) — ships with DuneOS
+├── apps/user/                      # launcher, g_shell, files, i2cscope, gfx_demo, waves, drview, radar,
+│                                   #   snake, tetris, splash, wifi, tcp_client, uart_echo, hello_world,
+│                                   #   qemu_smoke, test_exit/crash/hardening/pthread
 ├── profiles/                       # Image recipes — Phase 25 (Yocto-like)
 ├── tools/dbt.py                    # Thin wrapper → tools/dbt/cli.py
 ├── tools/dbt/                      # cli, builder, deploy, kernel, flashimg, bspgen, manifest, tui, toolchain/
@@ -187,18 +204,25 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 
 ## Implementation Status
 
-**DONE:** Phases 1–14, 16–19, 21–24 (Phase 24: HAL scope; core headers `init.h`/`task.h`/`vfs.h`/`supervisor.h` still `esp_err_t`, migrate in Phases 26–27). Phase 15 superseded by 18. Phase 24.5 (17 ADRs in `docs/adr/`).
+**DONE:** Phases 1–14, 16–19, 21–24 (Phase 24: HAL scope; core headers `init.h`/`task.h`/`vfs.h`/`supervisor.h` still `esp_err_t`, migrate in Phases 26–27). Phase 15 superseded by 18. Phase 24.5 (13 ADRs closed in that phase — ADR 000-012; `docs/adr/` holds **41** today).
 
-**PARTIAL:** Phase 20 — Memory hardening: heap caps, WDT, exception handler, pointer validation done; stack canary + TLSF pending.
+**PARTIAL:** Phase 20 — Memory hardening: heap caps, WDT, exception handler, pointer validation and the
+**stack canary** (`sdkconfig.defaults:30` `CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y` +
+`supervisor.c:497` `vApplicationStackOverflowHook`, with `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK` at
+`sdkconfig.defaults:57` alongside it) are all done. **Userspace TLSF is the only item left.**
+
+**This table lists open items only.** A phase absent from it is not unknown — it is done. The full
+phase status, the ones below plus every closed one, lives in [`ROADMAP.md`](ROADMAP.md), which also
+carries the legacy-audit debt (LEG-01…LEG-38) as its own section.
 
 | Phase | Status | Notes |
 | --- | --- | --- |
-| Phase 24.7 — Safe boot & recovery | Not finished | `board.yaml recovery_pin` + hold-key in `init.c` still required. Don't claim DONE until hardware-tested. |
-| Phase 24.8 — `<duneos/board.h>` auto-generated | Not finished | `boardgen.py` works for storage/display/input/i2c. NOT closed until: capabilities filtering, mtime rebuild trigger, `libst7789.c` migrated. |
-| Phase 24.9 — Kernel driver self-registration | Not started | `DUNEOS_DRIVER_REGISTER()` macro + `.duneos_driver_init` ELF section. `vfs_dev.c` becomes a loop — zero `#ifdef`, zero hardcoded list. |
-| Phase 24.9.5 — Captured-app exit semantics (ADR 016) | Not started | `loader_run_captured` installs setjmp; `duneos_exit` longjmps back instead of `vTaskDelete(NULL)`. **Critical before contest launcher.** ~50 LoC. |
-| Phase 24.10 — libgfx streaming mode | Not started | `gfx_open(GFX_MODE_STREAM)` draws line-by-line to `/dev/disp0`, no userspace back-buffer. Saves 64 KiB on CardPuter. |
-| Phase 25 — dbt system (Image Recipes) | Not started | `profile.yaml` + `system.yaml` + `capability_map.py`. `dbt system check` validates permissions before build. |
+| Phase 24.7 — Safe boot & recovery | Code complete, hardware validation open | The recovery pin **is implemented**: `init.c:17-47` `recovery_pin_held()` (input + pull, `DUNEOS_HAVE_RECOVERY_PIN`), `init.c:181-184` loads `/init.yaml.safe` instead of the normal chain, `boards/lilygo-t-embed-cc1101/board.yaml:118` declares it, bspgen translates it (`duneos-bspgen.py:463`). Only the on-hardware hold-key test is missing. Don't claim DONE until hardware-tested. |
+| Phase 24.8 — `<duneos/board.h>` auto-generated | **SHIPPED** | All three former blockers are closed: capability filtering (`boardgen.py:211` `CAPABILITY_TO_BLOCKS`, applied at `:243`/`:246`), `sdk/display/libst7789.c` migrated to `DUNEOS_DISPLAY_DEV_INDEX`, and the rebuild trigger resolved (`_board.h` is rewritten every `dbt build`, so its mtime is always fresh). Kept in this table only until somebody deletes the row. |
+| Phase 24.9 — Kernel driver self-registration | **SHIPPED** | `DUNEOS_DRIVER_REGISTER()` in `duneos/driver_init.h`, used by **19** kernel files, registry + `duneos_drivers_run_init()` in `vfs_dev.c`. Implemented with GCC constructors, **not** a custom ELF section (ESP-IDF v6's `--orphan-handling=error`). This row said "Not started" while the "Adding a new kernel driver" section of this same file documented the shipped macro. |
+| Phase 24.9.5 — Captured-app exit semantics (ADR 016) | **SHIPPED**, one test open | `duneos_loader_run_captured` at `loader.c:1555` installs the setjmp; `duneos_exit` longjmps instead of `vTaskDelete(NULL)`; `api_pthread_create` returns `EPERM` when captured. Same contradiction as above — the Hard-Won Lessons entry below already described the fix as shipped. Still open: the on-device regression test (`run test_crash` must return to the prompt without restarting the shell). |
+| Phase 24.10 — libgfx streaming mode | **SHIPPED** | `gfx_open_mode(GFX_MODE_STREAM)` in `sdk/display/gfx.c:34` (`gfx_open()` = `GFX_MODE_BUFFERED`, `:94`), stream path at `:336`; declared in `sdk/display/include/duneos/gfx.h`. |
+| Phase 25 — dbt system (Image Recipes) | 25.1-25.5 **SHIPPED**, 25.6 partial | 7 profiles under `profiles/`; `cli.py:643-697` registers the whole `system` family (`list`/`use`/`check`/`build`/`flash`/`deploy`/`size`/`diff`) on top of `system.py` + `capability_map.py`. 25.6 (contest apps + launcher icons): icons delivered, the rest open — see `ROADMAP.md`. |
 | Phase 26 — OSAL + scheduler portability | Not started | `duneos_osal.h` abstracts FreeRTOS. `freertos_osal.c` + `pthread_osal.c`. Migrates `task.h`/`supervisor.h` to `int`/-errno. |
 | Phase 27 — VFS native + networking | Not started | Native `duneos_vfs` replacing `esp_vfs`; `poll()`/`select()`; `hal_net.h`; WiFi rewrite; BSD sockets. Migrates `vfs.h` to `int`/-errno. |
 | Phase 28.5 — ESP-IDF de-coupling | Not started | Split `main/main.c` into SDK-agnostic core + per-SDK `entry_<sdk>.c`. Prerequisite for Phase 29. |
@@ -211,7 +235,7 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 - **ELF format = ET_REL** (relocatable object), not ET_DYN. Same as Flipper Zero FAP.
 - **No manifest.json on SD** — manifest is a JSON string embedded in `.duneos_manifest` ELF section.
 - **`.dap` binaries are ISA-specific** — loader rejects incompatible arch at load time (manifest `arch` field).
-- **Flash-first VFS**: `/flash` (LittleFS, `sysbin` partition) always mounted first and fatal if absent. SD is optional.
+- **Flash-first VFS**: the LittleFS `sysbin` partition is always mounted first and fatal if absent; it mounts **at the root** (`vfs.c:31` `FLASH_MOUNT_POINT ""`), so its paths are `/bin`, `/init.yaml`, `/board.info`, `/share/icons` — there is no `/flash` prefix. SD is optional.
 - **Flash boot services**: `boards/<board>/init.yaml` controls auto-start services. Deduplication in `init.c` is name-based (basename without `.dap`) — flash entry wins over SD.
 - **Board config** selected at build time via `.duneos_board` → `boards/<board>/`. `bspgen.py` generates all derived files.
 - **PSRAM auto-detection**: `#ifdef CONFIG_SPIRAM` in loader.c — PSRAM boards allocate in SPIRAM, others in DRAM.
@@ -229,6 +253,9 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 - **Captured apps don't get a per-app heap** — `manifest.heap_size` is consumed by `supervisor_launch` (spawned mode), not by `loader_run_captured`. A captured app's `malloc()` falls back to the global kernel heap (~50-80 KiB free on CardPuter). Large allocations silently fail. **Workaround**: if `heap_size > 0` in manifest, shell spawns instead of capturing.
 - **`while (running_count > N) usleep(...)` busy-polls and may hang** — replaced with `duneos_supervisor_wait_for_completion(target_count)` which blocks on a counting semaphore. Apply this pattern any time a task waits for app completion.
 - **`duneos_exit()` from a captured app used to kill the caller's task** — `vTaskDelete(NULL)` in a captured context = "kill the current task" = "kill the shell that launched me". Fixed by Phase 24.9.5 (ADR 016): the loader installs a `setjmp` checkpoint before `app_main()` (`s_captured_jmp` in `loader.c`); `duneos_exit()` calls `duneos_supervisor_captured_active()` and longjmps instead of vTaskDelete. Captured-mode invariant: the app body runs in the **shell's task**, with three contracts spelled out in `<duneos/libdune.h>` ("Captured app contract" block): (1) no `pthread_create` — the kernel enforces this; `api_pthread_create` returns `EPERM` when captured. (2) free what you malloc. (3) close what you open. Apps that need any of those should declare `heap_size: <bytes>` in their manifest — the shell auto-dispatches them to spawned mode (their own task) where all three contracts are lifted.
+- **A change that alters what a physical board links, or how deep it recurses, must be run on that board before it reaches `main`** — LEG-37. An ELF-parser extraction whose commit message said "extraction at constant behaviour" added one struct local and one call frame on a path reaching `lfs_bd_crc`; the 3584 B ESP-IDF default `main_task` stack had nothing left to absorb it and it overflowed into the adjacent heap. Symptom: TLSF free-list corruption and a watchdog reboot loop, surfacing thousands of instructions later at a different place on each boot — never a stack-overflow report. Neither gate could have caught it and neither was at fault: the QEMU bench is bounded to "the loader, the VFS and the boot sequence, not the CardPuter" (ADR 039), and the host corpus runs the parser with a host-sized stack. **The missing thing was a rule, not a tool.** `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK` (`sdkconfig.defaults:57`) is now armed project-wide so the next one names itself in a single run.
+- **A test must construct what it asserts against, and must never read a gitignored artefact** — LEG-38, shipped twice by agents reading this file. `tools/dbt/tests/test_bspgen_uart.py` (PR #5) and `tools/dbt/tests/test_sdkconfig_check.py` (PR #7) both asserted against `boards/*/sdkconfig.board`, which `.gitignore:47` excludes. They passed only on a machine where `duneos-bspgen.py` had already run; on a clean checkout one raised `FileNotFoundError` and the other silently saw an empty map. Both were caught by a human reading a diff, not by a gate. Generate the input inside the test (tmp_path), or build the expected value in the test body — never read a build output.
+- **Correct a wrong claim everywhere it appears, in the same edit** — this file said the flash filesystem mounts at `/flash` in the Key Technical Decisions list while the Boot order paragraph, eleven lines earlier, already carried the correction that it mounts at the **root**. One occurrence was fixed and the other survived, in the same file, for weeks — and every agent that read the wrong one wrote `/flash/bin` paths from it. When you fix a factual claim, `grep` the tree for it and fix every hit; a half-corrected file is worse than an uncorrected one, because it now looks authoritative.
 - **`xtensa-esp-elf-gcc` defaults to big-endian Xtensa** — always use `xtensa-esp32s3-elf-gcc` for app builds.
 - **`idf.cmakeAdditionalArgs: ["-DDUNEOS_BOARD=..."]` in VS Code silently overrides `.duneos_board`** — keep `idf.cmakeAdditionalArgs` as `[]`.
 - **`sdkconfig` at project root caches board-specific settings** — must delete it when switching boards (Full Clean).
@@ -258,7 +285,7 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 - **`esp_rom_printf` in exception/WDT handlers is last-resort panic output** — bypasses VFS/UART entirely, works when allocator and scheduler are dead. Do NOT replace with `klog_e()` or `dprintf()`. Phase 26 (OSAL) abstracts it as `osal_panic_print()`.
 - **`xTaskGetTickCount() * portTICK_PERIOD_MS` for event timestamps is wrong** — use `(uint32_t)(duneos_hal_monotonic_us() / 1000)` instead (hardware ESP timer, µs precision, no wrap issues).
 - **`arch.cmake` guard must check `IDF_TARGET_ARCH`, not just `CONFIG_IDF_TARGET_ARCH_XTENSA`** — `CONFIG_*` vars are empty during the requirements phase. Without `IDF_TARGET_ARCH` in the guard, `DUNEOS_KERNEL_REQUIRES` is never populated and arch-specific headers are missing at compile time.
-- **Every VFS mount consumes one esp_vfs table slot, and lwIP registers its socket fd-range LAZILY on first network use** — with `/flash /data /sd /tmp /dev /dev/ttyUSB0` + console, the default `CONFIG_VFS_MAX_COUNT=8` left lwIP no slot: the first `duneos_wifi_init()` died in an `ESP_ERROR_CHECK` abort inside `vfs_lwip.c` (`esp_vfs_register_fd_range` → `ESP_ERR_NO_MEM`), deterministically, regardless of free heap. `sdkconfig.defaults` sets `VFS_MAX_COUNT=12`. When adding a mount, count the slots.
+- **Every VFS mount consumes one esp_vfs table slot, and lwIP registers its socket fd-range LAZILY on first network use** — with the flash root, `/data /sd /tmp /dev /dev/ttyUSB0` + console (6 mounts), the default `CONFIG_VFS_MAX_COUNT=8` left lwIP no slot: the first `duneos_wifi_init()` died in an `ESP_ERROR_CHECK` abort inside `vfs_lwip.c` (`esp_vfs_register_fd_range` → `ESP_ERR_NO_MEM`), deterministically, regardless of free heap. `sdkconfig.defaults` sets `VFS_MAX_COUNT=12`. When adding a mount, count the slots.
 - **`esp_rom_printf` output is captured into the klog ring** (`klog_capture_rom_output()`, first call in `main.c`) — panic/assert/abort details (`_esp_error_check_failed` file:line) are readable post-mortem via `klog` whenever the system survives an app-kill recovery. Without it those messages go to UART0, which has no header on the CardPuter. Do not remove the hook; it is the only assert visibility on this board.
 - **`ESP_ERROR_CHECK` inside ESP-IDF aborts — DuneOS kernel wrappers must pre-flight what IDF would check** — e.g. `duneos_wifi_init()` refuses with `-ENOMEM` when internal RAM is below the WiFi bring-up watermark instead of letting `esp_netif`/lwIP abort mid-init. A daemon poking a driver at a bad time must get an errno it can back off from, never take the system down.
 
@@ -267,13 +294,13 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 - **Kernel:** C17, no C++, no exceptions, no external dependencies beyond ESP-IDF
 - **Tooling** (`dbt.py`, `duneos-bspgen`): Python
 - **ABI stability:** any breaking change to exported symbols or struct layouts requires `DUNEOS_ABI_VERSION` bump in `abi.h`
-- **No MMU** → strict conventions, Task WDT, stack canaries (pending), per-app exception handlers
+- **No MMU** → strict conventions, Task WDT, stack canaries (delivered — see Phase 20 above), per-app exception handlers
 - **No comments explaining what code does** — only comments for non-obvious WHY
 
 ## References
 
-- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (17 ADRs as of 2026-05). Authoritative for design intent.
+- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (**41** ADRs, 000 to 040, as of 2026-09). Authoritative for design intent. Note ADRs 025-038 describe delivered work that no roadmap phase accounts for; the gap is recorded in `ROADMAP.md`, not resolved.
 - **Unscheduled ideas** — [`docs/backlog.md`](docs/backlog.md)
-- **Contest sprint 2026** — [`docs/contest-2026.md`](docs/contest-2026.md). Freezes phases 26-29 until 2026-09.
+- **Roadmap** — [`ROADMAP.md`](ROADMAP.md). Phases (delivered and next) plus the 2026-09 legacy-audit debt section. Single file; `ROADMAP_v2.md` and `ROADMAP-legacy.md` were merged into it on 2026-09-06.
 - Flipper Zero FAP loader: [flipperzero-firmware](https://github.com/flipperdevices/flipperzero-firmware)
 - ESP-IDF VFS: [ESP-IDF VFS docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/vfs.html)

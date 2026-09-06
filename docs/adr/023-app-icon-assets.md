@@ -5,7 +5,7 @@
 ## Context
 
 The launcher should show a per-app icon. The manifest already carries an
-`icon:` string ([Phase 25.4](../../ROADMAP_v2.md)), `appmeta_t` exposes it, the
+`icon:` string ([Phase 25.4](../../ROADMAP.md)), `appmeta_t` exposes it, the
 `.dr` raster format + `duneos_image_load_dr()` decoder exist, and `dbt img
 convert png→dr` ships. What is undecided is *where the icon image lives and how
 it reaches the device*.

@@ -20,7 +20,7 @@ From the requirement given as input, analyse the repository's existing code and 
    - Apps: `apps/system/`, `apps/user/`
    - Boards: `boards/<name>/board.yaml` (source of truth — bspgen-generated files are never hand-edited)
    - Tooling: `tools/dbt/` (Python), `tools/duneos-bspgen.py`
-3. Identify the applicable constraints: kernel error convention (`int`, 0 / -errno, ADR 001), ABI stability (`DUNEOS_ABI_VERSION` in `abi.h`), no PSRAM on the CardPuter, captured-app contracts, phases frozen by `docs/contest-2026.md`.
+3. Identify the applicable constraints: kernel error convention (`int`, 0 / -errno, ADR 001), ABI stability (`DUNEOS_ABI_VERSION` in `abi.h`), no PSRAM on the CardPuter, captured-app contracts.
 4. Write the draft spec.
 
 ## Required output format

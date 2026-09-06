@@ -69,4 +69,4 @@ This directory holds DuneOS' Architecture Decision Records (ADRs) — short, dat
 
 ## Related docs
 
-- [`../backlog.md`](../backlog.md) — unscheduled ideas and gaps surfaced during planning. Items get promoted to a real ADR or a ROADMAP_v2 entry as they earn scheduling.
+- [`../backlog.md`](../backlog.md) — unscheduled ideas and gaps surfaced during planning. Items get promoted to a real ADR or a ROADMAP entry as they earn scheduling.

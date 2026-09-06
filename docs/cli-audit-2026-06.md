@@ -9,7 +9,7 @@ conventions), [034](adr/034-shell-pipelines-redirection.md) (pipes/redirection,
 
 ## How a bin works today (baseline)
 
-- A bin is an ET_REL `.dap` in `/flash/bin` or `/sd/bin`, run **captured** by the
+- A bin is an ET_REL `.dap` in `/bin` or `/sd/bin`, run **captured** by the
   shell (same task, no `duneos_exit`). It reads `argc/argv/cwd` from
   `/tmp/.exec_args` via `duneos_bin_args()` ([bin_args.h](../kernel/duneos_kernel/include/duneos/bin_args.h)).
 - Output: the app writes to `STDOUT_FILENO`; the shell now **streams** it live

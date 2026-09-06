@@ -62,7 +62,7 @@ Example: `hal_signal_gen` covers "emit N pulses of width W with delay D" (RMT-st
 
 ## Consequences
 
-- The current `enc_quadrature.c` (software polling, kernel-side) is the **fallback**; ESP32 gains `hal_encoder` backed by PCNT in Phase 24 debt (see ROADMAP_v2). This is the first concrete Pattern A migration.
+- The current `enc_quadrature.c` (software polling, kernel-side) is the **fallback**; ESP32 gains `hal_encoder` backed by PCNT in Phase 24 debt (see ROADMAP.md). This is the first concrete Pattern A migration.
 - RP2040 PIO becomes a userspace SDK lib in Phase 29. No kernel API exposes it; apps that use it are non-portable by design and the manifest reflects this.
 - ESP32 ULP (currently unused) follows the same pattern when needed: userspace lib in `sdk/esp32/ulp.h`, app declares ESP32-only.
 - New HAL additions go through the [[ADR-002]] OSAL-style review: "is this on the intersection of capabilities, or only one arch?" Pattern A or B, not both.

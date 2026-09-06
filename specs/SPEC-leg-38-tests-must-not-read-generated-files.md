@@ -7,7 +7,7 @@ Status: PROPOSED
 The same defect has now shipped into two consecutive pull requests, from two different specs, and in
 both cases it was caught by a human reading a diff rather than by any gate:
 
-- **PR #5 (SPEC-leg-26)** — `tests/host/test_bspgen_uart.py` asserted against
+- **PR #5 (SPEC-leg-26)** — `tools/dbt/tests/test_bspgen_uart.py` asserted against
   `boards/*/sdkconfig.board`. That path is gitignored (`.gitignore:47`), so on a clean checkout the
   file does not exist and the test raised `FileNotFoundError`. It passed only on a machine where
   `duneos-bspgen.py` had already run. The PR's first CI run failed on exactly that line.
