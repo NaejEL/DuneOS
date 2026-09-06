@@ -1265,7 +1265,9 @@ void duneos_loader_init(void)
  *   load -> apply_relocations -> klog_write                          = 608 B
  *   load -> load_sections     -> klog_write                          = 576 B
  *
- * 672 B is the deepest chain out of this function, before the split and after.
+ * 672 B is the deepest FIXED-DEPTH chain out of this function, before the split
+ * and after. It is not the deepest chain outright: the manifest parse below is
+ * recursive on file content and overtakes it from five nesting levels.
  *
  * Six of the eight helpers also reach klog_write — load_read_symbols,
  * load_inject_api_table, load_check_compat and load_locate_entry directly (the
@@ -1288,19 +1290,21 @@ void duneos_loader_init(void)
  * Note klog_write is not a leaf either — it formats into its own buffer and
  * writes — and nothing below it is accounted for in any figure here.
  *
- * Two other chains matter, both shallower than the 672 B above but the ones
- * that descend into foreign code.
+ * Two other chains matter — the ones that descend into foreign code.
  *
  * Reaching LittleFS: load -> apply_relocations -> file_read_at = 304 B before
- * fread, whose own descent is not counted here.
+ * fread, whose own descent is not counted here. This one is shallow.
  *
  * The manifest parse, with no I/O: load -> extract_manifest ->
  * cJSON_ParseWithLength (32) -> cJSON_ParseWithLengthOpts (80) -> parse_value
  * (32) = 368 B, then 64 B per JSON nesting level (parse_object or parse_array
  * 32 + parse_value 32) and 48 B for the parse_string leaf. Even a flat manifest
- * is one object, so it already reaches 480 B. This is the only chain here with no
- * upper bound: the descent is mutually recursive on attacker-supplied file
- * content and stops only at CJSON_NESTING_LIMIT (1000).
+ * is one object, so it already reaches 480 B, and 368 + 64n + 48 passes the 672 B
+ * fixed-depth maximum at n = 5 (736 B). This is the only chain here with no upper
+ * bound: the descent is mutually recursive on attacker-supplied file content and
+ * stops only at CJSON_NESTING_LIMIT (1000) — roughly 64 KiB, on a 5120 B stack.
+ * So the deepest chain on this path is not one of ours; it is whatever a file on
+ * the SD card asks for.
  * That is a tracked defect, not something to fix here — LEG-41,
  * specs/SPEC-leg-41-manifest-json-recursion.md.
  *
