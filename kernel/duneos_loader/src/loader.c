@@ -1300,8 +1300,8 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 
         /* Same reasoning as the bound above, for the type: the malloc below is
          * sized from str_sh->sh_size, and that size is only bounded by the
-         * image for a section that occupies file bytes. A SHT_NOBITS or
-         * SHT_NULL link would carry an unbounded sh_size straight into it. */
+         * image for a section that occupies file bytes. A SHT_NOBITS link would
+         * carry an unbounded sh_size straight into it. */
         if (str_sh->sh_type != SHT_STRTAB) {
             klog_e(TAG, "section %d: sh_link=%lu is type %lu, not SHT_STRTAB",
                    i, (unsigned long)shdrs[i].sh_link,

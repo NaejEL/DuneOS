@@ -56,8 +56,8 @@ static int sh_link_is_section_index(uint32_t sh_type)
  * the one link the loader dereferences into an allocation — loader.c reads
  * shdrs[symtab->sh_link] and mallocs sh_size + 1 for the symbol string table.
  * Bounding the index alone leaves that allocation wide open, because a link to
- * a SHT_NOBITS or SHT_NULL section is in range yet exempt from the size bound
- * below, so its sh_size is unbounded. SHT_REL/SHT_RELA links are left alone:
+ * a SHT_NOBITS section is in range yet exempt from the size bound below, so its
+ * sh_size is unbounded. SHT_REL/SHT_RELA links are left alone:
  * nothing sizes an allocation from them, and constraining a field no caller
  * indexes is how a validator starts rejecting well-formed objects.
  */
@@ -95,22 +95,30 @@ static int check_section_extents(const duneos_elf_image_t *img,
         }
 
         /*
-         * sh_size is a MEMORY size for SHT_NOBITS and meaningless for
-         * SHT_NULL: neither occupies file bytes, so the file size does not
-         * bound it. A .bss larger than the whole object is well-formed and
-         * must load — bounding it here would reject any app with a static
-         * buffer bigger than its own binary. What bounds a NOBITS sh_size is
-         * the memory that has to hold it, which is the loader's pool, not this
-         * unit's image (load_sections() caps it there).
+         * sh_size is a MEMORY size for SHT_NOBITS: it does not occupy file
+         * bytes, so the file size does not bound it. A .bss larger than the
+         * whole object is well-formed and must load — bounding it here would
+         * reject any app with a static buffer bigger than its own binary. What
+         * bounds a NOBITS sh_size is the memory that has to hold it, which is
+         * the loader's pool, not this unit's image (load_sections() caps it
+         * there).
          *
-         * sh_offset above is NOT exempt: a NOBITS sh_offset is still the file
-         * position the section would have occupied, every object this loader
-         * accepts keeps it inside the file, and leaving it unbounded serves
-         * nothing. The section name table is never exempt whatever it claims
-         * to be: open() reads it from the file.
+         * SHT_NULL is NOT exempt, although it occupies no file bytes either.
+         * Its sh_size is meaningless, which is exactly why nothing is lost by
+         * bounding it: a well-formed SHT_NULL section carries sh_size == 0, so
+         * the bound never rescinds a legitimate object. Exempting it would only
+         * carry an attacker-controlled uint32 through the invariant this file
+         * advertises — and load_sections() would act on it, because its
+         * zero-fill branch tests SHT_NOBITS alone, so a SHT_NULL section named
+         * '.data' is placed AND read from the file at its sh_size.
+         *
+         * sh_offset above is NOT exempt either: a NOBITS sh_offset is still the
+         * file position the section would have occupied, every object this
+         * loader accepts keeps it inside the file, and leaving it unbounded
+         * serves nothing. The section name table is never exempt whatever it
+         * claims to be: open() reads it from the file.
          */
-        if (i != img->hdr.e_shstrndx &&
-            (sh->sh_type == SHT_NOBITS || sh->sh_type == SHT_NULL)) continue;
+        if (i != img->hdr.e_shstrndx && sh->sh_type == SHT_NOBITS) continue;
 
         if (sh->sh_size > image_size - sh->sh_offset) {
             *why       = DUNEOS_ELF_REJ_SH_SIZE;

@@ -107,13 +107,25 @@ deferred, because `elf_parse.h` now advertises an extent guarantee callers size 
    by the file), so the fix is a per-section cap against the memory that must hold it, applied
    **before** the alignment arithmetic, which itself wraps.
 
-**The exemption that remains, and why.** Only `sh_size`, only for `SHT_NOBITS`/`SHT_NULL`, and never
-for `e_shstrndx`. `sh_offset` is now bounded for every section without exception. Dropping the
+**The exemption that remains, and why.** Only `sh_size`, only for `SHT_NOBITS`, and never for
+`e_shstrndx`. `sh_offset` is now bounded for every section without exception. Dropping the
 `sh_size` exemption too would pass today's 57 objects built under `apps/**/build/` (largest NOBITS
 `sh_offset + sh_size` is 29 876, inside every file), but it bounds a **memory** size by a **file** size: the first app
 with a `.bss` larger than its own binary — a static framebuffer on a board with PSRAM — would stop
 loading, and the symptom would be a rejection naming the wrong cause. Corpus case
 `nobits_size_past_eof` pins that acceptance so removing the exemption fails loudly instead.
+
+`SHT_NULL` was exempted alongside `SHT_NOBITS` in the first implementation and is not any more (PR
+review, round 1). The reasoning that covers `SHT_NOBITS` does not transfer: a NOBITS `sh_size` is a
+memory size the file genuinely cannot bound, whereas a `SHT_NULL` `sh_size` is meaningless and zero
+in every well-formed object — so the exemption could never rescue a legitimate image and only
+carried an attacker-controlled `uint32` through the guarantee `elf_parse.h` advertises.
+`load_sections()` then acts on it: `duneos_elf_classify_section()` dispatches on the name and
+`sh_flags`, never on `sh_type`, and pass 2's zero-fill branch tests `SHT_NOBITS` alone — so a
+`SHT_NULL` section named `.data` with `sh_size = 0x100000` in a 400-byte object was placed in a
+1 MiB data pool and then *read from the file*. The short read fails the load cleanly, so it was an
+attacker-controlled allocation rather than corruption; it is exactly the class this spec exists to
+remove.
 
 ## Verification addenda (second round)
 

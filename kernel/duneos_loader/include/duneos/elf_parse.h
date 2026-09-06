@@ -119,10 +119,13 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
  *   sh_offset <= io->size for EVERY section;
  *   sh_size <= io->size - sh_offset for every section that occupies file
  *   bytes, so its extent never escapes the image and never wraps.
- *   SHT_NOBITS and SHT_NULL are exempt from THAT bound only: their sh_size is
- *   a memory size the file cannot bound (a .bss larger than the object is
- *   well-formed), so a caller placing one in memory must bound it against the
- *   memory it has — the loader does that in load_sections().
+ *   SHT_NOBITS is exempt from THAT bound only, and only when it is not the
+ *   section name table: its sh_size is a memory size the file cannot bound (a
+ *   .bss larger than the object is well-formed), so a caller placing one in
+ *   memory must bound it against the memory it has — the loader does that in
+ *   load_sections(). SHT_NULL gets no exemption: its sh_size is meaningless
+ *   and zero in any well-formed object, so bounding it costs nothing and
+ *   keeps this guarantee whole.
  * A caller indexing shdrs with a value it read itself still bounds it itself.
  */
 int duneos_elf_image_open(const duneos_elf_io_t *io,
