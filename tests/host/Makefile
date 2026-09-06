@@ -41,7 +41,8 @@ test_i2c_decode: test_i2c_decode.c $(ROOT)/sdk/proto/i2c_decode.c tassert.h
 test_known_yaml: test_known_yaml.c known_yaml_cases.h tassert.h
 	$(CC) $(CFLAGS) test_known_yaml.c -o $@
 
-test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h
+test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
+                   $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h
 	$(CC) $(CFLAGS) $(ELF_INC) test_elf_validate.c elf_corpus.c $(ELF_SRC) -o $@
 
 test_elf_scan: test_elf_scan.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \

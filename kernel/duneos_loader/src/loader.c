@@ -6,6 +6,7 @@
 #include "duneos/api.h"
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -223,6 +224,18 @@ static int file_read_at(void *ctx, long offset, void *buf, size_t len)
     return 0;
 }
 
+/* Image size for duneos_elf_io_t, taken from the stream itself rather than
+ * from a stat(): the parser bounds every section extent against it, so it must
+ * describe exactly the bytes file_read_at() can serve. 0 on failure, which
+ * makes the parser reject the image rather than trust an unknown extent. */
+static size_t file_size_of(FILE *f)
+{
+    if (fseek(f, 0, SEEK_END) != 0) return 0;
+    long end = ftell(f);
+    if (end < 0) return 0;
+    return (size_t)end;
+}
+
 /* -------------------------------------------------------------------------
  * ELF validation diagnostics
  *
@@ -286,6 +299,27 @@ static void elf_log_reject(const duneos_elf_image_t *img, duneos_elf_reject_t wh
                (unsigned long)img->reject_value,
                (unsigned long)img->reject_bound);
         break;
+    case DUNEOS_ELF_REJ_SH_OFFSET:
+        klog_e(TAG, "section %lu: sh_offset=%lu past the end of the file "
+                    "(%lu B)",
+               (unsigned long)img->reject_index,
+               (unsigned long)img->reject_value,
+               (unsigned long)img->reject_bound);
+        break;
+    case DUNEOS_ELF_REJ_SH_SIZE:
+        klog_e(TAG, "section %lu: sh_size=%lu exceeds the %lu B left in the "
+                    "file at its sh_offset",
+               (unsigned long)img->reject_index,
+               (unsigned long)img->reject_value,
+               (unsigned long)img->reject_bound);
+        break;
+    case DUNEOS_ELF_REJ_SH_LINK_TYPE:
+        klog_e(TAG, "section %lu: sh_link names a section of type %lu, "
+                    "expected type %lu",
+               (unsigned long)img->reject_index,
+               (unsigned long)img->reject_value,
+               (unsigned long)img->reject_bound);
+        break;
     default:
         break;
     }
@@ -306,6 +340,37 @@ static esp_err_t elf_rc_to_esp(int rc)
 /* -------------------------------------------------------------------------
  * Section loading
  * ---------------------------------------------------------------------- */
+
+/*
+ * Per-section ceiling, applied BEFORE the 4-byte round-up in the passes below.
+ *
+ * WHY it cannot be left to the pool checks: `(sh->sh_size + 3u) & ~3u` is
+ * size_t arithmetic and size_t is 32 bits on this target, so a sh_size within
+ * 3 of UINT32_MAX rounds up to 0. The section then contributes nothing to
+ * exec_total / data_total, is placed in a zero-sized slot, and pass 2 still
+ * memsets (SHT_NOBITS) or reads sh_size bytes into it — heap corruption, not a
+ * failed allocation.
+ *
+ * The image-extent bound (SPEC-leg-34) does not cover this: an SHT_NOBITS
+ * sh_size is a memory size the file size cannot bound, by design. The bound
+ * here is therefore against the memory that would have to hold the section: a
+ * ceiling far above any allocation this board can satisfy, so it never rejects
+ * a section that would otherwise have loaded; it only removes the wrap.
+ *
+ * WHY the same ceiling applies to .text and not the exec pool size: sizing the
+ * .text ceiling from s_exec_pool_size makes this check, not the pool check
+ * below, the one that reports an oversized .text — with the wrong code
+ * (INVALID_ARG for what is a memory shortage) and, when the exec pool failed to
+ * allocate at boot, with the actively misleading "over the 0 B ceiling" on
+ * every app. The pool check at the allocation site already arbitrates .text
+ * against the pool and says "exec pool full"; this ceiling only has to be low
+ * enough to make the round-up below safe.
+ */
+#ifdef CONFIG_SPIRAM
+#define LOADER_MAX_SECTION_BYTES (4u * 1024u * 1024u)
+#else
+#define LOADER_MAX_SECTION_BYTES (1u * 1024u * 1024u)
+#endif
 
 static esp_err_t load_sections(const duneos_elf_io_t    *io,
                                 const duneos_elf_image_t *img,
@@ -329,13 +394,36 @@ static esp_err_t load_sections(const duneos_elf_io_t    *io,
         if (sh->sh_size == 0) continue;
         sec_kind_t kind = duneos_elf_classify_section(name, sh->sh_flags);
         if (kind == SEC_IGNORE) continue;
+
+        if (sh->sh_size > LOADER_MAX_SECTION_BYTES) {
+            klog_e(TAG, "section '%s': sh_size=%lu B over the %u B ceiling",
+                   name, (unsigned long)sh->sh_size,
+                   (unsigned)LOADER_MAX_SECTION_BYTES);
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        /* Per-section rounding is safe now; the SUM is not. MAX_SECTIONS
+         * sections at the ceiling reach exactly 2^32 on a PSRAM board, which
+         * wraps a 32-bit size_t to 0: no pool would be allocated and pass 2
+         * would write through a NULL data_pool. Any other over-large total
+         * fails cleanly at the malloc; this one has to be caught here. */
+        size_t rounded = (sh->sh_size + 3u) & ~3u;
+
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
         if (kind == SEC_TEXT) {
-            exec_total += (sh->sh_size + 3u) & ~3u;
+            if (exec_total > SIZE_MAX - rounded) {
+                klog_e(TAG, "section '%s': exec total overflows size_t", name);
+                return ESP_ERR_INVALID_ARG;
+            }
+            exec_total += rounded;
             continue;
         }
 #endif
-        data_total += (sh->sh_size + 3u) & ~3u;
+        if (data_total > SIZE_MAX - rounded) {
+            klog_e(TAG, "section '%s': data total overflows size_t", name);
+            return ESP_ERR_INVALID_ARG;
+        }
+        data_total += rounded;
     }
 
     /* --- Allocate exec block from static DRAM pool (Xtensa IRAM alias) --- */
@@ -1155,7 +1243,8 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     if (s_loader_lock) xSemaphoreTake(s_loader_lock, portMAX_DELAY);
 
     esp_err_t    err     = ESP_FAIL;
-    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f };
+    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f,
+                                  .size = file_size_of(f) };
     duneos_elf_image_t  img;
     duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
     const elf32_hdr_t  *hdr = &img.hdr;
@@ -1208,6 +1297,19 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         }
 
         const elf32_shdr_t *str_sh = &shdrs[shdrs[i].sh_link];
+
+        /* Same reasoning as the bound above, for the type: the malloc below is
+         * sized from str_sh->sh_size, and that size is only bounded by the
+         * image for a section that occupies file bytes. A SHT_NOBITS link would
+         * carry an unbounded sh_size straight into it. */
+        if (str_sh->sh_type != SHT_STRTAB) {
+            klog_e(TAG, "section %d: sh_link=%lu is type %lu, not SHT_STRTAB",
+                   i, (unsigned long)shdrs[i].sh_link,
+                   (unsigned long)str_sh->sh_type);
+            err = ESP_ERR_INVALID_ARG;
+            goto out;
+        }
+
         strtab = malloc(str_sh->sh_size + 1);
         if (!strtab) { err = ESP_ERR_NO_MEM; goto out; }
         if (io.read(io.ctx, (long)str_sh->sh_offset,
@@ -1413,7 +1515,8 @@ static esp_err_t read_manifest_from_file(const char            *path,
     FILE *f = fopen(path, "rb");
     if (!f) return ESP_ERR_NOT_FOUND;
 
-    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f };
+    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f,
+                                  .size = file_size_of(f) };
     duneos_elf_image_t  img;
     duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
 

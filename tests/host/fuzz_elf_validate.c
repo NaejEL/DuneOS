@@ -43,7 +43,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     fuzz_buf_t b = { .bytes = data, .size = size };
-    duneos_elf_io_t io = { .read = fuzz_read, .ctx = &b };
+    duneos_elf_io_t io = { .read = fuzz_read, .ctx = &b, .size = size };
 
     duneos_elf_image_t img;
     duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;

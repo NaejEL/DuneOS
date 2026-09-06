@@ -50,6 +50,92 @@ static int sh_link_is_section_index(uint32_t sh_type)
     return sh_type == SHT_SYMTAB || sh_type == SHT_RELA || sh_type == SHT_REL;
 }
 
+/*
+ * The type a section's sh_link target must have, or 0 when the type imposes
+ * none. Only SHT_SYMTAB is constrained here, and for a concrete reason: it is
+ * the one link the loader dereferences into an allocation — loader.c reads
+ * shdrs[symtab->sh_link] and mallocs sh_size + 1 for the symbol string table.
+ * Bounding the index alone leaves that allocation wide open, because a link to
+ * a SHT_NOBITS section is in range yet exempt from the size bound below, so its
+ * sh_size is unbounded. SHT_REL/SHT_RELA links are left alone:
+ * nothing sizes an allocation from them, and constraining a field no caller
+ * indexes is how a validator starts rejecting well-formed objects.
+ */
+static uint32_t sh_link_required_type(uint32_t sh_type)
+{
+    return sh_type == SHT_SYMTAB ? SHT_STRTAB : 0u;
+}
+
+/*
+ * WHY the two-step form, and why `sh_offset + sh_size > size` is wrong here:
+ * both fields are uint32 read straight from the file, so their sum wraps —
+ * 0xffffff00 + 0x200 is 0x100, which passes any comparison against a small
+ * size. That wrap IS the defect being fixed (BL-ELF-EXTENT). Bounding
+ * sh_offset first is what makes `size - sh_offset` safe to compute.
+ *
+ * Runs before any size-dependent allocation, so the shstrtab buffer below is
+ * bounded by the image size by construction rather than by malloc failing.
+ */
+static int check_section_extents(const duneos_elf_image_t *img,
+                                 size_t                    image_size,
+                                 uint32_t                 *bad_index,
+                                 uint32_t                 *bad_value,
+                                 uint32_t                 *bad_bound,
+                                 duneos_elf_reject_t      *why)
+{
+    for (uint16_t i = 0; i < img->hdr.e_shnum; i++) {
+        const elf32_shdr_t *sh = &img->shdrs[i];
+
+        if (sh->sh_offset > image_size) {
+            *why       = DUNEOS_ELF_REJ_SH_OFFSET;
+            *bad_index = i;
+            *bad_value = sh->sh_offset;
+            *bad_bound = (uint32_t)image_size;
+            return -EINVAL;
+        }
+
+        /*
+         * sh_size is a MEMORY size for SHT_NOBITS: it does not occupy file
+         * bytes, so the file size does not bound it. A .bss larger than the
+         * whole object is well-formed and must load — bounding it here would
+         * reject any app with a static buffer bigger than its own binary. What
+         * bounds a NOBITS sh_size is the memory that has to hold it, which is
+         * the loader's pool, not this unit's image (load_sections() caps it
+         * there).
+         *
+         * SHT_NULL is NOT exempt, although it occupies no file bytes either.
+         * Its sh_size is meaningless in every object that reaches this check,
+         * which is exactly why nothing is lost by bounding it. (Not "in every
+         * well-formed object": the gABI gives shdrs[0].sh_size a meaning under
+         * extended numbering, where a section count >= SHN_LORESERVE is written
+         * as e_shnum == 0 and the real count lives there. duneos_elf_validate()
+         * rejects e_shnum == 0 outright, so such an object never gets here — if
+         * that ever changes, this exemption has to be revisited, not assumed.)
+         * So the bound never rejects a legitimate object. Exempting it would only
+         * carry an attacker-controlled uint32 through the invariant this file
+         * advertises — and load_sections() would act on it, because its
+         * zero-fill branch tests SHT_NOBITS alone, so a SHT_NULL section named
+         * '.data' is placed AND read from the file at its sh_size.
+         *
+         * sh_offset above is NOT exempt either: a NOBITS sh_offset is still the
+         * file position the section would have occupied, every object this
+         * loader accepts keeps it inside the file, and leaving it unbounded
+         * serves nothing. The section name table is never exempt whatever it
+         * claims to be: open() reads it from the file.
+         */
+        if (i != img->hdr.e_shstrndx && sh->sh_type == SHT_NOBITS) continue;
+
+        if (sh->sh_size > image_size - sh->sh_offset) {
+            *why       = DUNEOS_ELF_REJ_SH_SIZE;
+            *bad_index = i;
+            *bad_value = sh->sh_size;
+            *bad_bound = (uint32_t)(image_size - sh->sh_offset);
+            return -EINVAL;
+        }
+    }
+    return 0;
+}
+
 static int check_section_table(duneos_elf_image_t *img, duneos_elf_reject_t *why)
 {
     for (uint16_t i = 0; i < img->hdr.e_shnum; i++) {
@@ -68,6 +154,15 @@ static int check_section_table(duneos_elf_image_t *img, duneos_elf_reject_t *why
             img->reject_index = i;
             img->reject_value = sh->sh_link;
             img->reject_bound = img->hdr.e_shnum;
+            return -EINVAL;
+        }
+
+        uint32_t want_type = sh_link_required_type(sh->sh_type);
+        if (want_type != 0 && img->shdrs[sh->sh_link].sh_type != want_type) {
+            *why = DUNEOS_ELF_REJ_SH_LINK_TYPE;
+            img->reject_index = i;
+            img->reject_value = img->shdrs[sh->sh_link].sh_type;
+            img->reject_bound = want_type;
             return -EINVAL;
         }
     }
@@ -110,7 +205,12 @@ int duneos_elf_image_open(const duneos_elf_io_t *io,
         goto fail;
     }
 
-    /* e_shstrndx was bounded by duneos_elf_validate(). */
+    rc = check_section_extents(out, io->size, &out->reject_index,
+                               &out->reject_value, &out->reject_bound, why);
+    if (rc != 0) goto fail;
+
+    /* e_shstrndx was bounded by duneos_elf_validate(); its extent by the check
+     * above, so this allocation cannot exceed the image size. */
     const elf32_shdr_t *ss = &out->shdrs[out->hdr.e_shstrndx];
     out->shstrtab = malloc((size_t)ss->sh_size + 1u);
     if (!out->shstrtab) {
