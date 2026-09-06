@@ -1286,10 +1286,24 @@ void *duneos_supervisor_app_realloc(void *ptr, size_t size)
 
 void *duneos_supervisor_app_calloc(size_t n, size_t size)
 {
+    /* The fallback below lands in heap_caps_calloc_base(), which rejects the
+     * overflow with __builtin_mul_overflow: the slot-heap branch must reject
+     * it the same way, or the same call returns NULL or a wrapped-size buffer
+     * depending only on whether the app declared a heap_size. On a target with
+     * no MMU, the memset over the wrapped length is a silent heap corruption.
+     *
+     * A zero product is deliberately NOT special-cased: libc lets calloc()
+     * answer either NULL or a unique freeable pointer, and both allocators
+     * under this function already return NULL for it (multi_heap_malloc() and
+     * heap_caps_aligned_alloc_base() both bail out on size == 0). Adding a
+     * branch here would only make the two paths disagree. */
+    size_t total;
+    if (__builtin_mul_overflow(n, size, &total)) return NULL;
+
     app_slot_t *slot = slot_by_task_unsafe(xTaskGetCurrentTaskHandle());
     if (slot && slot->active && slot->heap_handle) {
-        void *p = multi_heap_malloc(slot->heap_handle, n * size);
-        if (p) memset(p, 0, n * size);
+        void *p = multi_heap_malloc(slot->heap_handle, total);
+        if (p) memset(p, 0, total);
         return p;
     }
     return heap_caps_calloc(n, size, MALLOC_CAP_DEFAULT);

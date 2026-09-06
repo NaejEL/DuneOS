@@ -1,0 +1,13 @@
+name: qemu_calloc
+version: "0.1.0"
+required_abi_version: 3
+# UART (2) | FS_READ (32) | FS_WRITE (64) — drains /dev/klog and writes its
+# markers to /dev/uart0, a channel independent of where fd 1 points.
+permissions: 98
+stack_size: 8192
+# Must match SLOT_POOL_BYTES in qemu_calloc.c. Two roles: it gives the app a
+# slot heap at all (supervisor.c only registers one for heap_size >= 64), so
+# app_main exercises the branch SPEC-leg-04 fixes; and it sizes the pool small
+# enough that the app's CHECK_BIG probe can tell that branch from the global
+# heap fallback its pthread child reaches.
+heap_size: 4096

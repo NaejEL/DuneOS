@@ -4,8 +4,11 @@
 serial output that the boot sequence went all the way through the ELF loader:
 
 ```
-/flash mounted → /bin scanned → qemu_smoke.dap loaded → the app's own exit marker
+/flash mounted → /bin scanned → <payload>.dap loaded → the app's own verdict marker
 ```
+
+Each payload app is a separate boot with its own assertion set; the exit code is red if any of
+them is. See "The payload apps" below.
 
 Shape and rationale: [ADR 039](adr/039-qemu-test-bench.md). Scope: `SPEC-leg-27`.
 
@@ -59,8 +62,9 @@ machine or in CI. If you ever re-enable networking in the emulator, that depende
 ## Running
 
 Options: `--board` (must match `.duneos_board`), `--build-dir` (default `build-<board>`),
-`--timeout` (default 180 s), `--no-build`, `--quiet`, `--gdb-port` (default: a free ephemeral
-port picked at launch), `--no-gdb-diag`.
+`--timeout` (default 180 s, per payload), `--no-build`, `--payload` (run one payload instead of
+all), `--quiet`, `--gdb-port` (default: a free ephemeral port picked at launch, re-picked per
+payload), `--no-gdb-diag`.
 
 `--no-build` skips **dbt's own** kernel and app build steps. The app is then genuinely not
 rebuilt, but the kernel still is: ESP-IDF's `qemu` action declares `dependencies: ['all']`
@@ -103,16 +107,16 @@ splits the runner's `PANIC_PATTERNS` in two, and a reader should not trust the d
 | --- | --- |
 | `Guru Meditation Error`, `Core N panic'ed`, `CPU halted` | **yes** — the panic handler writes them with `panic_print_char`, bypassing klog |
 | second `rst:0x…` boot banner | **yes** — printed by the ROM of the next boot |
-| `abort() was called`, `assert failed:`, `Task watchdog got triggered`, `CORRUPT HEAP` | **only while `qemu_smoke` is alive** and draining the ring — they are `ESP_EARLY_LOG` / `esp_rom_printf` output, which `klog_capture_rom_output()` swallows |
+| `abort() was called`, `assert failed:`, `Task watchdog got triggered`, `CORRUPT HEAP` | **only while the payload is alive** and draining the ring — they are `ESP_EARLY_LOG` / `esp_rom_printf` output, which `klog_capture_rom_output()` swallows |
 
 Consequence: a panic that halts **without** rebooting and without a Guru Meditation dump is
 reported as a timeout (code 2), not a panic (code 3). Both are failures; only the label differs.
 
 ### Reading a failed run: silence is never the answer
 
-Every assertion above travels on a single channel — `qemu_smoke` draining the klog ring to
-its stdout. If the payload never starts, all five report `[MISS]` and say nothing about *why*.
-Absence proved nothing, and a healthy-but-mute kernel looked exactly like a hung one.
+Every assertion above travels on a single channel — the payload (`qemu_smoke`, `qemu_calloc`,
+or whichever one booted) draining the klog ring to its stdout. If the payload never starts, all
+five report `[MISS]` and say nothing about *why*. Absence proved nothing, and a healthy-but-mute kernel looked exactly like a hung one.
 
 Two mechanisms close that gap. Neither can make a run pass: they do not feed the matcher and
 do not touch the exit code.
@@ -196,9 +200,39 @@ Switching board requires a clean build (`sdkconfig` is board-specific), so each 
 own build directory **and its own `sdkconfig`** (`build-<board>/sdkconfig`, passed as
 `-D SDKCONFIG=…`). Nothing is shared with the default `build/`.
 
-## The payload app
+## The payload apps
 
-`apps/user/qemu_smoke` is the only app staged into the image. It drains `/dev/klog` to its
+`dbt qemu` runs **one payload per boot**, in sequence, and exits non-zero if any of them fails:
+
+| payload | what it proves | spec |
+| --- | --- | --- |
+| `qemu_smoke` | the boot sequence reaches the ELF loader and the loaded code runs | SPEC-leg-27 |
+| `qemu_calloc` | the `calloc()` exposed to apps rejects an `n * size` overflow, on both of its allocation branches | SPEC-leg-04 |
+
+One app per image is not a limitation to be relaxed: autoboot launches whichever app the
+loader's scan returns first, so staging two payloads at once would make the choice depend on
+directory order. `--payload <name>` runs a single one; the kernel is built once and shared.
+
+Adding a payload means adding a `Payload` entry to `PAYLOADS` in `tools/dbt/qemu.py`. The boot
+half of its assertions is generated from its app name; only the last one — the app's own
+verdict marker — has to be written.
+
+**`qemu_calloc` (SPEC-leg-04).** `duneos_supervisor_app_calloc` needs FreeRTOS, a live
+supervisor slot and the ESP-IDF heap, so `tests/host/` cannot reach it: this bench is the only
+place that guard is executed rather than reviewed. The app exercises both of the function's
+branches from one boot — the per-app slot heap from `app_main` (its manifest declares
+`heap_size: 4096`), and the global-heap fallback from a pthread child, whose task handle
+belongs to no slot. A 16 KiB request refused in `app_main` and served in the thread is what
+makes that split an observation rather than an inference.
+
+The overflow vectors matter more than they look. `SIZE_MAX/2 * 4` wraps to `0xFFFFFFFC` and
+`0x10000 * 0x10000` wraps to exactly `0` — both are refused by the allocator itself, so a
+kernel with **no** guard at all returns `NULL` for them too. A bench built only on those two
+shapes passes on a broken kernel; this was confirmed by removing the guard and re-running.
+`0x40000001 * 4` wraps to `4` instead: an unguarded build hands back a real 4-byte block for a
+16 GiB request. That is the vector the assertion actually rests on.
+
+**`qemu_smoke` (SPEC-leg-27).** It drains `/dev/klog` to its
 stdout — that is what makes the kernel's boot lines observable from outside, since klog does not
 forward info-level messages to the console — then prints
 `<<<DUNEOS-QEMU-SMOKE app_main reached duneos_exit(0)>>>` and calls `duneos_exit(0)`.
