@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 
 #include "esp_err.h"
+#include "esp_task.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
@@ -80,14 +81,23 @@ static int launch_from_init_yaml(void)
  * stack report. The init.yaml launch is the deepest point, so the mark is taken
  * right after it. It is published as ambient state (ADR 027) rather than logged:
  * the margin stays one `free` away instead of costing a line on every boot.
- * Same StackType_t scaling as supervisor.c uses for app slots. */
+ * Same StackType_t scaling as supervisor.c uses for app slots.
+ *
+ * The total is ESP_TASK_MAIN_STACK, NOT CONFIG_ESP_MAIN_TASK_STACK_SIZE: ESP-IDF
+ * creates main_task with the Kconfig value plus TASK_EXTRA_STACK_SIZE
+ * (esp_task.h:57, app_startup.c:81), which is 512 B unless
+ * CONFIG_LIBC_NEWLIB_NANO_FORMAT is set — this is a picolibc build and never
+ * sets it. uxTaskGetStackHighWaterMark() reports free space against that real
+ * size, so subtracting the Kconfig value instead understates both the stack and
+ * the peak by 512 B. */
 static void publish_boot_stack_mark(void)
 {
     size_t free_bytes = uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t);
+    uint32_t total    = (uint32_t)ESP_TASK_MAIN_STACK;
 
     ambient_stack_t st = {
-        .total = (uint32_t)CONFIG_ESP_MAIN_TASK_STACK_SIZE,
-        .peak  = (uint32_t)(CONFIG_ESP_MAIN_TASK_STACK_SIZE - free_bytes),
+        .total = total,
+        .peak  = (free_bytes < (size_t)total) ? (uint32_t)(total - free_bytes) : 0,
     };
 
     mkdir(AMBIENT_STATE_DIR, 0755);
@@ -166,13 +176,17 @@ void app_main(void)
         launched = launch_autoboot();
     }
 
+    /* Before the "nothing to run" bail-out: launch_autoboot() also returns 0
+     * when duneos_supervisor_launch() fails, which happens only after a full
+     * duneos_loader_load() — the deepest chain of the boot. Publishing after
+     * the bail-out would lose the mark on exactly the boots that reach furthest. */
+    publish_boot_stack_mark();
+
     if (launched == 0) {
         klog_w(TAG, "nothing to run");
         kernel_idle();
         return;
     }
-
-    publish_boot_stack_mark();
 
     /* Block until all services (and anything they spawned) have exited */
     duneos_supervisor_wait_all();

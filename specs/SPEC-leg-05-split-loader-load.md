@@ -8,7 +8,7 @@ Finding LEG-05 (minor, M). **Moved from milestone 1 to milestone 0** at the 2026
 and refocused: the split is no longer a standalone readability improvement, it serves the host
 compilability of the parser.
 
-`kernel/duneos_loader/src/loader.c:1231`, `duneos_loader_load()` spans **271 lines** (1231-1502) and
+`kernel/duneos_loader/src/loader.c:1231`, `duneos_loader_load()` spans **272 lines** (1231-1502) and
 chains about ten steps (header validation, section table read, string table, classification, allocation, section
 content read, symbol table, relocations, resolution, finalisation). Six distinct resources are
 released through a single `out` label, each under a different condition.
@@ -38,7 +38,9 @@ registers.
 
 What changed since LEG-37, and why this is now attemptable rather than reckless: the CardPuter
 declares a **measured** 4608 B (`boards/m5stack-cardputer/board.yaml:38`; peak 3764 B, 784 B usable
-margin after the watchpoint's 60 B), and `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK` is armed
+margin after the watchpoint's 60 B — both figures stated against the Kconfig value, while the stack
+ESP-IDF actually creates is `ESP_TASK_MAIN_STACK` = 5120 B, so the true peak is 4276 B of 5120 B and
+the 784 B margin is the same either way), and `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK` is armed
 project-wide (`sdkconfig.defaults:57`) so the next overflow names itself in a single run.
 
 Neither host tests nor QEMU can catch this: the host corpus runs with a host-sized stack, and the

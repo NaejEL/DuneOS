@@ -29,14 +29,18 @@ them — about **64 KiB**.
 **480 B is the floor, not the one-nesting-level case.** A manifest *is* a JSON
 object, so `cJSON_ParseWithLength(32) + cJSON_ParseWithLengthOpts(80) +
 parse_value(32) + parse_object(32) + parse_value(32) + parse_string(48)` is
-unavoidable: even a flat `{"name":"x"}` reaches
-`load(160) + extract_manifest(64) + 320 = 544 B` on this path. Every further
+unavoidable — that chain sums to 256 B — so even a flat `{"name":"x"}` reaches
+`load(160) + extract_manifest(64) + 256 = 480 B` on this path. Every further
 nesting level adds 64 B on top of that, with no bound below 1000.
 
-The boot scan parses the manifest of **every** `.dap` it finds, on `main_task`,
-whose measured peak on the m5stack-cardputer is **3684 B of 4608 B, leaving 924 B**
-(measured on hardware 2026-09-06). At 64 B per level, roughly **14 further
-nesting levels consume the entire margin**.
+The boot scan parses the manifest of **every** `.dap` it finds, on `main_task`.
+Three boots were measured on the m5stack-cardputer (2026-09-06), leaving
+924 / 860 / 844 B free; the budget is the **worst** of them. `main_task`'s real
+stack is 5120 B (`ESP_TASK_MAIN_STACK` = the board's 4608 B Kconfig value plus
+the 512 B `TASK_EXTRA_STACK_SIZE` of this picolibc build), so the worst peak is
+**4276 B of 5120 B, leaving 844 B raw and 784 B after the 60 B end-of-stack
+watchpoint**. At 64 B per level, roughly **12 further nesting levels consume the
+entire margin** — and that is on top of the 480 B floor above, not instead of it.
 
 The manifest is file content: a `.dap` on the SD card, which any user can drop
 there and which the boot scan opens without the file having been run. This is

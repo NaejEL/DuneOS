@@ -1250,11 +1250,31 @@ void duneos_loader_init(void)
  * them one frame deeper is what would actually move the peak.
  *
  * The eight load_* step helpers the split introduced are 32 B each and none of
- * them is a leaf, so each adds one 32 B frame to whatever it reaches. The
- * deepest chain any of them creates is 256 B (load -> load_release ->
- * unload_locked -> duneos_supervisor_arena_free, 160+32+32+32 — the last frame
- * is the one that dispatches to heap_caps_free, so it counts). Both worst cases
- * below exceed that, so the split did not move the peak.
+ * them is a leaf, so each adds one 32 B frame to whatever it reaches.
+ *
+ * The deepest thing they reach is klog_write (336 B) — the largest frame on this
+ * path by a wide margin, and not compiled out: CONFIG_DUNEOS_KERNEL_SILENT is set
+ * on no board. Four helpers reach it — load_read_symbols, load_inject_api_table
+ * and load_locate_entry directly (the last on the SUCCESS path, via the
+ * "app_main @ %p" klog_d), and load_report_image_reject through elf_log_reject
+ * (48 B). So:
+ *
+ *   load -> load_report_image_reject -> elf_log_reject -> klog_write = 576 B
+ *   load -> {the other three}         -> klog_write                  = 528 B
+ *
+ * and pre-split, with the same calls made directly from the function body:
+ *
+ *   load -> elf_log_reject -> klog_write = 544 B
+ *   load -> klog_write                   = 496 B
+ *
+ * This is the one place the split did move the peak: +32 B on the logging
+ * chains, one helper frame, and that is the whole cost. It is NOT covered by
+ * the "four deepest-framed callees" invariant above, which is about the parse
+ * and relocation chains. Note klog_write is not a leaf either (it formats into
+ * its own buffer and writes); nothing below it is accounted for here.
+ *
+ * For reference the release chain is far shallower: load -> load_release ->
+ * unload_locked -> duneos_supervisor_arena_free = 256 B.
  *
  * Worst case reaching LittleFS: load -> apply_relocations -> file_read_at
  * = 304 B before fread.
@@ -1269,11 +1289,27 @@ void duneos_loader_init(void)
  * That is a tracked defect, not something to fix here — LEG-41,
  * specs/SPEC-leg-41-manifest-json-recursion.md.
  *
- * Confirmed on hardware (M5Stack CardPuter) with a well-formed manifest: after
- * the split, main_task peaks at 3684 B of 4608 B (924 B free), against 3764 B /
- * 784 B free measured on the same board before it. The peak went down, not up.
- * That mark is published at the end of main() as ambient state
- * (AMBIENT_STACK_PATH) and printed by `free`.
+ * Measured on hardware (M5Stack CardPuter) with a well-formed manifest, three
+ * boots. The quantity uxTaskGetStackHighWaterMark() actually reports is the FREE
+ * space, and that is what to compare: 924 / 860 / 844 B free. A high-water mark
+ * is the worst observation, so the figure that counts is the 844 B one.
+ *
+ * main_task's real stack is 5120 B, not the 4608 B of the board's Kconfig value:
+ * ESP-IDF creates it with ESP_TASK_MAIN_STACK = CONFIG_ESP_MAIN_TASK_STACK_SIZE
+ * + TASK_EXTRA_STACK_SIZE, and the latter is 512 B on this picolibc build
+ * (esp_task.h:33-36, 57). So the peaks are 4196 / 4260 / 4276 B of 5120 B; the
+ * worst is 4276 B, leaving 844 B raw and 784 B after the 60 B end-of-stack
+ * watchpoint.
+ *
+ * Before the split the same board measured 784 B usable margin on the same
+ * basis. The worst-case margin is therefore UNCHANGED by the split — not
+ * improved. Which is the result the split was designed for, since every byte of
+ * the deepest chains was meant to stay where it was; the +32 B on the logging
+ * chains above did not surface as a new worst case in these three boots, and
+ * three boots is not a proof that it cannot.
+ *
+ * That mark is published in main() as ambient state (AMBIENT_STACK_PATH) and
+ * printed by `free`.
  * ---------------------------------------------------------------------- */
 
 typedef struct {
