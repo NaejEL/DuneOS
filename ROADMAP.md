@@ -98,7 +98,7 @@ DuneOS must boot and be usable even with no SD card inserted.
 - [x] **LittleFS `sysbin` partition** in `partitions.csv` (~1 MB); mounted as the **root** in `vfs.c` (`FLASH_MOUNT_POINT ""`, `vfs.c:31`) — not under a `/flash` prefix.
 - [x] **Embedding the vital apps** (`shell.dap`, `apps/system/bin/` commands) as firmware blobs through `COMPONENT_EMBED_FILES`.
 - [x] **First-boot provisioning**: the kernel copies the missing blobs to `/bin/` on first start.
-- [x] **Loader cascade**: search `/bin` → `/sd/bin` → `/sd/apps` (`loader.c:1438-1443`, `s_scan_dirs`).
+- [x] **Loader cascade**: search `/bin` → `/sd/bin` → `/sd/apps` (`loader.c:1541-1546`, `s_scan_dirs`).
 - [x] **BSP YAML**: `has_sd: false` field; `vfs.c` skips the SD mount and reads `/init.yaml` from the flash root.
 - [x] **`dbt.py flashimg`**: produces a LittleFS image directly flashable through `esptool` (port from `.duneos_port` / `--port` / `DUNEOS_PORT`).
 - [x] **`bspgen.py`**: generates a per-board `partitions.csv` from `flash_size_mb`; `sdkconfig.board` replaces the handwritten `sdkconfig.defaults`.
@@ -628,10 +628,10 @@ file dropped on the SD card triggers it, without launching an app. **The three a
 | ID | Finding | Severity | Size | Depends on | Spec | Status |
 |---|---|---|---|---|---|---|
 | LEG-01 | `e_shstrndx` unbounded before indexing `shdrs` | major | XS | LEG-26 | [specs/SPEC-leg-01-harden-elf-validation.md](specs/SPEC-leg-01-harden-elf-validation.md) | **DONE** — `elf_parse.c:36` `if (hdr->e_shstrndx >= hdr->e_shnum) return -EINVAL` (`DUNEOS_ELF_REJ_SHSTRNDX`) |
-| LEG-02 | `sh_link` unbounded before indexing `shdrs` | major | XS | LEG-01, LEG-26 | same spec | **DONE** — bounded once at parse time (`elf_parse.c:65-72`, only for the section types that actually index with it) and again at the site that indexes (`loader.c:1200-1208`, guard deliberately duplicated where the index is used) |
-| LEG-03 | `sh_name` / `st_name` offsets unbounded before `strcmp` | major | S | LEG-01, LEG-26 | same spec | **DONE** — `sh_name` at `elf_parse.c:58-64`, every string read through `duneos_elf_string()` at `elf_parse.c:156-161`, and all `st_name` bounded in one pass at `loader.c:1223-1231` before any of the three lookups |
+| LEG-02 | `sh_link` unbounded before indexing `shdrs` | major | XS | LEG-01, LEG-26 | same spec | **DONE** — bounded once at parse time (`elf_parse.c:138-145`, only for the section types that actually index with it) and again at the site that indexes (`loader.c:1292-1297`, guard deliberately duplicated where the index is used). The link's TARGET TYPE is bounded alongside it since SPEC-leg-34's verification (`elf_parse.c:147-154`, `loader.c:1305-1312`): an in-range index to a `SHT_NOBITS` section still carried an unbounded `sh_size` into `malloc()` |
+| LEG-03 | `sh_name` / `st_name` offsets unbounded before `strcmp` | major | S | LEG-01, LEG-26 | same spec | **DONE** — `sh_name` at `elf_parse.c:131-137`, every string read through `duneos_elf_string()` at `elf_parse.c:243-248`, and all `st_name` bounded in one pass at `loader.c:1328-1336` before any of the three lookups |
 | LEG-04 | `calloc` exposed to apps without `n * size` overflow detection (`supervisor.c:1287-1295` — still unchecked: `multi_heap_malloc(slot->heap_handle, n * size)` at `:1291`) | major | XS | — | [specs/SPEC-leg-04-calloc-overflow.md](specs/SPEC-leg-04-calloc-overflow.md) | TODO |
-| LEG-34 | No section extent check: `sh_offset + sh_size` may wrap past `UINT32_MAX` or run past EOF and is still read; `duneos_elf_io_t` carries no file size | major | S | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EXTENT` | TODO |
+| LEG-34 | No section extent check: `sh_offset + sh_size` may wrap past `UINT32_MAX` or run past EOF and is still read; `duneos_elf_io_t` carries no file size | major | S | LEG-26 | [specs/SPEC-leg-34-bound-section-extents.md](specs/SPEC-leg-34-bound-section-extents.md) | **DONE** — `duneos_elf_io_t` carries the image size; `elf_parse.c` `check_section_extents()` rejects `sh_offset > size` (`DUNEOS_ELF_REJ_SH_OFFSET`) then `sh_size > size - sh_offset` (`DUNEOS_ELF_REJ_SH_SIZE`), before any allocation, so the 2.4 GiB `malloc` the CI fuzzer found is unreachable through `duneos_elf_image_open()` — including through `shdrs[symtab->sh_link]`, whose target must now be an `SHT_STRTAB` (`DUNEOS_ELF_REJ_SH_LINK_TYPE`). `SHT_NOBITS` keeps the `sh_size` exemption only, and only when it is not the section name table (a `.bss` bigger than the object is well-formed); `SHT_NULL` gets no exemption, its `sh_size` being meaningless and zero in every object that reaches the check (`duneos_elf_validate()` already rejects the `e_shnum == 0` extended-numbering form that is the one convention giving `shdrs[0].sh_size` a meaning), pinned by corpus case `null_size_past_eof`; `load_sections()` caps every section against a single memory ceiling (`LOADER_MAX_SECTION_BYTES`) before the 4-byte round-up, which is `size_t` and wraps to 0 on a 32-bit target, and guards both pool accumulators against a sum that overflows `size_t` — 1024 sections at the 4 MiB PSRAM ceiling reach exactly 2^32 and would otherwise wrap to a NULL data pool |
 | LEG-35 | A zero-size `.symtab` is not refused by the validator: `symcount = 0`, `malloc(0)`, and the image is rejected only later by an `app_main not found` message that names the wrong cause | minor | XS | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EMPTY-SYMTAB` | TODO |
 | LEG-36 | `dbt flash sysbin` ignores the active profile and stages every built app (71 files, 1263 KiB) into a 1024 KiB partition, failing with a raw `LittleFSError -28` traceback; `dbt system flash` stages the same board's profile correctly (35 apps, 500 KiB per `dbt system size`). Two commands disagree on what belongs in the image, and the one that is wrong is the one whose name suggests it. Found by flashing a real CardPuter, not by any test. Aggravating detail: the failure surfaces as a Python traceback from inside the LittleFS binding although the staged size is known before a single byte is written and `dbt system size` already reports the correct figure — a one-line pre-flight would say "staging 1263 KiB > partition 1024 KiB" | major | S | — | — | TODO |
 | LEG-37 | `main_task` runs the whole boot — LittleFS mount, SD mount, and the loader scan of every `.dap` — on the 3584 B ESP-IDF default stack, with no measured margin. Adding one call frame to the loader path overflowed it into the adjacent heap: TLSF free-list corruption and a watchdog reboot loop, never a clean stack-overflow report. Fixed by declaring a measured 4608 B in `boards/m5stack-cardputer/board.yaml`, translated by bspgen (peak 3764 B on hardware, 784 B of usable margin after the watchpoint's 60 B), and by arming `CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK` project-wide (`sdkconfig.defaults:57`) so the next overflow reports itself. Covered by `tools/dbt/tests` | major | S | — | [specs/SPEC-leg-37-per-board-main-stack.md](specs/SPEC-leg-37-per-board-main-stack.md) | FIXED |
@@ -655,12 +655,18 @@ to do. What was missing is a rule, not a tool: **a change that alters what a phy
 how deep it recurses must be run on that board before it reaches `main`.** (Also recorded in
 CLAUDE.md's Hard-Won Lessons, where every agent reads it.)
 
-**LEG-34 and LEG-35 were found by the LEG-26 corpus, not by the audit sweep**, and are deliberately
-outside SPEC-leg-01's scope: that spec bounds indices and string offsets, while these two need a
-section-extent notion the pure unit does not have (`duneos_elf_io_t` has no file size). Both are
-covered on the bench today as expected failures marked `UNPLANNED`, and the suite prints their count
-separately, so they stay visible until specced. They have no spec yet — only the backlog entries
-linked above.
+**LEG-34 and LEG-35 were found by the LEG-26 corpus, not by the audit sweep**, and were both
+outside SPEC-leg-01's scope: that spec bounds indices and string offsets, while these two needed a
+notion the pure unit did not have. LEG-34 is now fixed by SPEC-leg-34, which gave `duneos_elf_io_t`
+the image size and bounded every section extent against it; its corpus case is green and its
+`UNPLANNED` marker is gone. Its adversarial verification found two ways the same exemption stayed
+reachable and both were closed in that spec's own change rather than deferred: an `SHT_SYMTAB`
+whose `sh_link` named a `SHT_NOBITS` section handed the loader an unbounded `sh_size` to `malloc`
+(the fuzzer's 2.4 GiB request through another field — corpus case `symtab_strtab_nobits`), and an
+`SHF_ALLOC` `.bss` with `sh_size = 0xfffffffe` wrapped `(sh_size + 3) & ~3` to 0 in 32-bit `size_t`
+and got a 4 GiB `memset` into a zero-sized placement — heap corruption, invisible on a 64-bit host,
+now capped in `load_sections()` before the round-up. LEG-35 remains the single expected failure marked `UNPLANNED`, and the
+suite still prints that count separately so it stays visible until specced.
 
 ### Milestone 2 — Foundations: hygiene, licensing and build reproducibility
 
@@ -742,8 +748,8 @@ one entry and one piece of reasoning worth keeping.
 1. **LEG-04 — `calloc` overflow.** Same family as the hardening just landed, same milestone, cheap
    now that the corpus exists. `supervisor.c:1291` still multiplies `n * size` unchecked before
    handing the result to `multi_heap_malloc`.
-2. **LEG-34 / LEG-35** — the two extent findings the corpus is already failing on, once somebody
-   specs the file-size notion `duneos_elf_io_t` lacks.
+2. **LEG-35** — the last corpus finding still failing, once somebody specs what a validator should
+   say about a zero-size symbol table. (LEG-34, its sibling, is done: see SPEC-leg-34.)
 3. **LEG-36** — a hardware-found packaging defect with no spec yet, plus its `_SYSBIN_SIZE`
    duplicate.
 

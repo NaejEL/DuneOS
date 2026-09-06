@@ -47,19 +47,26 @@
  * A file is "accepted" when the scan gets far enough to look for a manifest
  * section, i.e. exactly when read_manifest_from_file() does not bail out on
  * duneos_elf_image_open(). Four images are accepted on purpose:
- *   valid                   — the legitimate object (criterion 2);
- *   st_name_past_strtab     — the defect is in the symbol string table, which
- *                             the scan path never reads; it is caught at load
- *                             time instead, by the st_name bound in loader.c;
- *   sh_offset_size_overflow — LEG-34, out of this spec's scope;
- *   symtab_size_zero        — LEG-35, out of this spec's scope.
+ *   valid               — the legitimate object (criterion 2);
+ *   st_name_past_strtab — the defect is in the symbol string table, which the
+ *                         scan path never reads; it is caught at load time
+ *                         instead, by the st_name bound in loader.c;
+ *   symtab_size_zero    — LEG-35, out of scope here;
+ *   nobits_size_past_eof— a NOBITS sh_size larger than the whole object is
+ *                         well-formed (the size is a memory size, which the
+ *                         file cannot bound), so the scan must list it. It is
+ *                         here to pin that exemption: a bound extended to it
+ *                         would reject any real app whose .bss outgrows its
+ *                         own binary, and would fail this list first.
+ * The extent cases are skipped since SPEC-leg-34: the scan path now bounds
+ * every section's file extent, so a scan reaches none of them.
  * Any other image reaching the manifest lookup is a hole in the hardening.
  */
 static const char *const k_accepted[] = {
     "valid",
     "st_name_past_strtab",
-    "sh_offset_size_overflow",
     "symtab_size_zero",
+    "nobits_size_past_eof",
     NULL,
 };
 
@@ -80,6 +87,16 @@ static int file_read_at(void *ctx, long offset, void *buf, size_t len)
     return fread(buf, 1, len, f) == len ? 0 : -EIO;
 }
 
+/* Mirrors loader.c file_size_of(): the io size must describe exactly the bytes
+ * file_read_at() can serve. */
+static size_t file_size_of(FILE *f)
+{
+    if (fseek(f, 0, SEEK_END) != 0) return 0;
+    long end = ftell(f);
+    if (end < 0) return 0;
+    return (size_t)end;
+}
+
 /*
  * read_manifest_from_file() without cJSON: open the image, then walk the
  * section names exactly as extract_manifest() does. Returns 0 when the file
@@ -90,7 +107,8 @@ static int scan_read_manifest(const char *path)
     FILE *f = fopen(path, "rb");
     if (!f) return -ENOENT;
 
-    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f };
+    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f,
+                                 .size = file_size_of(f) };
     duneos_elf_image_t  img;
     duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
 

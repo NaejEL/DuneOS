@@ -25,12 +25,15 @@
  */
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "duneos/loader_limits.h"
 
 #include "elf_corpus.h"
 #include "tassert.h"
@@ -64,6 +67,99 @@ static void test_validate_direct(void)
     hdr.e_shnum = 0;
     CHECK_INT(duneos_elf_validate(&hdr, EM_XTENSA, &why), -EINVAL);
     CHECK_INT(why, DUNEOS_ELF_REJ_NO_SECTIONS);
+}
+
+/*
+ * SPEC-leg-34 criterion 3, made explicit rather than left to the corpus verdict.
+ *
+ * The natural way to bound a section extent is `sh_offset + sh_size > size`,
+ * and it is exactly the defect: both fields are uint32, so the sum wraps. This
+ * asserts the wrap first — the naive check really would accept this image —
+ * then that the unit rejects it anyway. Without the first assertion, a corpus
+ * case turning green proves nothing about which arithmetic produced it.
+ */
+static void test_extent_arithmetic(void)
+{
+    const elf_corpus_case_t *c = NULL;
+    for (size_t i = 0; i < elf_corpus_count; i++) {
+        if (strcmp(elf_corpus[i].name, "sh_offset_size_overflow") == 0)
+            c = &elf_corpus[i];
+    }
+    CHECK(c != NULL);
+    if (!c) return;
+
+    elf_corpus_image_t img;
+    elf_corpus_build(c, &img);
+
+    const elf32_hdr_t *h = (const elf32_hdr_t *)(const void *)img.bytes;
+    const elf32_shdr_t *sh =
+        (const elf32_shdr_t *)(const void *)(img.bytes + h->e_shoff) + 1;
+
+    CHECK_INT(sh->sh_offset, 0xffffff00u);
+    CHECK_INT(sh->sh_size,   0x00000200u);
+
+    /* The wrong check, spelled out: the sum wraps to 0x100, which is inside a
+     * 348-byte image, so `sh_offset + sh_size > size` would accept it. */
+    uint32_t naive = sh->sh_offset + sh->sh_size;
+    CHECK_INT(naive, 0x100u);
+    CHECK(!(naive > img.size));
+
+    /* The right check, both halves, in the order that makes the subtraction
+     * safe. */
+    CHECK(sh->sh_offset > img.size);
+
+    duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
+    CHECK_INT(elf_corpus_probe_open(&img, &why), -EINVAL);
+    CHECK_INT(why, DUNEOS_ELF_REJ_SH_OFFSET);
+}
+
+/*
+ * Pins the accumulator guard of load_sections() pass 1 (loader.c).
+ *
+ * The guard itself is not reachable from this suite: load_sections() lives in
+ * the target-only half of the loader, and the input that reaches it is a .dap
+ * of at least 4 MiB carrying DUNEOS_LOADER_MAX_SECTIONS sections — not a corpus
+ * image this harness can build cheaply. What is pinned here is the arithmetic,
+ * the same way test_extent_arithmetic() pins the extent check: the wrong shape
+ * next to the right one.
+ *
+ * size_t is 32-bit on the target and 64-bit on this host, so the target's
+ * accumulator is reproduced in uint32_t.
+ */
+static void test_section_total_arithmetic(void)
+{
+    /* LOADER_MAX_SECTION_BYTES on a CONFIG_SPIRAM board, and MAX_SECTIONS. */
+    const uint32_t cap      = 4u * 1024u * 1024u;
+    const uint32_t sections = DUNEOS_LOADER_MAX_SECTIONS;
+
+    /* The unguarded accumulator: 1024 sections of exactly 4 MiB sum to 2^32 and
+     * wrap to 0 — no pool is allocated and pass 2 writes through NULL. Every
+     * per-section value here is under the ceiling, so the per-section cap does
+     * not see it. */
+    uint32_t naive = 0;
+    for (uint32_t i = 0; i < sections; i++) naive += (cap + 3u) & ~3u;
+    CHECK_INT(naive, 0u);
+
+    /* The guard: reject before adding, on the form that cannot itself
+     * overflow. */
+    uint32_t total       = 0;
+    uint32_t rejected_at = sections;
+    for (uint32_t i = 0; i < sections; i++) {
+        uint32_t rounded = (cap + 3u) & ~3u;
+        if (total > UINT32_MAX - rounded) { rejected_at = i; break; }
+        total += rounded;
+    }
+    CHECK_INT(rejected_at, sections - 1u);
+    CHECK_INT(total, 0xffc00000u);
+
+    /* And it does not fire on a total that merely fails to allocate: that one
+     * must reach the malloc and be reported as -ENOMEM, not as a bad image. */
+    total = 0;
+    for (uint32_t i = 0; i < sections - 1u; i++) {
+        uint32_t rounded = (cap + 3u) & ~3u;
+        CHECK(!(total > UINT32_MAX - rounded));
+        total += rounded;
+    }
 }
 
 /* ------------------------------------------------------------ corpus driver */
@@ -166,6 +262,8 @@ int main(int argc, char **argv)
     }
 
     test_validate_direct();
+    test_extent_arithmetic();
+    test_section_total_arithmetic();
 
     int passed = 0, failed = 0, xfailed = 0, xpassed = 0, unplanned = 0;
     int errored = 0;
