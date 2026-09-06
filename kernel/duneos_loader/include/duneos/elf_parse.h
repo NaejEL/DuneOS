@@ -124,8 +124,10 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
  *   .bss larger than the object is well-formed), so a caller placing one in
  *   memory must bound it against the memory it has — the loader does that in
  *   load_sections(). SHT_NULL gets no exemption: its sh_size is meaningless
- *   and zero in any well-formed object, so bounding it costs nothing and
- *   keeps this guarantee whole.
+ *   and zero in every object that reaches this function — duneos_elf_validate()
+ *   rejects the one ELF convention that gives shdrs[0].sh_size a meaning
+ *   (extended numbering, signalled by e_shnum == 0) — so bounding it costs
+ *   nothing and keeps this guarantee whole.
  * A caller indexing shdrs with a value it read itself still bounds it itself.
  */
 int duneos_elf_image_open(const duneos_elf_io_t *io,

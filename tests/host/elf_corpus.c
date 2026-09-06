@@ -277,6 +277,24 @@ static void mut_nobits_size_past_eof(elf_corpus_image_t *img)
     s->sh_size = IMAGE_SIZE * 64;
 }
 
+/*
+ * The exemption's boundary, from the other side: SHT_NULL occupies no file
+ * bytes either, but unlike SHT_NOBITS its sh_size carries no meaning that the
+ * file size could contradict, so nothing is lost by bounding it and it IS
+ * bounded. Without this case nothing fails if someone re-adds SHT_NULL to the
+ * exemption beside SHT_NOBITS, and the hole is not theoretical:
+ * duneos_elf_classify_section() dispatches on the name and sh_flags rather
+ * than on sh_type, and load_sections() pass 2 zero-fills only SHT_NOBITS — so
+ * a SHT_NULL section named '.text' is placed in the pool and then READ from
+ * the file at this sh_size.
+ */
+static void mut_null_size_past_eof(elf_corpus_image_t *img)
+{
+    elf32_shdr_t *s = shdr_of(img, SEC_DOT_TEXT);
+    s->sh_type = SHT_NULL;
+    s->sh_size = IMAGE_SIZE * 64;
+}
+
 static void mut_symtab_size_zero(elf_corpus_image_t *img)
 {
     shdr_of(img, SEC_SYMTAB)->sh_size = 0;
@@ -427,6 +445,10 @@ const elf_corpus_case_t elf_corpus[] = {
     { "nobits_size_past_eof", "a NOBITS sh_size larger than the file is well-formed",
       mut_nobits_size_past_eof, elf_corpus_probe_open,
       0, DUNEOS_ELF_REJ_NONE, ELF_CORPUS_WHY_EXACT, NULL, NULL },
+
+    { "null_size_past_eof", "a SHT_NULL sh_size larger than the file is not exempt",
+      mut_null_size_past_eof, elf_corpus_probe_open,
+      -EINVAL, DUNEOS_ELF_REJ_SH_SIZE, ELF_CORPUS_WHY_EXACT, NULL, NULL },
 
     { "symtab_size_zero", "symtab sh_size is 0 on a table required to be non-empty",
       mut_symtab_size_zero, elf_corpus_probe_open,

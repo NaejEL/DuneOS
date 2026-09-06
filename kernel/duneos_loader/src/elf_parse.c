@@ -104,9 +104,14 @@ static int check_section_extents(const duneos_elf_image_t *img,
          * there).
          *
          * SHT_NULL is NOT exempt, although it occupies no file bytes either.
-         * Its sh_size is meaningless, which is exactly why nothing is lost by
-         * bounding it: a well-formed SHT_NULL section carries sh_size == 0, so
-         * the bound never rescinds a legitimate object. Exempting it would only
+         * Its sh_size is meaningless in every object that reaches this check,
+         * which is exactly why nothing is lost by bounding it. (Not "in every
+         * well-formed object": the gABI gives shdrs[0].sh_size a meaning under
+         * extended numbering, where a section count >= SHN_LORESERVE is written
+         * as e_shnum == 0 and the real count lives there. duneos_elf_validate()
+         * rejects e_shnum == 0 outright, so such an object never gets here — if
+         * that ever changes, this exemption has to be revisited, not assumed.)
+         * So the bound never rejects a legitimate object. Exempting it would only
          * carry an attacker-controlled uint32 through the invariant this file
          * advertises — and load_sections() would act on it, because its
          * zero-fill branch tests SHT_NOBITS alone, so a SHT_NULL section named

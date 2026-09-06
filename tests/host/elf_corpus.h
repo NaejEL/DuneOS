@@ -92,7 +92,7 @@ typedef struct {
  * and its markers are deleted; that change must update this constant, exactly
  * like the markers themselves.
  */
-#define ELF_CORPUS_EXPECTED_CASES  22
+#define ELF_CORPUS_EXPECTED_CASES  23
 #define ELF_CORPUS_EXPECTED_XFAILS 1
 
 extern const elf_corpus_case_t elf_corpus[];

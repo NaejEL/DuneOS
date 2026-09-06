@@ -118,8 +118,13 @@ loading, and the symptom would be a rejection naming the wrong cause. Corpus cas
 `SHT_NULL` was exempted alongside `SHT_NOBITS` in the first implementation and is not any more (PR
 review, round 1). The reasoning that covers `SHT_NOBITS` does not transfer: a NOBITS `sh_size` is a
 memory size the file genuinely cannot bound, whereas a `SHT_NULL` `sh_size` is meaningless and zero
-in every well-formed object — so the exemption could never rescue a legitimate image and only
-carried an attacker-controlled `uint32` through the guarantee `elf_parse.h` advertises.
+in every object that reaches the check — so the exemption could never rescue a legitimate image and
+only carried an attacker-controlled `uint32` through the guarantee `elf_parse.h` advertises. (Not
+"in every well-formed object": the gABI does give `shdrs[0].sh_size` a meaning under extended
+numbering, where a section count of at least `SHN_LORESERVE` is written as `e_shnum == 0` and the
+real count is stored there. `duneos_elf_validate()` rejects `e_shnum == 0`, so no such object ever
+reaches `check_section_extents()`. The bound is safe because of that rejection, not because the
+convention does not exist — whoever relaxes the `e_shnum` check must revisit this.)
 `load_sections()` then acts on it: `duneos_elf_classify_section()` dispatches on the name and
 `sh_flags`, never on `sh_type`, and pass 2's zero-fill branch tests `SHT_NOBITS` alone — so a
 `SHT_NULL` section named `.data` with `sh_size = 0x100000` in a 400-byte object was placed in a
