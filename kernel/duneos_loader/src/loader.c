@@ -1252,40 +1252,55 @@ void duneos_loader_init(void)
  * The eight load_* step helpers the split introduced are 32 B each and none of
  * them is a leaf, so each adds one 32 B frame to whatever it reaches.
  *
- * The deepest thing they reach is klog_write (336 B) — the largest frame on this
- * path by a wide margin, and not compiled out: CONFIG_DUNEOS_KERNEL_SILENT is set
- * on no board. Four helpers reach it — load_read_symbols, load_inject_api_table
- * and load_locate_entry directly (the last on the SUCCESS path, via the
- * "app_main @ %p" klog_d), and load_report_image_reject through elf_log_reject
- * (48 B). So:
+ * The frame at the bottom of those chains is klog_write (336 B) — the largest on
+ * this path by a wide margin, never compiled out (CONFIG_DUNEOS_KERNEL_SILENT is
+ * set on no board), and reached from almost everywhere. The deepest chains, all
+ * traced by objdump relocation from duneos_loader_load, are NOT the new helpers';
+ * they run through those same direct callees at depth +1, and are therefore
+ * byte-identical before and after the split:
+ *
+ *   load -> apply_relocations -> symbol_address -> resolve_symbol -> klog_write
+ *                                                    160+112+32+32+336 = 672 B
+ *   load -> apply_relocations -> apply_slot0_op -> klog_write        = 640 B
+ *   load -> apply_relocations -> klog_write                          = 608 B
+ *   load -> load_sections     -> klog_write                          = 576 B
+ *
+ * 672 B is the deepest chain out of this function, before the split and after.
+ *
+ * Six of the eight helpers also reach klog_write — load_read_symbols,
+ * load_inject_api_table, load_check_compat and load_locate_entry directly (the
+ * last on the SUCCESS path, via the "app_main @ %p" klog_d), load_report_image_reject
+ * through elf_log_reject (48 B), and load_release through unload_locked (32 B):
  *
  *   load -> load_report_image_reject -> elf_log_reject -> klog_write = 576 B
- *   load -> {the other three}         -> klog_write                  = 528 B
+ *   load -> load_release -> unload_locked -> klog_write              = 560 B
+ *   load -> {the other four}                          -> klog_write = 528 B
  *
- * and pre-split, with the same calls made directly from the function body:
+ * against 544 / 528 / 496 B for the same calls made directly from the function
+ * body before the split. So the split does add one 32 B frame to each of these,
+ * but every one of them stays at least 96 B below the 672 B chain above, which
+ * it did not touch. The split moved no peak — which is what the three boots
+ * below, showing an unchanged worst-case margin, independently say.
  *
- *   load -> elf_log_reject -> klog_write = 544 B
- *   load -> klog_write                   = 496 B
+ * (unload_locked's other branch, load_release -> unload_locked ->
+ * duneos_supervisor_arena_free, is only 256 B; klog_write is the deep one.)
  *
- * This is the one place the split did move the peak: +32 B on the logging
- * chains, one helper frame, and that is the whole cost. It is NOT covered by
- * the "four deepest-framed callees" invariant above, which is about the parse
- * and relocation chains. Note klog_write is not a leaf either (it formats into
- * its own buffer and writes); nothing below it is accounted for here.
+ * Note klog_write is not a leaf either — it formats into its own buffer and
+ * writes — and nothing below it is accounted for in any figure here.
  *
- * For reference the release chain is far shallower: load -> load_release ->
- * unload_locked -> duneos_supervisor_arena_free = 256 B.
+ * Two other chains matter, both shallower than the 672 B above but the ones
+ * that descend into foreign code.
  *
- * Worst case reaching LittleFS: load -> apply_relocations -> file_read_at
- * = 304 B before fread.
+ * Reaching LittleFS: load -> apply_relocations -> file_read_at = 304 B before
+ * fread, whose own descent is not counted here.
  *
- * Worst case with no I/O: the manifest parse, load -> extract_manifest ->
+ * The manifest parse, with no I/O: load -> extract_manifest ->
  * cJSON_ParseWithLength (32) -> cJSON_ParseWithLengthOpts (80) -> parse_value
  * (32) = 368 B, then 64 B per JSON nesting level (parse_object or parse_array
  * 32 + parse_value 32) and 48 B for the parse_string leaf. Even a flat manifest
- * is one object, so it already reaches 480 B — deeper than either chain above.
- * There is no upper bound to quote: the descent is mutually recursive on
- * attacker-supplied file content and stops only at CJSON_NESTING_LIMIT (1000).
+ * is one object, so it already reaches 480 B. This is the only chain here with no
+ * upper bound: the descent is mutually recursive on attacker-supplied file
+ * content and stops only at CJSON_NESTING_LIMIT (1000).
  * That is a tracked defect, not something to fix here — LEG-41,
  * specs/SPEC-leg-41-manifest-json-recursion.md.
  *
