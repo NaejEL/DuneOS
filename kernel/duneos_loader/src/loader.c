@@ -325,14 +325,17 @@ static void elf_log_reject(const duneos_elf_image_t *img, duneos_elf_reject_t wh
     }
 }
 
-/* Map the parser's -errno onto the esp_err_t values duneos_loader_load has
- * always returned for each rejection path. */
-static esp_err_t elf_rc_to_esp(int rc)
+/* Map the -errno of the parser and of duneos_loader_load's steps onto the
+ * esp_err_t values duneos_loader_load has always returned for each rejection
+ * path. The mapping is injective over the values those callers produce, so a
+ * step reporting -errno (ADR 001) still yields the historical esp_err_t. */
+static esp_err_t rc_to_esp(int rc)
 {
     switch (rc) {
     case 0:        return ESP_OK;
     case -ENOTSUP: return ESP_ERR_NOT_SUPPORTED;
     case -ENOMEM:  return ESP_ERR_NO_MEM;
+    case -ENOENT:  return ESP_ERR_NOT_FOUND;
     default:       return ESP_ERR_INVALID_ARG;   /* -EINVAL and -EIO alike */
     }
 }
@@ -1228,63 +1231,118 @@ void duneos_loader_init(void)
     duneos_supervisor_register_loader(&ops);
 }
 
-esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
-{
-    if (!path || !out_app) return ESP_ERR_INVALID_ARG;
-    *out_app = NULL;
+/* -------------------------------------------------------------------------
+ * duneos_loader_load — state and steps
+ *
+ * duneos_loader_load() runs on main_task during the boot scan, and LEG-37 was
+ * a stack overflow caused by one extra frame on this path; on Xtensa every
+ * frame also spills windowed registers. So what binds here is the deepest
+ * chain, not the number of steps.
+ *
+ * All frame sizes below are the `entry a1, N` of the -Os build for this board;
+ * re-derive them with objdump before trusting them, do not carry them forward.
+ *
+ * The invariant the split has to preserve: the four deepest-framed callees —
+ * duneos_elf_image_open (96 B), extract_manifest (64 B), load_sections (80 B)
+ * and apply_relocations (112 B) — are called directly from duneos_loader_load()
+ * (160 B), at depth +1, never from behind a step helper. Their chains are what
+ * binds and they are byte-identical to before the split. Pushing any one of
+ * them one frame deeper is what would actually move the peak.
+ *
+ * The eight load_* step helpers the split introduced are 32 B each and none of
+ * them is a leaf, so each adds one 32 B frame to whatever it reaches. The
+ * deepest chain any of them creates is 256 B (load -> load_release ->
+ * unload_locked -> duneos_supervisor_arena_free, 160+32+32+32 — the last frame
+ * is the one that dispatches to heap_caps_free, so it counts). Both worst cases
+ * below exceed that, so the split did not move the peak.
+ *
+ * Worst case reaching LittleFS: load -> apply_relocations -> file_read_at
+ * = 304 B before fread.
+ *
+ * Worst case with no I/O: the manifest parse, load -> extract_manifest ->
+ * cJSON_ParseWithLength (32) -> cJSON_ParseWithLengthOpts (80) -> parse_value
+ * (32) = 368 B, then 64 B per JSON nesting level (parse_object or parse_array
+ * 32 + parse_value 32) and 48 B for the parse_string leaf. Even a flat manifest
+ * is one object, so it already reaches 480 B — deeper than either chain above.
+ * There is no upper bound to quote: the descent is mutually recursive on
+ * attacker-supplied file content and stops only at CJSON_NESTING_LIMIT (1000).
+ * That is a tracked defect, not something to fix here — LEG-41,
+ * specs/SPEC-leg-41-manifest-json-recursion.md.
+ *
+ * Confirmed on hardware (M5Stack CardPuter) with a well-formed manifest: after
+ * the split, main_task peaks at 3684 B of 4608 B (924 B free), against 3764 B /
+ * 784 B free measured on the same board before it. The peak went down, not up.
+ * That mark is published at the end of main() as ambient state
+ * (AMBIENT_STACK_PATH) and printed by `free`.
+ * ---------------------------------------------------------------------- */
 
-    FILE *f = fopen(path, "rb");
-    if (!f) {
-        klog_e(TAG, "cannot open '%s'", path);
-        return ESP_ERR_NOT_FOUND;
-    }
-
-    /* Serialize against concurrent load/unload — see s_loader_lock. */
-    if (s_loader_lock) xSemaphoreTake(s_loader_lock, portMAX_DELAY);
-
-    esp_err_t    err     = ESP_FAIL;
-    const duneos_elf_io_t io = { .read = file_read_at, .ctx = f,
-                                  .size = file_size_of(f) };
+typedef struct {
+    /* io.ctx IS the FILE * — the open file is not repeated in a field of its
+     * own. That costs one cast in load_release() and buys 16 B of main_task
+     * stack: with a separate field, gcc gives duneos_loader_load() a 176 B
+     * frame instead of the 160 B it had before this split. */
+    duneos_elf_io_t     io;
     duneos_elf_image_t  img;
-    duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
-    const elf32_hdr_t  *hdr = &img.hdr;
-    const elf32_shdr_t *shdrs  = NULL;   /* img.shdrs, once the image is open */
-    elf32_sym_t  *symtab   = NULL;
-    char         *strtab   = NULL;
-    size_t        strtab_size = 0;
-    int           symcount = 0;
-    duneos_app_t *app      = NULL;
+    elf32_sym_t        *symtab;
+    char               *strtab;
+    size_t              strtab_size;
+    int                 symcount;
+    duneos_app_t       *app;   /* NULLed on success — ownership passed out */
+} load_state_t;
 
-    /* 1-3. ELF header, validation, section header table, section name strings */
-    int prc = duneos_elf_image_open(&io, LOADER_EXPECT_MACHINE, MAX_SECTIONS,
-                                    &img, &why);
-    if (prc != 0) {
-        elf_log_reject(&img, why);
-        if (why == DUNEOS_ELF_REJ_HEADER_READ)
-            klog_e(TAG, "cannot read ELF header");
-        else if (why == DUNEOS_ELF_REJ_TOO_MANY_SECTIONS)
-            klog_e(TAG, "too many sections: %u (max %u)",
-                   img.hdr.e_shnum, MAX_SECTIONS);
-        err = elf_rc_to_esp(prc);
-        goto out;
-    }
+/*
+ * The single release point of duneos_loader_load(): every resource a load can
+ * take is released here, exactly once, whatever the exit point. A zeroed
+ * load_state_t is a valid argument, so it is correct from the first statement
+ * after the state is declared.
+ */
+static void load_release(load_state_t *st)
+{
+#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+    /* Release the transient exec-staging buffer if an error left it held (only
+     * the malloc'd scratch is owned; the S2/S3 DRAM-alias pointer is not heap). */
+    if (s_build_scratch_owned && s_build_scratch)
+        heap_caps_free(s_build_scratch);
+    s_build_scratch       = NULL;
+    s_build_scratch_owned = false;
+    s_build_exec_base     = 0;
+    s_build_exec_size     = 0;
+#endif
+    if (st->io.ctx) fclose((FILE *)st->io.ctx);
+    duneos_elf_image_close(&st->img);
+    free(st->symtab);
+    free(st->strtab);
+    if (st->app) unload_locked(st->app);   /* lock already held */
+}
 
-    shdrs = img.shdrs;
+/* Error path only: name the offending field. Reports, returns nothing — the
+ * caller maps the parser's rc through rc_to_esp() like every other step. */
+static void load_report_image_reject(const duneos_elf_image_t *img,
+                                     duneos_elf_reject_t       why)
+{
+    elf_log_reject(img, why);
+    if (why == DUNEOS_ELF_REJ_HEADER_READ)
+        klog_e(TAG, "cannot read ELF header");
+    else if (why == DUNEOS_ELF_REJ_TOO_MANY_SECTIONS)
+        klog_e(TAG, "too many sections: %u (max %u)",
+               img->hdr.e_shnum, MAX_SECTIONS);
+}
 
-    klog_d(TAG, "loading '%s' (%u sections)", path, hdr->e_shnum);
+/* Symbol table + its string table. */
+static int load_read_symbols(load_state_t *st)
+{
+    const elf32_hdr_t  *hdr   = &st->img.hdr;
+    const elf32_shdr_t *shdrs = st->img.shdrs;
 
-    /* 4. Symbol table + string table */
     for (int i = 0; i < hdr->e_shnum; i++) {
         if (shdrs[i].sh_type != SHT_SYMTAB) continue;
 
-        symcount = shdrs[i].sh_size / sizeof(elf32_sym_t);
-        symtab   = malloc(shdrs[i].sh_size);
-        if (!symtab) { err = ESP_ERR_NO_MEM; goto out; }
-        if (io.read(io.ctx, (long)shdrs[i].sh_offset,
-                    symtab, shdrs[i].sh_size) != 0) {
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
-        }
+        st->symcount = shdrs[i].sh_size / sizeof(elf32_sym_t);
+        st->symtab   = malloc(shdrs[i].sh_size);
+        if (!st->symtab) return -ENOMEM;
+        if (st->io.read(st->io.ctx, (long)shdrs[i].sh_offset,
+                        st->symtab, shdrs[i].sh_size) != 0)
+            return -EIO;
 
         /* duneos_elf_image_open() already bounds sh_link, but this is the site
          * that indexes with it: the guard belongs where the index is used, not
@@ -1292,8 +1350,7 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
         if (shdrs[i].sh_link >= (uint32_t)hdr->e_shnum) {
             klog_e(TAG, "section %d: sh_link=%lu out of range (e_shnum=%u)",
                    i, (unsigned long)shdrs[i].sh_link, hdr->e_shnum);
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
+            return -EINVAL;
         }
 
         const elf32_shdr_t *str_sh = &shdrs[shdrs[i].sh_link];
@@ -1306,57 +1363,57 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
             klog_e(TAG, "section %d: sh_link=%lu is type %lu, not SHT_STRTAB",
                    i, (unsigned long)shdrs[i].sh_link,
                    (unsigned long)str_sh->sh_type);
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
+            return -EINVAL;
         }
 
-        strtab = malloc(str_sh->sh_size + 1);
-        if (!strtab) { err = ESP_ERR_NO_MEM; goto out; }
-        if (io.read(io.ctx, (long)str_sh->sh_offset,
-                    strtab, str_sh->sh_size) != 0) {
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
-        }
-        strtab[str_sh->sh_size] = '\0';
-        strtab_size = str_sh->sh_size;
+        st->strtab = malloc(str_sh->sh_size + 1);
+        if (!st->strtab) return -ENOMEM;
+        if (st->io.read(st->io.ctx, (long)str_sh->sh_offset,
+                        st->strtab, str_sh->sh_size) != 0)
+            return -EIO;
+        st->strtab[str_sh->sh_size] = '\0';
+        st->strtab_size = str_sh->sh_size;
         break;
     }
 
     /* Every st_name is bounded once here, so the three lookups below (API table
      * injection, app_main, and relocation symbol resolution) never carry an
      * offset that escapes the string table. */
-    for (int i = 0; i < symcount; i++) {
-        if (symtab[i].st_name >= strtab_size) {
+    for (int i = 0; i < st->symcount; i++) {
+        if (st->symtab[i].st_name >= st->strtab_size) {
             klog_e(TAG, "symbol %d: st_name=%lu past the string table (%lu B)",
-                   i, (unsigned long)symtab[i].st_name,
-                   (unsigned long)strtab_size);
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
+                   i, (unsigned long)st->symtab[i].st_name,
+                   (unsigned long)st->strtab_size);
+            return -EINVAL;
         }
     }
+    return 0;
+}
 
-    /* 5. Allocate app descriptor + the section-base table sized to the real
-     * section count (P2.1: ~4 B/section instead of a fixed 4 KiB array). */
-    app = calloc(1, sizeof(duneos_app_t));
-    if (!app) { err = ESP_ERR_NO_MEM; goto out; }
-    app->section_count = hdr->e_shnum;
-    app->section_bases = calloc(hdr->e_shnum, sizeof(void *));
-    if (!app->section_bases) { err = ESP_ERR_NO_MEM; goto out; }
+/* App descriptor + the section-base table sized to the real section count
+ * (P2.1: ~4 B/section instead of a fixed 4 KiB array). */
+static int load_alloc_app(load_state_t *st)
+{
+    st->app = calloc(1, sizeof(duneos_app_t));
+    if (!st->app) return -ENOMEM;
+    st->app->section_count = st->img.hdr.e_shnum;
+    st->app->section_bases = calloc(st->img.hdr.e_shnum, sizeof(void *));
+    if (!st->app->section_bases) return -ENOMEM;
+    return 0;
+}
 
-    /* 6. Manifest */
-    err = extract_manifest(&io, &img, &app->manifest);
-    if (err != ESP_OK) goto out;
-
-    if (app->manifest.required_abi_version > DUNEOS_ABI_VERSION) {
+/* ABI level and ISA the manifest declares, against this kernel. */
+static int load_check_compat(const duneos_app_manifest_t *m)
+{
+    if (m->required_abi_version > DUNEOS_ABI_VERSION) {
         klog_e(TAG, "app requires ABI v%lu, kernel is v%d",
-                 (unsigned long)app->manifest.required_abi_version,
+                 (unsigned long)m->required_abi_version,
                  DUNEOS_ABI_VERSION);
-        err = ESP_ERR_NOT_SUPPORTED;
-        goto out;
+        return -ENOTSUP;
     }
 
     /* Arch compatibility check — reject binaries for a different ISA. */
-    if (app->manifest.arch[0] != '\0') {
+    if (m->arch[0] != '\0') {
 #if defined(CONFIG_IDF_TARGET_ESP32)
         static const char kernel_arch[] = "xtensa-esp32";
 #elif defined(CONFIG_IDF_TARGET_ESP32S2)
@@ -1366,28 +1423,24 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
 #else
         static const char kernel_arch[] = "riscv32";
 #endif
-        if (strcmp(app->manifest.arch, kernel_arch) != 0) {
+        if (strcmp(m->arch, kernel_arch) != 0) {
             klog_e(TAG, "arch mismatch: app='%s' kernel='%s'",
-                   app->manifest.arch, kernel_arch);
-            err = ESP_ERR_NOT_SUPPORTED;
-            goto out;
+                   m->arch, kernel_arch);
+            return -ENOTSUP;
         }
     }
-
-    /* 7. Load sections */
-    err = load_sections(&io, &img, app);
-    if (err != ESP_OK) goto out;
-
-    /* 8. Apply relocations */
-    err = apply_relocations(&io, &img, symtab, symcount, strtab,
-                            strtab_size, app);
-    if (err != ESP_OK) goto out;
+    return 0;
+}
 
 #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* With a malloc'd scratch (plain ESP32), copy the relocated image into the
-     * IRAM exec block and free it. On S2/S3 the relocations already landed in the
-     * exec block via its DRAM alias — nothing to install or free. ISYNC makes the
-     * freshly written instructions visible to the fetch pipeline either way. */
+/*
+ * With a malloc'd scratch (plain ESP32), copy the relocated image into the
+ * IRAM exec block and free it. On S2/S3 the relocations already landed in the
+ * exec block via its DRAM alias — nothing to install or free. ISYNC makes the
+ * freshly written instructions visible to the fetch pipeline either way.
+ */
+static void load_commit_exec(duneos_app_t *app)
+{
     if (s_build_scratch_owned) {
         if (app->exec_block_size > 0 && s_build_scratch)
             build_install_exec((uintptr_t)app->exec_block,
@@ -1399,36 +1452,45 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
     s_build_exec_base     = 0;
     s_build_exec_size     = 0;
     asm volatile("isync" ::: "memory");
+}
+#else
+static void load_commit_exec(duneos_app_t *app) { (void)app; }
 #endif /* CONFIG_IDF_TARGET_ARCH_XTENSA */
 
-    /* 8.5. API table injection (Phase 22 / ABI v3).
-     *
-     * Apps built with libdune.a contain a DEFINED symbol named
-     * DUNEOS_API_SYMBOL ("__duneos_api_ptr") in their data section.
-     * libdune.a initialises it to NULL; we overwrite it with the kernel's
-     * API table pointer here — before app_main is called — so that every
-     * libdune wrapper can dispatch through it from the very first call.
-     *
-     * We search DEFINED symbols (st_shndx != SHN_UNDEF) for the magic name.
-     * The pointer variable lives in the data pool (D-bus accessible), so a
-     * plain dereference is safe.  to_write_ptr() is called for correctness
-     * on Xtensa, though data sections are never in the exec pool.           */
-    for (int i = 0; i < symcount; i++) {
-        const elf32_sym_t *sym = &symtab[i];
-        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr->e_shnum) continue;
+/*
+ * API table injection (Phase 22 / ABI v3).
+ *
+ * Apps built with libdune.a contain a DEFINED symbol named
+ * DUNEOS_API_SYMBOL ("__duneos_api_ptr") in their data section.
+ * libdune.a initialises it to NULL; we overwrite it with the kernel's
+ * API table pointer here — before app_main is called — so that every
+ * libdune wrapper can dispatch through it from the very first call.
+ *
+ * We search DEFINED symbols (st_shndx != SHN_UNDEF) for the magic name.
+ * The pointer variable lives in the data pool (D-bus accessible), so a
+ * plain dereference is safe.  to_write_ptr() is called for correctness
+ * on Xtensa, though data sections are never in the exec pool.
+ */
+static void load_inject_api_table(const load_state_t *st)
+{
+    for (int i = 0; i < st->symcount; i++) {
+        const elf32_sym_t *sym = &st->symtab[i];
+        if (sym->st_shndx == SHN_UNDEF ||
+            sym->st_shndx >= st->img.hdr.e_shnum) continue;
         /* The st_name bound above makes this non-NULL, but the strcmp is the
          * site that dereferences it: guard where it is used. */
-        const char *sym_name = duneos_elf_string(strtab, strtab_size,
+        const char *sym_name = duneos_elf_string(st->strtab, st->strtab_size,
                                                  sym->st_name);
         if (!sym_name) {
             klog_w(TAG, "symbol %d: st_name=%lu past the string table (%lu B) "
                         "— skipped",
-                   i, (unsigned long)sym->st_name, (unsigned long)strtab_size);
+                   i, (unsigned long)sym->st_name,
+                   (unsigned long)st->strtab_size);
             continue;
         }
         if (strcmp(sym_name, DUNEOS_API_SYMBOL) != 0)                    continue;
 
-        void *section_base = app->section_bases[sym->st_shndx];
+        void *section_base = st->app->section_bases[sym->st_shndx];
         if (!section_base) {
             klog_w(TAG, DUNEOS_API_SYMBOL " is in an unloaded section — skip");
             break;
@@ -1443,60 +1505,118 @@ esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
                (unsigned)duneos_api_get()->version, (void *)inject_ptr);
         break;
     }
+}
 
-    /* 9. Locate app_main */
-    for (int i = 0; i < symcount; i++) {
-        const elf32_sym_t *sym = &symtab[i];
-        if (sym->st_shndx == SHN_UNDEF || sym->st_shndx >= hdr->e_shnum) continue;
+/* Resolve app_main into app->entry. */
+static int load_locate_entry(load_state_t *st)
+{
+    for (int i = 0; i < st->symcount; i++) {
+        const elf32_sym_t *sym = &st->symtab[i];
+        if (sym->st_shndx == SHN_UNDEF ||
+            sym->st_shndx >= st->img.hdr.e_shnum) continue;
         /* Same contract as the injection loop: bounded above, checked here,
          * where the pointer is actually dereferenced. */
-        const char *sym_name = duneos_elf_string(strtab, strtab_size,
+        const char *sym_name = duneos_elf_string(st->strtab, st->strtab_size,
                                                  sym->st_name);
         if (!sym_name) {
             klog_w(TAG, "symbol %d: st_name=%lu past the string table (%lu B) "
                         "— skipped",
-                   i, (unsigned long)sym->st_name, (unsigned long)strtab_size);
+                   i, (unsigned long)sym->st_name,
+                   (unsigned long)st->strtab_size);
             continue;
         }
         if (strcmp(sym_name, "app_main") != 0) continue;
 
-        void *base = app->section_bases[sym->st_shndx];
+        void *base = st->app->section_bases[sym->st_shndx];
         if (!base) {
             klog_e(TAG, "app_main is in an unloaded section");
-            err = ESP_ERR_INVALID_ARG;
-            goto out;
+            return -EINVAL;
         }
-        app->entry = (void (*)(void))((uint8_t *)base + sym->st_value);
-        klog_d(TAG, "app_main @ %p", (void *)app->entry);
+        st->app->entry = (void (*)(void))((uint8_t *)base + sym->st_value);
+        klog_d(TAG, "app_main @ %p", (void *)st->app->entry);
         break;
     }
 
-    if (!app->entry) {
+    if (!st->app->entry) {
         klog_e(TAG, "app_main not found in symbol table");
-        err = ESP_ERR_NOT_FOUND;
+        return -ENOENT;
+    }
+    return 0;
+}
+
+esp_err_t duneos_loader_load(const char *path, duneos_app_t **out_app)
+{
+    if (!path || !out_app) return ESP_ERR_INVALID_ARG;
+    *out_app = NULL;
+
+    load_state_t st = { 0 };
+
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        klog_e(TAG, "cannot open '%s'", path);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    /* Serialize against concurrent load/unload — see s_loader_lock. */
+    if (s_loader_lock) xSemaphoreTake(s_loader_lock, portMAX_DELAY);
+
+    st.io.read = file_read_at;
+    st.io.ctx  = f;
+    st.io.size = file_size_of(f);
+
+    esp_err_t           err;
+    duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
+
+    /* 1-3. ELF header, validation, section header table, section name strings */
+    int rc = duneos_elf_image_open(&st.io, LOADER_EXPECT_MACHINE, MAX_SECTIONS,
+                                   &st.img, &why);
+    if (rc != 0) {
+        load_report_image_reject(&st.img, why);
+        err = rc_to_esp(rc);
         goto out;
     }
 
-    *out_app = app;
-    app = NULL;
-    err = ESP_OK;
+    klog_d(TAG, "loading '%s' (%u sections)", path, st.img.hdr.e_shnum);
+
+    /* 4. Symbol table + string table */
+    rc = load_read_symbols(&st);
+    if (rc != 0) { err = rc_to_esp(rc); goto out; }
+
+    /* 5. Allocate app descriptor + the section-base table */
+    rc = load_alloc_app(&st);
+    if (rc != 0) { err = rc_to_esp(rc); goto out; }
+
+    /* 6. Manifest, then the ABI and ISA it declares */
+    err = extract_manifest(&st.io, &st.img, &st.app->manifest);
+    if (err != ESP_OK) goto out;
+
+    rc = load_check_compat(&st.app->manifest);
+    if (rc != 0) { err = rc_to_esp(rc); goto out; }
+
+    /* 7. Load sections */
+    err = load_sections(&st.io, &st.img, st.app);
+    if (err != ESP_OK) goto out;
+
+    /* 8. Apply relocations, then publish the exec block */
+    err = apply_relocations(&st.io, &st.img, st.symtab, st.symcount,
+                            st.strtab, st.strtab_size, st.app);
+    if (err != ESP_OK) goto out;
+
+    load_commit_exec(st.app);
+
+    /* 8.5. API table injection */
+    load_inject_api_table(&st);
+
+    /* 9. Locate app_main */
+    rc = load_locate_entry(&st);
+    if (rc != 0) { err = rc_to_esp(rc); goto out; }
+
+    *out_app = st.app;
+    st.app   = NULL;
+    err      = ESP_OK;
 
 out:
-#ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
-    /* Release the transient exec-staging buffer if an error left it held (only
-     * the malloc'd scratch is owned; the S2/S3 DRAM-alias pointer is not heap). */
-    if (s_build_scratch_owned && s_build_scratch)
-        heap_caps_free(s_build_scratch);
-    s_build_scratch       = NULL;
-    s_build_scratch_owned = false;
-    s_build_exec_base     = 0;
-    s_build_exec_size     = 0;
-#endif
-    fclose(f);
-    duneos_elf_image_close(&img);
-    free(symtab);
-    free(strtab);
-    if (app) unload_locked(app);   /* lock already held */
+    load_release(&st);
     if (s_loader_lock) xSemaphoreGive(s_loader_lock);
     return err;
 }
@@ -1527,7 +1647,7 @@ static esp_err_t read_manifest_from_file(const char            *path,
         /* Scan path: only the validation rejections were ever reported here —
          * the caller logs a "cannot read manifest" line for the rest. */
         elf_log_reject(&img, why);
-        err = elf_rc_to_esp(prc);
+        err = rc_to_esp(prc);
     } else {
         err = extract_manifest(&io, &img, out);
     }

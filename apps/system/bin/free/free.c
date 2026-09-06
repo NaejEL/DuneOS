@@ -1,16 +1,40 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #include "duneos/meminfo.h"
+#include "duneos/ambient.h"
 
 extern int esp_get_free_heap_size(void);
 
 static void put(const char *s, int n) { write(STDOUT_FILENO, s, n); }
 
+/* Boot stack margin of main_task (LEG-37), published once by the kernel at the
+ * end of boot. Absent file = kernel too old, or boot never reached the mark. */
+static void put_boot_stack(void)
+{
+    ambient_stack_t st;
+    char b[80];
+
+    int fd = open(AMBIENT_STACK_PATH, O_RDONLY);
+    if (fd < 0) return;
+    int n = (int)read(fd, &st, sizeof(st));
+    close(fd);
+    if (n != (int)sizeof(st) || st.total == 0 || st.peak > st.total) return;
+
+    n = snprintf(b, sizeof(b),
+        "boot stack  peak %6u  of %6u  (%u free)\r\n",
+        (unsigned)st.peak, (unsigned)st.total,
+        (unsigned)(st.total - st.peak));
+    put(b, n);
+}
+
 void app_main(void)
 {
     char b[128];
     int  n;
+
+    put_boot_stack();
 
     duneos_meminfo_t mi;
     if (duneos_meminfo(&mi) != 0) {
