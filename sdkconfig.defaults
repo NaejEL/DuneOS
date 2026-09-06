@@ -29,6 +29,33 @@ CONFIG_FATFS_MAX_LFN=255
 # overflow and gives the supervisor a chance to kill the app without kernel reboot.
 CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y
 
+# Hardware watchpoint on the last 32 bytes of every task stack. The canary above
+# is only checked at a context switch, so an overflow that runs into the adjacent
+# heap between two switches is already gone: it corrupted TLSF's free list and
+# surfaced thousands of instructions later inside an unrelated malloc, at a
+# different place on each boot (LEG-37 — heap poisoning reported CORRUPT HEAP
+# with no culprit; this watchpoint named the task in a single run).
+# This lives here and not in a board's sdkconfig.board because it is a
+# project-wide POLICY, not a per-board measurement (ADR 040): every board wants
+# its overflows loud. The stack SIZES stay per board — see boards/*/board.yaml.
+#
+# It is not free, and the cost lands on the six boards still running ESP-IDF's
+# unmeasured 3584 B default. The eighth board, kincony-A16, is not on that
+# default either: boards/kincony-A16/board.yaml sets
+# CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192 through the raw `kconfig:` passthrough,
+# an untraceable value with no measurement recorded behind it.
+# ESP-IDF's own Kconfig help for the symbol:
+#   "due to alignment requirements of the watchpoint, the usable stack size
+#    decreases by up to 60 bytes"
+# so this line moves every unmeasured board up to 60 B CLOSER to the overflow it
+# exists to diagnose. Accepted deliberately: an overflow that is named costs
+# minutes, one that lands in the heap cost a hardware bisect. The same help also
+# bounds what it catches:
+#   "This check only triggers if the stack overflow writes within 32 bytes near
+#    the end of the stack, rather than overshooting further"
+# — which is why it ships alongside the canary above rather than replacing it.
+CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK=y
+
 
 # select()/poll() on /dev devices (ADR 019)
 CONFIG_VFS_SUPPORT_SELECT=y

@@ -7,6 +7,7 @@ board (pico-sdk plugin) works without changing this file.
 import sys
 
 from .constants import DUNEOS_ROOT
+from .sdkconfig_check import enforce as enforce_sdkconfig
 from .setup import ensure_board, ensure_port, run_bspgen, _IDF_FILE, _msg
 from .toolchain import get_board_plugin
 
@@ -51,6 +52,11 @@ def cmd_flash_kernel(args) -> None:
 
     board_dir = DUNEOS_ROOT / "boards" / board
     build_dir = DUNEOS_ROOT / "build"
+
+    # 3b. A cached sdkconfig outranks the freshly generated fragment, silently.
+    # Checked before the flash path too, not just the build: --flash-only reuses
+    # a binary whose Kconfig may already be the stale one.
+    enforce_sdkconfig(board, DUNEOS_ROOT / "sdkconfig")
 
     # 4. Build
     if not flash_only:
