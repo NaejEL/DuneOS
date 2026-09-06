@@ -630,7 +630,7 @@ file dropped on the SD card triggers it, without launching an app. **The three a
 | LEG-01 | `e_shstrndx` unbounded before indexing `shdrs` | major | XS | LEG-26 | [specs/SPEC-leg-01-harden-elf-validation.md](specs/SPEC-leg-01-harden-elf-validation.md) | **DONE** — `elf_parse.c:36` `if (hdr->e_shstrndx >= hdr->e_shnum) return -EINVAL` (`DUNEOS_ELF_REJ_SHSTRNDX`) |
 | LEG-02 | `sh_link` unbounded before indexing `shdrs` | major | XS | LEG-01, LEG-26 | same spec | **DONE** — bounded once at parse time (`elf_parse.c:138-145`, only for the section types that actually index with it) and again at the site that indexes (`loader.c:1292-1297`, guard deliberately duplicated where the index is used). The link's TARGET TYPE is bounded alongside it since SPEC-leg-34's verification (`elf_parse.c:147-154`, `loader.c:1305-1312`): an in-range index to a `SHT_NOBITS` section still carried an unbounded `sh_size` into `malloc()` |
 | LEG-03 | `sh_name` / `st_name` offsets unbounded before `strcmp` | major | S | LEG-01, LEG-26 | same spec | **DONE** — `sh_name` at `elf_parse.c:131-137`, every string read through `duneos_elf_string()` at `elf_parse.c:243-248`, and all `st_name` bounded in one pass at `loader.c:1328-1336` before any of the three lookups |
-| LEG-04 | `calloc` exposed to apps without `n * size` overflow detection (`supervisor.c:1287-1295` — still unchecked: `multi_heap_malloc(slot->heap_handle, n * size)` at `:1291`) | major | XS | — | [specs/SPEC-leg-04-calloc-overflow.md](specs/SPEC-leg-04-calloc-overflow.md) | TODO |
+| LEG-04 | `calloc` exposed to apps without `n * size` overflow detection | major | XS | — | [specs/SPEC-leg-04-calloc-overflow.md](specs/SPEC-leg-04-calloc-overflow.md) | **DONE** (PR #8) — `supervisor.c:1301` `if (__builtin_mul_overflow(n, size, &total)) return NULL;`, the same primitive `heap_caps_calloc_base()` uses, so the slot-heap and global-heap branches agree by construction. Guards both the `multi_heap_malloc` size and the `memset` length — the latter was the actual corruption vector. A zero product is deliberately not special-cased. Gated on both QEMU boards by `apps/user/qemu_calloc` |
 | LEG-34 | No section extent check: `sh_offset + sh_size` may wrap past `UINT32_MAX` or run past EOF and is still read; `duneos_elf_io_t` carries no file size | major | S | LEG-26 | [specs/SPEC-leg-34-bound-section-extents.md](specs/SPEC-leg-34-bound-section-extents.md) | **DONE** — `duneos_elf_io_t` carries the image size; `elf_parse.c` `check_section_extents()` rejects `sh_offset > size` (`DUNEOS_ELF_REJ_SH_OFFSET`) then `sh_size > size - sh_offset` (`DUNEOS_ELF_REJ_SH_SIZE`), before any allocation, so the 2.4 GiB `malloc` the CI fuzzer found is unreachable through `duneos_elf_image_open()` — including through `shdrs[symtab->sh_link]`, whose target must now be an `SHT_STRTAB` (`DUNEOS_ELF_REJ_SH_LINK_TYPE`). `SHT_NOBITS` keeps the `sh_size` exemption only, and only when it is not the section name table (a `.bss` bigger than the object is well-formed); `SHT_NULL` gets no exemption, its `sh_size` being meaningless and zero in every object that reaches the check (`duneos_elf_validate()` already rejects the `e_shnum == 0` extended-numbering form that is the one convention giving `shdrs[0].sh_size` a meaning), pinned by corpus case `null_size_past_eof`; `load_sections()` caps every section against a single memory ceiling (`LOADER_MAX_SECTION_BYTES`) before the 4-byte round-up, which is `size_t` and wraps to 0 on a 32-bit target, and guards both pool accumulators against a sum that overflows `size_t` — 1024 sections at the 4 MiB PSRAM ceiling reach exactly 2^32 and would otherwise wrap to a NULL data pool |
 | LEG-35 | A zero-size `.symtab` is not refused by the validator: `symcount = 0`, `malloc(0)`, and the image is rejected only later by an `app_main not found` message that names the wrong cause | minor | XS | LEG-26 | [docs/backlog.md](docs/backlog.md) `BL-ELF-EMPTY-SYMTAB` | TODO |
 | LEG-36 | `dbt flash sysbin` ignores the active profile and stages every built app (71 files, 1263 KiB) into a 1024 KiB partition, failing with a raw `LittleFSError -28` traceback; `dbt system flash` stages the same board's profile correctly (35 apps, 500 KiB per `dbt system size`). Two commands disagree on what belongs in the image, and the one that is wrong is the one whose name suggests it. Found by flashing a real CardPuter, not by any test. Aggravating detail: the failure surfaces as a Python traceback from inside the LittleFS binding although the staged size is known before a single byte is written and `dbt system size` already reports the correct figure — a one-line pre-flight would say "staging 1263 KiB > partition 1024 KiB" | major | S | — | — | TODO |
@@ -741,17 +741,16 @@ lowered in severity, and LEG-05 corrected — the claim "only function above 200
 
 ### Remaining execution order
 
-Milestone order and table order carry the default sequencing. Two of the three specs this section
-originally sequenced are executed (LEG-26, then LEG-01/02/03), so what is left of that decision is
-one entry and one piece of reasoning worth keeping.
+Milestone order and table order carry the default sequencing. Three of the four specs this section
+originally sequenced are executed (LEG-26, then LEG-01/02/03, then LEG-04), so what is left of that
+decision is two entries and one piece of reasoning worth keeping.
 
-1. **LEG-04 — `calloc` overflow.** Same family as the hardening just landed, same milestone, cheap
-   now that the corpus exists. `supervisor.c:1291` still multiplies `n * size` unchecked before
-   handing the result to `multi_heap_malloc`.
-2. **LEG-35** — the last corpus finding still failing, once somebody specs what a validator should
+LEG-04 is executed (PR #8), so what this section sequences is now:
+
+1. **LEG-35** — the last corpus finding still failing, once somebody specs what a validator should
    say about a zero-size symbol table. (LEG-34, its sibling, is done: see SPEC-leg-34.)
-3. **LEG-36** — a hardware-found packaging defect with no spec yet, plus its `_SYSBIN_SIZE`
-   duplicate.
+2. **LEG-36** — a hardware-found packaging defect with no spec yet, plus its `_SYSBIN_SIZE`
+   duplicate. It is the only open finding that broke a real workflow on real hardware.
 
 **LEG-31, LEG-32 and LEG-33 are deliberately NOT next**, despite LEG-32's ruling being signed and
 LEG-33 being XS. They are build-system correctness, not security, and LEG-31 is latent — no board
