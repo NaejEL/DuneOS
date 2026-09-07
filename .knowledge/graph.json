@@ -116,6 +116,11 @@
    "src": "CLAUDE.md"
   },
   {
+   "count": 4,
+   "dst": "check",
+   "src": "CLAUDE.md"
+  },
+  {
    "count": 2,
    "dst": "close",
    "src": "CLAUDE.md"
@@ -237,11 +242,6 @@
   },
   {
    "count": 1,
-   "dst": "human",
-   "src": "CLAUDE.md"
-  },
-  {
-   "count": 1,
    "dst": "klog_capture_rom_output",
    "src": "CLAUDE.md"
   },
@@ -297,6 +297,11 @@
   },
   {
    "count": 1,
+   "dst": "regenerated_root",
+   "src": "CLAUDE.md"
+  },
+  {
+   "count": 1,
    "dst": "report",
    "src": "CLAUDE.md"
   },
@@ -308,6 +313,11 @@
   {
    "count": 4,
    "dst": "scan",
+   "src": "CLAUDE.md"
+  },
+  {
+   "count": 2,
+   "dst": "step",
    "src": "CLAUDE.md"
   },
   {
@@ -368,6 +378,11 @@
   {
    "count": 3,
    "dst": "app_main",
+   "src": "README.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "README.md"
   },
   {
@@ -811,6 +826,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 2,
+   "dst": "candidate",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "capture",
    "src": "ROADMAP.md"
@@ -818,6 +838,11 @@
   {
    "count": 1,
    "dst": "cflags",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 10,
+   "dst": "check",
    "src": "ROADMAP.md"
   },
   {
@@ -1107,11 +1132,6 @@
   },
   {
    "count": 1,
-   "dst": "human",
-   "src": "ROADMAP.md"
-  },
-  {
-   "count": 1,
    "dst": "i2c_bus_init",
    "src": "ROADMAP.md"
   },
@@ -1191,7 +1211,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 7,
+   "count": 6,
    "dst": "missing",
    "src": "ROADMAP.md"
   },
@@ -1221,7 +1241,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 17,
+   "count": 14,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -1286,7 +1306,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "step",
    "src": "ROADMAP.md"
   },
@@ -4091,6 +4111,11 @@
    "src": "apps/system/shell_core/shell_cmds.c"
   },
   {
+   "count": 1,
+   "dst": "candidate",
+   "src": "apps/system/shell_core/shell_cmds.c"
+  },
+  {
    "count": 2,
    "dst": "capture",
    "src": "apps/system/shell_core/shell_cmds.c"
@@ -6826,6 +6851,11 @@
    "src": "apps/user/i2cscope/sniff.c"
   },
   {
+   "count": 1,
+   "dst": "check",
+   "src": "apps/user/i2cscope/sniff.c"
+  },
+  {
    "count": 4,
    "dst": "close",
    "src": "apps/user/i2cscope/sniff.c"
@@ -7413,6 +7443,11 @@
   {
    "count": 16,
    "dst": "calloc",
+   "src": "apps/user/qemu_calloc/qemu_calloc.c"
+  },
+  {
+   "count": 3,
+   "dst": "check",
    "src": "apps/user/qemu_calloc/qemu_calloc.c"
   },
   {
@@ -8438,6 +8473,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "apps/user/test_hardening/test_hardening.c"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "apps/user/test_hardening/test_hardening.c"
   },
   {
@@ -10002,6 +10042,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "read",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -10018,6 +10063,11 @@
   {
    "count": 1,
    "dst": "SPI_SET_CS",
+   "src": "boards/m5stack-cardputer/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "candidate",
    "src": "boards/m5stack-cardputer/board.yaml"
   },
   {
@@ -10327,6 +10377,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "docs/adr/003-memory-caps.md"
+  },
+  {
+   "count": 1,
    "dst": "close",
    "src": "docs/adr/003-memory-caps.md"
   },
@@ -10483,6 +10538,11 @@
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "docs/adr/006-manifest-extensibility.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "docs/adr/006-manifest-extensibility.md"
   },
   {
@@ -10728,6 +10788,11 @@
   {
    "count": 7,
    "dst": "DuneOS",
+   "src": "docs/adr/011-threat-model.md"
+  },
+  {
+   "count": 3,
+   "dst": "check",
    "src": "docs/adr/011-threat-model.md"
   },
   {
@@ -11168,6 +11233,11 @@
   {
    "count": 1,
    "dst": "Pattern",
+   "src": "docs/adr/017-multi-function-device.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "docs/adr/017-multi-function-device.md"
   },
   {
@@ -11682,6 +11752,11 @@
   },
   {
    "count": 1,
+   "dst": "candidate",
+   "src": "docs/adr/026-file-type-associations.md"
+  },
+  {
+   "count": 1,
    "dst": "duneos_send",
    "src": "docs/adr/026-file-type-associations.md"
   },
@@ -11938,6 +12013,11 @@
   {
    "count": 2,
    "dst": "app_main",
+   "src": "docs/adr/029-app-stack-auto-sizing.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "docs/adr/029-app-stack-auto-sizing.md"
   },
   {
@@ -12632,6 +12712,11 @@
   },
   {
    "count": 1,
+   "dst": "candidate",
+   "src": "docs/adr/039-qemu-test-bench.md"
+  },
+  {
+   "count": 1,
    "dst": "close",
    "src": "docs/adr/039-qemu-test-bench.md"
   },
@@ -12721,6 +12806,11 @@
    "src": "docs/adr/040-config-layering.md"
   },
   {
+   "count": 2,
+   "dst": "check",
+   "src": "docs/adr/040-config-layering.md"
+  },
+  {
    "count": 1,
    "dst": "duneos_loader_scan",
    "src": "docs/adr/040-config-layering.md"
@@ -12798,6 +12888,11 @@
   {
    "count": 3,
    "dst": "capture",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "docs/adr/README.md"
   },
   {
@@ -12977,6 +13072,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "docs/audit-ram-2026-06.md"
+  },
+  {
+   "count": 1,
    "dst": "duneos_meminfo",
    "src": "docs/audit-ram-2026-06.md"
   },
@@ -13073,6 +13173,11 @@
   {
    "count": 1,
    "dst": "capture",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "docs/backlog.md"
   },
   {
@@ -13408,6 +13513,11 @@
   {
    "count": 1,
    "dst": "calloc",
+   "src": "docs/qemu-test-bench.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "docs/qemu-test-bench.md"
   },
   {
@@ -14752,6 +14862,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "kernel/duneos_kernel/include/duneos/hal_i2c.h"
+  },
+  {
+   "count": 1,
    "dst": "duneos_hal_i2c",
    "src": "kernel/duneos_kernel/include/duneos/hal_i2c.h"
   },
@@ -15283,6 +15398,11 @@
   {
    "count": 3,
    "dst": "app_main",
+   "src": "kernel/duneos_kernel/include/duneos/libdune.h"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "kernel/duneos_kernel/include/duneos/libdune.h"
   },
   {
@@ -15938,6 +16058,11 @@
   {
    "count": 5,
    "dst": "addrinfo",
+   "src": "kernel/duneos_kernel/include/duneos/socket.h"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "kernel/duneos_kernel/include/duneos/socket.h"
   },
   {
@@ -17646,6 +17771,11 @@
    "src": "kernel/duneos_kernel/src/drivers/drv_uart.c"
   },
   {
+   "count": 1,
+   "dst": "candidate",
+   "src": "kernel/duneos_kernel/src/drivers/drv_uart.c"
+  },
+  {
    "count": 2,
    "dst": "drv_uart_register",
    "src": "kernel/duneos_kernel/src/drivers/drv_uart.c"
@@ -18227,6 +18357,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "kernel/duneos_kernel/src/drivers/i2c_bus.c"
+  },
+  {
+   "count": 1,
    "dst": "duneos_hal_i2c_deinit",
    "src": "kernel/duneos_kernel/src/drivers/i2c_bus.c"
   },
@@ -18728,6 +18863,11 @@
   {
    "count": 1,
    "dst": "RAW80211_SET_IFACE",
+   "src": "kernel/duneos_kernel/src/drivers/net/drv_raw80211.c"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "kernel/duneos_kernel/src/drivers/net/drv_raw80211.c"
   },
   {
@@ -19503,6 +19643,11 @@
   {
    "count": 2,
    "dst": "calloc",
+   "src": "kernel/duneos_kernel/src/supervisor.c"
+  },
+  {
+   "count": 6,
+   "dst": "check",
    "src": "kernel/duneos_kernel/src/supervisor.c"
   },
   {
@@ -20616,6 +20761,11 @@
    "src": "kernel/duneos_kernel/src/vfs_dev.c"
   },
   {
+   "count": 1,
+   "dst": "check",
+   "src": "kernel/duneos_kernel/src/vfs_dev.c"
+  },
+  {
    "count": 3,
    "dst": "close",
    "src": "kernel/duneos_kernel/src/vfs_dev.c"
@@ -21546,6 +21696,11 @@
    "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
   },
   {
+   "count": 5,
+   "dst": "check",
+   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
+  },
+  {
    "count": 1,
    "dst": "duneos_elf_classify_section",
    "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
@@ -21747,6 +21902,11 @@
   },
   {
    "count": 1,
+   "dst": "candidate",
+   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
    "dst": "duneos_loader_name_is_app",
    "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
   },
@@ -21758,6 +21918,11 @@
   {
    "count": 1,
    "dst": "DUNEOS_MANIFEST_MAX_DEPTH",
+   "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
   },
   {
@@ -21848,6 +22013,11 @@
   {
    "count": 3,
    "dst": "SHT_SYMTAB",
+   "src": "kernel/duneos_loader/src/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "kernel/duneos_loader/src/elf_parse.c"
   },
   {
@@ -22181,6 +22351,11 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
+   "count": 8,
+   "dst": "check",
+   "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
    "count": 10,
    "dst": "close",
    "src": "kernel/duneos_loader/src/loader.c"
@@ -22509,6 +22684,11 @@
    "count": 10,
    "dst": "write",
    "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "libdune/src/libdune_fs.c"
   },
   {
    "count": 2,
@@ -25931,6 +26111,11 @@
    "src": "sdkconfig.defaults"
   },
   {
+   "count": 1,
+   "dst": "check",
+   "src": "sdkconfig.defaults"
+  },
+  {
    "count": 3,
    "dst": "free",
    "src": "sdkconfig.defaults"
@@ -25978,6 +26163,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-01-harden-elf-validation.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "specs/SPEC-leg-01-harden-elf-validation.md"
   },
   {
@@ -26036,6 +26226,11 @@
    "src": "specs/SPEC-leg-04-calloc-overflow.md"
   },
   {
+   "count": 6,
+   "dst": "check",
+   "src": "specs/SPEC-leg-04-calloc-overflow.md"
+  },
+  {
    "count": 1,
    "dst": "duneos_supervisor_app_calloc",
    "src": "specs/SPEC-leg-04-calloc-overflow.md"
@@ -26083,6 +26278,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-05-split-loader-load.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "specs/SPEC-leg-05-split-loader-load.md"
   },
   {
@@ -26168,6 +26368,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
   },
   {
@@ -26262,6 +26467,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
+  },
+  {
+   "count": 1,
    "dst": "Context",
    "src": "specs/SPEC-leg-15-glob-configure-depends.md"
   },
@@ -26282,6 +26492,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-leg-15-glob-configure-depends.md"
+  },
+  {
+   "count": 1,
    "dst": "Context",
    "src": "specs/SPEC-leg-16-pin-idf-components.md"
   },
@@ -26293,6 +26508,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-16-pin-idf-components.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "specs/SPEC-leg-16-pin-idf-components.md"
   },
   {
@@ -26448,6 +26668,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
   },
   {
@@ -26702,6 +26927,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
+  },
+  {
+   "count": 1,
    "dst": "fail",
    "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
   },
@@ -26936,6 +27166,11 @@
    "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
   },
   {
+   "count": 3,
+   "dst": "check",
+   "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
+  },
+  {
    "count": 2,
    "dst": "drv_logic_register",
    "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
@@ -27012,6 +27247,11 @@
   },
   {
    "count": 1,
+   "dst": "candidate",
+   "src": "specs/SPEC-leg-33-requires-over-declaration.md"
+  },
+  {
+   "count": 1,
    "dst": "fail",
    "src": "specs/SPEC-leg-33-requires-over-declaration.md"
   },
@@ -27081,6 +27321,11 @@
    "src": "specs/SPEC-leg-34-bound-section-extents.md"
   },
   {
+   "count": 10,
+   "dst": "check",
+   "src": "specs/SPEC-leg-34-bound-section-extents.md"
+  },
+  {
    "count": 1,
    "dst": "check_section_table",
    "src": "specs/SPEC-leg-34-bound-section-extents.md"
@@ -27136,6 +27381,11 @@
    "src": "specs/SPEC-leg-37-per-board-main-stack.md"
   },
   {
+   "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-leg-37-per-board-main-stack.md"
+  },
+  {
    "count": 2,
    "dst": "close",
    "src": "specs/SPEC-leg-37-per-board-main-stack.md"
@@ -27173,6 +27423,56 @@
   {
    "count": 1,
    "dst": "Context",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "REPO_ROOT",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "Risks",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "human",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 5,
+   "dst": "read",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "report",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 6,
+   "dst": "step",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
   },
   {
@@ -27183,6 +27483,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
   },
   {
@@ -27228,6 +27533,11 @@
   {
    "count": 3,
    "dst": "_stream",
+   "src": "specs/SPEC-leg-40-tui-tests-menu.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
   },
   {
@@ -27278,6 +27588,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
@@ -27348,6 +27663,16 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-radar-ld2450.md"
+  },
+  {
+   "count": 1,
+   "dst": "candidate",
+   "src": "specs/SPEC-radar-ld2450.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "specs/SPEC-radar-ld2450.md"
   },
   {
@@ -27571,6 +27896,11 @@
    "src": "tests/host/elf_corpus.c"
   },
   {
+   "count": 3,
+   "dst": "check",
+   "src": "tests/host/elf_corpus.c"
+  },
+  {
    "count": 1,
    "dst": "duneos_elf_classify_section",
    "src": "tests/host/elf_corpus.c"
@@ -27766,6 +28096,11 @@
    "src": "tests/host/elf_corpus.h"
   },
   {
+   "count": 2,
+   "dst": "check",
+   "src": "tests/host/elf_corpus.h"
+  },
+  {
    "count": 1,
    "dst": "elf_corpus_build",
    "src": "tests/host/elf_corpus.h"
@@ -27913,6 +28248,11 @@
   {
    "count": 2,
    "dst": "SCAN_EXPECT_MACHINE",
+   "src": "tests/host/test_elf_scan.c"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "tests/host/test_elf_scan.c"
   },
   {
@@ -28118,6 +28458,11 @@
   {
    "count": 1,
    "dst": "MAX_SECTIONS",
+   "src": "tests/host/test_elf_validate.c"
+  },
+  {
+   "count": 5,
+   "dst": "check",
    "src": "tests/host/test_elf_validate.c"
   },
   {
@@ -28807,6 +29152,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 1,
    "dst": "clean_single",
    "src": "tools/dbt/builder.py"
   },
@@ -29021,6 +29371,11 @@
    "src": "tools/dbt/capability_map.py"
   },
   {
+   "count": 2,
+   "dst": "check",
+   "src": "tools/dbt/capability_map.py"
+  },
+  {
    "count": 1,
    "dst": "check_app",
    "src": "tools/dbt/capability_map.py"
@@ -29133,6 +29488,11 @@
   {
    "count": 3,
    "dst": "capture",
+   "src": "tools/dbt/cli.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "tools/dbt/cli.py"
   },
   {
@@ -29636,6 +29996,11 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
+   "count": 3,
+   "dst": "candidate",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
    "count": 1,
    "dst": "cmd_flashimg",
    "src": "tools/dbt/flashimg.py"
@@ -29818,6 +30183,11 @@
   {
    "count": 1,
    "dst": "build_kernel",
+   "src": "tools/dbt/kernel.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "tools/dbt/kernel.py"
   },
   {
@@ -30236,6 +30606,11 @@
    "src": "tools/dbt/qemu.py"
   },
   {
+   "count": 6,
+   "dst": "check",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
    "count": 1,
    "dst": "chunk_reader",
    "src": "tools/dbt/qemu.py"
@@ -30646,6 +31021,16 @@
    "src": "tools/dbt/setup.py"
   },
   {
+   "count": 10,
+   "dst": "candidate",
+   "src": "tools/dbt/setup.py"
+  },
+  {
+   "count": 3,
+   "dst": "check",
+   "src": "tools/dbt/setup.py"
+  },
+  {
    "count": 1,
    "dst": "cmd_setup",
    "src": "tools/dbt/setup.py"
@@ -30751,6 +31136,11 @@
    "src": "tools/dbt/stackusage.py"
   },
   {
+   "count": 2,
+   "dst": "check",
+   "src": "tools/dbt/stackusage.py"
+  },
+  {
    "count": 1,
    "dst": "gfx_rect",
    "src": "tools/dbt/stackusage.py"
@@ -30853,6 +31243,16 @@
   {
    "count": 2,
    "dst": "build_single",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 3,
+   "dst": "candidate",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "tools/dbt/system.py"
   },
   {
@@ -30971,6 +31371,126 @@
    "src": "tools/dbt/system.py"
   },
   {
+   "count": 9,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 5,
+   "dst": "_GitUnavailable",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_Guard",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "__init__",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_check_ignore",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 3,
+   "dst": "_guarded_open",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_ignore_rules_signature",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "candidate",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 5,
+   "dst": "check",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "classify",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "is_ignored",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "mkdir",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 6,
+   "dst": "open",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_configure",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_runtest_setup",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_unconfigure",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "read_guard",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "regenerated_root",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "stat",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "stderr",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
    "count": 1,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/tests/test_board_file.py"
@@ -31003,6 +31523,11 @@
   {
    "count": 2,
    "dst": "boom",
+   "src": "tools/dbt/tests/test_board_file.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "tools/dbt/tests/test_board_file.py"
   },
   {
@@ -31106,7 +31631,7 @@
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
   {
-   "count": 9,
+   "count": 7,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
@@ -31137,11 +31662,16 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
+  },
+  {
+   "count": 1,
    "dst": "free",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
   {
-   "count": 13,
+   "count": 14,
    "dst": "generate_sdkconfig_board",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
@@ -31153,6 +31683,11 @@
   {
    "count": 1,
    "dst": "open",
+   "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
+  },
+  {
+   "count": 4,
+   "dst": "regenerated_root",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
   {
@@ -31178,11 +31713,6 @@
   {
    "count": 1,
    "dst": "test_declared_value_is_emitted_verbatim",
-   "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
-  },
-  {
-   "count": 1,
-   "dst": "test_generated_sdkconfig_board_files_match_the_yaml",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
   {
@@ -31257,6 +31787,11 @@
   },
   {
    "count": 1,
+   "dst": "test_the_written_fragment_matches_the_yaml",
+   "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
+  },
+  {
+   "count": 1,
    "dst": "test_unaligned_is_rejected",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
@@ -31276,7 +31811,7 @@
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
-   "count": 8,
+   "count": 7,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
@@ -31311,7 +31846,7 @@
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
-   "count": 9,
+   "count": 10,
    "dst": "generate_sdkconfig_board",
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
@@ -31326,6 +31861,11 @@
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
+   "count": 2,
+   "dst": "regenerated_root",
+   "src": "tools/dbt/tests/test_bspgen_qemu.py"
+  },
+  {
    "count": 1,
    "dst": "resolve",
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
@@ -31333,11 +31873,6 @@
   {
    "count": 1,
    "dst": "test_every_xtensa_cpu_accepts_the_flag",
-   "src": "tools/dbt/tests/test_bspgen_qemu.py"
-  },
-  {
-   "count": 1,
-   "dst": "test_generated_sdkconfig_board_files_match_the_yaml",
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
@@ -31393,6 +31928,11 @@
   {
    "count": 1,
    "dst": "test_the_loader_guards_the_write_path_on_the_symbol",
+   "src": "tools/dbt/tests/test_bspgen_qemu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_written_fragment_matches_the_yaml",
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
@@ -31533,6 +32073,11 @@
   {
    "count": 2,
    "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
   },
   {
@@ -31913,6 +32458,11 @@
   {
    "count": 1,
    "dst": "capture",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
+   "count": 6,
+   "dst": "check",
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
@@ -32541,12 +33091,92 @@
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
+   "count": 4,
+   "dst": "GENERATED",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 6,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "_guarded_open",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 5,
+   "dst": "candidate",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 3,
+   "dst": "is_ignored",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 3,
+   "dst": "open",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 16,
+   "dst": "read_guard",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_generated_board_artefact_is_denied",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_caches_and_paths_outside_the_repo_are_never_classified",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_denial_does_not_depend_on_the_file_existing",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "test_opening_a_denied_path_fails_the_test_that_did_it",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_guard_is_installed_during_the_run",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_tracked_yaml_next_to_it_is_allowed",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_writes_are_not_classified",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
    "count": 3,
    "dst": "BOARD",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
@@ -32613,6 +33243,16 @@
   {
    "count": 1,
    "dst": "read",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 3,
+   "dst": "regenerated_root",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 4,
+   "dst": "regenerated_sources",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
@@ -32763,6 +33403,11 @@
   {
    "count": 3,
    "dst": "build_kernel",
+   "src": "tools/dbt/tests/test_sdkconfig_guard_coverage.py"
+  },
+  {
+   "count": 2,
+   "dst": "check",
    "src": "tools/dbt/tests/test_sdkconfig_guard_coverage.py"
   },
   {
@@ -33148,6 +33793,11 @@
   {
    "count": 1,
    "dst": "build_kernel",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
+   "count": 9,
+   "dst": "candidate",
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
@@ -33816,6 +34466,11 @@
    "src": "tools/dbt/tui.py"
   },
   {
+   "count": 4,
+   "dst": "check",
+   "src": "tools/dbt/tui.py"
+  },
+  {
    "count": 2,
    "dst": "check_app",
    "src": "tools/dbt/tui.py"
@@ -34098,6 +34753,11 @@
   {
    "count": 83,
    "dst": "_define",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -34494,6 +35154,7 @@
    "profiles/kincony-a16-default/profile.yaml",
    "profiles/t-embed-default/profile.yaml",
    "profiles/t-embed-recovery/profile.yaml",
+   "pytest.ini",
    "sdk/app/include/duneos/appmeta.h",
    "sdk/app/libappmeta.c",
    "sdk/display/gfx.c",
@@ -34558,6 +35219,7 @@
    "specs/SPEC-leg-33-requires-over-declaration.md",
    "specs/SPEC-leg-34-bound-section-extents.md",
    "specs/SPEC-leg-37-per-board-main-stack.md",
+   "specs/SPEC-leg-38-08-gates-that-test-nothing.md",
    "specs/SPEC-leg-38-tests-must-not-read-generated-files.md",
    "specs/SPEC-leg-40-tui-tests-menu.md",
    "specs/SPEC-leg-41-manifest-json-recursion.md",
@@ -34594,6 +35256,7 @@
    "tools/dbt/stackusage.py",
    "tools/dbt/system.py",
    "tools/dbt/tests/__init__.py",
+   "tools/dbt/tests/conftest.py",
    "tools/dbt/tests/test_board_file.py",
    "tools/dbt/tests/test_bspgen_main_task_stack.py",
    "tools/dbt/tests/test_bspgen_qemu.py",
@@ -34601,6 +35264,7 @@
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
    "tools/dbt/tests/test_manifest_depth_bound.py",
    "tools/dbt/tests/test_qemu.py",
+   "tools/dbt/tests/test_read_guard.py",
    "tools/dbt/tests/test_sdkconfig_check.py",
    "tools/dbt/tests/test_sdkconfig_guard_coverage.py",
    "tools/dbt/tests/test_tui_sdkconfig_guard.py",
@@ -34863,6 +35527,7 @@
    "FUZZ_MAX_SECTIONS",
    "FakeApp",
    "FakeClock",
+   "GENERATED",
    "GFX_BLACK",
    "GFX_BLUE",
    "GFX_CYAN",
@@ -35285,6 +35950,8 @@
    "_DUNEOS_DRV_CAT",
    "_DUNEOS_DRV_CAT2",
    "_DUNEOS_SOCKET_NEED_SELECT",
+   "_GitUnavailable",
+   "_Guard",
    "__attribute__",
    "__call__",
    "__enter__",
@@ -35314,6 +35981,7 @@
    "_called_names",
    "_calloc_matcher",
    "_check_idf_version",
+   "_check_ignore",
    "_check_sdkconfig",
    "_close",
    "_col_staged_bytes",
@@ -35344,6 +36012,7 @@
    "_got",
    "_got_path",
    "_guard",
+   "_guarded_open",
    "_hi_flash",
    "_hi_sd",
    "_hook_process_cleanup",
@@ -35352,6 +36021,7 @@
    "_idf_env",
    "_idf_export",
    "_ignore",
+   "_ignore_rules_signature",
    "_image_to_dr_bytes",
    "_in_dbt_venv",
    "_init_predecessors",
@@ -35512,6 +36182,7 @@
    "call_calloc",
    "call_from_thread",
    "calloc",
+   "candidate",
    "capture",
    "captured_free_stack",
    "cat_fd",
@@ -35522,6 +36193,7 @@
    "cell_set",
    "cfg_int",
    "cflags",
+   "check",
    "check_app",
    "check_build_sdkconfig",
    "check_profile",
@@ -35982,6 +36654,7 @@
    "ip_mreq",
    "iram_word_dram_alias",
    "is_builtin",
+   "is_ignored",
    "is_mod_pos",
    "is_name_char",
    "is_suffix",
@@ -36162,6 +36835,9 @@
    "pump",
    "push_history",
    "put_boot_stack",
+   "pytest_configure",
+   "pytest_runtest_setup",
+   "pytest_unconfigure",
    "qemu_available",
    "qemu_gdb_report",
    "qemu_platform_supported",
@@ -36185,6 +36861,7 @@
    "read_chunk",
    "read_config",
    "read_full",
+   "read_guard",
    "read_line",
    "read_link",
    "read_mask",
@@ -36198,6 +36875,8 @@
    "recovery_pin_held",
    "redraw_all",
    "refresh_line",
+   "regenerated_root",
+   "regenerated_sources",
    "register_exc_handlers",
    "register_instance",
    "register_mount",
@@ -36365,6 +37044,7 @@
    "test_a_failed_calloc_check_fails_the_run",
    "test_a_failed_write_leaves_the_old_value_intact",
    "test_a_first_build_with_no_cached_sdkconfig_proceeds",
+   "test_a_generated_board_artefact_is_denied",
    "test_a_good_calloc_run_matches_every_assertion",
    "test_a_known_board_validates",
    "test_a_line_tail_cannot_pose_as_the_start_of_a_console_line",
@@ -36393,6 +37073,7 @@
    "test_boot_banners_are_counted_once_each_across_chunks",
    "test_both_layers_are_checked_for_the_active_board",
    "test_bound_leaves_headroom_over_the_deepest_real_manifest",
+   "test_caches_and_paths_outside_the_repo_are_never_classified",
    "test_capacity_limit",
    "test_cardputer_board_yaml_declares_radar_uart",
    "test_classes",
@@ -36407,6 +37088,7 @@
    "test_declared_psram_size_reaches_the_emulator",
    "test_declared_value_is_emitted_verbatim",
    "test_default_console_leaves_the_secondary_console_alone",
+   "test_denial_does_not_depend_on_the_file_existing",
    "test_divzero",
    "test_dot",
    "test_each_payload_asserts_on_its_own_app_not_another",
@@ -36435,7 +37117,6 @@
    "test_format_klog_ring_handles_an_untouched_ring",
    "test_generate_emits_all_uart_entries",
    "test_generate_without_i2c_emits_no_i2c_defines",
-   "test_generated_sdkconfig_board_files_match_the_yaml",
    "test_good_log_matches_every_assertion",
    "test_heap",
    "test_idle_and_noise",
@@ -36458,6 +37139,7 @@
    "test_null_store",
    "test_only_the_measured_boards_declare_the_key",
    "test_only_the_qemu_boards_declare_the_flag",
+   "test_opening_a_denied_path_fails_the_test_that_did_it",
    "test_other_bit_positions",
    "test_panic_during_the_settle_window_beats_a_full_match",
    "test_panic_patterns_are_detected",
@@ -36512,6 +37194,7 @@
    "test_the_declared_psram_size_is_not_a_mismatch",
    "test_the_derivation_does_not_claim_the_watchpoint_is_free",
    "test_the_flag_changes_nothing_else_in_the_fragment",
+   "test_the_guard_is_installed_during_the_run",
    "test_the_guard_runs_before_the_build_in_each_entry_point",
    "test_the_kconfig_declares_the_symbol",
    "test_the_kconfig_dependency_is_the_one_bspgen_gates_on",
@@ -36535,9 +37218,11 @@
    "test_the_scan_finds_the_known_entry_points",
    "test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one",
    "test_the_stack_watchpoint_is_project_wide",
+   "test_the_tracked_yaml_next_to_it_is_allowed",
    "test_the_typed_key_and_a_raw_kconfig_entry_are_refused_together",
    "test_the_unavailable_cross_check_is_a_warning_not_a_verdict",
    "test_the_word_panic_alone_is_not_a_panic",
+   "test_the_written_fragment_matches_the_yaml",
    "test_unaligned_is_rejected",
    "test_unchanged_board_file_is_not_reported",
    "test_utf8_board_yaml_reads_regardless_of_locale",
@@ -36552,6 +37237,7 @@
    "test_write_board_file_overwrites_an_existing_value",
    "test_write_board_file_writes_the_name_with_a_trailing_newline",
    "test_write_txn",
+   "test_writes_are_not_classified",
    "thread_body",
    "timespec",
    "timeval",

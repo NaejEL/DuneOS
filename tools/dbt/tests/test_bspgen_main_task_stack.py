@@ -196,13 +196,11 @@ def test_no_other_board_generates_the_symbol():
             assert SYMBOL not in frag, name
 
 
-def test_generated_sdkconfig_board_files_match_the_yaml():
-    """Guards against a stale checked-out artefact."""
+def test_the_written_fragment_matches_the_yaml(regenerated_root):
+    """The file bspgen writes, not just what generate_sdkconfig_board() returns."""
     for name in _all_board_names():
-        generated = REPO_ROOT / "boards" / name / "sdkconfig.board"
-        if not generated.exists():
-            continue
-        text = generated.read_text(encoding="utf-8")
+        text = (regenerated_root / "boards" / name / "sdkconfig.board").read_text(
+            encoding="utf-8")
         expected = name in DECLARING_BOARDS or _sets_the_symbol_by_hand(name)
         assert (SYMBOL in text) == expected, name
 
@@ -239,7 +237,7 @@ def test_the_derivation_does_not_claim_the_watchpoint_is_free():
     assert "844" not in block
 
 
-def test_the_stack_watchpoint_is_project_wide():
+def test_the_stack_watchpoint_is_project_wide(regenerated_root):
     """Criterion 5: it is a policy, not a measurement, so it belongs to the root
     Kconfig — and never to a board fragment."""
     defaults = (REPO_ROOT / "sdkconfig.defaults").read_text(encoding="utf-8")
@@ -252,7 +250,6 @@ def test_the_stack_watchpoint_is_project_wide():
     assert "32 bytes" in block
     assert "zero RAM" not in defaults
     for name in _all_board_names():
-        frag = REPO_ROOT / "boards" / name / "sdkconfig.board"
-        if frag.exists():
-            assert "WATCHPOINT_END_OF_STACK" not in frag.read_text(
-                encoding="utf-8"), name
+        frag = (regenerated_root / "boards" / name / "sdkconfig.board").read_text(
+            encoding="utf-8")
+        assert "WATCHPOINT_END_OF_STACK" not in frag, name

@@ -28,8 +28,11 @@ jobs:
 
       # The dbt unit tests are the only executable proof of the `dbt qemu`
       # verdict logic (SPEC-leg-27 criteria 5 and 8), which no other job runs.
-      # The general Python-CI story — a deliberately failing test proving the
-      # gate bites, an explicit collection root — belongs to SPEC-leg-08.
+      #
+      # This step must go red rather than report a green nothing: the recorded
+      # failure mode is a run that verified 0 tests and said so nowhere
+      # (SPEC-leg-38-08). Hence the exit-code triage and the count floor below,
+      # and the self-proof step after it.
       - name: Run dbt Python unit tests
         run: |
           python -m pip install --upgrade pip
@@ -39,7 +42,49 @@ jobs:
           # import here is not one red test — it is a collection error that
           # aborts the whole run, so every dbt test would go unrun.
           python -m pip install pytest pyyaml textual
-          python -m pytest tools/dbt/tests -q
+
+          # Raise this when tests are added; a drop is the suite shrinking in
+          # silence, which no other check would notice.
+          FLOOR=279
+
+          set +e
+          python -m pytest -q --junitxml=pytest-report.xml
+          status=$?
+          set -e
+
+          if [ "$status" -eq 5 ]; then
+            echo "::error::pytest collected 0 tests — NO TEST RAN"
+            exit 1
+          fi
+          if [ "$status" -ge 2 ]; then
+            echo "::error::pytest exited $status before running the suite (collection error) — NO TEST RAN"
+            exit 1
+          fi
+
+          collected=$(python -c "import xml.etree.ElementTree as E; print(next(E.parse('pytest-report.xml').getroot().iter('testsuite')).get('tests'))")
+          echo "collected $collected tests (floor $FLOOR)"
+          if [ "$collected" -lt "$FLOOR" ]; then
+            echo "::error::only $collected tests collected, floor is $FLOOR — the suite shrank"
+            exit 1
+          fi
+          exit $status
+
+      # The scratch test lives outside the repo on purpose: inside it, the run
+      # above would collect it and this step would become the failure it detects.
+      - name: Prove the pytest gate can go red
+        run: |
+          proof="${RUNNER_TEMP:-$(mktemp -d)}/gate_proof"
+          mkdir -p "$proof"
+          printf 'def test_the_gate_bites():\n    assert False\n' > "$proof/test_gate_proof.py"
+          set +e
+          python -m pytest -q -p no:cacheprovider "$proof/test_gate_proof.py"
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "::error::a deliberately failing test exited 0 — this job reports success without testing anything"
+            exit 1
+          fi
+          echo "a failing test exits $status, so a real failure would fail this job"
 
   # Time-bounded libFuzzer run on the ELF validation entry point (SPEC-leg-26
   # criteria 7 and 8). Separate job on purpose: `host-tests` must never depend

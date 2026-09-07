@@ -91,14 +91,12 @@ def test_no_hardware_board_generates_the_symbol():
             assert "DUNEOS_TARGET_QEMU" not in frag, name
 
 
-def test_generated_sdkconfig_board_files_match_the_yaml():
-    """Guards against a stale checked-out artefact: the committed generated
-    file must agree with what bspgen produces from the YAML today."""
+def test_the_written_fragment_matches_the_yaml(regenerated_root):
+    """The file bspgen writes, not just what generate_sdkconfig_board() returns:
+    the fragment the build consumes is the one that must carry the flag."""
     for name in _all_board_names():
-        generated = (REPO_ROOT / "boards" / name / "sdkconfig.board")
-        if not generated.exists():
-            continue
-        text = generated.read_text(encoding="utf-8")
+        text = (regenerated_root / "boards" / name / "sdkconfig.board").read_text(
+            encoding="utf-8")
         assert (SYMBOL in text) == (name in QEMU_BOARDS), name
 
 

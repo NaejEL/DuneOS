@@ -37,6 +37,18 @@ def declared_root(tmp_path, monkeypatch):
     return tmp_path
 
 
+@pytest.fixture
+def regenerated_sources(regenerated_root, monkeypatch):
+    """The real board fragments, regenerated from their YAML into a tmp root.
+
+    These tests are about the CardPuter's and the QEMU boards' own declarations,
+    so a hand-built layer would assert nothing; reading the committed artefacts
+    asserts nothing either, for the reason given above.
+    """
+    monkeypatch.setattr(sc, "DUNEOS_ROOT", regenerated_root)
+    return regenerated_root
+
+
 # --- parsing -----------------------------------------------------------------
 
 def test_parses_values_and_unset_symbols():
@@ -138,7 +150,7 @@ def test_a_stale_build_directory_is_refused(tmp_path, declared_root):
     assert (WATCHPOINT, "y", "n") in conflicts
 
 
-def test_a_matching_build_directory_passes(tmp_path):
+def test_a_matching_build_directory_passes(tmp_path, regenerated_sources):
     clean = tmp_path / "sdkconfig"
     declared = sc.declared_config(sc.default_sources("m5stack-cardputer"))
     clean.write_text("".join(f"{k}={v}\n" for k, v in declared.items()))
@@ -166,7 +178,7 @@ def test_enforce_exits_and_names_symbol_stale_value_and_remedy(tmp_path, declare
     assert str(stale) in msg
 
 
-def test_enforce_is_silent_when_the_build_agrees(tmp_path):
+def test_enforce_is_silent_when_the_build_agrees(tmp_path, regenerated_sources):
     clean = tmp_path / "sdkconfig"
     declared = sc.declared_config(sc.default_sources("m5stack-cardputer"))
     clean.write_text("".join(f"{k}={v}\n" for k, v in declared.items()))
@@ -175,7 +187,7 @@ def test_enforce_is_silent_when_the_build_agrees(tmp_path):
     assert printed == []
 
 
-def test_the_qemu_boards_are_not_caught_by_their_own_fragment(tmp_path):
+def test_the_qemu_boards_are_not_caught_by_their_own_fragment(regenerated_sources):
     """Neither QEMU board declares main_task_stack, so a build dir carrying
     ESP-IDF's own default must stay clean (criterion 7)."""
     for board in ("esp32s3-qemu", "esp32s3-qemu-psram"):

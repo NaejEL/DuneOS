@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-38-08-gates-that-test-nothing.md
 
 # SPEC-leg-08 — Run the Python tests in CI
 
