@@ -1,5 +1,5 @@
 # LEG-41 — Unbounded cJSON recursion parses attacker-controlled manifests on the boot stack
-Status: PROPOSED
+Status: APPROVED
 
 ## Context
 
@@ -60,26 +60,40 @@ mitigation of the symptom, not of the cause.
 Bound the manifest parse so that no file content can drive the boot stack past
 a known ceiling.
 
-Directions, to be chosen in the Plan phase rather than assumed here:
-- lower `CJSON_NESTING_LIMIT` to a value derived from the actual stack budget
-  (a manifest is a flat object; single-digit nesting is generous);
-- and/or reject an oversized or over-nested `.duneos_manifest` section before
-  handing it to cJSON, in the same spirit as SPEC-leg-34's extent bounds;
-- and/or move the manifest parse off `main_task`.
+**Direction chosen by the Product Owner (2026-09-06): a pre-parse depth check we
+own.** The `.duneos_manifest` bytes are scanned by our own non-recursive,
+constant-stack pass *before* `cJSON_ParseWithLength()` is ever called; a manifest
+whose nesting exceeds the derived limit is rejected there, with a named reason,
+having spent no descent at all. This satisfies "before the recursion" literally,
+and it survives a cJSON submodule update, unlike a patch to `cJSON.h`.
+
+A `-DCJSON_NESTING_LIMIT=` in the component's build definition MAY be added as a
+second line of defence, but it is not the primary mechanism and must not be the
+thing the acceptance criteria rest on.
+
+Explicitly not chosen: moving the parse off `main_task` (leaves the recursion
+itself unbounded and adds a task to the boot path).
 
 ## Acceptance criteria
 
-- [ ] A `.dap` whose manifest nests deeper than the chosen limit is REJECTED with
+- [x] A `.dap` whose manifest nests deeper than the chosen limit is REJECTED with
       a named reason, not parsed.
-- [ ] The rejection happens before the recursion, not by surviving it.
-- [ ] The limit is derived from a stated stack budget, and the derivation is
+- [x] The rejection happens before the recursion, not by surviving it.
+- [x] The limit is derived from a stated stack budget, and the derivation is
       written down where the next person will find it.
-- [ ] A host corpus case pins it: a deeply nested manifest must fail the parse,
+- [x] A host corpus case pins it: a deeply nested manifest must fail the parse,
       and the case must fail loudly if the bound is removed (mutation-tested).
-- [ ] All 57 real `apps/**/build/app.elf` manifests still parse — the bound must
+- [x] All 57 real `apps/**/build/app.elf` manifests still parse — the bound must
       not reject legitimate output.
-- [ ] `main_task` peak on the cardputer is re-measured with the fix and reported
-      as a number.
+- [ ] **BLOCKED ON HARDWARE** — `main_task` peak on the cardputer re-measured with
+      the fix and reported as a number. Nobody in the implementing session had the
+      board. Deliberately left unticked; no number was estimated or fabricated.
+      To close it, with the CardPuter attached:
+      `python tools/dbt.py flash kernel && python tools/dbt.py flashimg &&
+      python tools/dbt.py monitor`, then `free` at the DuneOS shell — it prints
+      `boot stack peak N of 5120`. Baseline to compare against: peak 4276 B,
+      784 B usable margin. The derivation predicts no change, since the depth-4
+      bound holds the manifest chain at or below the pre-existing 672 B maximum.
 
 ## Out of scope
 

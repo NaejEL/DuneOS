@@ -21052,6 +21052,11 @@
   },
   {
    "count": 1,
+   "dst": "scan",
+   "src": "kernel/duneos_loader/CMakeLists.txt"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "kernel/duneos_loader/Kconfig"
   },
@@ -21752,6 +21757,31 @@
   },
   {
    "count": 1,
+   "dst": "DUNEOS_MANIFEST_MAX_DEPTH",
+   "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
+  },
+  {
+   "count": 3,
+   "dst": "duneos_loader_load",
+   "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
+  },
+  {
+   "count": 2,
+   "dst": "klog_write",
+   "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
+  },
+  {
+   "count": 1,
+   "dst": "report",
+   "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
+  },
+  {
+   "count": 3,
+   "dst": "scan",
+   "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
+  },
+  {
+   "count": 1,
    "dst": "EI_CLASS",
    "src": "kernel/duneos_loader/src/elf_parse.c"
   },
@@ -21933,6 +21963,11 @@
   {
    "count": 1,
    "dst": "DUNEOS_LOADER_MAX_SECTIONS",
+   "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
+   "count": 3,
+   "dst": "DUNEOS_MANIFEST_MAX_DEPTH",
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
@@ -22291,7 +22326,7 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
-   "count": 24,
+   "count": 25,
    "dst": "free",
    "src": "kernel/duneos_loader/src/loader.c"
   },
@@ -22331,7 +22366,7 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
-   "count": 50,
+   "count": 51,
    "dst": "klog_e",
    "src": "kernel/duneos_loader/src/loader.c"
   },
@@ -27232,12 +27267,22 @@
   },
   {
    "count": 1,
+   "dst": "DuneOS",
+   "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
+  },
+  {
+   "count": 1,
    "dst": "Risks",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
+  },
+  {
+   "count": 1,
+   "dst": "close",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
@@ -27256,8 +27301,13 @@
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "free",
+   "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
+  },
+  {
+   "count": 1,
+   "dst": "monitor",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
@@ -28339,6 +28389,61 @@
    "count": 1,
    "dst": "write",
    "src": "tests/host/test_known_yaml.c"
+  },
+  {
+   "count": 1,
+   "dst": "CHECK",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 29,
+   "dst": "CHECK_INT",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 23,
+   "dst": "DUNEOS_MANIFEST_MAX_DEPTH",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 14,
+   "dst": "depth_of",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 3,
+   "dst": "free",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 1,
+   "dst": "malloc",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 4,
+   "dst": "nested_object",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 3,
+   "dst": "scan",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 1,
+   "dst": "show",
+   "src": "tests/host/test_manifest_depth.c"
+  },
+  {
+   "count": 1,
+   "dst": "t_report",
+   "src": "tests/host/test_manifest_depth.c"
   },
   {
    "count": 6,
@@ -31491,6 +31596,71 @@
    "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
   },
   {
+   "count": 3,
+   "dst": "DUNEOS_MANIFEST_MAX_DEPTH",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 3,
+   "dst": "HEADER",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 6,
+   "dst": "MANIFESTS",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 6,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 5,
+   "dst": "_declared_limit",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 5,
+   "dst": "_json_depth",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 2,
+   "dst": "_manifest_sources",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 1,
+   "dst": "scan",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_bound_leaves_headroom_over_the_deepest_real_manifest",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_embedded_manifest_nests_within_the_bound",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_repo_has_manifests",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
    "count": 2,
    "dst": "AF_INET",
    "src": "tools/dbt/tests/test_qemu.py"
@@ -34310,8 +34480,10 @@
    "kernel/duneos_loader/include/duneos/elf_parse.h",
    "kernel/duneos_loader/include/duneos/loader.h",
    "kernel/duneos_loader/include/duneos/loader_limits.h",
+   "kernel/duneos_loader/include/duneos/manifest_depth.h",
    "kernel/duneos_loader/src/elf_parse.c",
    "kernel/duneos_loader/src/loader.c",
+   "kernel/duneos_loader/src/manifest_depth.c",
    "libdune/src/libdune_fs.c",
    "libdune/src/libdune_mem.c",
    "libdune/src/libdune_ptr.c",
@@ -34405,6 +34577,7 @@
    "tests/host/test_elf_validate.c",
    "tests/host/test_i2c_decode.c",
    "tests/host/test_known_yaml.c",
+   "tests/host/test_manifest_depth.c",
    "tests/host/test_re.c",
    "tools/dbt.py",
    "tools/dbt/__init__.py",
@@ -34431,6 +34604,7 @@
    "tools/dbt/tests/test_bspgen_qemu.py",
    "tools/dbt/tests/test_bspgen_uart.py",
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
+   "tools/dbt/tests/test_manifest_depth_bound.py",
    "tools/dbt/tests/test_qemu.py",
    "tools/dbt/tests/test_sdkconfig_check.py",
    "tools/dbt/tests/test_sdkconfig_guard_coverage.py",
@@ -34607,6 +34781,7 @@
    "DUNEOS_LOADER_MACHINE_XTENSA",
    "DUNEOS_LOADER_MAX_SECTIONS",
    "DUNEOS_MAILBOX_DEPTH",
+   "DUNEOS_MANIFEST_MAX_DEPTH",
    "DUNEOS_MANIFEST_SECTION",
    "DUNEOS_MAX_APPS",
    "DUNEOS_MAX_REGISTERED_DRIVERS",
@@ -34725,6 +34900,7 @@
    "GREEN_RUN_CONSOLE",
    "GUARD_NAMES",
    "HAL_I2C_MAX_DEVICES",
+   "HEADER",
    "HISTORY_DEPTH",
    "HIST_DEPTH",
    "HIST_LEN",
@@ -34813,6 +34989,7 @@
    "LOGIC_GET_INFO",
    "LOGIC_MAX_CHANNELS",
    "LOGIC_SET_CONFIG",
+   "MANIFESTS",
    "MANIFEST_JSON_FILE",
    "MANIFEST_SECTION",
    "MANIFEST_YAML_FILE",
@@ -35148,6 +35325,7 @@
    "_config_error",
    "_convert_etc_pngs",
    "_create_image",
+   "_declared_limit",
    "_define",
    "_deploy_data",
    "_deps_satisfied",
@@ -35189,6 +35367,7 @@
    "_is_bin_app",
    "_is_entry_point",
    "_iter_functions",
+   "_json_depth",
    "_kill_idf",
    "_list_boards",
    "_list_ports",
@@ -35197,6 +35376,7 @@
    "_log",
    "_log_ansi",
    "_make_opts",
+   "_manifest_sources",
    "_menu_selected",
    "_msg",
    "_nested_get",
@@ -35433,6 +35613,7 @@
    "decode_perms",
    "default_sources",
    "deploy_single",
+   "depth_of",
    "devfs_close",
    "devfs_closedir",
    "devfs_end_select",
@@ -35907,6 +36088,7 @@
    "mut_symtab_strtab_nobits",
    "mut_wrong_machine",
    "nanosleep",
+   "nested_object",
    "next_char",
    "next_tok",
    "normalize_path",
@@ -36215,6 +36397,7 @@
    "test_boolean_is_rejected",
    "test_boot_banners_are_counted_once_each_across_chunks",
    "test_both_layers_are_checked_for_the_active_board",
+   "test_bound_leaves_headroom_over_the_deepest_real_manifest",
    "test_capacity_limit",
    "test_cardputer_board_yaml_declares_radar_uart",
    "test_classes",
@@ -36232,6 +36415,7 @@
    "test_divzero",
    "test_dot",
    "test_each_payload_asserts_on_its_own_app_not_another",
+   "test_embedded_manifest_nests_within_the_bound",
    "test_empty_output_matches_nothing",
    "test_enforce_exits_and_names_symbol_stale_value_and_remedy",
    "test_enforce_is_silent_when_the_build_agrees",
@@ -36310,6 +36494,7 @@
    "test_realistic",
    "test_reaping_kills_a_tracked_process_group",
    "test_repeated_start",
+   "test_repo_has_manifests",
    "test_run_loop_completes_on_a_good_run",
    "test_run_loop_reports_eof_when_qemu_dies_early",
    "test_run_loop_stops_on_panic",

@@ -12,3 +12,4 @@ fuzz_artifacts/
 fuzz_ran.marker
 test_elf_scan
 elf_scan_*/
+test_manifest_depth
