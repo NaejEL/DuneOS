@@ -7,10 +7,12 @@ CFLAGS  += -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L
 ROOT    := ../..
 
 TESTS   := test_re test_i2c_decode test_known_yaml test_elf_validate \
-           test_elf_scan
+           test_elf_scan test_manifest_depth
 
 ELF_INC := -I$(ROOT)/kernel/duneos_loader/include
 ELF_SRC := $(ROOT)/kernel/duneos_loader/src/elf_parse.c
+CJSON_INC := -I$(ROOT)/third_party/cjson
+CJSON_SRC := $(ROOT)/third_party/cjson/cJSON.c
 
 # Fuzzing (LEG-26). libFuzzer needs clang; override FUZZ_CC for another one.
 FUZZ_CC        ?= clang
@@ -48,6 +50,16 @@ test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tass
 test_elf_scan: test_elf_scan.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
                $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h
 	$(CC) $(CFLAGS) $(ELF_INC) test_elf_scan.c elf_corpus.c $(ELF_SRC) -o $@
+
+# LEG-41: cJSON is linked in at its STOCK nesting limit on purpose — the test
+# asserts that what the pre-parse bound rejects is what cJSON would have
+# descended into. Do not pass -DCJSON_NESTING_LIMIT here.
+test_manifest_depth: test_manifest_depth.c \
+                     $(ROOT)/kernel/duneos_loader/src/manifest_depth.c \
+                     $(ROOT)/kernel/duneos_loader/include/duneos/manifest_depth.h \
+                     $(CJSON_SRC) tassert.h
+	$(CC) $(CFLAGS) $(ELF_INC) $(CJSON_INC) test_manifest_depth.c \
+	    $(ROOT)/kernel/duneos_loader/src/manifest_depth.c $(CJSON_SRC) -o $@
 
 test: all
 	@rc=0; \

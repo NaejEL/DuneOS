@@ -2,6 +2,7 @@
 #include "duneos/elf.h"
 #include "duneos/elf_parse.h"
 #include "duneos/loader_limits.h"
+#include "duneos/manifest_depth.h"
 #include "duneos/supervisor.h"
 #include "duneos/api.h"
 
@@ -1121,6 +1122,20 @@ static esp_err_t extract_manifest(const duneos_elf_io_t    *io,
         out->heap_size      = 0;   /* 0 → global heap */
         out->wdt_timeout_ms = 0;   /* 0 → WDT disabled */
 
+        /* LEG-41: bound the nesting BEFORE cJSON's mutually recursive descent
+         * is entered — the depth is chosen by file content, the stack it runs
+         * on is main_task's. Derivation of the limit: duneos/manifest_depth.h.
+         * out_depth is deliberately NULL: the local it would need costs this
+         * frame 16 B, on the very chain being bounded. */
+        if (duneos_manifest_scan_depth(raw, sh->sh_size,
+                                       DUNEOS_MANIFEST_MAX_DEPTH, NULL) != 0) {
+            klog_e(TAG, "manifest rejected: JSON nesting exceeds the %u-level "
+                        "stack bound (LEG-41)",
+                   (unsigned)DUNEOS_MANIFEST_MAX_DEPTH);
+            free(raw);
+            return ESP_ERR_INVALID_SIZE;
+        }
+
         cJSON *root = cJSON_ParseWithLength(raw, sh->sh_size);
         free(raw);  /* cJSON owns its own copy — we can free raw now */
 
@@ -1300,32 +1315,47 @@ void duneos_loader_init(void)
  * (32) = 368 B, then 64 B per JSON nesting level (parse_object or parse_array
  * 32 + parse_value 32) and 48 B for the parse_string leaf. Even a flat manifest
  * is one object, so it already reaches 480 B, and 368 + 64n + 48 passes the 672 B
- * fixed-depth maximum at n = 5 (736 B). This is the only chain here with no upper
- * bound: the descent is mutually recursive on attacker-supplied file content and
- * stops only at CJSON_NESTING_LIMIT (1000) — roughly 64 KiB, on a 5120 B stack.
- * So the deepest chain on this path is not one of ours; it is whatever a file on
- * the SD card asks for.
- * That is a tracked defect, not something to fix here — LEG-41,
- * specs/SPEC-leg-41-manifest-json-recursion.md.
+ * fixed-depth maximum at n = 5 (736 B). This chain used to have no upper bound
+ * of ours: the descent is mutually recursive on attacker-supplied file content
+ * and stopped only at CJSON_NESTING_LIMIT (1000) — roughly 64 KiB, on a 5120 B
+ * stack. The deepest chain on this path was therefore not one of ours; it was
+ * whatever a file on the SD card asked for.
+ * That was LEG-41, and it is now bounded: extract_manifest() scans the
+ * manifest bytes with duneos_manifest_scan_depth() — one non-recursive pass,
+ * O(1) stack — and rejects anything nesting deeper than
+ * DUNEOS_MANIFEST_MAX_DEPTH (4) before cJSON is called at all. At the bound the
+ * chain is 416 + 64*4 = 672 B, exactly the fixed-depth maximum above, so no
+ * manifest can raise the peak of this path. The derivation of the 4 lives in
+ * duneos/manifest_depth.h; -DCJSON_NESTING_LIMIT in the component's
+ * CMakeLists.txt is the second line of defence, not the mechanism.
  *
  * Measured on hardware (M5Stack CardPuter) with a well-formed manifest, three
- * boots. The quantity uxTaskGetStackHighWaterMark() actually reports is the FREE
- * space, and that is what to compare: 924 / 860 / 844 B free. A high-water mark
- * is the worst observation, so the figure that counts is the 844 B one.
+ * boots per measurement. The quantity uxTaskGetStackHighWaterMark() actually
+ * reports is the FREE space, and that is what to compare. A high-water mark is
+ * the worst observation, so the figure that counts is always the smallest one.
  *
  * main_task's real stack is 5120 B, not the 4608 B of the board's Kconfig value:
  * ESP-IDF creates it with ESP_TASK_MAIN_STACK = CONFIG_ESP_MAIN_TASK_STACK_SIZE
  * + TASK_EXTRA_STACK_SIZE, and the latter is 512 B on this picolibc build
- * (esp_task.h:33-36, 57). So the peaks are 4196 / 4260 / 4276 B of 5120 B; the
- * worst is 4276 B, leaving 844 B raw and 784 B after the 60 B end-of-stack
- * watchpoint.
+ * (esp_task.h:33-36, 57).
  *
- * Before the split the same board measured 784 B usable margin on the same
- * basis. The worst-case margin is therefore UNCHANGED by the split — not
- * improved. Which is the result the split was designed for, since every byte of
- * the deepest chains was meant to stay where it was; the +32 B on the logging
- * chains above did not surface as a new worst case in these three boots, and
- * three boots is not a proof that it cannot.
+ * PRE-LEG-41 BASELINE (LEG-05, the split): 924 / 860 / 844 B free, i.e. peaks
+ * 4196 / 4260 / 4276 B of 5120 B; the worst is 4276 B, leaving 844 B raw and
+ * 784 B after the 60 B end-of-stack watchpoint. Before the split the same board
+ * measured 784 B usable margin on the same basis, so the worst-case margin was
+ * UNCHANGED by the split — not improved. Which is the result the split was
+ * designed for, since every byte of the deepest chains was meant to stay where
+ * it was; the +32 B on the logging chains above did not surface as a new worst
+ * case in these three boots, and three boots is not a proof that it cannot.
+ *
+ * CURRENT, with the LEG-41 gate (2026-09-07): 860 / 860 / 908 B free, i.e. a
+ * worst case of peak 4260 B of 5120, 860 B free, 800 B after the watchpoint.
+ * The worst-case margin is again UNCHANGED against the 784 B baseline: the 16 B
+ * is boot-to-boot variance, not a gain this change earned. Unchanged is what
+ * the derivation predicts — the depth-4 bound holds the manifest chain at or
+ * below the 672 B fixed-depth maximum, so it consumes none of the margin by
+ * construction. Reading the 16 B as an improvement is the LEG-05 ledger mistake
+ * in a smaller font. Full record: specs/SPEC-leg-41-manifest-json-recursion.md.
  *
  * That mark is published in main() as ambient state (AMBIENT_STACK_PATH) and
  * printed by `free`.
