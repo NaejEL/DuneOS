@@ -10272,6 +10272,11 @@
   },
   {
    "count": 2,
+   "dst": "_parse_submodule_paths",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
    "dst": "_submodule_prefixes",
    "src": "conftest.py"
   },
@@ -10317,12 +10322,12 @@
   },
   {
    "count": 1,
-   "dst": "pytest_runtest_setup",
+   "dst": "pytest_runtest_logfinish",
    "src": "conftest.py"
   },
   {
    "count": 1,
-   "dst": "pytest_runtest_teardown",
+   "dst": "pytest_runtest_setup",
    "src": "conftest.py"
   },
   {
@@ -31517,7 +31522,7 @@
   },
   {
    "count": 1,
-   "dst": "check",
+   "dst": "decode",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
@@ -31538,6 +31543,11 @@
   {
    "count": 1,
    "dst": "resolve",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "stderr",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
@@ -33141,12 +33151,12 @@
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "GENERATED",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 12,
+   "count": 13,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
@@ -33166,13 +33176,23 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
+   "count": 1,
+   "dst": "_git",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
    "count": 2,
    "dst": "_guarded_open",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "_ignore_rule_files",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "_parse_submodule_paths",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
@@ -33186,6 +33206,16 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
+   "count": 1,
+   "dst": "classify",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
    "count": 2,
    "dst": "flaky",
    "src": "tools/dbt/tests/test_read_guard.py"
@@ -33196,7 +33226,7 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 4,
+   "count": 7,
    "dst": "open",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
@@ -33206,7 +33236,7 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 31,
+   "count": 36,
    "dst": "read_guard",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
@@ -33227,6 +33257,16 @@
   },
   {
    "count": 1,
+   "dst": "test_a_transient_git_failure_does_not_narrow_the_signature",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
    "dst": "test_caches_and_paths_outside_the_repo_are_never_classified",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
@@ -33243,6 +33283,11 @@
   {
    "count": 2,
    "dst": "test_opening_a_denied_path_fails_the_test_that_did_it",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_pathlib_readers_are_intercepted_too",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
@@ -36161,6 +36206,7 @@
    "_opt",
    "_parse_ci",
    "_parse_size",
+   "_parse_submodule_paths",
    "_pick",
    "_pick_and_build",
    "_picked",
@@ -36947,8 +36993,8 @@
    "push_history",
    "put_boot_stack",
    "pytest_configure",
+   "pytest_runtest_logfinish",
    "pytest_runtest_setup",
-   "pytest_runtest_teardown",
    "pytest_unconfigure",
    "qemu_available",
    "qemu_gdb_report",
@@ -37172,9 +37218,11 @@
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
    "test_a_symbol_absent_from_the_build_is_not_a_conflict",
+   "test_a_transient_git_failure_does_not_narrow_the_signature",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
    "test_all_eight_boards_still_validate",
    "test_an_agreeing_build_is_not_a_conflict",
+   "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
    "test_an_unconfigured_build_directory_passes",
    "test_an_unknown_key_is_refused",
    "test_an_unrelated_raw_kconfig_entry_is_not_refused",
@@ -37262,6 +37310,7 @@
    "test_parse_flash_size",
    "test_parse_flash_size_rejects_non_literal_sizes",
    "test_parses_values_and_unset_symbols",
+   "test_pathlib_readers_are_intercepted_too",
    "test_pathological",
    "test_pick_gdb_port_does_not_hand_out_a_port_twice_in_a_row",
    "test_pick_gdb_port_returns_a_bindable_port",

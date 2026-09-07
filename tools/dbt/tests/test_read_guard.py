@@ -85,6 +85,39 @@ def test_a_failed_classification_is_not_remembered(read_guard, monkeypatch):
     assert guard.is_ignored(rel) is True
 
 
+@pytest.mark.parametrize("reader", [
+    lambda p: p.read_text(encoding="utf-8"),
+    lambda p: p.read_bytes(),
+    lambda p: p.open(encoding="utf-8").close(),
+])
+def test_pathlib_readers_are_intercepted_too(reader):
+    """The idiom of all four recorded instances and of every rebuilt assertion.
+    pathlib goes through io.open, which is a different object from builtins.open."""
+    with pytest.raises(BaseException, match="LEG-38"):
+        reader(GENERATED)
+
+
+def test_an_empty_submodule_path_cannot_exempt_the_whole_repo(read_guard):
+    """`path =` or `path = .` yields an empty prefix, which prefix-matches every
+    path in the repo: the guard would classify nothing and stay green."""
+    assert read_guard._parse_submodule_paths(
+        '[submodule "x"]\n\tpath =\n[submodule "y"]\n\tpath = .\n') == ()
+    assert read_guard._parse_submodule_paths(
+        '[submodule "z"]\n\tpath = third_party/cjson\n') == (("third_party", "cjson"),)
+
+
+def test_a_transient_git_failure_does_not_narrow_the_signature(read_guard, monkeypatch):
+    guard = read_guard._GUARD
+    monkeypatch.setattr(guard, "_rule_files", None)
+    monkeypatch.setattr(guard, "_git", lambda args, ok: None)
+    assert len(guard._ignore_rule_files()) == 2
+    assert guard._rule_files is None
+
+    monkeypatch.undo()
+    monkeypatch.setattr(guard, "_rule_files", None)
+    assert REPO_ROOT / "tests" / "host" / ".gitignore" in guard._ignore_rule_files()
+
+
 def test_the_nested_gitignore_files_are_in_the_cache_signature(read_guard):
     """tests/host/.gitignore is tracked and governs real build artefacts, so a
     cache that outlives an edit to it would answer from stale rules."""

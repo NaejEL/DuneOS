@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 # than no hook: people learn to bypass it. The deny set is build artefacts under
 # the repo — never bytecode, never a tool's own cache, never anything outside.
 _EXEMPT_SUFFIXES = frozenset({".pyc", ".pyo"})
-_EXEMPT_DIRS = frozenset({"__pycache__", "managed_components", "node_modules"})
+_EXEMPT_DIRS = frozenset({"__pycache__", "managed_components"})
 
 _ADVICE = ("generated files are absent on a clean checkout and in CI; build what "
            "you assert against under tmp_path")
@@ -35,18 +35,25 @@ class _Unclassifiable(Exception):
     sticky error turns the guard into a session-wide skip machine."""
 
 
-def _submodule_prefixes():
-    modules = REPO_ROOT / ".gitmodules"
+def _parse_submodule_paths(text):
     prefixes = []
-    try:
-        text = modules.read_text(encoding="utf-8")
-    except OSError:
-        return ()
     for line in text.splitlines():
         key, sep, value = line.partition("=")
         if sep and key.strip() == "path":
-            prefixes.append(tuple(Path(value.strip()).parts))
+            # An empty or "." path would match every path in the repo and
+            # exempt the whole tree, leaving the guard green and inert.
+            parts = tuple(part for part in Path(value.strip()).parts if part != ".")
+            if parts:
+                prefixes.append(parts)
     return tuple(prefixes)
+
+
+def _submodule_prefixes():
+    try:
+        text = (REPO_ROOT / ".gitmodules").read_text(encoding="utf-8")
+    except OSError:
+        return ()
+    return _parse_submodule_paths(text)
 
 
 # Read at import time, before the guard is installed: reading it lazily from
@@ -97,22 +104,29 @@ class _Guard:
         return self._ignored[key]
 
     def _ignore_rule_files(self):
-        if self._rule_files is None:
-            files = [REPO_ROOT / ".gitignore", REPO_ROOT / ".git" / "info" / "exclude"]
-            for line in self._git(["ls-files", "--", ".gitignore", "*/.gitignore"]):
-                files.append(REPO_ROOT / line)
-            for line in self._git(["config", "--get", "core.excludesFile"]):
-                files.append(Path(os.path.expanduser(line)))
-            self._rule_files = tuple(dict.fromkeys(files))
+        if self._rule_files is not None:
+            return self._rule_files
+        files = [REPO_ROOT / ".gitignore", REPO_ROOT / ".git" / "info" / "exclude"]
+        tracked = self._git(["ls-files", "--", ".gitignore", "*/.gitignore"], (0,))
+        excludes = self._git(["config", "--get", "core.excludesFile"], (0, 1))
+        if tracked is None or excludes is None:
+            # Never cache a short list: one transient git failure would narrow
+            # the invalidation signature for the whole session.
+            return tuple(files)
+        files += [REPO_ROOT / line for line in tracked]
+        files += [Path(os.path.expanduser(line)) for line in excludes]
+        self._rule_files = tuple(dict.fromkeys(files))
         return self._rule_files
 
     @staticmethod
-    def _git(args):
+    def _git(args, ok_returncodes):
         try:
             proc = subprocess.run(["git", "-C", str(REPO_ROOT)] + args,
                                   capture_output=True)
         except OSError:
-            return []
+            return None
+        if proc.returncode not in ok_returncodes:
+            return None
         return [l.strip() for l in proc.stdout.decode(errors="replace").splitlines()
                 if l.strip()]
 
@@ -184,7 +198,9 @@ def pytest_runtest_setup(item):
     _GUARD.node = item.nodeid
 
 
-def pytest_runtest_teardown(item):
+def pytest_runtest_logfinish(nodeid, location):
+    # Not pytest_runtest_teardown: fixture finalizers run after it, and a
+    # violation in one would be attributed to nobody.
     _GUARD.node = None
 
 

@@ -38,8 +38,11 @@ Rest of the suite audited clean: tracked sources or `tmp_path` fixtures only.
 
 ## Scope
 
-- `tools/dbt/tests/conftest.py` — read-time guard: opening a gitignored path
-  fails the test that did it, naming test and path. Enforced on the path actually
+- `conftest.py` at the repo root — read-time guard: opening a gitignored path
+  fails the test that did it, naming test and path. (Delivered at the root, not
+  under `tools/dbt/tests/` as first written here: the collection root is `tools`,
+  so a sub-directory conftest leaves the rest of it unguarded and misattributes
+  violations.) Enforced on the path actually
   opened, whatever expression produced it — not a lint of source text. Ignore
   status comes from git itself, not a hand-maintained list. Deny set scoped to
   build artefacts under the repo (never `__pycache__`, `.pyc`, caches). Git

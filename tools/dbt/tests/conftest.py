@@ -18,8 +18,11 @@ def regenerated_root(tmp_path_factory):
     for yaml_path in sorted((REPO_ROOT / "boards").glob("*/board.yaml")):
         dest = root / "boards" / yaml_path.parent.name
         dest.mkdir(parents=True)
-        subprocess.run(
+        proc = subprocess.run(
             [sys.executable, str(REPO_ROOT / "tools" / "duneos-bspgen.py"),
              str(yaml_path), "--out", str(dest / "board_config.h")],
-            check=True, capture_output=True)
+            capture_output=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"bspgen rejected {yaml_path}:\n"
+                               f"{proc.stderr.decode(errors='replace')}")
     return root
