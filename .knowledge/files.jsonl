@@ -1,7 +1,7 @@
 {"lang": "markdown", "lines": 306, "path": "CLAUDE.md", "sha256": "b4e74a748f2c99ef103bc0fa5b1378279260bd7ae57f84cfc16ce8239a5f4fa3", "size": 31180}
 {"lang": "other", "lines": 72, "path": "CMakeLists.txt", "sha256": "177dd3ed8c566b2f288cd2590c59874febac1403f98b4ca2073da4af7e7079f6", "size": 3081}
 {"lang": "markdown", "lines": 333, "path": "README.md", "sha256": "d4e9c2a6b61ee8dae6a36d4d371ae5d412751fcf0344309f6568c514594a53ef", "size": 19316}
-{"lang": "markdown", "lines": 1095, "path": "ROADMAP.md", "sha256": "56e0c4ce4ce782da2c0c5e72e76121a5f287202e95650be1ae14e494e56b318e", "size": 124541}
+{"lang": "markdown", "lines": 1095, "path": "ROADMAP.md", "sha256": "ba125f9e33a9893cafb5f1c9638d45834bad89fa850d65a56bbed5c581c2bf24", "size": 126594}
 {"lang": "cpp", "lines": 48, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "683fa79c950b2df3176f16629d6629e571eae31c1c3262d2cf98ee610e1c0e44", "size": 1477}
 {"lang": "yaml", "lines": 7, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "6dbddf714eaeb8d2f9643a96173ea4ce03ba48ebe5b431c220c9a54c68b2a240", "size": 168}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
@@ -380,7 +380,7 @@
 {"lang": "markdown", "lines": 128, "path": "specs/SPEC-leg-37-per-board-main-stack.md", "sha256": "19b46758ecc9df8aaee0aac7b45bc8c768449389279c0651137f4ffa5b382456", "size": 9123}
 {"lang": "markdown", "lines": 87, "path": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md", "sha256": "96c11e4d71b3c80eddadb8fd35e9d62fd1353a2fa0ff73d97441723621c06563", "size": 5374}
 {"lang": "markdown", "lines": 78, "path": "specs/SPEC-leg-40-tui-tests-menu.md", "sha256": "22507e1be883c285356f6efb6676aa39fcd05473f4f6852365a7f9abc3e20a29", "size": 3986}
-{"lang": "markdown", "lines": 108, "path": "specs/SPEC-leg-41-manifest-json-recursion.md", "sha256": "48576aba44e583cbddf3c11d230a0cba9223af4e09d4f3baa1706d431fa30a7b", "size": 5501}
+{"lang": "markdown", "lines": 111, "path": "specs/SPEC-leg-41-manifest-json-recursion.md", "sha256": "d2cb2c07af737bcbb5ac529d79bfa691886d64ede39daae1d73fa5b5c6d0d2e6", "size": 5688}
 {"lang": "markdown", "lines": 90, "path": "specs/SPEC-radar-ld2450.md", "sha256": "0c67fb2c127ab614e252159613c29882c8ba3d7a53874bd634c4b61759f1aea1", "size": 10807}
 {"lang": "other", "lines": 105, "path": "tests/host/Makefile", "sha256": "d07dcc96fcba3e9d45791f0b9e1f00d8567656f8a41e16c5610f886763206ea3", "size": 4584}
 {"lang": "cpp", "lines": 469, "path": "tests/host/elf_corpus.c", "sha256": "91aac56b1424a5127fbf3c8499befb9ccd55d6b609f84bcc3d134f776663e87d", "size": 17464}

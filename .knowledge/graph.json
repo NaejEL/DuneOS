@@ -956,7 +956,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "duneos_loader_load",
    "src": "ROADMAP.md"
   },
@@ -966,7 +966,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "duneos_loader_scan",
    "src": "ROADMAP.md"
   },
@@ -1051,7 +1051,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 11,
+   "count": 13,
    "dst": "free",
    "src": "ROADMAP.md"
   },
@@ -27282,11 +27282,6 @@
   },
   {
    "count": 1,
-   "dst": "close",
-   "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
-  },
-  {
-   "count": 1,
    "dst": "consume",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
@@ -27301,13 +27296,13 @@
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
-   "count": 3,
+   "count": 7,
    "dst": "free",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
    "count": 1,
-   "dst": "monitor",
+   "dst": "read",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {

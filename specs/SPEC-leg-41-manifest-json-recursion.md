@@ -85,15 +85,18 @@ itself unbounded and adds a task to the boot path).
       and the case must fail loudly if the bound is removed (mutation-tested).
 - [x] All 57 real `apps/**/build/app.elf` manifests still parse — the bound must
       not reject legitimate output.
-- [ ] **BLOCKED ON HARDWARE** — `main_task` peak on the cardputer re-measured with
-      the fix and reported as a number. Nobody in the implementing session had the
-      board. Deliberately left unticked; no number was estimated or fabricated.
-      To close it, with the CardPuter attached:
-      `python tools/dbt.py flash kernel && python tools/dbt.py flashimg &&
-      python tools/dbt.py monitor`, then `free` at the DuneOS shell — it prints
-      `boot stack peak N of 5120`. Baseline to compare against: peak 4276 B,
-      784 B usable margin. The derivation predicts no change, since the depth-4
-      bound holds the manifest chain at or below the pre-existing 672 B maximum.
+- [x] `main_task` peak on the cardputer is re-measured with the fix and reported
+      as a number. **Measured 2026-09-07 on the m5stack-cardputer**, kernel flashed
+      from `af71741`, three boots read with `free` at the DuneOS shell:
+      **860 / 860 / 908 B free**, so the worst case is **peak 4260 B of 5120,
+      860 B free, 800 B after the 60 B end-of-stack watchpoint**.
+      Baseline without the fix (LEG-05, three boots): 924 / 860 / 844 B free,
+      worst case peak 4276 B / 844 B free / 784 B usable.
+      **The worst-case margin is unchanged.** The 16 B difference is boot-to-boot
+      variance, not a gain attributable to this change — the derivation predicts
+      no change, because the depth-4 bound holds the manifest chain at or below
+      the pre-existing 672 B fixed-depth maximum, so it consumes none of the
+      margin. Measured, not predicted.
 
 ## Out of scope
 
