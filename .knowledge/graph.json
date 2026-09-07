@@ -1241,7 +1241,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 14,
+   "count": 13,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -10224,6 +10224,136 @@
    "count": 4,
    "dst": "usage",
    "src": "ci/factory.sh"
+  },
+  {
+   "count": 10,
+   "dst": "REPO_ROOT",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_Guard",
+   "src": "conftest.py"
+  },
+  {
+   "count": 4,
+   "dst": "_Unclassifiable",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "__init__",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_check_ignore",
+   "src": "conftest.py"
+  },
+  {
+   "count": 3,
+   "dst": "_git",
+   "src": "conftest.py"
+  },
+  {
+   "count": 3,
+   "dst": "_guarded_open",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_ignore_rule_files",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_ignore_rules_signature",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "_submodule_prefixes",
+   "src": "conftest.py"
+  },
+  {
+   "count": 3,
+   "dst": "candidate",
+   "src": "conftest.py"
+  },
+  {
+   "count": 6,
+   "dst": "check",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "classify",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "decode",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "is_ignored",
+   "src": "conftest.py"
+  },
+  {
+   "count": 10,
+   "dst": "open",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_configure",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_runtest_setup",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_runtest_teardown",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "pytest_unconfigure",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "read_guard",
+   "src": "conftest.py"
+  },
+  {
+   "count": 3,
+   "dst": "resolve",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "stat",
+   "src": "conftest.py"
+  },
+  {
+   "count": 1,
+   "dst": "stderr",
+   "src": "conftest.py"
   },
   {
    "count": 2,
@@ -26777,6 +26907,11 @@
   },
   {
    "count": 1,
+   "dst": "flaky",
+   "src": "specs/SPEC-leg-26-host-harness-elf-corpus.md"
+  },
+  {
+   "count": 1,
    "dst": "missing",
    "src": "specs/SPEC-leg-26-host-harness-elf-corpus.md"
   },
@@ -27498,6 +27633,11 @@
   {
    "count": 2,
    "dst": "fail",
+   "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
+  },
+  {
+   "count": 1,
+   "dst": "flaky",
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
   },
   {
@@ -31371,68 +31511,13 @@
    "src": "tools/dbt/system.py"
   },
   {
-   "count": 9,
+   "count": 4,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
-   "count": 5,
-   "dst": "_GitUnavailable",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 2,
-   "dst": "_Guard",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
    "count": 1,
-   "dst": "__init__",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 2,
-   "dst": "_check_ignore",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 3,
-   "dst": "_guarded_open",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 2,
-   "dst": "_ignore_rules_signature",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 2,
-   "dst": "candidate",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 5,
    "dst": "check",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "classify",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "decode",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "fail",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 2,
-   "dst": "is_ignored",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
@@ -31441,33 +31526,8 @@
    "src": "tools/dbt/tests/conftest.py"
   },
   {
-   "count": 6,
-   "dst": "open",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "pytest_configure",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "pytest_runtest_setup",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "pytest_unconfigure",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
    "count": 1,
    "dst": "read",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "read_guard",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
@@ -31478,16 +31538,6 @@
   {
    "count": 1,
    "dst": "resolve",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "stat",
-   "src": "tools/dbt/tests/conftest.py"
-  },
-  {
-   "count": 1,
-   "dst": "stderr",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
@@ -33091,13 +33141,28 @@
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
-   "count": 4,
+   "count": 6,
    "dst": "GENERATED",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 6,
+   "count": 12,
    "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 3,
+   "dst": "TRACKED",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "_Unclassifiable",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "_check_ignore",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
@@ -33106,33 +33171,53 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 5,
+   "count": 1,
+   "dst": "_ignore_rule_files",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 10,
    "dst": "candidate",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 3,
+   "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "flaky",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 7,
    "dst": "is_ignored",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "open",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "read",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
-   "count": 16,
+   "count": 31,
    "dst": "read_guard",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
    "count": 1,
    "dst": "resolve",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_failed_classification_is_not_remembered",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
@@ -33151,8 +33236,23 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
+   "count": 1,
+   "dst": "test_every_read_mode_is_classified",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
    "count": 2,
    "dst": "test_opening_a_denied_path_fails_the_test_that_did_it",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_reading_inside_a_submodule_disturbs_no_other_path",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_submodule_paths_are_out_of_scope",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
@@ -33162,12 +33262,17 @@
   },
   {
    "count": 1,
+   "dst": "test_the_nested_gitignore_files_are_in_the_cache_signature",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 1,
    "dst": "test_the_tracked_yaml_next_to_it_is_allowed",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
    "count": 1,
-   "dst": "test_writes_are_not_classified",
+   "dst": "test_write_modes_are_not",
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
@@ -35004,6 +35109,7 @@
    "boards/m5stack-cardputer/init.yaml",
    "ci/factory.ps1",
    "ci/factory.sh",
+   "conftest.py",
    "docs/adr/000-process.md",
    "docs/adr/001-error-model.md",
    "docs/adr/002-osal-api.md",
@@ -35932,6 +36038,7 @@
    "TMPFS_MAX_FDS",
    "TMPFS_MAX_FILES",
    "TMPFS_NAME_MAX",
+   "TRACKED",
    "USAGE",
    "VADDR_EXHAUSTED_LOG",
    "VALID_CPUS",
@@ -35950,8 +36057,8 @@
    "_DUNEOS_DRV_CAT",
    "_DUNEOS_DRV_CAT2",
    "_DUNEOS_SOCKET_NEED_SELECT",
-   "_GitUnavailable",
    "_Guard",
+   "_Unclassifiable",
    "__attribute__",
    "__call__",
    "__enter__",
@@ -36009,6 +36116,7 @@
    "_fmt_kb",
    "_get_board_name",
    "_get_sysbin_offset",
+   "_git",
    "_got",
    "_got_path",
    "_guard",
@@ -36021,6 +36129,7 @@
    "_idf_env",
    "_idf_export",
    "_ignore",
+   "_ignore_rule_files",
    "_ignore_rules_signature",
    "_image_to_dr_bytes",
    "_in_dbt_venv",
@@ -36095,6 +36204,7 @@
    "_storage_block",
    "_stream",
    "_string_args",
+   "_submodule_prefixes",
    "_to_rgb565",
    "_track",
    "_valid",
@@ -36552,6 +36662,7 @@
    "find_known",
    "find_qemu",
    "find_toolchain_root",
+   "flaky",
    "flash_kernel",
    "flash_size_from_opts",
    "flush_rect",
@@ -36837,6 +36948,7 @@
    "put_boot_stack",
    "pytest_configure",
    "pytest_runtest_setup",
+   "pytest_runtest_teardown",
    "pytest_unconfigure",
    "qemu_available",
    "qemu_gdb_report",
@@ -37042,6 +37154,7 @@
    "test_a_detected_psram_size_clears_the_unavailable_warning",
    "test_a_different_app_does_not_satisfy_the_scan_assertion",
    "test_a_failed_calloc_check_fails_the_run",
+   "test_a_failed_classification_is_not_remembered",
    "test_a_failed_write_leaves_the_old_value_intact",
    "test_a_first_build_with_no_cached_sdkconfig_proceeds",
    "test_a_generated_board_artefact_is_denied",
@@ -37102,6 +37215,7 @@
    "test_every_build_or_flash_entry_point_calls_the_guard",
    "test_every_key_used_by_every_board_in_the_tree_is_known",
    "test_every_payload_has_a_source_directory_and_a_manifest",
+   "test_every_read_mode_is_classified",
    "test_every_xtensa_cpu_accepts_the_flag",
    "test_exit_codes_are_all_distinct",
    "test_explicit_console_uart_suppresses_the_secondary_console",
@@ -37168,6 +37282,7 @@
    "test_read_board_file_ignores_trailing_lines",
    "test_read_board_file_returns_none_when_absent",
    "test_read_txn",
+   "test_reading_inside_a_submodule_disturbs_no_other_path",
    "test_realistic",
    "test_reaping_kills_a_tracked_process_group",
    "test_repeated_start",
@@ -37186,6 +37301,7 @@
    "test_settle_window_elapsing_reports_complete",
    "test_signal_and_exit_hooks_are_installed_once",
    "test_single_boot_banner_is_not_a_reboot",
+   "test_submodule_paths_are_out_of_scope",
    "test_the_board_fragment_wins_over_the_root_defaults",
    "test_the_calloc_payload_is_part_of_the_bench",
    "test_the_cardputer_value_carries_its_derivation",
@@ -37208,6 +37324,7 @@
    "test_the_loader_guards_the_write_path_on_the_symbol",
    "test_the_marker_label_claims_only_that_app_main_ran",
    "test_the_message_says_interference_not_firmware",
+   "test_the_nested_gitignore_files_are_in_the_cache_signature",
    "test_the_psram_cross_check_reports_when_it_could_not_run",
    "test_the_qemu_boards_are_not_caught_by_their_own_fragment",
    "test_the_qemu_psram_board_declares_eight_megabytes",
@@ -37236,8 +37353,8 @@
    "test_write_board_file_never_truncates_in_place",
    "test_write_board_file_overwrites_an_existing_value",
    "test_write_board_file_writes_the_name_with_a_trailing_newline",
+   "test_write_modes_are_not",
    "test_write_txn",
-   "test_writes_are_not_classified",
    "thread_body",
    "timespec",
    "timeval",

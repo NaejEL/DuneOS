@@ -39,12 +39,8 @@ def declared_root(tmp_path, monkeypatch):
 
 @pytest.fixture
 def regenerated_sources(regenerated_root, monkeypatch):
-    """The real board fragments, regenerated from their YAML into a tmp root.
-
-    These tests are about the CardPuter's and the QEMU boards' own declarations,
-    so a hand-built layer would assert nothing; reading the committed artefacts
-    asserts nothing either, for the reason given above.
-    """
+    """The real board fragments, regenerated: these tests are about the
+    CardPuter's and the QEMU boards' own declarations, not a hand-built layer."""
     monkeypatch.setattr(sc, "DUNEOS_ROOT", regenerated_root)
     return regenerated_root
 

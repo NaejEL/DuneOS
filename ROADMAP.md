@@ -699,8 +699,6 @@ peripheral, declared by a bare `logic:` key with no pin list, on `m5stack-cardpu
 `CONFIG_DUNEOS_DRV_GPIO` is explicitly out of its scope. Its four open questions are closed. **It is
 ready to build** — the `M` size is schema plus guard, not design.
 
-**LEG-38 and LEG-08 shipped together** (2026-09-07): they are one defect — a gate reporting success while having verified nothing — seen from the test side and from the job side. The audit that produced the fused spec found three more vacuous assertions, and the read guard found three others still. Their rule is in CLAUDE.md's Hard-Won Lessons, because every occurrence was written by an agent reading that file.
-
 ### Milestone 3 — Remaining test safety net and documentation consistency
 
 | ID | Finding | Severity | Size | Depends on | Spec | Status |

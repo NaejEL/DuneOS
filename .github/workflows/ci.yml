@@ -44,8 +44,9 @@ jobs:
           python -m pip install pytest pyyaml textual
 
           # Raise this when tests are added; a drop is the suite shrinking in
-          # silence, which no other check would notice.
-          FLOOR=279
+          # silence, which no other check would notice. The floor counts tests
+          # that RAN: a bug that mass-skips the suite clears a collected count.
+          FLOOR=292
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml
@@ -61,10 +62,11 @@ jobs:
             exit 1
           fi
 
-          collected=$(python -c "import xml.etree.ElementTree as E; print(next(E.parse('pytest-report.xml').getroot().iter('testsuite')).get('tests'))")
-          echo "collected $collected tests (floor $FLOOR)"
-          if [ "$collected" -lt "$FLOOR" ]; then
-            echo "::error::only $collected tests collected, floor is $FLOOR — the suite shrank"
+          read -r collected skipped <<< "$(python -c "import xml.etree.ElementTree as E; s=next(E.parse('pytest-report.xml').getroot().iter('testsuite')); print(s.get('tests'), s.get('skipped'))")"
+          ran=$((collected - skipped))
+          echo "collected $collected tests, $skipped skipped, $ran ran (floor $FLOOR)"
+          if [ "$ran" -lt "$FLOOR" ]; then
+            echo "::error::only $ran of $collected tests ran, floor is $FLOOR — the suite shrank or mass-skipped"
             exit 1
           fi
           exit $status

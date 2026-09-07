@@ -1,10 +1,4 @@
-"""Tests for the read guard in conftest.py (LEG-38).
-
-The guard exists because the artefacts it denies are present on the machine
-where the test is written, so the decisive properties are that it classifies by
-ignore status rather than existence, and that it stays away from the caches a
-test run legitimately touches.
-"""
+"""Tests for the read guard in the root conftest.py (LEG-38)."""
 
 from pathlib import Path
 
@@ -12,6 +6,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 GENERATED = REPO_ROOT / "boards" / "m5stack-cardputer" / "sdkconfig.board"
+TRACKED = REPO_ROOT / "boards" / "m5stack-cardputer" / "board.yaml"
 
 
 def test_a_generated_board_artefact_is_denied(read_guard):
@@ -21,8 +16,7 @@ def test_a_generated_board_artefact_is_denied(read_guard):
 
 
 def test_the_tracked_yaml_next_to_it_is_allowed(read_guard):
-    rel = read_guard._GUARD.candidate(
-        REPO_ROOT / "boards" / "m5stack-cardputer" / "board.yaml", "r")
+    rel = read_guard._GUARD.candidate(TRACKED, "r")
     assert read_guard._GUARD.is_ignored(rel) is False
 
 
@@ -43,8 +37,60 @@ def test_caches_and_paths_outside_the_repo_are_never_classified(read_guard, path
     assert read_guard._GUARD.candidate(path, "r") is None
 
 
-def test_writes_are_not_classified(read_guard):
-    assert read_guard._GUARD.candidate(GENERATED, "w") is None
+@pytest.mark.parametrize("mode", ["r", "rb", "r+", "rb+", "r+b"])
+def test_every_read_mode_is_classified(read_guard, mode):
+    assert read_guard._GUARD.candidate(GENERATED, mode) is not None
+
+
+@pytest.mark.parametrize("mode", ["w", "wb", "x", "a", "w+"])
+def test_write_modes_are_not(read_guard, mode):
+    assert read_guard._GUARD.candidate(GENERATED, mode) is None
+
+
+def test_submodule_paths_are_out_of_scope(read_guard):
+    """`git check-ignore` exits 128 inside a submodule instead of answering."""
+    for path in (REPO_ROOT / "third_party" / "cjson" / "README.md",
+                 REPO_ROOT / "third_party" / "littlefs" / "lfs.c"):
+        assert read_guard._GUARD.candidate(path, "r") is None
+
+
+def test_reading_inside_a_submodule_disturbs_no_other_path(read_guard):
+    """The regression: a per-path git failure used to poison the whole session,
+    turning every later test into a skip while the collected-count floor held."""
+    readme = REPO_ROOT / "third_party" / "cjson" / "README.md"
+    if readme.exists():
+        with open(readme, encoding="utf-8") as f:
+            f.read(1)
+    assert read_guard._GUARD.is_ignored(
+        read_guard._GUARD.candidate(GENERATED, "r")) is True
+    assert read_guard._GUARD.is_ignored(
+        read_guard._GUARD.candidate(TRACKED, "r")) is False
+
+
+def test_a_failed_classification_is_not_remembered(read_guard, monkeypatch):
+    guard = read_guard._GUARD
+    calls = []
+    real = guard._check_ignore
+
+    def flaky(rel):
+        calls.append(rel)
+        if len(calls) == 1:
+            raise read_guard._Unclassifiable("simulated per-path git failure")
+        return real(rel)
+
+    monkeypatch.setattr(guard, "_check_ignore", flaky)
+    rel = guard.candidate(REPO_ROOT / "boards" / "probe" / "sdkconfig.board", "r")
+    with pytest.raises(read_guard._Unclassifiable):
+        guard.is_ignored(rel)
+    assert guard.is_ignored(rel) is True
+
+
+def test_the_nested_gitignore_files_are_in_the_cache_signature(read_guard):
+    """tests/host/.gitignore is tracked and governs real build artefacts, so a
+    cache that outlives an edit to it would answer from stale rules."""
+    files = read_guard._GUARD._ignore_rule_files()
+    assert REPO_ROOT / "tests" / "host" / ".gitignore" in files
+    assert REPO_ROOT / ".gitignore" in files
 
 
 def test_the_guard_is_installed_during_the_run(read_guard):
