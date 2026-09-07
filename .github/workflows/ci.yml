@@ -10,7 +10,15 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
+      # submodules: the host suite links third_party/cjson/cJSON.c into
+      # test_manifest_depth (LEG-41) at its stock nesting limit, on purpose —
+      # the test asserts that what the pre-parse bound rejects is what cJSON
+      # would have descended into. Without this the checkout leaves that path
+      # empty and make stops before running any test, taking the pytest step
+      # below down with it.
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Run host unit tests
         run: make -C tests/host test
 

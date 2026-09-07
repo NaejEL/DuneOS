@@ -22326,7 +22326,7 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
-   "count": 25,
+   "count": 27,
    "dst": "free",
    "src": "kernel/duneos_loader/src/loader.c"
   },

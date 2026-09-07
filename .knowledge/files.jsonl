@@ -289,7 +289,7 @@
 {"lang": "cpp", "lines": 458, "path": "kernel/duneos_kernel/src/vfs.c", "sha256": "e03664fb63969a4cabf874a9baea22228724e72e225ceca762c73545e82cb570", "size": 15354}
 {"lang": "cpp", "lines": 451, "path": "kernel/duneos_kernel/src/vfs_dev.c", "sha256": "63962dcca77c3933a525f0943c0f5ac95d18a9eabedbd88c3517b49ae81d5e5e", "size": 14107}
 {"lang": "cpp", "lines": 376, "path": "kernel/duneos_kernel/src/vfs_tmp.c", "sha256": "b1096888abcc3cb6bc004bcd8d39b1a4772a33694206a094fce7de0b2208a757", "size": 9539}
-{"lang": "other", "lines": 19, "path": "kernel/duneos_loader/CMakeLists.txt", "sha256": "e3d8ac3db366541401d7151e854acc46f8740ba7d8feb82e2ae42cb1ceef48e9", "size": 844}
+{"lang": "other", "lines": 26, "path": "kernel/duneos_loader/CMakeLists.txt", "sha256": "9f68c87269153b1fcf288b207fa9938d94f84758648dd064c377b8bb0744aefd", "size": 1236}
 {"lang": "other", "lines": 36, "path": "kernel/duneos_loader/Kconfig", "sha256": "260a3271a169dafab5dd3bf4f98360f2fb2f6763249fe844ff50e728d8c58d0f", "size": 1680}
 {"lang": "cpp", "lines": 175, "path": "kernel/duneos_loader/include/duneos/elf.h", "sha256": "fdd439eddb8507c15acae57871e76b4b0746fcb8ad021f264a9789198ea12b59", "size": 7017}
 {"lang": "cpp", "lines": 171, "path": "kernel/duneos_loader/include/duneos/elf_parse.h", "sha256": "cd6d0434ce48309077dfa0411a2d777c051a79e7605c31bd8bf26b569823e2d6", "size": 8706}
@@ -297,7 +297,7 @@
 {"lang": "cpp", "lines": 45, "path": "kernel/duneos_loader/include/duneos/loader_limits.h", "sha256": "d1995bace98c10b96999cc3ed39b9cec3213c5b8e42b60c5c57f98ec77534226", "size": 1770}
 {"lang": "cpp", "lines": 94, "path": "kernel/duneos_loader/include/duneos/manifest_depth.h", "sha256": "59a103626bbc04cf17e7e14f0aae8899ea6e51eb09189e8ef273a9f2687e75a0", "size": 4297}
 {"lang": "cpp", "lines": 284, "path": "kernel/duneos_loader/src/elf_parse.c", "sha256": "5af63ea931f41e9d2bf5ea1f8fc12d73359408e10473356abca7356aed8be77c", "size": 10812}
-{"lang": "cpp", "lines": 2069, "path": "kernel/duneos_loader/src/loader.c", "sha256": "7cc9ced8300260fe78a2d4af3ed2714acb5096f21c559475c0e3fc6029a40192", "size": 84088}
+{"lang": "cpp", "lines": 2078, "path": "kernel/duneos_loader/src/loader.c", "sha256": "2b70cd25028aafcdc144a79c6f2a0bd1825ad11e43dcea02f27cb8ae9f6dada0", "size": 84780}
 {"lang": "cpp", "lines": 51, "path": "kernel/duneos_loader/src/manifest_depth.c", "sha256": "6cfb4cb729c61f79486c091edde90bf1b3853dac3696b188ed1a26c9de9bed5f", "size": 1342}
 {"lang": "cpp", "lines": 153, "path": "libdune/src/libdune_fs.c", "sha256": "26226a8a13accd750011e81ff91e08e0738e58f2cd46a6e3e79e567aac1865fa", "size": 3694}
 {"lang": "cpp", "lines": 32, "path": "libdune/src/libdune_mem.c", "sha256": "f33ccd43360208fe01bbe6691198bb2d160fa07d8ec2995d49ef6751bddc086d", "size": 673}

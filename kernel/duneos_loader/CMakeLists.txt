@@ -13,7 +13,14 @@ idf_component_register(
 
 # LEG-41, second line of defence only — the primary bound is the pre-parse scan
 # in src/manifest_depth.c. Set here rather than in third_party/cjson/cJSON.h so
-# a submodule update cannot drop it. 16 levels is 416 + 64*16 = 1440 B on the
-# manifest chain: 768 B above the 672 B fixed-depth maximum of the load path,
-# still inside main_task's 784 B worst-case measured margin.
+# a submodule update cannot drop it.
+#
+# 16 is two orders below cJSON's stock 1000, and is reached only if a call site
+# ever parses a manifest without the gate. It is NOT a budgeted chain: at 16
+# levels the descent is 416 + 64*16 = 1440 B, i.e. 768 B above the 672 B
+# fixed-depth maximum of the load path, and manifest_depth.h says why nothing
+# should be spent above that maximum at all — parse_string's callees, and
+# cJSON's per-item allocations from inside the descent, are counted in neither
+# figure. So this is a net against a bug, not a second budget; the acceptance
+# criteria rest on the gate.
 target_compile_definitions(${COMPONENT_LIB} PRIVATE CJSON_NESTING_LIMIT=16)
