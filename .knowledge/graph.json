@@ -10351,7 +10351,7 @@
    "src": "conftest.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "stat",
    "src": "conftest.py"
   },
@@ -27567,6 +27567,11 @@
   },
   {
    "count": 1,
+   "dst": "DUNEOS_ROOT",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
    "dst": "REPO_ROOT",
    "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
   },
@@ -27583,6 +27588,11 @@
   {
    "count": 2,
    "dst": "check",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 1,
+   "dst": "default_sources",
    "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
   },
   {

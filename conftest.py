@@ -6,6 +6,11 @@ and it comes from git rather than from a pattern list here.
 
 Only builtins.open / io.open are intercepted; os.open, mmap and subprocesses are
 not, and no current test uses them to reach an artefact.
+
+Path.exists()/stat() are not reads either, so `if not generated.exists(): continue`
+— recorded instance 4 — stays vacuous on CI, where the artefact is absent. It goes
+red on any machine that has run bspgen. That inversion is deliberate and is what
+the guard buys: the developer who can reproduce it is the one who gets told.
 """
 
 import builtins

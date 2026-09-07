@@ -1,7 +1,7 @@
 {"lang": "markdown", "lines": 306, "path": "CLAUDE.md", "sha256": "f13b555b0c5e0597518bebdc4a39834b66d28dc7d304003f59dca9cb49d86479", "size": 31541}
 {"lang": "other", "lines": 72, "path": "CMakeLists.txt", "sha256": "177dd3ed8c566b2f288cd2590c59874febac1403f98b4ca2073da4af7e7079f6", "size": 3081}
 {"lang": "markdown", "lines": 333, "path": "README.md", "sha256": "d4e9c2a6b61ee8dae6a36d4d371ae5d412751fcf0344309f6568c514594a53ef", "size": 19316}
-{"lang": "markdown", "lines": 1088, "path": "ROADMAP.md", "sha256": "94fcc9fb5400684d016543cf2536b7c4840fccd59eb1eff2fb2a91607d3a9300", "size": 125793}
+{"lang": "markdown", "lines": 1088, "path": "ROADMAP.md", "sha256": "bd614ef9a4180cbba993a424252d5ecfd61f2b8666efc492e45168c34816a0e2", "size": 125793}
 {"lang": "cpp", "lines": 48, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "683fa79c950b2df3176f16629d6629e571eae31c1c3262d2cf98ee610e1c0e44", "size": 1477}
 {"lang": "yaml", "lines": 7, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "6dbddf714eaeb8d2f9643a96173ea4ce03ba48ebe5b431c220c9a54c68b2a240", "size": 168}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
@@ -164,7 +164,7 @@
 {"lang": "yaml", "lines": 11, "path": "boards/m5stack-cardputer/init.yaml", "sha256": "a7298799d34776858b2dfc653e8cd8fc8e0ae22f6fba7a07fa6adb473284580c", "size": 303}
 {"lang": "powershell", "lines": 44, "path": "ci/factory.ps1", "sha256": "75081559f6e7bfaa144aa7dd9792b921391e2ba647806c4c6a31172842adc47b", "size": 1517}
 {"lang": "shell", "lines": 56, "path": "ci/factory.sh", "sha256": "4c51e9eedef72e4cb8f2f3e7e63d6a7646fd9f2074ca1f5f14c6e81df1580fc8", "size": 1585}
-{"lang": "python", "lines": 210, "path": "conftest.py", "sha256": "018b538498311a7c7ef631f6a8d01693a6d5a7bd1d855be7dca1cc742f51e0be", "size": 7416}
+{"lang": "python", "lines": 215, "path": "conftest.py", "sha256": "4afa71520d3162398668b3bc801811840c0d900c721f86e7c7dd5bffc3de0e14", "size": 7746}
 {"lang": "markdown", "lines": 52, "path": "docs/adr/000-process.md", "sha256": "ff77b8f41a05661d24a118c2516147325675f3dfd374feb31ec8a928d33d1357", "size": 2858}
 {"lang": "markdown", "lines": 34, "path": "docs/adr/001-error-model.md", "sha256": "646650ba0283136c280fc6ab0e75e500700973b89cde1690fad63afffe2cc5d3", "size": 3701}
 {"lang": "markdown", "lines": 47, "path": "docs/adr/002-osal-api.md", "sha256": "b6d92b701168e9e0876742ead011b75468cad7b7404e5aff5e6e59f54f1e54ba", "size": 4689}
@@ -380,7 +380,7 @@
 {"lang": "markdown", "lines": 200, "path": "specs/SPEC-leg-33-requires-over-declaration.md", "sha256": "add087e5016a176da5cca5fd8660655222c04975e739205b9d83e4dd488fbbdb", "size": 14127}
 {"lang": "markdown", "lines": 178, "path": "specs/SPEC-leg-34-bound-section-extents.md", "sha256": "af3368d945438c522d445d462c1082cf2367beb9c581ed81c3d2f787eebc18d7", "size": 12357}
 {"lang": "markdown", "lines": 128, "path": "specs/SPEC-leg-37-per-board-main-stack.md", "sha256": "19b46758ecc9df8aaee0aac7b45bc8c768449389279c0651137f4ffa5b382456", "size": 9123}
-{"lang": "markdown", "lines": 111, "path": "specs/SPEC-leg-38-08-gates-that-test-nothing.md", "sha256": "7a9156fbd1844ef100b8540f15dc501d1c56e5afd04e82c3e110d2a27e982526", "size": 6168}
+{"lang": "markdown", "lines": 115, "path": "specs/SPEC-leg-38-08-gates-that-test-nothing.md", "sha256": "2cb045b3fc78570bf79e0dfc7a087766a6f23a7f80ef7b6b506d252de69e5f8b", "size": 6398}
 {"lang": "markdown", "lines": 87, "path": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md", "sha256": "d3b746383f376daa79b384c3af6daca7765c8075ae2cddd60912663bc3891485", "size": 5427}
 {"lang": "markdown", "lines": 78, "path": "specs/SPEC-leg-40-tui-tests-menu.md", "sha256": "22507e1be883c285356f6efb6676aa39fcd05473f4f6852365a7f9abc3e20a29", "size": 3986}
 {"lang": "markdown", "lines": 111, "path": "specs/SPEC-leg-41-manifest-json-recursion.md", "sha256": "d2cb2c07af737bcbb5ac529d79bfa691886d64ede39daae1d73fa5b5c6d0d2e6", "size": 5688}

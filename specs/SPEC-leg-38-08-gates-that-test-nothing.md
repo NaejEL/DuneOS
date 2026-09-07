@@ -34,7 +34,10 @@ State: no `conftest.py`, `pytest.ini`, `pyproject.toml` or `setup.cfg` anywhere.
 Collection root is a bare CLI argument in `ci.yml:42`. No collected-count floor,
 no proof the job can go red.
 
-Rest of the suite audited clean: tracked sources or `tmp_path` fixtures only.
+Rest of the suite audited clean at spec time. The guard then found **three more**
+in `test_sdkconfig_check.py`, reaching generated fragments through
+`sc.default_sources`/`DUNEOS_ROOT` rather than by opening a path — invisible to a
+source audit. Six assertions were rebuilt, not three.
 
 ## Scope
 
@@ -50,7 +53,8 @@ Rest of the suite audited clean: tracked sources or `tmp_path` fixtures only.
   (PO decision: an opt-out is the convention this spec removes).
 - `pytest.ini` at repo root (PO decision) — collection root and strictness, so a
   new `tools/**/test_*.py` is collected by bare `python -m pytest`.
-- The three vacuous assertions — **rebuilt against `tmp_path`** (PO decision):
+- The vacuous assertions (three known, six found) — **rebuilt against `tmp_path`**
+  (PO decision):
   run bspgen on the tracked `board.yaml` into `tmp_path`, compare there. The
   check becomes real and runs in CI. Not deleted.
 - `.github/workflows/ci.yml`, dbt pytest step — fatal collected-count floor
