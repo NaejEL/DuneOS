@@ -1,7 +1,7 @@
 {"lang": "markdown", "lines": 306, "path": "CLAUDE.md", "sha256": "b4e74a748f2c99ef103bc0fa5b1378279260bd7ae57f84cfc16ce8239a5f4fa3", "size": 31180}
 {"lang": "other", "lines": 72, "path": "CMakeLists.txt", "sha256": "177dd3ed8c566b2f288cd2590c59874febac1403f98b4ca2073da4af7e7079f6", "size": 3081}
 {"lang": "markdown", "lines": 333, "path": "README.md", "sha256": "d4e9c2a6b61ee8dae6a36d4d371ae5d412751fcf0344309f6568c514594a53ef", "size": 19316}
-{"lang": "markdown", "lines": 1095, "path": "ROADMAP.md", "sha256": "ba125f9e33a9893cafb5f1c9638d45834bad89fa850d65a56bbed5c581c2bf24", "size": 126594}
+{"lang": "markdown", "lines": 1095, "path": "ROADMAP.md", "sha256": "8b291115e0f0d53d7bd3efc3d14412fbaabf74ae1e5bfa472acd7a12bec2855b", "size": 126625}
 {"lang": "cpp", "lines": 48, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "683fa79c950b2df3176f16629d6629e571eae31c1c3262d2cf98ee610e1c0e44", "size": 1477}
 {"lang": "yaml", "lines": 7, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "6dbddf714eaeb8d2f9643a96173ea4ce03ba48ebe5b431c220c9a54c68b2a240", "size": 168}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
