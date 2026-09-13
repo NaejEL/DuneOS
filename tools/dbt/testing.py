@@ -14,8 +14,8 @@ Failure outranks unavailability: a run with both exits 1, because the failing
 gate is the thing to go and look at.
 """
 
-# Named testing.py rather than test.py: CPython ships a stdlib `test` package,
-# and `tools/` is on sys.path for dbt's own imports.
+# Named testing.py rather than test.py so it does not read as a suite sitting
+# next to tools/dbt/tests/. It would import as dbt.test and shadow nothing.
 
 from __future__ import annotations
 

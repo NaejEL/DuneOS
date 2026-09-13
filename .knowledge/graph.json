@@ -1376,7 +1376,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 9,
+   "count": 10,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -32726,7 +32726,7 @@
    "src": "tools/dbt/testing.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "read",
    "src": "tools/dbt/testing.py"
   },
