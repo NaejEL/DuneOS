@@ -1,0 +1,14 @@
+# Pip constraints for every DuneOS tooling install site: tools/dbt.py's venv
+# bootstrap, the four pip steps in .github/workflows/ci.yml, and the README
+# prerequisite line. Each site installs a different subset, which is why this is
+# a constraints file and not a requirements file.
+#
+# Versions are a freeze of a working tools/.dbt-venv/ — not chosen. Adding a
+# package to any site without adding its pin here fails the tooling tests.
+esptool==5.2.0
+littlefs-python==0.17.1
+pillow==12.2.0
+pytest==9.1.1
+pyyaml==6.0.3
+rich==15.0.0
+textual==8.2.6

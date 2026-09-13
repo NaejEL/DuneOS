@@ -1,12 +1,12 @@
 {
   "config_digest": "7c6b5f0b56fa22983e3a27aa096518d375d113a3dba15dce8b9ad15897c6d222",
   "counts": {
-    "edges": 6999,
-    "files": 435,
+    "edges": 7098,
+    "files": 442,
     "notes": 0,
-    "symbols": 3116
+    "symbols": 3157
   },
-  "digest": "917747c1ba1c6bacea312127570149158b4efbe24d84f861675e4238d75a0073",
+  "digest": "343c821ff1eb1bbf7bc86c813c9f04fe8a036ade2a116e91be2b051aa93e541b",
   "languages": [
     "cpp",
     "markdown",

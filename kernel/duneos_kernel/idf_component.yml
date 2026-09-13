@@ -17,19 +17,24 @@ dependencies:
   # versions of these PHY components for esp32, so on any other target the
   # version solver fails ("no versions of espressif/X match *") unless we
   # gate the dependency out.
+  #
+  # Floors are the versions the solver actually selected for target esp32 with
+  # IDF 6.0.1, not chosen values: 1.0.0 for three of them, 1.0.1 for rtl8201
+  # because that is its lowest published release. No CI job builds an esp32
+  # board, so re-resolve a kincony-A16 configure by hand before widening these.
   espressif/lan87xx:
-    version: "*"
+    version: "^1.0.0"
     rules:
       - if: "target == esp32"
   espressif/ksz80xx:
-    version: "*"
+    version: "^1.0.0"
     rules:
       - if: "target == esp32"
   espressif/rtl8201:
-    version: "*"
+    version: "^1.0.1"
     rules:
       - if: "target == esp32"
   espressif/ip101:
-    version: "*"
+    version: "^1.0.0"
     rules:
       - if: "target == esp32"

@@ -44,7 +44,8 @@ python tools/dbt.py flashimg                # uses .duneos_port
 # Interactive TUI (board picker, init editor, build/flash actions)
 python tools/dbt.py tui
 
-# --- Tests. Run these; there is no other gate. ---
+# --- Gates. CI runs all four; run them before you push. ---
+python tools/dbt.py flash kernel --build-only # kernel builds, no new warning
 make -C tests/host test                      # C host suites (elf_validate, elf_scan, i2c_decode, known_yaml, re)
 python -m pytest -q                          # Python tooling (dbt, bspgen); root pytest.ini holds the collection root
 python tools/dbt.py qemu --board esp32s3-qemu --build-dir build-esp32s3-qemu

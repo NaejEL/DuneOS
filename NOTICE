@@ -1,0 +1,46 @@
+DuneOS
+Copyright (C) 2026 Jean Le Quellec
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Lesser General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See LICENSE (LGPL-3.0) and LICENSE.GPL-3.0, which it
+incorporates by reference.
+
+
+Why LGPL and not GPL
+--------------------
+
+A DuneOS application is a `.dap` ELF that links `libdune.a` and reaches the
+kernel through a function-pointer table resolved at load time. That is linking,
+not a syscall boundary. Linux can publish its kernel under plain GPL because it
+carries an explicit syscall exception; DuneOS has no such exception and no MMU
+to make one meaningful. Under plain GPL, every third-party `.dap` would
+therefore be a derivative work and would itself have to be GPL.
+
+LGPL draws the line where the project actually wants it: the kernel, the loader
+and libdune stay copyleft — modify them and you owe your recipient the modified
+sources — while an application that merely links libdune and calls the ABI
+remains free to choose its own licence, proprietary included.
+
+Copyleft compels publication to the *recipient* of a binary. It never obliges
+anyone to contribute changes back to this project.
+
+
+Third-party components
+----------------------
+
+third_party/cjson      cJSON        MIT
+                       Copyright (c) 2009-2017 Dave Gamble and cJSON
+                       contributors. Git submodule; cJSON.c is compiled into
+                       the loader (kernel/duneos_loader/CMakeLists.txt).
+
+third_party/littlefs   littlefs     BSD-3-Clause
+                       Copyright (c) 2022, The littlefs authors.
+                       Copyright (c) 2017, Arm Limited. Git submodule.
+
+Full texts are in each submodule's own licence file. ESP-IDF and the components
+pulled by the IDF component manager (kernel/duneos_kernel/idf_component.yml) are
+build inputs, not distributed here, and carry their own terms.

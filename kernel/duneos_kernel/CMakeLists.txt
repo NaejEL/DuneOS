@@ -83,12 +83,22 @@ if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)
     list(APPEND DUNEOS_KERNEL_REQUIRES espressif__esp_tinyusb)
 endif()
 
+# ESP-IDF's requirements phase re-runs this file through `cmake -P`, where
+# CONFIGURE_DEPENDS is a hard error ("invalid for script and find package
+# modes") — and where there is no build system to re-generate, so it would buy
+# nothing. Carry it on the real configure pass only.
+if(CMAKE_SCRIPT_MODE_FILE)
+    set(_DUNEOS_GLOB_DEPENDS "")
+else()
+    set(_DUNEOS_GLOB_DEPENDS CONFIGURE_DEPENDS)
+endif()
+
 # --- Arch discovery ----------------------------------------------------------
 # Each arch/*/arch.cmake self-selects via CONFIG_IDF_TARGET_ARCH_* and appends
 # its HAL sources + ESP-IDF component deps to DUNEOS_KERNEL_SRCS/REQUIRES.
 # Adding a new architecture = creating arch/<new_arch>/arch.cmake only.
 # Zero changes to this file.
-file(GLOB _DUNEOS_ARCH_MAKEFILES "${DUNEOS_ROOT}/arch/*/arch.cmake")
+file(GLOB _DUNEOS_ARCH_MAKEFILES ${_DUNEOS_GLOB_DEPENDS} "${DUNEOS_ROOT}/arch/*/arch.cmake")
 foreach(_ARCH_CMAKE ${_DUNEOS_ARCH_MAKEFILES})
     include("${_ARCH_CMAKE}")
 endforeach()
@@ -179,7 +189,7 @@ endif()
 # firmware image.  At first boot, vfs.c copies any missing blob to /flash/bin/.
 # ---------------------------------------------------------------------------
 
-file(GLOB DUNEOS_FIRMWARE_BLOBS "${CMAKE_SOURCE_DIR}/firmware/blobs/*.dap")
+file(GLOB DUNEOS_FIRMWARE_BLOBS ${_DUNEOS_GLOB_DEPENDS} "${CMAKE_SOURCE_DIR}/firmware/blobs/*.dap")
 
 # Always generate blobs_gen.c; table is empty when no blobs are present.
 set(BLOBS_GEN_C "${CMAKE_CURRENT_BINARY_DIR}/blobs_gen.c")

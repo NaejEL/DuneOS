@@ -44,7 +44,7 @@ Validated boards: **M5Stack CardPuter** (ESP32-S3FN8, 8 MB flash, no PSRAM), **L
 
 - ESP-IDF v6.0.1 (`IDF_PATH` set or `.duneos_idf` pointing at the install)
 - VS Code + ESP-IDF extension, or `idf.py` in PATH
-- Python 3.10+ with `pip install textual pyyaml littlefs-python esptool`
+- Python 3.10+ with `pip install -c tools/constraints.txt textual pyyaml littlefs-python esptool` (or just run `tools/dbt.py`, which bootstraps its own pinned venv)
 - `xtensa-esp32s3-elf-gcc` (ships with ESP-IDF)
 
 ### 1. Select your board and port
@@ -323,6 +323,25 @@ The manifest is a JSON blob in the `.duneos_manifest` ELF section (name,
 refuses a `.dap` built for a different ISA, or one whose `required_abi_version`
 is newer than the running kernel — so a wrong-board binary fails cleanly instead
 of crashing.
+
+## Licence
+
+DuneOS is licensed under the **GNU Lesser General Public License v3.0 or later**
+([`LICENSE`](LICENSE), which incorporates [`LICENSE.GPL-3.0`](LICENSE.GPL-3.0)).
+Copyright (C) 2026 Jean Le Quellec.
+
+LGPL rather than GPL for a concrete reason: an application links `libdune.a` and
+calls the kernel through a function-pointer table — linking, not a syscall
+boundary, and DuneOS has no Linux-style syscall exception. An app that merely
+links `libdune.a` is **not** a derivative work for LGPL purposes and is free to
+choose its own licence; modify the kernel, the loader or libdune themselves and
+those changes stay LGPL. [`NOTICE`](NOTICE) records the reasoning and the
+third-party terms.
+
+## Contributing
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, the four commands to run before a
+pull request, and the house rules.
 
 ## References
 

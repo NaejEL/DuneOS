@@ -347,17 +347,122 @@
   },
   {
    "count": 1,
+   "dst": "Contributing",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 2,
+   "dst": "DuneOS",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "Licence",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "generate",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 1,
+   "dst": "Permissions",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 2,
+   "dst": "enforce",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 14,
+   "dst": "free",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 1,
+   "dst": "generate",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 1,
+   "dst": "render",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 6,
+   "dst": "show",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
+   "count": 3,
+   "dst": "DuneOS",
+   "src": "NOTICE"
+  },
+  {
+   "count": 2,
+   "dst": "free",
+   "src": "NOTICE"
+  },
+  {
+   "count": 1,
    "dst": "Architecture",
    "src": "README.md"
   },
   {
-   "count": 9,
+   "count": 1,
+   "dst": "Contributing",
+   "src": "README.md"
+  },
+  {
+   "count": 11,
    "dst": "DuneOS",
    "src": "README.md"
   },
   {
    "count": 4,
    "dst": "ET_REL",
+   "src": "README.md"
+  },
+  {
+   "count": 1,
+   "dst": "Licence",
    "src": "README.md"
   },
   {
@@ -378,6 +483,11 @@
   {
    "count": 3,
    "dst": "app_main",
+   "src": "README.md"
+  },
+  {
+   "count": 1,
+   "dst": "blob",
    "src": "README.md"
   },
   {
@@ -406,7 +516,7 @@
    "src": "README.md"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "free",
    "src": "README.md"
   },
@@ -503,6 +613,11 @@
   {
    "count": 1,
    "dst": "Context",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "Contributing",
    "src": "ROADMAP.md"
   },
   {
@@ -798,6 +913,11 @@
   {
    "count": 4,
    "dst": "app_main",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 4,
+   "dst": "blob",
    "src": "ROADMAP.md"
   },
   {
@@ -5002,6 +5122,11 @@
   },
   {
    "count": 6,
+   "dst": "blob",
+   "src": "apps/system/wifi_daemon/wifi_daemon.c"
+  },
+  {
+   "count": 6,
    "dst": "clear_net_status",
    "src": "apps/system/wifi_daemon/wifi_daemon.c"
   },
@@ -9187,6 +9312,11 @@
   },
   {
    "count": 3,
+   "dst": "blob",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 3,
    "dst": "build_rows",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -10532,6 +10662,11 @@
   },
   {
    "count": 1,
+   "dst": "patterns",
+   "src": "docs/adr/003-memory-caps.md"
+  },
+  {
+   "count": 1,
    "dst": "validate",
    "src": "docs/adr/003-memory-caps.md"
   },
@@ -10802,6 +10937,11 @@
   },
   {
    "count": 1,
+   "dst": "blob",
+   "src": "docs/adr/009-driver-boundary.md"
+  },
+  {
+   "count": 1,
    "dst": "capture",
    "src": "docs/adr/009-driver-boundary.md"
   },
@@ -10888,6 +11028,11 @@
   {
    "count": 1,
    "dst": "open",
+   "src": "docs/adr/010-arch-accelerators.md"
+  },
+  {
+   "count": 2,
+   "dst": "patterns",
    "src": "docs/adr/010-arch-accelerators.md"
   },
   {
@@ -11202,6 +11347,11 @@
   },
   {
    "count": 1,
+   "dst": "patterns",
+   "src": "docs/adr/015-declarative-driven-architecture.md"
+  },
+  {
+   "count": 1,
    "dst": "read",
    "src": "docs/adr/015-declarative-driven-architecture.md"
   },
@@ -11381,6 +11531,11 @@
    "src": "docs/adr/017-multi-function-device.md"
   },
   {
+   "count": 1,
+   "dst": "patterns",
+   "src": "docs/adr/017-multi-function-device.md"
+  },
+  {
    "count": 2,
    "dst": "read",
    "src": "docs/adr/017-multi-function-device.md"
@@ -11433,6 +11588,11 @@
   {
    "count": 1,
    "dst": "Decision",
+   "src": "docs/adr/018-peripheral-instance-tables.md"
+  },
+  {
+   "count": 1,
+   "dst": "blob",
    "src": "docs/adr/018-peripheral-instance-tables.md"
   },
   {
@@ -11712,6 +11872,11 @@
   },
   {
    "count": 1,
+   "dst": "blob",
+   "src": "docs/adr/023-app-icon-assets.md"
+  },
+  {
+   "count": 1,
    "dst": "build_app_icon",
    "src": "docs/adr/023-app-icon-assets.md"
   },
@@ -11883,6 +12048,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "docs/adr/026-file-type-associations.md"
+  },
+  {
+   "count": 1,
+   "dst": "blob",
    "src": "docs/adr/026-file-type-associations.md"
   },
   {
@@ -12552,6 +12722,11 @@
   },
   {
    "count": 1,
+   "dst": "patterns",
+   "src": "docs/adr/034-shell-pipelines-redirection.md"
+  },
+  {
+   "count": 1,
    "dst": "read",
    "src": "docs/adr/034-shell-pipelines-redirection.md"
   },
@@ -12663,6 +12838,11 @@
   {
    "count": 1,
    "dst": "malloc",
+   "src": "docs/adr/036-regex-engine.md"
+  },
+  {
+   "count": 1,
+   "dst": "patterns",
    "src": "docs/adr/036-regex-engine.md"
   },
   {
@@ -13021,6 +13201,11 @@
    "src": "docs/adr/README.md"
   },
   {
+   "count": 1,
+   "dst": "blob",
+   "src": "docs/adr/README.md"
+  },
+  {
    "count": 3,
    "dst": "capture",
    "src": "docs/adr/README.md"
@@ -13103,6 +13288,11 @@
   {
    "count": 1,
    "dst": "outf",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "patterns",
    "src": "docs/adr/README.md"
   },
   {
@@ -13457,6 +13647,11 @@
   },
   {
    "count": 1,
+   "dst": "blob",
+   "src": "docs/cli-audit-2026-06.md"
+  },
+  {
+   "count": 1,
    "dst": "cleanup",
    "src": "docs/cli-audit-2026-06.md"
   },
@@ -13717,6 +13912,11 @@
   },
   {
    "count": 1,
+   "dst": "patterns",
+   "src": "docs/qemu-test-bench.md"
+  },
+  {
+   "count": 1,
    "dst": "qemu_startup_failure",
    "src": "docs/qemu-test-bench.md"
   },
@@ -13772,6 +13972,11 @@
   },
   {
    "count": 1,
+   "dst": "blob",
+   "src": "kernel/duneos_kernel/CMakeLists.txt"
+  },
+  {
+   "count": 2,
    "dst": "generate",
    "src": "kernel/duneos_kernel/CMakeLists.txt"
   },
@@ -13904,6 +14109,11 @@
    "count": 7,
    "dst": "write",
    "src": "kernel/duneos_kernel/Kconfig"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "kernel/duneos_kernel/idf_component.yml"
   },
   {
    "count": 3,
@@ -16608,6 +16818,11 @@
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "kernel/duneos_kernel/include/duneos/vfs.h"
+  },
+  {
+   "count": 2,
+   "dst": "blob",
    "src": "kernel/duneos_kernel/include/duneos/vfs.h"
   },
   {
@@ -23962,6 +24177,11 @@
   },
   {
    "count": 1,
+   "dst": "patterns",
+   "src": "sdk/display/include/duneos/gfx.h"
+  },
+  {
+   "count": 1,
    "dst": "read",
    "src": "sdk/display/include/duneos/gfx.h"
   },
@@ -26512,6 +26732,11 @@
   },
   {
    "count": 1,
+   "dst": "patterns",
+   "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
+  },
+  {
+   "count": 1,
    "dst": "resolve",
    "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
   },
@@ -26592,6 +26817,11 @@
   },
   {
    "count": 1,
+   "dst": "Contributing",
+   "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
+  },
+  {
+   "count": 1,
    "dst": "Risks",
    "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
   },
@@ -26603,6 +26833,11 @@
   {
    "count": 1,
    "dst": "check",
+   "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
+  },
+  {
+   "count": 1,
+   "dst": "normalise",
    "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
   },
   {
@@ -27666,6 +27901,11 @@
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
   },
   {
+   "count": 1,
+   "dst": "patterns",
+   "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
+  },
+  {
    "count": 2,
    "dst": "read",
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
@@ -27784,6 +28024,76 @@
    "count": 2,
    "dst": "scan",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 2,
+   "dst": "DuneOS",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "Licence",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "Resolution",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "Risks",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 3,
+   "dst": "blob",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 2,
+   "dst": "check",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "human",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "stat",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
   },
   {
    "count": 2,
@@ -28043,6 +28353,11 @@
   {
    "count": 3,
    "dst": "app_main",
+   "src": "tests/host/elf_corpus.c"
+  },
+  {
+   "count": 1,
+   "dst": "blob",
    "src": "tests/host/elf_corpus.c"
   },
   {
@@ -29024,6 +29339,11 @@
    "count": 2,
    "dst": "test_realistic",
    "src": "tests/host/test_re.c"
+  },
+  {
+   "count": 1,
+   "dst": "DuneOS",
+   "src": "tools/constraints.txt"
   },
   {
    "count": 2,
@@ -30427,6 +30747,11 @@
   },
   {
    "count": 1,
+   "dst": "blob",
+   "src": "tools/dbt/manifest.py"
+  },
+  {
+   "count": 1,
    "dst": "fail",
    "src": "tools/dbt/manifest.py"
   },
@@ -30741,6 +31066,11 @@
    "src": "tools/dbt/qemu.py"
   },
   {
+   "count": 4,
+   "dst": "blob",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
    "count": 3,
    "dst": "build_kernel",
    "src": "tools/dbt/qemu.py"
@@ -30948,6 +31278,11 @@
   {
    "count": 2,
    "dst": "parse_flash_size",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
+   "count": 2,
+   "dst": "patterns",
    "src": "tools/dbt/qemu.py"
   },
   {
@@ -32241,6 +32576,11 @@
    "src": "tools/dbt/tests/test_manifest_depth_bound.py"
   },
   {
+   "count": 3,
+   "dst": "blob",
+   "src": "tools/dbt/tests/test_manifest_depth_bound.py"
+  },
+  {
    "count": 1,
    "dst": "read",
    "src": "tools/dbt/tests/test_manifest_depth_bound.py"
@@ -32623,6 +32963,11 @@
   {
    "count": 2,
    "dst": "parse_flash_size",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
+   "count": 1,
+   "dst": "patterns",
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
@@ -33329,6 +33674,156 @@
    "count": 1,
    "dst": "test_write_modes_are_not",
    "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
+   "count": 2,
+   "dst": "GENERATED_TREE",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 3,
+   "dst": "MAX_TRACKED_BYTES",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 4,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "_stage",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 36,
+   "dst": "blob",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 4,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 3,
+   "dst": "constraint_pins",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 2,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 3,
+   "dst": "missing",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 4,
+   "dst": "normalise",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 3,
+   "dst": "packages_on",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 3,
+   "dst": "patterns",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 3,
+   "dst": "pip_install_lines",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_both_globs_carry_configure_depends",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_contributing_names_the_commands_that_exist",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_devcontainer_is_tracked_and_pinned_to_the_ci_tag",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_constraint_is_an_exact_pin",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_install_site_passes_the_constraints_file",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_installed_package_is_pinned",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_index_is_lf_only",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_license_and_notice_are_tracked_and_advertised",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_lock_files_are_no_longer_ignored",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_component_is_declared_at_any_version",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_tracked_file_exceeds_the_size_bound",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_notice_covers_every_third_party_directory",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_readme_states_the_linking_position",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_root_gitattributes_defers_to_the_generated_index",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
   },
   {
    "count": 3,
@@ -35000,6 +35495,10 @@
   "files": [
    "CLAUDE.md",
    "CMakeLists.txt",
+   "CONTRIBUTING.md",
+   "LICENSE",
+   "LICENSE.GPL-3.0",
+   "NOTICE",
    "README.md",
    "ROADMAP.md",
    "apps/system/battery_daemon/battery_daemon.c",
@@ -35384,6 +35883,7 @@
    "specs/SPEC-leg-38-tests-must-not-read-generated-files.md",
    "specs/SPEC-leg-40-tui-tests-menu.md",
    "specs/SPEC-leg-41-manifest-json-recursion.md",
+   "specs/SPEC-leg-pin-and-share-dependencies.md",
    "specs/SPEC-radar-ld2450.md",
    "tests/host/Makefile",
    "tests/host/elf_corpus.c",
@@ -35397,6 +35897,7 @@
    "tests/host/test_known_yaml.c",
    "tests/host/test_manifest_depth.c",
    "tests/host/test_re.c",
+   "tools/constraints.txt",
    "tools/dbt.py",
    "tools/dbt/__init__.py",
    "tools/dbt/boardgen.py",
@@ -35426,6 +35927,7 @@
    "tools/dbt/tests/test_manifest_depth_bound.py",
    "tools/dbt/tests/test_qemu.py",
    "tools/dbt/tests/test_read_guard.py",
+   "tools/dbt/tests/test_repo_dependencies.py",
    "tools/dbt/tests/test_sdkconfig_check.py",
    "tools/dbt/tests/test_sdkconfig_guard_coverage.py",
    "tools/dbt/tests/test_tui_sdkconfig_guard.py",
@@ -35544,6 +36046,7 @@
    "Consequences",
    "Consumers",
    "Context",
+   "Contributing",
    "Conventions",
    "DAEMON_NAME",
    "DATA_MOUNT_POINT",
@@ -35689,6 +36192,7 @@
    "FakeApp",
    "FakeClock",
    "GENERATED",
+   "GENERATED_TREE",
    "GFX_BLACK",
    "GFX_BLUE",
    "GFX_CYAN",
@@ -35810,6 +36314,7 @@
    "LOGIC_GET_INFO",
    "LOGIC_MAX_CHANNELS",
    "LOGIC_SET_CONFIG",
+   "Licence",
    "MANIFESTS",
    "MANIFEST_JSON_FILE",
    "MANIFEST_SECTION",
@@ -35842,6 +36347,7 @@
    "MAX_SECTIONS",
    "MAX_TOK",
    "MAX_TOKENS",
+   "MAX_TRACKED_BYTES",
    "MAX_VCD",
    "MOUNT_PATH_MAX",
    "MOUNT_REGISTRY_MAX",
@@ -36330,6 +36836,7 @@
    "bit_of_id",
    "blip_xy",
    "blit_scaled",
+   "blob",
    "board_info_int",
    "boom",
    "bq27220_op_close",
@@ -36424,6 +36931,7 @@
    "config_problems",
    "connect_to",
    "console_init",
+   "constraint_pins",
    "consume",
    "container_of",
    "convert",
@@ -36926,6 +37434,7 @@
    "nested_object",
    "next_char",
    "next_tok",
+   "normalise",
    "normalize_path",
    "now_ms",
    "ntohl",
@@ -36947,6 +37456,7 @@
    "open_vcd",
    "opendir",
    "outf",
+   "packages_on",
    "panel_status",
    "panel_targets",
    "panicked",
@@ -36966,6 +37476,7 @@
    "patch_itype",
    "patch_stype",
    "patch_utype",
+   "patterns",
    "pcf8574_ioctl",
    "pcf8574_op_init",
    "pcf8574_read_byte",
@@ -36973,6 +37484,7 @@
    "peek_file",
    "pick_best_known",
    "pick_gdb_port",
+   "pip_install_lines",
    "place_food",
    "pline",
    "policy_str",
@@ -37242,6 +37754,7 @@
    "test_bad_ptr",
    "test_boolean_is_rejected",
    "test_boot_banners_are_counted_once_each_across_chunks",
+   "test_both_globs_carry_configure_depends",
    "test_both_layers_are_checked_for_the_active_board",
    "test_bound_leaves_headroom_over_the_deepest_real_manifest",
    "test_caches_and_paths_outside_the_repo_are_never_classified",
@@ -37254,12 +37767,14 @@
    "test_compose_flash_image_rejects_overflow",
    "test_compose_flash_image_rejects_overlap",
    "test_conflicts_are_reported_in_a_stable_order",
+   "test_contributing_names_the_commands_that_exist",
    "test_dead_payload_is_an_assertion_failure_not_a_timeout",
    "test_declared_psram_mb_reads_the_board_yaml",
    "test_declared_psram_size_reaches_the_emulator",
    "test_declared_value_is_emitted_verbatim",
    "test_default_console_leaves_the_secondary_console_alone",
    "test_denial_does_not_depend_on_the_file_existing",
+   "test_devcontainer_is_tracked_and_pinned_to_the_ci_tag",
    "test_divzero",
    "test_dot",
    "test_each_payload_asserts_on_its_own_app_not_another",
@@ -37271,6 +37786,9 @@
    "test_eof_inside_the_settle_window_is_not_a_pass",
    "test_escapes",
    "test_every_build_or_flash_entry_point_calls_the_guard",
+   "test_every_constraint_is_an_exact_pin",
+   "test_every_install_site_passes_the_constraints_file",
+   "test_every_installed_package_is_pinned",
    "test_every_key_used_by_every_board_in_the_tree_is_known",
    "test_every_payload_has_a_source_directory_and_a_manifest",
    "test_every_read_mode_is_classified",
@@ -37293,21 +37811,27 @@
    "test_heap",
    "test_idle_and_noise",
    "test_incremental_feed_matches_the_same_things_as_one_shot",
+   "test_index_is_lf_only",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
+   "test_license_and_notice_are_tracked_and_advertised",
    "test_literals",
+   "test_lock_files_are_no_longer_ignored",
    "test_metachars",
    "test_missing_app_marker_is_reported",
    "test_missing_qemu_exits_with_its_own_code",
    "test_n_and_not_set_are_the_same_statement",
+   "test_no_component_is_declared_at_any_version",
    "test_no_hardware_board_generates_the_symbol",
    "test_no_key_emits_nothing",
    "test_no_other_board_generates_the_symbol",
    "test_no_qemu_key_emits_no_symbol",
    "test_no_secondary_symbol_on_a_chip_without_usb_serial_jtag",
+   "test_no_tracked_file_exceeds_the_size_bound",
    "test_node_limit",
    "test_non_integer_is_rejected",
    "test_non_positive_is_rejected",
    "test_non_uart_consoles_emit_no_secondary_symbol",
+   "test_notice_covers_every_third_party_directory",
    "test_null_store",
    "test_only_the_measured_boards_declare_the_key",
    "test_only_the_qemu_boards_declare_the_flag",
@@ -37342,10 +37866,12 @@
    "test_read_board_file_returns_none_when_absent",
    "test_read_txn",
    "test_reading_inside_a_submodule_disturbs_no_other_path",
+   "test_readme_states_the_linking_position",
    "test_realistic",
    "test_reaping_kills_a_tracked_process_group",
    "test_repeated_start",
    "test_repo_has_manifests",
+   "test_root_gitattributes_defers_to_the_generated_index",
    "test_run_loop_completes_on_a_good_run",
    "test_run_loop_reports_eof_when_qemu_dies_early",
    "test_run_loop_stops_on_panic",
