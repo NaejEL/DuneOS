@@ -5,13 +5,9 @@
 DuneOS is LGPL-3.0-or-later. By contributing you agree your work ships under
 those terms. There is no CLA and no copyright assignment.
 
-The choice is deliberate and worth understanding before you touch the ABI. An
-application links `libdune.a` and calls the kernel through a function-pointer
-table — linking, not a syscall boundary, and DuneOS has no Linux-style syscall
-exception. Plain GPL would make every third-party `.dap` GPL. LGPL keeps the
-kernel, the loader and libdune copyleft while leaving an app that merely links
-libdune free to choose its own licence. `NOTICE` records the reasoning; keep it
-true if the boundary ever moves.
+The choice rests on the ABI being a linking boundary, not a syscall one, so it
+constrains anyone changing that boundary. `NOTICE` carries the reasoning — read
+it before you touch the ABI, and keep it true if the boundary moves.
 
 ## Setting up
 
@@ -44,9 +40,11 @@ python tools/dbt.py qemu --board esp32s3-qemu --build-dir build-esp32s3-qemu
                                                 # hardware-free boot + loader
 ```
 
-The qemu leg needs no board. It is the only check that actually boots the
-kernel and loads a `.dap`, so skipping it means CI finds the breakage instead
-of you.
+The qemu leg needs no *physical* board, but it does need `.duneos_board` to say
+`esp32s3-qemu` — on a cardputer checkout the command above exits 6 rather than
+running. Switch the board (and full-clean, `sdkconfig` is board-specific), run
+it, switch back. It is the only check that actually boots the kernel and loads
+a `.dap`, so skipping it means CI finds the breakage instead of you.
 
 Use `dbt`, not raw `idf.py`, outside the IDF container: it resolves the pinned
 toolchain for you.

@@ -356,7 +356,7 @@
    "src": "CONTRIBUTING.md"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "DuneOS",
    "src": "CONTRIBUTING.md"
   },
@@ -376,7 +376,7 @@
    "src": "CONTRIBUTING.md"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "free",
    "src": "CONTRIBUTING.md"
   },
@@ -391,7 +391,7 @@
    "src": "CONTRIBUTING.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "read",
    "src": "CONTRIBUTING.md"
   },
@@ -28061,7 +28061,7 @@
    "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "check",
    "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
   },

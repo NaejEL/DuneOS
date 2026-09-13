@@ -17,10 +17,11 @@ Verified state:
 
 - No `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, or root `.gitattributes`. `README.md`
   has neither a licence nor a contributing section.
-- `.gitignore:15` `*.lock`. `dependencies.lock` **is tracked** (ROADMAP:676 corrects
-  the original audit; the old `SPEC-leg-07` still says otherwise). `git check-ignore`
-  consults the index, so the rule is inert today and will silently swallow the next
-  lock file.
+- `.gitignore:15` `*.lock`. **Corrected during the cycle:** `dependencies.lock` was
+  NOT tracked at `909cafd` — commit `6328583` dropped it from the index. Both this
+  spec's first draft and `ROADMAP:676` claimed it was tracked; both were wrong, and
+  `git log --name-status` shows the `D`. So the rule was not merely inert: it had
+  already swallowed the file it was written about.
 - `tools/dbt.py:25` `_DEPS` — 6 bare names. `ci.yml` has **four** unpinned installs
   (`:44`, `:183`, `:225`, `:262`), plus `README.md:47`. No `requirements.txt`, no
   `pyproject.toml`. `pytest.ini` exists; there is no Python packaging.
@@ -84,8 +85,10 @@ Verified state:
   would contradict that promise and is rejected.
 - `idf_component.yml`: replace the four `version: "*"` with bounds derived from the
   version the solver **actually** selects for target esp32 — resolve first, then bound.
-  Regenerate and commit `dependencies.lock` (editing the manifest invalidates
-  `manifest_hash:55`).
+  Regenerate and commit `dependencies.lock` if the edit is semantic. **Correction,
+  verified during the cycle:** `manifest_hash` is computed over the *parsed*
+  manifest, so a comment-only edit leaves the lock byte-identical. This spec
+  originally claimed any manifest edit invalidates it; that was wrong.
 - One new pytest module under `tools/dbt/tests/` for the automated criteria. Raise
   `ci.yml`'s `FLOOR` by the number of tests added.
 
