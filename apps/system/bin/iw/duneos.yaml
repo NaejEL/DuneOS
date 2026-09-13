@@ -2,3 +2,5 @@ name: iw
 version: "0.1.0"
 required_abi_version: 1
 permissions: 96
+sources:
+  - $SDK/net/known_yaml.c

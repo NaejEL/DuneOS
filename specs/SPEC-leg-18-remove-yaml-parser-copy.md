@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-17-18-19-21-tests-that-cover.md
 
 # SPEC-leg-18 — Make the YAML parser test exercise the real code
 

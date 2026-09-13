@@ -1,6 +1,6 @@
 # ADR 012 — Test strategy: host-side first, on-device smoke
 
-**Status:** Accepted · 2026-05-19
+**Status:** Accepted · 2026-05-19 · partly superseded by [041](041-test-harness-keep-tassert.md) — the Greatest choice, the `--target=sim` shape of `dbt test` and the per-module file layout are replaced; the host-first strategy stands
 
 ## Context
 

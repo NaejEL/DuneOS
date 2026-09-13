@@ -12,3 +12,4 @@ sources:
   - $SDK/display/gfx.c
   - $SDK/ui/ui.c
   - $SDK/ui/ui_statusbar.c
+  - $SDK/net/known_yaml.c

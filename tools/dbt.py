@@ -31,6 +31,7 @@ _DEPS = [
     "pyyaml",
     "textual",
     "Pillow",          # img convert + build-time PNG->.dr icons (ADR 023)
+    "pytest",          # the pytest gate of `dbt test` / CONTRIBUTING.md
 ]
 
 

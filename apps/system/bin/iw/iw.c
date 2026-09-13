@@ -23,6 +23,7 @@
 #include "duneos/ambient.h"
 #include "duneos/bin_args.h"
 #include "duneos/libdune.h"
+#include "duneos/known_yaml.h"
 #include "duneos/wifi.h"
 
 /* Not exposed by the toolchain's headers under default feature macros. */
@@ -36,7 +37,7 @@ extern int usleep(unsigned int usec);
 #define WIFI_SCAN_PATH "/tmp/state/wifi_scan"
 
 #define MAX_SCAN   16
-#define MAX_KNOWN  16   /* must match the UI app (apps/user/wifi) writer */
+#define MAX_KNOWN  KNOWN_YAML_MAX_NETS
 
 static void out(const char *s) { write(STDOUT_FILENO, s, strlen(s)); }
 static void outf(const char *fmt, ...)
@@ -149,72 +150,22 @@ static int cmd_status(void)
 
 /* ---------------------------------------------------- known.yaml editor -- */
 
-typedef struct {
-    char ssid[33];
-    char psk[65];
-} known_net_t;
-
-static void copy_value(char *dst, int dstsz, const char *src)
-{
-    while (*src == ' ' || *src == '\t') src++;
-    int len = (int)strlen(src);
-    while (len > 0 && (src[len - 1] == ' ' || src[len - 1] == '\t' ||
-                       src[len - 1] == '\r'))
-        len--;
-    if (len >= 2 && src[0] == '"' && src[len - 1] == '"') { src++; len -= 2; }
-    if (len > dstsz - 1) len = dstsz - 1;
-    memcpy(dst, src, (size_t)len);
-    dst[len] = '\0';
-}
-
-static int parse_known(char *buf, known_net_t *nets, int max)
-{
-    int n = 0;
-    int open_entry = -1;   /* orphan psk: lines (dropped ssid) are ignored */
-    char *p = buf;
-    while (p && *p) {
-        char *eol = strchr(p, '\n');
-        if (eol) *eol = '\0';
-        char *t = p;
-        while (*t == ' ' || *t == '\t') t++;
-        if (*t != '#' && *t) {
-            if (strncmp(t, "- ssid:", 7) == 0) {
-                open_entry = -1;
-                if (n < max) {
-                    copy_value(nets[n].ssid, sizeof(nets[n].ssid), t + 7);
-                    nets[n].psk[0] = '\0';
-                    open_entry = n++;
-                }
-            } else if (strncmp(t, "psk:", 4) == 0 && open_entry >= 0) {
-                copy_value(nets[open_entry].psk, sizeof(nets[open_entry].psk),
-                           t + 4);
-                open_entry = -1;
-            }
-        }
-        p = eol ? eol + 1 : NULL;
-    }
-    return n;
-}
-
 static int update_known(const char *ssid, const char *psk)
 {
     mkdir("/data/wifi", 0755);
 
     known_net_t nets[MAX_KNOWN];
-    int n = 0;
+    int n;
 
-    char fbuf[2048];   /* covers 16 full entries, same as the UI's s_fbuf */
+    /* One buffer for both directions: the file is parsed in place and the
+     * rewrite lands in the same bytes. iw runs in the shell's task (captured
+     * mode), so a second 2 KiB frame here is 2 KiB off the shell's stack. */
+    char fbuf[KNOWN_YAML_BUF_SIZE];
+
     /* /data once it exists, else seed the first write from the /flash copy */
-    int fd = open(KNOWN_YAML, O_RDONLY);
-    if (fd < 0) fd = open(KNOWN_YAML_SEED, O_RDONLY);
-    if (fd >= 0) {
-        int r = (int)read(fd, fbuf, sizeof(fbuf) - 1);
-        close(fd);
-        if (r > 0) {
-            fbuf[r] = '\0';
-            n = parse_known(fbuf, nets, MAX_KNOWN);
-        }
-    }
+    int r = known_yaml_read(KNOWN_YAML, fbuf, sizeof(fbuf));
+    if (r < 0) r = known_yaml_read(KNOWN_YAML_SEED, fbuf, sizeof(fbuf));
+    n = (r > 0) ? known_yaml_parse(fbuf, nets, MAX_KNOWN) : 0;
 
     int idx = -1;
     for (int i = 0; i < n; i++)
@@ -234,7 +185,7 @@ static int update_known(const char *ssid, const char *psk)
         if (o >= (int)sizeof(fbuf)) return -ENOSPC;
     }
 
-    fd = open(KNOWN_YAML, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    int fd = open(KNOWN_YAML, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) {
         /* Old partition table without /data — flash fallback (not
          * reflash-proof, but saving must never silently fail). */

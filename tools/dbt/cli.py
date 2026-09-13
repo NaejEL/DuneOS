@@ -16,6 +16,7 @@ Direct CLI commands:
     dbt new <name>              Create a new app from template
     dbt buildall [path]         Build all system apps (+ deploy if path given)
     dbt qemu                    Boot under QEMU and assert boot + .dap load
+    dbt test                    Run the test gates (see docs/testing.md)
     dbt clean / cleanall        Remove build artefacts
 """
 
@@ -36,6 +37,7 @@ from .bspgen import cmd_bspgen
 from .qemu import (cmd_qemu, DEFAULT_TIMEOUT_S as DEFAULT_QEMU_TIMEOUT_S,
                    PAYLOADS as QEMU_PAYLOADS)
 from .img import cmd_img_convert, cmd_img_splash
+from .testing import cmd_test
 
 
 # ---------------------------------------------------------------------------
@@ -644,6 +646,21 @@ def main() -> None:
                         help="Skip the post-mortem backtrace + klog ring dump "
                              "taken when a run does not pass")
     p_qemu.set_defaults(func=cmd_qemu)
+
+    # --- test ---
+    p_test = sub.add_parser(
+        "test",
+        help="Run the test gates; exits non-zero when one merely could not run",
+    )
+    p_test.add_argument("--fuzz", action="store_true",
+                        help="Also run the time-bounded libFuzzer gate (needs clang)")
+    p_test.add_argument("--qemu", action="store_true",
+                        help="Also run the QEMU bench. Opt-in because it needs "
+                             ".duneos_board to name a QEMU board, which is a "
+                             "full clean away; this never rewrites that file")
+    p_test.add_argument("--allow-missing", dest="allow_missing", action="store_true",
+                        help="Downgrade an unavailable gate to a warning and exit 0")
+    p_test.set_defaults(func=cmd_test)
 
     # --- system <verb> (Phase 25 — declarative image recipes) ---
     p_system = sub.add_parser(

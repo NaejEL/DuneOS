@@ -7,7 +7,7 @@ CFLAGS  += -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L
 ROOT    := ../..
 
 TESTS   := test_re test_i2c_decode test_known_yaml test_elf_validate \
-           test_elf_scan test_manifest_depth
+           test_elf_scan test_manifest_depth test_ld2450
 
 ELF_INC := -I$(ROOT)/kernel/duneos_loader/include
 ELF_SRC := $(ROOT)/kernel/duneos_loader/src/elf_parse.c
@@ -40,8 +40,16 @@ test_re: test_re.c $(ROOT)/sdk/re/re.c tassert.h
 test_i2c_decode: test_i2c_decode.c $(ROOT)/sdk/proto/i2c_decode.c tassert.h
 	$(CC) $(CFLAGS) -I$(ROOT)/sdk/proto/include test_i2c_decode.c $(ROOT)/sdk/proto/i2c_decode.c -o $@
 
-test_known_yaml: test_known_yaml.c known_yaml_cases.h tassert.h
-	$(CC) $(CFLAGS) test_known_yaml.c -o $@
+test_known_yaml: test_known_yaml.c known_yaml_cases.h tassert.h \
+                 $(ROOT)/sdk/net/known_yaml.c \
+                 $(ROOT)/sdk/net/include/duneos/known_yaml.h
+	$(CC) $(CFLAGS) -I$(ROOT)/sdk/net/include test_known_yaml.c \
+	    $(ROOT)/sdk/net/known_yaml.c -o $@
+
+test_ld2450: test_ld2450.c $(ROOT)/sdk/sensor/libld2450.c \
+             $(ROOT)/sdk/sensor/include/duneos/ld2450.h tassert.h
+	$(CC) $(CFLAGS) -I$(ROOT)/sdk/sensor/include test_ld2450.c \
+	    $(ROOT)/sdk/sensor/libld2450.c -o $@
 
 test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
                    $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h

@@ -24,7 +24,6 @@
  *   /tmp/net_status       text ip=/gw=/netmask=/ssid=/rssi= (for ifconfig)
  */
 
-#include <ctype.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -37,22 +36,18 @@
 #include "duneos/libdune.h"
 #include "duneos/wifi.h"
 #include "duneos/dlog.h"
+#include "duneos/known_yaml.h"
 
 #define KNOWN_YAML      "/data/wifi/known.yaml"
 #define KNOWN_YAML_SEED "/etc/wifi/known.yaml"
 #define NET_STATUS     "/tmp/net_status"
 #define WIFI_SCAN_PATH "/tmp/state/wifi_scan"
 
-#define MAX_KNOWN       16 /* must match the UI app (apps/user/wifi) writer */
+#define MAX_KNOWN       KNOWN_YAML_MAX_NETS
 #define MAX_SCAN        16
 #define RECV_TIMEOUT_S  5
 #define MAX_BACKOFF_S   60
 #define HK_WAKEUPS      6 /* 6 × 5 s recv timeouts ≈ 30 s housekeeping */
-
-typedef struct {
-    char ssid[33];
-    char psk[65];
-} known_net_t;
 
 typedef struct {
     known_net_t known[MAX_KNOWN];
@@ -70,112 +65,24 @@ static uint8_t s_scan_seq;
 /* known.yaml parsing                                                  */
 /* ------------------------------------------------------------------ */
 
-/* Trim whitespace and one pair of surrounding double quotes (psk: ""). */
-static void copy_value(const char *src, char *dst, size_t dstsz) {
-  while (*src && isspace((unsigned char)*src)) src++;
-  size_t len = strlen(src);
-  while (len > 0 && isspace((unsigned char)src[len - 1])) len--;
-  if (len >= 2 && src[0] == '"' && src[len - 1] == '"') {
-    src++;
-    len -= 2;
-  }
-  if (len >= dstsz) len = dstsz - 1;
-  memcpy(dst, src, len);
-  dst[len] = '\0';
-}
-
-/* "- ssid:" opens an entry; the next "psk:" line (any indent) completes it. */
-static int load_known_yaml(const char *path, known_net_t *nets, int max) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0) return -1;
-
-  char buf[2048]; /* covers 16 full entries, same as the UI's s_fbuf */
-  ssize_t n = read(fd, buf, sizeof(buf) - 1);
-  close(fd);
-  if (n <= 0) return 0;
-  buf[n] = '\0';
-
-  int count = 0;
-  int open_entry = -1;
-  char *line = buf;
-  while (line && *line) {
-    char *nl = strchr(line, '\n');
-    if (nl) *nl = '\0';
-
-    char *p = line;
-    while (*p && isspace((unsigned char)*p)) p++;
-    if (*p && *p != '#') {
-      if (strncmp(p, "- ssid:", 7) == 0) {
-        open_entry = -1;
-        if (count < max) {
-          copy_value(p + 7, nets[count].ssid, sizeof(nets[count].ssid));
-          nets[count].psk[0] = '\0';
-          if (nets[count].ssid[0]) open_entry = count++;
-        }
-      } else if (open_entry >= 0 && strncmp(p, "psk:", 4) == 0) {
-        copy_value(p + 4, nets[open_entry].psk, sizeof(nets[open_entry].psk));
-        open_entry = -1;
-      }
-    }
-
-    line = nl ? nl + 1 : NULL;
-  }
-  return count;
-}
-
 static int find_known(const known_net_t *nets, int count, const char *ssid) {
   for (int i = 0; i < count; i++)
     if (strcmp(nets[i].ssid, ssid) == 0) return i;
   return -1;
 }
 
-/* Legacy single-network config, merged as one more known entry. */
-static void merge_legacy(known_net_t *nets, int *count, int max) {
-  char path[64];
-  if (duneos_config_path("wifi_daemon", path, sizeof(path)) != 0) return;
-
-  int fd = open(path, O_RDONLY);
-  if (fd < 0) return;
-
-  char buf[256];
-  ssize_t n = read(fd, buf, sizeof(buf) - 1);
-  close(fd);
-  if (n <= 0) return;
-  buf[n] = '\0';
-
-  char ssid[33] = "", psk[65] = "";
-  char *line = buf;
-  while (line && *line) {
-    char *nl = strchr(line, '\n');
-    if (nl) *nl = '\0';
-
-    char *p = line;
-    while (*p && isspace((unsigned char)*p)) p++;
-    if (*p && *p != '#') {
-      if (strncmp(p, "ssid:", 5) == 0)
-        copy_value(p + 5, ssid, sizeof(ssid));
-      else if (strncmp(p, "password:", 9) == 0)
-        copy_value(p + 9, psk, sizeof(psk));
-    }
-
-    line = nl ? nl + 1 : NULL;
-  }
-
-  if (!ssid[0] || *count >= max || find_known(nets, *count, ssid) >= 0) return;
-  memcpy(nets[*count].ssid, ssid, sizeof(ssid));
-  memcpy(nets[*count].psk, psk, sizeof(psk));
-  (*count)++;
-}
-
 static int load_known(known_net_t *nets) {
   /* /data survives reflashes and is the source of truth once it exists;
    * the /flash copy is only the board-provisioned seed (dbt stages it from
    * boards/<board>/etc) for first boot or /data-less partition tables. */
-  int count = load_known_yaml(KNOWN_YAML, nets, MAX_KNOWN);
+  int count = known_yaml_load(KNOWN_YAML, nets, MAX_KNOWN);
   if (count < 0)
-    count = load_known_yaml(KNOWN_YAML_SEED, nets, MAX_KNOWN);
+    count = known_yaml_load(KNOWN_YAML_SEED, nets, MAX_KNOWN);
   if (count < 0) count = 0;
-  merge_legacy(nets, &count, MAX_KNOWN);
+
+  char legacy[64];
+  if (duneos_config_path("wifi_daemon", legacy, sizeof(legacy)) == 0)
+    known_yaml_merge_legacy(legacy, nets, &count, MAX_KNOWN);
   return count;
 }
 
