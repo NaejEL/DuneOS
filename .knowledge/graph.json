@@ -1376,7 +1376,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 10,
+   "count": 9,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1391,7 +1391,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 13,
+   "count": 14,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -33486,7 +33486,7 @@
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "join",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
@@ -33517,7 +33517,7 @@
   },
   {
    "count": 1,
-   "dst": "test_leg_18_stays_open_until_a_board_says_otherwise",
+   "dst": "test_leg_18_records_the_board_that_closed_it",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
@@ -39436,7 +39436,7 @@
    "test_index_is_lf_only",
    "test_junit_counts_are_read_from_a_real_report",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
-   "test_leg_18_stays_open_until_a_board_says_otherwise",
+   "test_leg_18_records_the_board_that_closed_it",
    "test_legacy_merge",
    "test_legacy_value_trimming",
    "test_license_and_notice_are_tracked_and_advertised",

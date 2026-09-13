@@ -140,22 +140,20 @@ def test_the_roadmap_suite_count_matches_the_makefile(blob):
         f"the LEG-17 row says {counts} suites; tests/host/Makefile builds {expected}"
 
 
-@pytest.mark.parametrize("tag", ["LEG-17", "LEG-19", "LEG-21"])
+@pytest.mark.parametrize("tag", ["LEG-17", "LEG-18", "LEG-19", "LEG-21"])
 def test_the_closed_rows_are_marked_done(blob, tag):
     assert roadmap_row(blob, tag).rstrip().endswith("| DONE |")
 
 
-# LEG-18 is the one row of the four this spec closes that a host gate cannot
-# close: the parser now behaves differently for a board carrying a hand-edited
-# known.yaml, and only a board can observe that. CLAUDE.md's Phase 24.7 row
-# sets the convention — don't claim DONE until hardware-tested — so what this
-# asserts is that the row keeps saying so, rather than drifting to DONE on the
-# strength of a green CI run.
-def test_leg_18_stays_open_until_a_board_says_otherwise(blob):
+# LEG-18 is the one row of the four that a host gate could not close: the parser
+# behaves differently for a board carrying a hand-edited known.yaml, and only a
+# board can observe that. It was run on an m5stack-cardputer on 2026-09-13 and
+# the row is DONE on that evidence, not on a green CI. What this asserts is that
+# the evidence stays named — a bare DONE here would be indistinguishable from the
+# host-closable rows above, and the next reader could not tell which kind it is.
+def test_leg_18_records_the_board_that_closed_it(blob):
     row = roadmap_row(blob, "LEG-18")
-    assert not row.rstrip().endswith("| DONE |"), \
-        "LEG-18 was marked DONE; the on-board iw join / reboot / iw status " \
-        "run is what closes it, and nothing host-side can stand in for it"
-    assert "CODE COMPLETE" in row
     assert "on-board" in row, \
-        "the LEG-18 row no longer names the validation it still owes"
+        "the LEG-18 row no longer names the on-board run that closed it"
+    assert "cardputer" in row.lower(), \
+        "the LEG-18 row does not say which board validated it"

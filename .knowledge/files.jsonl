@@ -5,7 +5,7 @@
 {"lang": "other", "lines": 674, "path": "LICENSE.GPL-3.0", "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986", "size": 35149}
 {"lang": "other", "lines": 46, "path": "NOTICE", "sha256": "bdfd3d56352bfb039156cf6b1407d397d14ddf69139447fc51f942d7ae5c5362", "size": 2061}
 {"lang": "markdown", "lines": 352, "path": "README.md", "sha256": "4663e933f358ae2e992a73036f711487d3f9241ebdd91b803f2604c2c1ecfdde", "size": 20244}
-{"lang": "markdown", "lines": 1088, "path": "ROADMAP.md", "sha256": "28539ecb9ff8ce793b78b03ba6b0609f48d745945e12a50c85ffd40631976af0", "size": 126124}
+{"lang": "markdown", "lines": 1088, "path": "ROADMAP.md", "sha256": "5938ce244c5b68e99efd153d5b510f6a3bbc5d73297b69bfebad155ad1839932", "size": 126439}
 {"lang": "cpp", "lines": 48, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "683fa79c950b2df3176f16629d6629e571eae31c1c3262d2cf98ee610e1c0e44", "size": 1477}
 {"lang": "yaml", "lines": 7, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "6dbddf714eaeb8d2f9643a96173ea4ce03ba48ebe5b431c220c9a54c68b2a240", "size": 168}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
@@ -436,7 +436,7 @@
 {"lang": "python", "lines": 156, "path": "tools/dbt/tests/test_bspgen_qemu.py", "sha256": "548f2729ad69426497dc90a1ebdc3c0de638295e676f23af6c573318de8ec9bb", "size": 5580}
 {"lang": "python", "lines": 145, "path": "tools/dbt/tests/test_bspgen_uart.py", "sha256": "5db151b7cf8f07f68acc1e5ef853e2092b529454dd753180148fa324ad2d2eb8", "size": 5637}
 {"lang": "python", "lines": 89, "path": "tools/dbt/tests/test_bspgen_unknown_keys.py", "sha256": "90e2a2ad31e2eeaacfca161ef5d17633470ff9b97e23477a3b43d5a983bf4e4f", "size": 3019}
-{"lang": "python", "lines": 161, "path": "tools/dbt/tests/test_gates_cover.py", "sha256": "ef68336e64c3c416221fc669465d620ab781af5c7ead7f95cb482f53a7bc875d", "size": 5953}
+{"lang": "python", "lines": 159, "path": "tools/dbt/tests/test_gates_cover.py", "sha256": "30fbc1aae19fee84a5d2b46a1191bc06d24a40ed440eb255cb56022a6dc2dd96", "size": 5886}
 {"lang": "python", "lines": 88, "path": "tools/dbt/tests/test_manifest_depth_bound.py", "sha256": "1accf71015ce9f61926ef17de6731ca6a79599567d3a729195455ae741784c03", "size": 3355}
 {"lang": "python", "lines": 169, "path": "tools/dbt/tests/test_pure_logic.py", "sha256": "4b41b475ac1abea7aeba74e6d04f162b659809acc348d8a5906eed0339ac3768", "size": 5633}
 {"lang": "python", "lines": 1026, "path": "tools/dbt/tests/test_qemu.py", "sha256": "d21992f135c20b45e1ac4dc5fe1270e1cdeb60fddc3f0449e867899e9efdb5be", "size": 37759}

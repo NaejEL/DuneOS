@@ -44,11 +44,11 @@ jobs:
           python -m pip install -c tools/constraints.txt pytest pyyaml textual
 
           # The floor counts tests that RAN, because a bug that mass-skips the
-          # suite clears a collected count. It sits a few below the current 383
+          # suite clears a collected count. It sits a few below the current 384
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=376
+          FLOOR=377
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml
