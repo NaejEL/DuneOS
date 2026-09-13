@@ -674,7 +674,7 @@ suite still prints that count separately so it stays visible until specced.
 |---|---|---|---|---|---|---|
 | LEG-06 | No LICENSE file on a public repository open to PRs | major | XS | — | [specs/SPEC-leg-06-add-license.md](specs/SPEC-leg-06-add-license.md) | TODO |
 | LEG-07 | `.gitignore:15` (`*.lock`) hides `dependencies.lock`. **The file is tracked today** (`git ls-files` finds it), so what remains is the ignore rule that will silently drop the next one | major | XS | — | [specs/SPEC-leg-07-version-dependencies-lock.md](specs/SPEC-leg-07-version-dependencies-lock.md) | TODO |
-| LEG-08 | CI runs the dbt Python suite (`ci.yml:25-34`, `python -m pytest tools/dbt/tests -q`). **What is missing is the gate's own proof**: a deliberately failing test showing the job actually goes red, and an explicit collection root so a collection error cannot pass for a green run. `ci.yml:21-24` names both as this spec's scope | major | XS | — | [specs/SPEC-leg-08-run-python-tests-in-ci.md](specs/SPEC-leg-08-run-python-tests-in-ci.md) | TODO |
+| LEG-08 | The dbt pytest step could not prove it had run anything: no collection root, no count floor, no proof the job goes red. Delivered with LEG-38 | major | XS | — | [specs/SPEC-leg-38-08-gates-that-test-nothing.md](specs/SPEC-leg-38-08-gates-that-test-nothing.md) | DONE |
 | LEG-09 | `_DEPS` (`tools/dbt.py:25`) and `pip install pytest pyyaml textual` / `pyyaml littlefs-python` in CI without version constraints | major | S | — | [specs/SPEC-leg-09-pin-python-dependencies.md](specs/SPEC-leg-09-pin-python-dependencies.md) | TODO |
 | LEG-10 | CI covers **3 boards out of 8** (`m5stack-cardputer` kernel build, `esp32s3-qemu` and `esp32s3-qemu-psram` under QEMU) and **1 profile out of 7** (`cardputer-contest`). **No RISC-V target is built** — that half of the finding is unchanged, and `esp32c3-devkitc` / `esp32p4-devkitm` exist as boards | major | M | — | [specs/SPEC-leg-10-ci-board-profile-matrix.md](specs/SPEC-leg-10-ci-board-profile-matrix.md) | TODO |
 | LEG-11 | `.devcontainer/` gitignored (`.gitignore:23`): development environment not shared | minor | XS | — | [specs/SPEC-leg-11-repo-hygiene-batch.md](specs/SPEC-leg-11-repo-hygiene-batch.md) | TODO |
@@ -685,7 +685,7 @@ suite still prints that count separately so it stays visible until specced.
 | LEG-16 | 4 IDF components at `version: "*"` outside the lock's scope (`kernel/duneos_kernel/idf_component.yml:20-35` — lan87xx, ksz80xx, rtl8201, ip101) | minor | S | LEG-07 | [specs/SPEC-leg-16-pin-idf-components.md](specs/SPEC-leg-16-pin-idf-components.md) | TODO |
 | LEG-31 | Latent compile break: `CONFIG_DUNEOS_DRV_I2C` means "an I2C section exists" but gates code that dereferences bus 0 by name — a board declaring `i2c: [{id: 1}]` does not build | major | S | — | [specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md](specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md) | TODO |
 | LEG-32 | `CONFIG_DUNEOS_DRV_LOGIC=y` emitted for every board against a `default n` Kconfig | minor | M | — | [specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md](specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md) | TODO |
-| LEG-38 | A test that reads a gitignored build artefact is green only on the machine that produced it. Shipped twice: `tools/dbt/tests/test_bspgen_uart.py` (PR #5) and `tools/dbt/tests/test_sdkconfig_check.py` (PR #7), both caught by a human reading a diff. Compounded by a collection-time `ImportError` that aborted the whole dbt suite while the job looked green — 202 tests unrun | major | S | — | [specs/SPEC-leg-38-tests-must-not-read-generated-files.md](specs/SPEC-leg-38-tests-must-not-read-generated-files.md) | TODO |
+| LEG-38 | A test that reads a gitignored build artefact is green only on the machine that produced it — four recorded instances, the last three green having tested nothing. The root `conftest.py` now fails any test that opens one, ignore status coming from git | major | S | — | [specs/SPEC-leg-38-08-gates-that-test-nothing.md](specs/SPEC-leg-38-08-gates-that-test-nothing.md) | DONE |
 
 LEG-31 and LEG-32 come from the Milestone 0 bench work, not from the audit sweep. Both are build
 reproducibility, which is why they sit here rather than in Milestone 1.
@@ -698,13 +698,6 @@ LEG-32's **product ruling is signed** (2026-09-05, parts 1 and 2 in the spec): `
 peripheral, declared by a bare `logic:` key with no pin list, on `m5stack-cardputer` only, and
 `CONFIG_DUNEOS_DRV_GPIO` is explicitly out of its scope. Its four open questions are closed. **It is
 ready to build** — the `M` size is schema plus guard, not design.
-
-**LEG-38 sits in this milestone rather than in a "not retained" list**, which is where it was
-first filed by mistake: it is active, specced
-([SPEC-leg-38](specs/SPEC-leg-38-tests-must-not-read-generated-files.md), `Status: PROPOSED`), and
-it is a build-reproducibility finding like the two above it. Its rule — **a test must construct what
-it asserts against, and must never read a gitignored artefact** — is also in CLAUDE.md's Hard-Won
-Lessons, because both occurrences were written by agents reading that file.
 
 ### Milestone 3 — Remaining test safety net and documentation consistency
 

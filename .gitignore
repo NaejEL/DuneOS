@@ -65,3 +65,6 @@ boards/*/etc/wifi/known.yaml
 
 # Software-factory CI run logs
 factory-logs/
+
+# pytest junit report (CI count floor, SPEC-leg-38-08)
+pytest-report.xml

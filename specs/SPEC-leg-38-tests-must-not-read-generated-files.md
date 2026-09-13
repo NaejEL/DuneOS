@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-38-08-gates-that-test-nothing.md
 
 # SPEC-leg-38 — A test must not depend on a generated file, and CI must prove it
 
