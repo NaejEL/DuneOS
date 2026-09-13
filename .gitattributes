@@ -1,0 +1,14 @@
+# LF in the index for every text file, on every platform. ci/factory.ps1 is
+# included deliberately: PowerShell reads LF fine, and an exception would be the
+# one file whose endings depend on who cloned it.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.dr   binary
+
+# .knowledge/ has its own .gitattributes for the generated index; nothing here
+# names those files, so the deeper file stays authoritative for them.

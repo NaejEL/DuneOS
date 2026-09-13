@@ -13,6 +13,7 @@ from pathlib import Path
 
 _TOOLS_DIR = Path(__file__).resolve().parent
 _VENV_DIR  = _TOOLS_DIR / ".dbt-venv"
+_CONSTRAINTS = _TOOLS_DIR / "constraints.txt"
 
 # pip package name → import module name (when they differ).
 _DEP_MODULE = {
@@ -21,7 +22,8 @@ _DEP_MODULE = {
     "Pillow": "PIL",
 }
 
-# All Python packages required by the dbt package itself.
+# All Python packages required by the dbt package itself. Every name here also
+# needs a pin in tools/constraints.txt; a test enforces it.
 _DEPS = [
     "littlefs-python",
     "esptool",
@@ -71,7 +73,7 @@ def _bootstrap() -> None:
 
     print("dbt: installing dependencies…", flush=True)
     result = subprocess.run(
-        [str(python), "-m", "pip", "install"] + _DEPS,
+        [str(python), "-m", "pip", "install", "-c", str(_CONSTRAINTS)] + _DEPS,
     )
     if result.returncode != 0:
         sys.exit("dbt: dependency installation failed.")

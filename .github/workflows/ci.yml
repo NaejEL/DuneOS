@@ -41,14 +41,14 @@ jobs:
           # textual: test_tui_sdkconfig_guard.py imports dbt.tui. A missing
           # import here is not one red test — it is a collection error that
           # aborts the whole run, so every dbt test would go unrun.
-          python -m pip install pytest pyyaml textual
+          python -m pip install -c tools/constraints.txt pytest pyyaml textual
 
           # The floor counts tests that RAN, because a bug that mass-skips the
-          # suite clears a collected count. It sits a few below the current 297
+          # suite clears a collected count. It sits a few below the current 311
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=290
+          FLOOR=304
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml
@@ -180,7 +180,7 @@ jobs:
         run: |
           echo m5stack-cardputer > .duneos_board
           . $IDF_PATH/export.sh
-          pip install pyyaml
+          pip install -c tools/constraints.txt pyyaml
           python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml
 
       # On dev machines the rule is `dbt flash kernel --build-only`, never raw
@@ -222,7 +222,7 @@ jobs:
       - name: Install Python deps
         run: |
           . $IDF_PATH/export.sh
-          pip install pyyaml littlefs-python
+          pip install -c tools/constraints.txt pyyaml littlefs-python
 
       # No qemu install step and no PATH surgery on purpose: `dbt qemu`
       # resolves qemu-system-xtensa from the IDF tools tree and installs it
@@ -259,6 +259,6 @@ jobs:
           git config --global --add safe.directory '*'
           echo m5stack-cardputer > .duneos_board
           . $IDF_PATH/export.sh
-          pip install pyyaml
+          pip install -c tools/constraints.txt pyyaml
           python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml
           python tools/dbt.py system build --profile cardputer-contest
