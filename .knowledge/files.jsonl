@@ -1,11 +1,11 @@
-{"lang": "markdown", "lines": 307, "path": "CLAUDE.md", "sha256": "502186af0538e778303c10caead9e23eda5276526542b926368f109825a265f1", "size": 31628}
+{"lang": "markdown", "lines": 307, "path": "CLAUDE.md", "sha256": "9859540c03ba6057f25e696e3349db0b99621b35a04b1dae2c42df0bfdb1ef14", "size": 31862}
 {"lang": "other", "lines": 72, "path": "CMakeLists.txt", "sha256": "177dd3ed8c566b2f288cd2590c59874febac1403f98b4ca2073da4af7e7079f6", "size": 3081}
 {"lang": "markdown", "lines": 65, "path": "CONTRIBUTING.md", "sha256": "686fef08b3c3cfc627a30b95e10b9bb492b29ce720ac14ec35206c6f68ba3738", "size": 2772}
 {"lang": "other", "lines": 165, "path": "LICENSE", "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118", "size": 7652}
 {"lang": "other", "lines": 674, "path": "LICENSE.GPL-3.0", "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986", "size": 35149}
 {"lang": "other", "lines": 46, "path": "NOTICE", "sha256": "bdfd3d56352bfb039156cf6b1407d397d14ddf69139447fc51f942d7ae5c5362", "size": 2061}
 {"lang": "markdown", "lines": 352, "path": "README.md", "sha256": "f99d24168ad94db40913781fcd610c7b1faa65c997f31240da8d629c4216c137", "size": 20244}
-{"lang": "markdown", "lines": 1088, "path": "ROADMAP.md", "sha256": "9f257b415c7d22e26f1bb3efb521ae516099c8513dd940cedc7cf404a9d215e6", "size": 126115}
+{"lang": "markdown", "lines": 1088, "path": "ROADMAP.md", "sha256": "20749e02be737aa727be40986e37454004d804b85ce9175cf331e1ed4a5148ad", "size": 126284}
 {"lang": "cpp", "lines": 48, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "683fa79c950b2df3176f16629d6629e571eae31c1c3262d2cf98ee610e1c0e44", "size": 1477}
 {"lang": "yaml", "lines": 7, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "6dbddf714eaeb8d2f9643a96173ea4ce03ba48ebe5b431c220c9a54c68b2a240", "size": 168}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
