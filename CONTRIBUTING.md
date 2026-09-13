@@ -47,12 +47,14 @@ running. Switch the board (and full-clean, `sdkconfig` is board-specific), run
 it, switch back. It is the only check that actually boots the kernel and loads
 a `.dap`, so skipping it means CI finds the breakage instead of you.
 
-`python tools/dbt.py test` runs the first three without the typing, and the
-qemu leg with `--qemu`. It exits non-zero when a gate merely *could not* run
-and names which — that is not a pass, and `--allow-missing` is how you say you
-accept it anyway. It also runs pytest from the venv it bootstraps, which is the
-only interpreter this repo provisions; the bare command above assumes pytest in
-whichever `python` you type.
+`python tools/dbt.py test` runs the host-C and pytest gates without the typing,
+and the qemu leg with `--qemu`. It does not build the kernel — that first gate
+is still yours to type, and a change that alters what a board links has to pass
+it before it reaches a PR. `dbt test` exits non-zero when a gate merely *could
+not* run and names which — that is not a pass, and `--allow-missing` is how you
+say you accept it anyway. It also runs pytest from the venv it bootstraps,
+which is the only interpreter this repo provisions; the bare command above
+assumes pytest in whichever `python` you type.
 
 Use `dbt`, not raw `idf.py`, outside the IDF container: it resolves the pinned
 toolchain for you.

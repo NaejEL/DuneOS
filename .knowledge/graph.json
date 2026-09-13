@@ -386,7 +386,7 @@
    "src": "CONTRIBUTING.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "gate",
    "src": "CONTRIBUTING.md"
   },
@@ -32716,7 +32716,7 @@
    "src": "tools/dbt/testing.py"
   },
   {
-   "count": 14,
+   "count": 15,
    "dst": "missing",
    "src": "tools/dbt/testing.py"
   },
@@ -32726,7 +32726,7 @@
    "src": "tools/dbt/testing.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "read",
    "src": "tools/dbt/testing.py"
   },
@@ -32736,7 +32736,7 @@
    "src": "tools/dbt/testing.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "run_gates",
    "src": "tools/dbt/testing.py"
   },
@@ -33451,13 +33451,18 @@
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
-   "count": 23,
+   "count": 25,
    "dst": "blob",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
    "count": 1,
    "dst": "check",
+   "src": "tools/dbt/tests/test_gates_cover.py"
+  },
+  {
+   "count": 1,
+   "dst": "close",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
@@ -33471,12 +33476,17 @@
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
+   "count": 1,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_gates_cover.py"
+  },
+  {
    "count": 2,
    "dst": "host_suite_count",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "join",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
@@ -33491,7 +33501,7 @@
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "roadmap_row",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
@@ -33503,6 +33513,11 @@
   {
    "count": 1,
    "dst": "test_adr_041_supersedes_adr_012_clause_by_clause",
+   "src": "tools/dbt/tests/test_gates_cover.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_leg_18_stays_open_until_a_board_says_otherwise",
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
@@ -35356,7 +35371,7 @@
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "EXIT_FAILED",
    "src": "tools/dbt/tests/test_testing.py"
   },
@@ -35371,7 +35386,7 @@
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "Gate",
    "src": "tools/dbt/tests/test_testing.py"
   },
@@ -35381,7 +35396,7 @@
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "UNAVAILABLE_RC",
    "src": "tools/dbt/tests/test_testing.py"
   },
@@ -35447,11 +35462,16 @@
   },
   {
    "count": 1,
-   "dst": "pytest_verdict",
+   "dst": "missing",
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
    "count": 1,
+   "dst": "pytest_verdict",
+   "src": "tools/dbt/tests/test_testing.py"
+  },
+  {
+   "count": 2,
    "dst": "read",
    "src": "tools/dbt/tests/test_testing.py"
   },
@@ -35466,7 +35486,7 @@
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "run_gates",
    "src": "tools/dbt/tests/test_testing.py"
   },
@@ -35528,6 +35548,11 @@
   {
    "count": 1,
    "dst": "test_a_run_where_every_test_skipped_is_not_a_pass",
+   "src": "tools/dbt/tests/test_testing.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
@@ -35618,6 +35643,11 @@
   {
    "count": 1,
    "dst": "test_the_qemu_gate_passes_other_exits_through",
+   "src": "tools/dbt/tests/test_testing.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_unavailable_sentinel_is_not_a_process_exit_code",
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
@@ -39304,6 +39334,7 @@
    "test_a_run_at_the_floor_passes",
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
+   "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
@@ -39405,6 +39436,7 @@
    "test_index_is_lf_only",
    "test_junit_counts_are_read_from_a_real_report",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
+   "test_leg_18_stays_open_until_a_board_says_otherwise",
    "test_legacy_merge",
    "test_legacy_value_trimming",
    "test_license_and_notice_are_tracked_and_advertised",
@@ -39540,6 +39572,7 @@
    "test_the_tracked_yaml_next_to_it_is_allowed",
    "test_the_typed_key_and_a_raw_kconfig_entry_are_refused_together",
    "test_the_unavailable_cross_check_is_a_warning_not_a_verdict",
+   "test_the_unavailable_sentinel_is_not_a_process_exit_code",
    "test_the_venv_dbt_bootstraps_can_run_the_pytest_gate",
    "test_the_word_panic_alone_is_not_a_panic",
    "test_the_written_fragment_matches_the_yaml",

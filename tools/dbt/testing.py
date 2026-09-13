@@ -55,7 +55,14 @@ class Gate:
 # `dbt qemu` exits 6 when .duneos_board does not name the board asked for. That
 # is a configuration answer, not a firmware verdict, so it is reported here as
 # unavailability — and the board file is never written to get past it.
-UNAVAILABLE_RC = -1
+#
+# The value is outside the range a process can return, because gates hand their
+# child's raw `returncode` to run_gates and subprocess reports a signal death as
+# -N: -1 is SIGHUP, which a dropped ssh session delivers to a `make` running
+# here. That would have read as unavailable — a configuration problem, said the
+# message — and exited 0 under --allow-missing, which is the one outcome this
+# module exists to refuse.
+UNAVAILABLE_RC = 1 << 20
 
 
 def _run(argv: list[str]) -> int:

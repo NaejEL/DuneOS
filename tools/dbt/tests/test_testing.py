@@ -89,6 +89,22 @@ def test_the_qemu_gate_maps_exit_six_to_unavailable(monkeypatch):
     assert testing._run_qemu() == testing.UNAVAILABLE_RC
 
 
+def test_the_unavailable_sentinel_is_not_a_process_exit_code():
+    """Gates hand run_gates their child's raw returncode, and subprocess
+    reports a signal death as -N. A sentinel inside that range would make a
+    killed `make` read as a configuration problem — and exit 0 under
+    --allow-missing, which is the one outcome this module refuses."""
+    assert not -256 <= testing.UNAVAILABLE_RC <= 255
+
+
+def test_a_signal_killed_gate_is_a_failure_not_unavailability():
+    for signal_rc in (-1, -9, -15):
+        code, out = run([testing.Gate("host-c", "c", lambda: None,
+                                      lambda rc=signal_rc: rc)])
+        assert code == testing.EXIT_FAILED, f"returncode {signal_rc}"
+        assert "unavailable" not in out.lower()
+
+
 def test_the_qemu_gate_passes_other_exits_through(monkeypatch):
     monkeypatch.setattr(testing, "_active_board", lambda: "esp32s3-qemu")
     monkeypatch.setattr(testing, "_run", lambda argv: 3)

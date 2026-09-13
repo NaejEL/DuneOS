@@ -140,6 +140,22 @@ def test_the_roadmap_suite_count_matches_the_makefile(blob):
         f"the LEG-17 row says {counts} suites; tests/host/Makefile builds {expected}"
 
 
-@pytest.mark.parametrize("tag", ["LEG-17", "LEG-18", "LEG-19", "LEG-21"])
+@pytest.mark.parametrize("tag", ["LEG-17", "LEG-19", "LEG-21"])
 def test_the_closed_rows_are_marked_done(blob, tag):
     assert roadmap_row(blob, tag).rstrip().endswith("| DONE |")
+
+
+# LEG-18 is the one row of the four this spec closes that a host gate cannot
+# close: the parser now behaves differently for a board carrying a hand-edited
+# known.yaml, and only a board can observe that. CLAUDE.md's Phase 24.7 row
+# sets the convention — don't claim DONE until hardware-tested — so what this
+# asserts is that the row keeps saying so, rather than drifting to DONE on the
+# strength of a green CI run.
+def test_leg_18_stays_open_until_a_board_says_otherwise(blob):
+    row = roadmap_row(blob, "LEG-18")
+    assert not row.rstrip().endswith("| DONE |"), \
+        "LEG-18 was marked DONE; the on-board iw join / reboot / iw status " \
+        "run is what closes it, and nothing host-side can stand in for it"
+    assert "CODE COMPLETE" in row
+    assert "on-board" in row, \
+        "the LEG-18 row no longer names the validation it still owes"
