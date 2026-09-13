@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-17-18-19-21-tests-that-cover.md
 
 # SPEC-leg-17 — Realign ADR 012, and make a clean clone able to run every gate
 

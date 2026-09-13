@@ -16,6 +16,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 MAX_TRACKED_BYTES = 256 * 1024
 
+# The four pre-PR gates, as CONTRIBUTING.md spells them.
+PRE_PR_COMMANDS = (
+    "dbt.py flash kernel --build-only",
+    "make -C tests/host test",
+    "python -m pytest -q",
+    "dbt.py qemu --board esp32s3-qemu",
+)
+
 # A generated index tree, not authored content — excluded for the same reason
 # the size bound already excludes submodule contents. This is not an allowlist:
 # do not add file names to it.
@@ -261,13 +269,45 @@ def test_no_tracked_file_exceeds_the_size_bound(index):
 def test_contributing_names_the_commands_that_exist(index, blob):
     assert "CONTRIBUTING.md" in index
     assert "(CONTRIBUTING.md)" in blob("README.md")
+    assert "tools/duneos-bspgen.py" in blob("CONTRIBUTING.md")
 
     contributing = blob("CONTRIBUTING.md")
-    for command in ("tools/duneos-bspgen.py",
-                    "dbt.py flash kernel --build-only",
-                    "make -C tests/host test",
-                    "python -m pytest -q"):
+    for command in PRE_PR_COMMANDS:
         assert command in contributing, f"CONTRIBUTING.md does not name `{command}`"
+
+
+# --- SPEC-leg-17/18/19/21 criterion 10 -----------------------------------
+
+
+def test_the_pre_pr_gate_list_lives_in_exactly_one_file(index, blob):
+    """Two copies of the list is two sources of truth, and the second one rots.
+    Other files link to CONTRIBUTING.md instead of restating it."""
+    markdown = sorted(path for path in index
+                      if path.endswith(".md") and not path.startswith(GENERATED_TREE))
+    restating = [path for path in markdown
+                 if path != "CONTRIBUTING.md"
+                 and sum(command in blob(path) for command in PRE_PR_COMMANDS) >= 3]
+    assert not restating, (
+        "these files restate CONTRIBUTING.md's pre-PR gate list instead of "
+        f"linking to it: {', '.join(restating)}")
+
+
+def test_the_documents_that_describe_testing_link_to_the_list(blob):
+    for path in ("docs/testing.md", "CLAUDE.md"):
+        assert "CONTRIBUTING.md" in blob(path), \
+            f"{path} does not link to CONTRIBUTING.md"
+
+
+# --- SPEC-leg-17/18/19/21 criterion 4 ------------------------------------
+
+
+def test_the_venv_dbt_bootstraps_can_run_the_pytest_gate(blob):
+    """CONTRIBUTING tells a newcomer to run `python -m pytest -q`; the venv
+    tools/dbt.py builds is the only Python environment the repo provisions."""
+    deps = re.search(r"_DEPS = \[(.*?)\]", blob("tools/dbt.py"), re.S)
+    assert deps, "could not find _DEPS in tools/dbt.py"
+    names = {normalise(name) for name in re.findall(r'"([^"]+)"', deps.group(1))}
+    assert "pytest" in names, "tools/dbt.py does not install pytest"
 
 
 # --- Criterion 16 --------------------------------------------------------

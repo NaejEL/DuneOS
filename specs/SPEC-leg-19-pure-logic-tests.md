@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-17-18-19-21-tests-that-cover.md
 
 # SPEC-leg-19 — Cover the host-testable pure logic with tests
 

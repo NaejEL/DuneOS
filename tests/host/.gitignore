@@ -13,3 +13,4 @@ fuzz_ran.marker
 test_elf_scan
 elf_scan_*/
 test_manifest_depth
+test_ld2450

@@ -44,13 +44,13 @@ python tools/dbt.py flashimg                # uses .duneos_port
 # Interactive TUI (board picker, init editor, build/flash actions)
 python tools/dbt.py tui
 
-# --- Gates. CI runs all four; run them before you push. ---
-python tools/dbt.py flash kernel --build-only # kernel builds, no new warning
-make -C tests/host test                      # C host suites (elf_validate, elf_scan, i2c_decode, known_yaml, re)
-python -m pytest -q                          # Python tooling (dbt, bspgen); root pytest.ini holds the collection root
-python tools/dbt.py qemu --board esp32s3-qemu --build-dir build-esp32s3-qemu
-                                             # hardware-free boot + loader smoke test (ADR 039)
+# --- Gates. CONTRIBUTING.md is the list; this runs what the machine can run. ---
+python tools/dbt.py test                     # non-zero when a gate merely could not run
+python tools/dbt.py test --fuzz --qemu       # the two opt-in gates as well
 ```
+
+`CONTRIBUTING.md` ("Before you open a pull request") is the single copy of the
+pre-PR gate list; `docs/testing.md` is how to write a test.
 
 ## Repository Structure
 
@@ -205,7 +205,7 @@ Two tiers: `third_party/` git submodules for pure-C libs (cJSON, LittleFS — no
 
 ## Implementation Status
 
-**DONE:** Phases 1–14, 16–19, 21–24 (Phase 24: HAL scope; core headers `init.h`/`task.h`/`vfs.h`/`supervisor.h` still `esp_err_t`, migrate in Phases 26–27). Phase 15 superseded by 18. Phase 24.5 (13 ADRs closed in that phase — ADR 000-012; `docs/adr/` holds **41** today).
+**DONE:** Phases 1–14, 16–19, 21–24 (Phase 24: HAL scope; core headers `init.h`/`task.h`/`vfs.h`/`supervisor.h` still `esp_err_t`, migrate in Phases 26–27). Phase 15 superseded by 18. Phase 24.5 (13 ADRs closed in that phase — ADR 000-012; `docs/adr/` holds **42** today).
 
 **PARTIAL:** Phase 20 — Memory hardening: heap caps, WDT, exception handler, pointer validation and the
 **stack canary** (`sdkconfig.defaults:30` `CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y` +
@@ -300,7 +300,7 @@ carries the legacy-audit debt (LEG-01…LEG-38) as its own section.
 
 ## References
 
-- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (**41** ADRs, 000 to 040, as of 2026-09). Authoritative for design intent. Note ADRs 025-038 describe delivered work that no roadmap phase accounts for; the gap is recorded in `ROADMAP.md`, not resolved.
+- **Architecture Decision Records** — [`docs/adr/`](docs/adr/) (**42** ADRs, 000 to 041, as of 2026-09). Authoritative for design intent. Note ADRs 025-038 describe delivered work that no roadmap phase accounts for; the gap is recorded in `ROADMAP.md`, not resolved.
 - **Unscheduled ideas** — [`docs/backlog.md`](docs/backlog.md)
 - **Roadmap** — [`ROADMAP.md`](ROADMAP.md). Phases (delivered and next) plus the 2026-09 legacy-audit debt section. Single file; `ROADMAP_v2.md` and `ROADMAP-legacy.md` were merged into it on 2026-09-06.
 - Flipper Zero FAP loader: [flipperzero-firmware](https://github.com/flipperdevices/flipperzero-firmware)

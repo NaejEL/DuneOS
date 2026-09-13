@@ -6,3 +6,4 @@ permissions: 112
 stack_size: 8192
 sources:
   - $SDK/log/dlog.c
+  - $SDK/net/known_yaml.c

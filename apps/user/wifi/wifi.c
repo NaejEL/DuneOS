@@ -22,6 +22,7 @@
 #include "duneos/ui.h"
 #include "duneos/input_ioctl.h"
 #include "duneos/ambient.h"
+#include "duneos/known_yaml.h"
 #include "duneos/libdune.h"
 #include "duneos/wifi.h"      /* duneos_wifi_ap_t — layout of the scan blob */
 
@@ -36,9 +37,12 @@ extern int dprintf(int fd, const char *fmt, ...);
 #define KNOWN_SEED   "/etc/wifi/known.yaml"   /* board-provisioned, RO */
 
 #define MAX_AP     16
-#define MAX_KNOWN  16
+#define MAX_KNOWN  KNOWN_YAML_MAX_NETS
 #define ROW_LEN    48
-#define PSK_CAP    64        /* 63 chars + NUL (WPA2 max passphrase) */
+#define PSK_CAP    64        /* what the prompt accepts: a 63-char WPA2
+                             * passphrase + NUL. The stored capacity is
+                             * KNOWN_YAML_PSK_CAP, which also fits a
+                             * 64 hex-digit PSK. */
 #define TICK_US      150000
 #define SCAN_WAIT_MS 8000
 
@@ -64,10 +68,8 @@ static ui_list_t        s_list;
 static link_t s_link;
 static int    s_mode;
 
-static char       s_kssid[MAX_KNOWN][33];
-static char       s_kpsk[MAX_KNOWN][PSK_CAP + 1];
-static int        s_kn;
-static char       s_fbuf[2048];
+static known_net_t s_known[MAX_KNOWN];
+static int         s_kn;
 
 static ui_input_t s_in;
 static char       s_mask[PSK_CAP];    /* what ui_input draws: '*' repeated  */
@@ -115,65 +117,18 @@ static int ensure_daemon(void)
 
 /* ----- known.yaml (read-modify-write, whole file) -------------------------- */
 
-static char *trim(char *s)
-{
-    while (*s == ' ' || *s == '\t') s++;
-    char *e = s + strlen(s);
-    while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n'))
-        *--e = '\0';
-    return s;
-}
-
-static void strip_quotes(char *s)
-{
-    int n = (int)strlen(s);
-    if (n >= 2 && s[0] == '"' && s[n - 1] == '"') {
-        s[n - 1] = '\0';
-        memmove(s, s + 1, (size_t)n - 1);
-    }
-}
-
 static void load_known(void)
 {
     /* /data (reflash-proof) once it exists; else the /flash seed. */
-    s_kn = 0;
-    int fd = open(KNOWN_PATH, O_RDONLY);
-    if (fd < 0) fd = open(KNOWN_SEED, O_RDONLY);
-    if (fd < 0) return;
-    int n = (int)read(fd, s_fbuf, sizeof(s_fbuf) - 1);
-    close(fd);
-    if (n <= 0) return;
-    s_fbuf[n] = '\0';
-
-    int pending = 0;
-    char *p = s_fbuf;
-    while (p && *p) {
-        char *nl = strchr(p, '\n');
-        if (nl) *nl = '\0';
-        char *t = trim(p);
-        if (t[0] != '#') {
-            if (strncmp(t, "- ssid:", 7) == 0 && s_kn < MAX_KNOWN) {
-                char *v = trim(t + 7);
-                strip_quotes(v);
-                snprintf(s_kssid[s_kn], sizeof(s_kssid[0]), "%s", v);
-                s_kpsk[s_kn][0] = '\0';
-                s_kn++;
-                pending = 1;
-            } else if (pending && strncmp(t, "psk:", 4) == 0) {
-                char *v = trim(t + 4);
-                strip_quotes(v);
-                snprintf(s_kpsk[s_kn - 1], sizeof(s_kpsk[0]), "%s", v);
-                pending = 0;
-            }
-        }
-        p = nl ? nl + 1 : NULL;
-    }
+    s_kn = known_yaml_load(KNOWN_PATH, s_known, MAX_KNOWN);
+    if (s_kn < 0) s_kn = known_yaml_load(KNOWN_SEED, s_known, MAX_KNOWN);
+    if (s_kn < 0) s_kn = 0;
 }
 
 static int find_known(const char *ssid)
 {
     for (int i = 0; i < s_kn; i++)
-        if (strcmp(s_kssid[i], ssid) == 0) return i;
+        if (strcmp(s_known[i].ssid, ssid) == 0) return i;
     return -1;
 }
 
@@ -192,7 +147,7 @@ static int save_known(void)
     dprintf(fd, "networks:\n");
     for (int i = 0; i < s_kn; i++)
         dprintf(fd, "  - ssid: %s\n    psk: %s\n",
-                s_kssid[i], s_kpsk[i][0] ? s_kpsk[i] : "\"\"");
+                s_known[i].ssid, s_known[i].psk[0] ? s_known[i].psk : "\"\"");
     close(fd);
     return 0;
 }
@@ -204,9 +159,9 @@ static void set_known(const char *ssid, const char *psk)
     if (i < 0) {
         if (s_kn >= MAX_KNOWN) return;
         i = s_kn++;
-        snprintf(s_kssid[i], sizeof(s_kssid[0]), "%s", ssid);
+        snprintf(s_known[i].ssid, sizeof(s_known[i].ssid), "%s", ssid);
     }
-    snprintf(s_kpsk[i], sizeof(s_kpsk[0]), "%s", psk);
+    snprintf(s_known[i].psk, sizeof(s_known[i].psk), "%s", psk);
     save_known();
 }
 
@@ -215,10 +170,8 @@ static void remove_known(const char *ssid)
     load_known();
     int i = find_known(ssid);
     if (i < 0) return;
-    for (; i < s_kn - 1; i++) {
-        memcpy(s_kssid[i], s_kssid[i + 1], sizeof(s_kssid[0]));
-        memcpy(s_kpsk[i], s_kpsk[i + 1], sizeof(s_kpsk[0]));
-    }
+    for (; i < s_kn - 1; i++)
+        s_known[i] = s_known[i + 1];
     s_kn--;
     save_known();
 }
@@ -486,7 +439,7 @@ static void select_ap(void)
         return;
     }
     if (k >= 0) {
-        set_known(ap->ssid, s_kpsk[k]);   /* refresh the entry per contract */
+        set_known(ap->ssid, s_known[k].psk);   /* refresh the entry per contract */
         join(ap->ssid);
     } else if (ap->authmode == 0) {
         set_known(ap->ssid, "");
