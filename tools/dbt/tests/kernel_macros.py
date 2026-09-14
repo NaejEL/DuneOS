@@ -237,7 +237,11 @@ def _eval_cond(rest, board_defines, enabled_configs):
     them as live demands DUNEOS_SD_* from every board that has no SD card. The
     C rule that an identifier no #define gives a value to is 0 inside #if makes
     this an evaluation rather than a guess — but only while every identifier is
-    one bspgen owns, so anything else returns None and stays live.
+    one bspgen owns. Anything else — a DUNEOS_ macro with a non-integer value, a
+    non-DUNEOS identifier, or a CONFIG_ symbol from ESP-IDF's sdkconfig — returns
+    None and stays live, because over-demanding a macro is a false positive a
+    reader can dismiss and under-demanding one is the blindness this file exists
+    to remove.
     """
     expr = rest.split("/*", 1)[0].split("//", 1)[0].strip()
     if not expr:
@@ -245,6 +249,12 @@ def _eval_cond(rest, board_defines, enabled_configs):
 
     def substitute_defined(m):
         name = m.group(1) or m.group(2)
+        # A CONFIG_ symbol outside CONFIG_DUNEOS_ comes from ESP-IDF's sdkconfig,
+        # which bspgen does not own and this module cannot see. Answering "not
+        # defined" would class the branch dead and stop demanding the macros
+        # inside it — the one direction that reintroduces LEG-31 blindness.
+        if name.startswith("CONFIG_") and not name.startswith("CONFIG_DUNEOS_"):
+            raise _NotEvaluable
         return "1" if _is_defined(name, board_defines, enabled_configs) else "0"
 
     def substitute_identifier(m):

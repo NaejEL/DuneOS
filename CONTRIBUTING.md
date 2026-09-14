@@ -33,6 +33,10 @@ ESP-IDF tag as CI.
 
 Run all four. Each covers something the others do not, and CI runs every one.
 
+If you build for a target other than `esp32s3` — any board but the CardPuter
+and the two QEMU ones — the build rewrites the tracked `dependencies.lock`.
+Revert it before committing; the churn is expected, the commit is not.
+
 ```bash
 python tools/dbt.py flash kernel --build-only   # kernel builds, no new warning
 make -C tests/host test                         # C host suites

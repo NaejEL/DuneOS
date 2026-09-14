@@ -9701,8 +9701,13 @@
    "src": "arch/riscv32/reloc/loader_reloc_riscv.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "check",
+   "src": "arch/xtensa_esp32/arch.cmake"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_component_is_declared_both_unconditionally_and_per_arch",
    "src": "arch/xtensa_esp32/arch.cmake"
   },
   {
@@ -32926,7 +32931,7 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "_NotEvaluable",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -33186,7 +33191,7 @@
    "src": "tools/dbt/tests/test_board_file.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "ARCH_DIRS_BY_CPU",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33196,13 +33201,23 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
+   "count": 1,
+   "dst": "GUARDED_EXCEPTIONS",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
    "count": 6,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 1,
+   "count": 5,
    "dst": "UNRESOLVABLE",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 5,
+   "dst": "_eval_cond",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -33216,17 +33231,17 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "check",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "cmake_files",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "cmake_sources",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33287,7 +33302,17 @@
   },
   {
    "count": 1,
+   "dst": "scan",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
    "dst": "stderr",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_idf_config_symbol_leaves_its_branch_live",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -33321,8 +33346,18 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
+   "count": 1,
+   "dst": "test_the_unresolvable_allowlist_still_names_something_real",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
    "count": 2,
    "dst": "validate",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "walk",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -40148,6 +40183,7 @@
    "test_an_empty_collection_is_not_a_pass",
    "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
    "test_an_icon_at_the_bound_is_accepted",
+   "test_an_idf_config_symbol_leaves_its_branch_live",
    "test_an_over_long_icon_is_rejected",
    "test_an_unavailable_gate_is_not_a_pass",
    "test_an_unconfigured_build_directory_passes",
@@ -40388,6 +40424,7 @@
    "test_the_typed_key_and_a_raw_kconfig_entry_are_refused_together",
    "test_the_unavailable_cross_check_is_a_warning_not_a_verdict",
    "test_the_unavailable_sentinel_is_not_a_process_exit_code",
+   "test_the_unresolvable_allowlist_still_names_something_real",
    "test_the_venv_dbt_bootstraps_can_run_the_pytest_gate",
    "test_the_withdrawal_rule_stays_inside_the_bspgen_namespace",
    "test_the_word_panic_alone_is_not_a_panic",

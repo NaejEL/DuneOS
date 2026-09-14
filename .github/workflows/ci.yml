@@ -48,7 +48,7 @@ jobs:
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=434
+          FLOOR=436
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml

@@ -33,7 +33,9 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
     # The same guards as arch/xtensa_esp32s3/arch.cmake, against the same
     # WHOLE_ARCHIVE over-link defect. Kept in sync by hand, not by a check, and
     # the REQUIRES list below repeats that file's — dbt-only, so no IDF build
-    # sees the duplication criterion 11 forbids between the core and an arch.
+    # sees the core-vs-arch duplication that
+    # tools/dbt/tests/test_cmake_requires.py::test_no_component_is_declared_both_unconditionally_and_per_arch
+    # enforces. This arch-vs-arch case has no check.
     if(CONFIG_DUNEOS_DRV_I2C)
         list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_i2c.c")
     endif()

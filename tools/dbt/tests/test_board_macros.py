@@ -134,3 +134,32 @@ def test_the_scan_reaches_the_core_and_the_guarded_drivers():
              if all(g for g in gates)}
     assert {"drv_i2c.c", "i2c_bus.c", "drv_logic.c", "hal_logic.c",
             "drv_eth.c", "hal_eth.c", "hal_phy.c"} <= gated
+
+
+# The one direction _eval_cond must never take. A CONFIG_ symbol outside
+# CONFIG_DUNEOS_ lives in ESP-IDF's sdkconfig, which this module cannot see;
+# reading it as undefined classes the branch dead and stops demanding the macros
+# inside it, which is LEG-31 blindness reintroduced through the condition walk
+# rather than through the source scan.
+def test_an_idf_config_symbol_leaves_its_branch_live():
+    defines = {"DUNEOS_X": "1"}
+    assert km._eval_cond("defined(CONFIG_SPIRAM)", defines, set()) is None
+    assert km._eval_cond("defined(CONFIG_SPIRAM) && DUNEOS_X", defines, set()) is None
+    # Ours stay evaluable, in both directions.
+    assert km._eval_cond("defined(CONFIG_DUNEOS_DRV_I2C)", defines, set()) == 0
+    assert km._eval_cond(
+        "defined(CONFIG_DUNEOS_DRV_I2C)", defines, {"CONFIG_DUNEOS_DRV_I2C"}) == 1
+
+
+# UNRESOLVABLE is an allow-list, and an allow-list nobody rereads is how a check
+# stops checking. Pin it to the tree the way GUARDED_EXCEPTIONS is pinned.
+def test_the_unresolvable_allowlist_still_names_something_real():
+    assert km.UNRESOLVABLE == {"${BLOBS_GEN_C}"}
+    seen = {token
+            for cpu in km.ARCH_DIRS_BY_CPU
+            for cmake_path in km.cmake_files(cpu)
+            for token, path, _gate in km.cmake_sources(cmake_path)
+            if path is None}
+    assert seen == km.UNRESOLVABLE, \
+        "UNRESOLVABLE no longer matches the tree; a stale entry is an " \
+        "allow-list nobody rereads"
