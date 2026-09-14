@@ -48,7 +48,7 @@ jobs:
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=425
+          FLOOR=434
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml
@@ -246,6 +246,10 @@ jobs:
           BUILD=build-${{ matrix.board }}
           if find "$BUILD" -name 'drv_logic.c.obj' -o -name 'hal_logic.c.obj' | grep -q .; then
             echo "::error::logic driver compiled for ${{ matrix.board }}, which declares no logic:"
+            exit 1
+          fi
+          if [ ! -f "$BUILD/duneos.map" ]; then
+            echo "::error::$BUILD/duneos.map is absent — this gate would pass on grep's exit 2"
             exit 1
           fi
           if grep -q 'drv_logic_register' "$BUILD/duneos.map"; then

@@ -74,9 +74,63 @@ def test_the_check_fails_on_a_bus_numbered_one(tmp_path):
             "DUNEOS_I2C0_FREQ_HZ"} <= missing
 
 
-def test_the_source_scan_reaches_the_guarded_drivers():
-    """kernel_sources() returning nothing would make every assertion above
-    vacuous, and it would look exactly the same from outside."""
-    gated = {p.name for p, gates in km.kernel_sources("esp32s3").items()
+def test_the_check_fails_on_a_board_missing_its_ethernet_pins(tmp_path):
+    """Second control, on a different board, driver and CMake file: kincony-A16
+    is the only board enabling ETH, and hal_eth.c is reached only through a
+    multi-line append in arch/xtensa_esp32/arch.cmake. A parse that reads the
+    opening line alone passes this board while defining none of its macros."""
+    yaml_path = REPO_ROOT / "boards" / "kincony-A16" / "board.yaml"
+    out = tmp_path / "kincony"
+    out.mkdir()
+    subprocess.run(
+        [sys.executable, str(REPO_ROOT / "tools" / "duneos-bspgen.py"),
+         str(yaml_path), "--out", str(out / "board_config.h")],
+        capture_output=True, check=True)
+    fragment = (out / "sdkconfig.board").read_text(encoding="utf-8")
+    assert "CONFIG_DUNEOS_DRV_ETH=y" in fragment
+
+    header = out / "board_config.h"
+    header.write_text("\n".join(
+        line for line in header.read_text(encoding="utf-8").splitlines()
+        if not line.startswith("#define DUNEOS_ETH_")), encoding="utf-8")
+
+    missing = km.missing_macros("esp32", fragment, header)
+    assert {"DUNEOS_ETH_MDC_PIN", "DUNEOS_ETH_MDIO_PIN", "DUNEOS_ETH_PHY_ADDR",
+            "DUNEOS_ETH_CLK_MODE", "DUNEOS_ETH_CLK_GPIO"} <= missing
+
+
+# --- the parse itself ---------------------------------------------------------
+#
+# Every assertion above is only as good as the source list behind it, and a
+# source that silently fails to parse looks exactly like a source with nothing
+# to demand. These three are the lamp.
+
+@pytest.mark.parametrize("cpu", sorted(km.ARCH_DIRS_BY_CPU))
+def test_the_cmake_parse_drops_no_source(cpu):
+    """Counted against the file's own text, so a source can leave the parse
+    only by leaving the file — never by being reformatted."""
+    for cmake_path in km.cmake_files(cpu):
+        parsed = [t for t, _, _ in km.cmake_sources(cmake_path) if t.endswith(".c")]
+        assert parsed == km.quoted_c_tokens(cmake_path), cmake_path
+
+
+@pytest.mark.parametrize("cpu", sorted(km.ARCH_DIRS_BY_CPU))
+def test_every_parsed_source_resolves_to_a_file(cpu):
+    for cmake_path in km.cmake_files(cpu):
+        for token, path, _gate in km.cmake_sources(cmake_path):
+            if path is None:
+                assert token in km.UNRESOLVABLE, f"{cmake_path}: {token}"
+            else:
+                assert path.exists(), f"{cmake_path}: {token} -> {path}"
+
+
+def test_the_scan_reaches_the_core_and_the_guarded_drivers():
+    unconditional = {p.name for p, gates in km.kernel_sources("esp32s3").items()
+                     if frozenset() in gates}
+    assert {"vfs.c", "vfs_dev.c", "vfs_tmp.c", "supervisor.c", "init.c",
+            "task.c", "klog.c", "api.c", "symbols.c"} <= unconditional
+
+    gated = {p.name for p, gates in km.kernel_sources("esp32").items()
              if all(g for g in gates)}
-    assert {"drv_i2c.c", "i2c_bus.c", "drv_logic.c", "hal_logic.c"} <= gated
+    assert {"drv_i2c.c", "i2c_bus.c", "drv_logic.c", "hal_logic.c",
+            "drv_eth.c", "hal_eth.c", "hal_phy.c"} <= gated

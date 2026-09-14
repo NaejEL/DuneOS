@@ -9702,6 +9702,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "arch/xtensa_esp32/arch.cmake"
+  },
+  {
+   "count": 1,
    "dst": "duneos_hal_eth_get_ip",
    "src": "arch/xtensa_esp32/hal/hal_eth.c"
   },
@@ -32906,8 +32911,23 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
+   "count": 2,
+   "dst": "DUNEOS_HAS_SD",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
    "count": 5,
    "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "UNRESOLVABLE",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 4,
+   "dst": "_NotEvaluable",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
@@ -32916,13 +32936,18 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 2,
-   "dst": "_cmake_sources",
+   "count": 3,
+   "dst": "_eval_cond",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
    "count": 3,
    "dst": "_expand",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 3,
+   "dst": "_is_defined",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
@@ -32932,22 +32957,22 @@
   },
   {
    "count": 2,
-   "dst": "_only_defined_tests",
+   "dst": "board_config_defines",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 2,
-   "dst": "_strip_comment",
-   "src": "tools/dbt/tests/kernel_macros.py"
-  },
-  {
-   "count": 2,
-   "dst": "board_config_macros",
-   "src": "tools/dbt/tests/kernel_macros.py"
-  },
-  {
-   "count": 2,
+   "count": 4,
    "dst": "check",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "cmake_files",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 3,
+   "dst": "cmake_sources",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
@@ -32956,7 +32981,7 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 6,
+   "count": 12,
    "dst": "enabled_configs",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -32966,7 +32991,7 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 5,
+   "count": 8,
    "dst": "gate",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -32991,13 +33016,43 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
+   "count": 1,
+   "dst": "open",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
    "count": 2,
    "dst": "patterns",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
    "count": 1,
+   "dst": "quoted_c_tokens",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "report",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
    "dst": "resolve",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "scan",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "substitute_defined",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "substitute_identifier",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
@@ -33131,13 +33186,23 @@
    "src": "tools/dbt/tests/test_board_file.py"
   },
   {
+   "count": 2,
+   "dst": "ARCH_DIRS_BY_CPU",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
    "count": 4,
    "dst": "BSPGEN",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 4,
+   "count": 6,
    "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "UNRESOLVABLE",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -33151,8 +33216,18 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "check",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "cmake_files",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "cmake_sources",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -33176,23 +33251,33 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
+   "count": 1,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
    "count": 2,
    "dst": "kernel_sources",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 5,
+   "count": 7,
    "dst": "missing",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "missing_macros",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "mkdir",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "quoted_c_tokens",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -33212,12 +33297,27 @@
   },
   {
    "count": 1,
+   "dst": "test_every_parsed_source_resolves_to_a_file",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_check_fails_on_a_board_missing_its_ethernet_pins",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
    "dst": "test_the_check_fails_on_a_bus_numbered_one",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
    "count": 1,
-   "dst": "test_the_source_scan_reaches_the_guarded_drivers",
+   "dst": "test_the_cmake_parse_drops_no_source",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_scan_reaches_the_core_and_the_guarded_drivers",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -33246,7 +33346,7 @@
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "UNCONDITIONAL",
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
@@ -33261,7 +33361,7 @@
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "_kconfig_defaults",
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
@@ -33273,6 +33373,11 @@
   {
    "count": 6,
    "dst": "_tracked_boards",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "find_withdrawn",
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
   {
@@ -33293,6 +33398,11 @@
   {
    "count": 1,
    "dst": "test_every_emitted_driver_symbol_is_declared_in_kconfig",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_optional_driver_defaults_to_n",
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
   {
@@ -33961,6 +34071,11 @@
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
+   "count": 2,
+   "dst": "SHAPES",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
    "count": 3,
    "dst": "_main_requires",
    "src": "tools/dbt/tests/test_cmake_requires.py"
@@ -33976,13 +34091,18 @@
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
-   "count": 10,
+   "count": 12,
    "dst": "gate",
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
    "count": 2,
    "dst": "missing",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 3,
+   "dst": "parse_requires",
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
@@ -34013,6 +34133,11 @@
   {
    "count": 1,
    "dst": "test_the_named_exception_is_still_the_one_it_claims_to_be",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_parser_sees_every_shape_a_requires_list_can_take",
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
@@ -38689,6 +38814,7 @@
    "SD_MOUNT_POINT",
    "SECONDARY_CONSOLE_CPUS",
    "SEL_FILE",
+   "SHAPES",
    "SHELLPIPE_DEV",
    "SHELL_BANNER",
    "SHELL_EOF_ON_ZERO",
@@ -38793,6 +38919,7 @@
    "UNAVAILABLE",
    "UNAVAILABLE_RC",
    "UNCONDITIONAL",
+   "UNRESOLVABLE",
    "USAGE",
    "VADDR_EXHAUSTED_LOG",
    "VALID_CPUS",
@@ -38812,6 +38939,7 @@
    "_DUNEOS_DRV_CAT2",
    "_DUNEOS_SOCKET_NEED_SELECT",
    "_Guard",
+   "_NotEvaluable",
    "_Unclassifiable",
    "__attribute__",
    "__call__",
@@ -38848,7 +38976,6 @@
    "_check_sdkconfig",
    "_ci_floor",
    "_close",
-   "_cmake_sources",
    "_col_staged_bytes",
    "_config_error",
    "_convert_etc_pngs",
@@ -38865,6 +38992,7 @@
    "_entry_points",
    "_err",
    "_espressif_roots",
+   "_eval_cond",
    "_expand",
    "_fake_tools_tree",
    "_find_esptool",
@@ -38899,6 +39027,7 @@
    "_install_default_icons",
    "_is_bin",
    "_is_bin_app",
+   "_is_defined",
    "_is_entry_point",
    "_iter_functions",
    "_json_depth",
@@ -38920,7 +39049,6 @@
    "_nested_get",
    "_on_pick",
    "_on_result",
-   "_only_defined_tests",
    "_open_profile_editor",
    "_open_setup",
    "_opt",
@@ -38980,7 +39108,6 @@
    "_storage_block",
    "_stream",
    "_string_args",
-   "_strip_comment",
    "_submodule_prefixes",
    "_to_rgb565",
    "_track",
@@ -39055,7 +39182,7 @@
    "blip_xy",
    "blit_scaled",
    "blob",
-   "board_config_macros",
+   "board_config_defines",
    "board_info_int",
    "boom",
    "bq27220_op_close",
@@ -39103,6 +39230,8 @@
    "clock_hhmm",
    "close",
    "closedir",
+   "cmake_files",
+   "cmake_sources",
    "cmd_bspgen",
    "cmd_build",
    "cmd_buildall",
@@ -39698,6 +39827,7 @@
    "parse_mode",
    "parse_partition_sizes",
    "parse_read_cmd",
+   "parse_requires",
    "parse_restart",
    "parse_sdkconfig",
    "parse_vcd",
@@ -39755,6 +39885,7 @@
    "qemu_psram_args",
    "qemu_startup_failure",
    "quit",
+   "quoted_c_tokens",
    "raw80211_ioctl",
    "raw80211_open",
    "raw80211_write",
@@ -39934,6 +40065,8 @@
    "stream_sink",
    "strip_slash",
    "subst",
+   "substitute_defined",
+   "substitute_identifier",
    "supervisor_task",
    "sweep_end",
    "sx1509_ioctl",
@@ -40076,6 +40209,8 @@
    "test_every_macro_the_enabled_drivers_reference_is_defined",
    "test_every_missing_field_is_named_at_once",
    "test_every_named_consumer_resolves",
+   "test_every_optional_driver_defaults_to_n",
+   "test_every_parsed_source_resolves_to_a_file",
    "test_every_payload_has_a_source_directory_and_a_manifest",
    "test_every_read_mode_is_classified",
    "test_every_requires_entry_names_a_consumer",
@@ -40201,8 +40336,10 @@
    "test_the_cardputer_value_carries_its_derivation",
    "test_the_cardputer_value_is_the_measured_one",
    "test_the_cheap_gates_come_first",
+   "test_the_check_fails_on_a_board_missing_its_ethernet_pins",
    "test_the_check_fails_on_a_bus_numbered_one",
    "test_the_closed_rows_are_marked_done",
+   "test_the_cmake_parse_drops_no_source",
    "test_the_console_patterns_anchor_per_line_not_per_capture",
    "test_the_declared_psram_size_is_not_a_mismatch",
    "test_the_derivation_does_not_claim_the_watchpoint_is_free",
@@ -40230,6 +40367,7 @@
    "test_the_nested_gitignore_files_are_in_the_cache_signature",
    "test_the_new_rule_rejects_no_existing_board",
    "test_the_non_zero_codes_are_distinct_and_not_argparse_usage",
+   "test_the_parser_sees_every_shape_a_requires_list_can_take",
    "test_the_pre_pr_gate_list_lives_in_exactly_one_file",
    "test_the_psram_cross_check_reports_when_it_could_not_run",
    "test_the_qemu_boards_are_not_caught_by_their_own_fragment",
@@ -40242,8 +40380,8 @@
    "test_the_rejection_names_the_file_and_lists_the_valid_keys",
    "test_the_roadmap_suite_count_matches_the_makefile",
    "test_the_scan_finds_the_known_entry_points",
+   "test_the_scan_reaches_the_core_and_the_guarded_drivers",
    "test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one",
-   "test_the_source_scan_reaches_the_guarded_drivers",
    "test_the_stack_watchpoint_is_project_wide",
    "test_the_three_apps_link_the_shared_parser",
    "test_the_tracked_yaml_next_to_it_is_allowed",

@@ -69,7 +69,7 @@ endif()
 # of the unconditional entry in kernel/duneos_kernel/CMakeLists.txt.
 list(APPEND DUNEOS_KERNEL_REQUIRES
     xtensa              # kernel/duneos_kernel/src/supervisor.c:55
-    esp_hw_support      # hal/hal_logic.c:16
+    esp_hw_support      # hal/hal_logic.c:16 — esp_cpu cycle counter + esp_clk_cpu_freq
     esp_driver_uart     # hal/hal_uart.c:9
     esp_driver_gpio     # hal/hal_gpio.c:9
     esp_driver_i2c      # hal/hal_i2c.c:9

@@ -6,14 +6,17 @@ from bspgen's fragment, the macro from bspgen's header, and only the compiler
 ever saw both. This module rebuilds that connection without a toolchain.
 
 Both halves are computed, never listed:
-  * which sources a board compiles — from the `if(CONFIG_DUNEOS_*)` blocks that
-    append to DUNEOS_KERNEL_SRCS in the CMake files;
+  * which sources a board compiles — from the `set(DUNEOS_KERNEL_SRCS …)` and
+    `list(APPEND DUNEOS_KERNEL_SRCS …)` statements in the CMake files, with the
+    `if(CONFIG_DUNEOS_*)` blocks around them;
   * which DUNEOS_* names are board macros — every DUNEOS_* token referenced by
     those sources, minus every name a tracked header defines.
 
 A hand-maintained allow-list here would grow until it asserted nothing, which is
-the failure LEG-38-08 records. `test_board_macros.py` keeps it honest with a
-board that must fail.
+the failure LEG-38-08 records. `test_board_macros.py` keeps it honest two ways:
+a board that must fail the check, and a self-check that the CMake parse did not
+silently drop a source. A dropped source is the one failure this module can have
+that looks exactly like success.
 """
 
 import re
@@ -22,13 +25,26 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-_MACRO = re.compile(r"\bDUNEOS_[A-Z0-9_]+\b")
-_CONFIG = re.compile(r"\bCONFIG_DUNEOS_[A-Z0-9_]+\b")
+# One pattern for both namespaces: CONFIG_DUNEOS_DRV_I2C has no word boundary
+# before its DUNEOS_, so a bare `\bDUNEOS_` pattern silently never matches a
+# CONFIG_ symbol and every `#ifdef CONFIG_DUNEOS_DRV_*` block reads as live.
+_TOKEN = re.compile(r"\b(?:CONFIG_)?DUNEOS_[A-Z0-9_]+\b")
 _DEFINE = re.compile(r"^\s*#\s*define\s+(DUNEOS_[A-Z0-9_]+)")
 _ENUMERATOR = re.compile(r"^\s*(DUNEOS_[A-Z0-9_]+)\s*(?:=|,)")
 _CPP_COND = re.compile(r"^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)$")
 _SET_VAR = re.compile(r'^\s*set\(\s*(\w+)\s+"([^"]*)"\s*\)')
-_APPEND_SRC = re.compile(r'"([^"]+)"')
+_DEFINED = re.compile(r"\bdefined\s*(?:\(\s*([A-Za-z_]\w*)\s*\)|([A-Za-z_]\w*))")
+_IDENT = re.compile(r"\b[A-Za-z_]\w*\b")
+_INTEGER = re.compile(r"-?\d+$")
+# Everything a #if may still contain once its identifiers are integers. `=` is
+# here only so a malformed expression reaches eval() and fails there.
+_ARITHMETIC = re.compile(r"[0-9\s+\-*/%()<>=&|^]*$")
+_SRCS_OPEN = re.compile(r"(?:set\(|list\(\s*APPEND\s+)DUNEOS_KERNEL_SRCS")
+_QUOTED = re.compile(r'"([^"]*)"')
+
+# The one source token that cannot resolve to a tracked file: blobs_gen.c is
+# written into the build directory by the same CMakeLists at configure time.
+UNRESOLVABLE = {"${BLOBS_GEN_C}"}
 
 # Which arch/*/arch.cmake an IDF build of this cpu actually includes, taken from
 # the guards at the head of each file: xtensa_esp32s3 self-selects on
@@ -39,6 +55,11 @@ ARCH_DIRS_BY_CPU = {
     "esp32s2": ("xtensa_esp32s3",),
     "esp32s3": ("xtensa_esp32s3",),
 }
+
+
+def cmake_files(cpu):
+    return [REPO_ROOT / "kernel" / "duneos_kernel" / "CMakeLists.txt"] + [
+        REPO_ROOT / "arch" / d / "arch.cmake" for d in ARCH_DIRS_BY_CPU.get(cpu, ())]
 
 
 def tracked_files(*patterns):
@@ -61,72 +82,104 @@ def header_defined_names():
     return names
 
 
-def _cmake_sources(cmake_path, variables):
-    """(source path, frozenset of CONFIG_DUNEOS_* symbols gating it) per append."""
-    variables = dict(variables)
-    variables["CMAKE_CURRENT_LIST_DIR"] = str(cmake_path.parent)
-    stack = []
-    found = []
-    for raw in cmake_path.read_text(encoding="utf-8").splitlines():
-        line = raw.split("#", 1)[0]
-        m = _SET_VAR.match(line)
-        if m:
-            variables[m.group(1)] = _expand(m.group(2), variables)
-        stripped = line.strip()
-        if stripped.startswith("if("):
-            stack.append(frozenset(_CONFIG.findall(stripped)))
-            continue
-        if stripped.startswith(("elseif(", "else(")) and stack:
-            stack[-1] = frozenset()
-            continue
-        if stripped.startswith("endif(") and stack:
-            stack.pop()
-            continue
-        if "DUNEOS_KERNEL_SRCS" not in line:
-            continue
-        gate = frozenset().union(*stack) if stack else frozenset()
-        for src in _APPEND_SRC.findall(line):
-            if "DUNEOS_KERNEL_SRCS" in src:
-                continue
-            resolved = _expand(src, variables)
-            if "${" in resolved:
-                continue
-            path = Path(resolved)
-            if not path.is_absolute():
-                path = cmake_path.parent / path
-            found.append((path, gate))
-    return found
-
-
 def _expand(text, variables):
     for name, value in variables.items():
         text = text.replace("${%s}" % name, value)
     return text
 
 
+def cmake_sources(cmake_path):
+    """(token, resolved path or None, frozenset of gating CONFIG symbols).
+
+    A DUNEOS_KERNEL_SRCS statement spans as many lines as it likes, so the scan
+    stays open until the closing paren: reading only the opening line drops
+    every multi-line block, and the drop is invisible from the result.
+    """
+    variables = {"CMAKE_CURRENT_LIST_DIR": str(cmake_path.parent)}
+    stack = []
+    found = []
+    depth = 0
+    gate = frozenset()
+    for raw in cmake_path.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#", 1)[0]
+        if depth == 0:
+            m = _SET_VAR.match(line)
+            if m:
+                variables[m.group(1)] = _expand(m.group(2), variables)
+            stripped = line.strip()
+            if stripped.startswith("if("):
+                stack.append(frozenset(t for t in _TOKEN.findall(stripped)
+                                       if t.startswith("CONFIG_")))
+                continue
+            if stripped.startswith(("elseif(", "else(")) and stack:
+                stack[-1] = frozenset()
+                continue
+            if stripped.startswith("endif(") and stack:
+                stack.pop()
+                continue
+            m = _SRCS_OPEN.search(line)
+            if not m:
+                continue
+            gate = frozenset().union(*stack) if stack else frozenset()
+            line = line[m.end():]
+            depth = 1
+
+        for token in _QUOTED.findall(line):
+            resolved = _expand(token, variables)
+            if "${" in resolved:
+                found.append((token, None, gate))
+                continue
+            path = Path(resolved)
+            if not path.is_absolute():
+                path = cmake_path.parent / path
+            found.append((token, path, gate))
+        depth += line.count("(") - line.count(")")
+        if depth <= 0:
+            depth = 0
+    return found
+
+
+def quoted_c_tokens(cmake_path):
+    """Every quoted token naming a .c file, ignoring `set(VAR "…")` lines.
+
+    The independent count the parse is checked against: a source can only leave
+    cmake_sources() by leaving the file, never by being reformatted.
+    """
+    tokens = []
+    for raw in cmake_path.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#", 1)[0]
+        if _SET_VAR.match(line):
+            continue
+        tokens += [t for t in _QUOTED.findall(line) if t.endswith(".c")]
+    return tokens
+
+
 def kernel_sources(cpu):
-    """Every compiled kernel source for this cpu, with the CONFIG symbols that
-    gate it. An entry gated by the empty set is compiled on every board."""
-    files = [REPO_ROOT / "kernel" / "duneos_kernel" / "CMakeLists.txt"]
-    files += [REPO_ROOT / "arch" / d / "arch.cmake"
-              for d in ARCH_DIRS_BY_CPU.get(cpu, ())]
+    """Compiled source -> the gate sets under which it is compiled.
+
+    A source reached by an unguarded statement carries the empty gate, which is
+    satisfied by every board: `vfs.c` — the functional LEG-31 consumer — is one
+    of those, and it must be scanned for every board, not only for I2C ones.
+    """
     sources = {}
-    for cmake_path in files:
-        for path, gate in _cmake_sources(cmake_path, {}):
-            if path.exists():
+    for cmake_path in cmake_files(cpu):
+        for _token, path, gate in cmake_sources(cmake_path):
+            if path is not None and path.exists():
                 sources.setdefault(path, set()).add(gate)
     return sources
 
 
-def _live_refs(path, board_macros, enabled_configs):
+def _live_refs(path, board_defines, enabled_configs):
     """DUNEOS_* tokens this file reaches with these board macros and symbols.
 
     A reference under `#ifdef DUNEOS_X` where the board does not define
     DUNEOS_X is dead code for that board (drv_spi.c probes SPI1/2/3 this way)
     and must not be demanded; a reference under `#ifdef CONFIG_DUNEOS_DRV_X` is
     demanded only when the fragment emits that symbol (vfs.c's board.info I2C
-    block). Conditions we cannot evaluate — __has_include, arithmetic — stay
-    live, so an unknown never silences the check.
+    block); a value test like `#if DUNEOS_HAS_SD` is evaluated (_eval_cond).
+    Conditions naming an identifier bspgen does not own stay live, so an unknown
+    never silences the check. An #else or #elif branch is skipped rather than
+    guessed at, which can under-report but cannot invent.
     """
     refs = set()
     local_defines = set()
@@ -140,11 +193,9 @@ def _live_refs(path, board_macros, enabled_configs):
         if cond:
             kind, rest = cond.group(1), cond.group(2)
             if kind in ("if", "ifdef", "ifndef"):
-                stack.append(_branch_dead(kind, rest, board_macros, enabled_configs))
+                stack.append(_branch_dead(kind, rest, board_defines, enabled_configs))
                 dead_depth += stack[-1]
             elif kind in ("elif", "else") and stack:
-                # The taken branch is already accounted for; an alternative
-                # branch is skipped rather than guessed at.
                 dead_depth -= stack[-1]
                 stack[-1] = 1
                 dead_depth += 1
@@ -153,38 +204,85 @@ def _live_refs(path, board_macros, enabled_configs):
             continue
         if dead_depth:
             continue
-        refs.update(_MACRO.findall(_strip_comment(raw)))
+        refs.update(_TOKEN.findall(raw.split("//", 1)[0]))
     return refs - local_defines
 
 
-def _strip_comment(line):
-    return line.split("//", 1)[0]
+class _NotEvaluable(Exception):
+    pass
 
 
-def _branch_dead(kind, rest, board_macros, enabled_configs):
-    names = set(_MACRO.findall(rest))
-    configs = {n for n in names if n.startswith("CONFIG_")}
-    macros = names - configs
-    if configs and not configs <= enabled_configs:
-        return 1
-    if kind == "ifdef" and len(macros) == 1 and not configs:
-        return 0 if macros <= board_macros else 1
-    if kind == "ifndef" and len(macros) == 1 and not configs:
-        return 1 if macros <= board_macros else 0
-    if kind == "if" and macros and _only_defined_tests(rest, macros):
-        return 0 if macros <= board_macros else 1
-    return 0
+def _branch_dead(kind, rest, board_defines, enabled_configs):
+    if kind in ("ifdef", "ifndef"):
+        names = _TOKEN.findall(rest)
+        if len(names) != 1:
+            return 0
+        present = _is_defined(names[0], board_defines, enabled_configs)
+        return (0 if present else 1) if kind == "ifdef" else (1 if present else 0)
+    value = _eval_cond(rest, board_defines, enabled_configs)
+    return 0 if value is None or value else 1
 
 
-def _only_defined_tests(rest, macros):
-    return all(re.search(r"defined\s*\(?\s*%s\b" % re.escape(m), rest) for m in macros)
+def _is_defined(name, board_defines, enabled_configs):
+    if name.startswith("CONFIG_"):
+        return name in enabled_configs
+    return name in board_defines
 
 
-def board_config_macros(header_path):
-    return {m.group(1) for m in
-            (_DEFINE.match(line)
-             for line in header_path.read_text(encoding="utf-8").splitlines())
-            if m}
+def _eval_cond(rest, board_defines, enabled_configs):
+    """The value of a `#if` expression, or None when it is not evaluable.
+
+    `#if DUNEOS_HAS_SD` and `#if DUNEOS_SD_CD_PIN >= 0` are value tests, not
+    defined() tests, and vfs.c guards the whole SD block with the first: reading
+    them as live demands DUNEOS_SD_* from every board that has no SD card. The
+    C rule that an identifier no #define gives a value to is 0 inside #if makes
+    this an evaluation rather than a guess — but only while every identifier is
+    one bspgen owns, so anything else returns None and stays live.
+    """
+    expr = rest.split("/*", 1)[0].split("//", 1)[0].strip()
+    if not expr:
+        return None
+
+    def substitute_defined(m):
+        name = m.group(1) or m.group(2)
+        return "1" if _is_defined(name, board_defines, enabled_configs) else "0"
+
+    def substitute_identifier(m):
+        name = m.group(0)
+        if name.startswith("CONFIG_DUNEOS_"):
+            return "1" if name in enabled_configs else "0"
+        if not name.startswith("DUNEOS_"):
+            raise _NotEvaluable
+        value = board_defines.get(name, "0").strip()
+        if not _INTEGER.match(value):
+            raise _NotEvaluable
+        return value
+
+    try:
+        expr = _IDENT.sub(substitute_identifier, _DEFINED.sub(substitute_defined, expr))
+    except _NotEvaluable:
+        return None
+    # `!` binds tighter than a comparison in C and looser in Python, so an
+    # expression still carrying one after defined() is substituted is refused
+    # rather than translated.
+    if "!" in expr.replace("!=", ""):
+        return None
+    if not _ARITHMETIC.match(expr):
+        return None
+    try:
+        return eval(expr.replace("&&", " and ").replace("||", " or "), {"__builtins__": {}})
+    except (SyntaxError, ValueError, ZeroDivisionError, TypeError):
+        return None
+
+
+def board_config_defines(header_path):
+    """DUNEOS_* name -> the literal text bspgen defined it as."""
+    defines = {}
+    for line in header_path.read_text(encoding="utf-8").splitlines():
+        m = _DEFINE.match(line)
+        if m:
+            defines[m.group(1)] = line[m.end():].strip()
+    return defines
 
 
 def enabled_configs(fragment_text):
@@ -198,13 +296,13 @@ def missing_macros(cpu, fragment_text, header_path, known_names=None):
     not define. Empty is the invariant; anything in it fails to compile."""
     known = header_defined_names() if known_names is None else known_names
     configs = enabled_configs(fragment_text)
-    board_macros = board_config_macros(header_path)
+    board_defines = board_config_defines(header_path)
     missing = set()
     for path, gates in kernel_sources(cpu).items():
         if not any(g <= configs for g in gates):
             continue
-        for name in _live_refs(path, board_macros, configs):
-            if name.startswith("CONFIG_") or name in known or name in board_macros:
+        for name in _live_refs(path, board_defines, configs):
+            if name.startswith("CONFIG_") or name in known or name in board_defines:
                 continue
             missing.add(name)
     return missing

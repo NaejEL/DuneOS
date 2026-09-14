@@ -58,7 +58,7 @@ set(DUNEOS_KERNEL_SRCS
 set(DUNEOS_KERNEL_REQUIRES
     freertos            # src/klog.c:23
     pthread             # src/api.c:22
-    esp_system          # src/api.c:29
+    esp_system          # src/api.c:29 — esp_restart, esp_get_free_heap_size → hal_sys.h (Phase 27)
     esp_libc            # src/klog.c:79 (vsnprintf)
 )
 
@@ -67,7 +67,7 @@ set(DUNEOS_KERNEL_REQUIRES
 list(APPEND DUNEOS_KERNEL_REQUIRES
     fatfs                # src/vfs.c:4
     vfs                  # src/vfs_tmp.c:13
-    joltwallet__littlefs # src/vfs.c:5
+    joltwallet__littlefs # src/vfs.c:5 — third_party/ holds a second copy; unify (Phase 26)
 )
 
 # ── Phase 26 (hal_net.h): replace with arch/*/hal/hal_net.c ────────────────

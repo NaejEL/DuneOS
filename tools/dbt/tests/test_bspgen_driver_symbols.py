@@ -105,6 +105,16 @@ def test_every_unconditional_symbol_defaults_to_y():
         assert declared[symbol] == "y", f"{symbol} is emitted always but is not default y"
 
 
+def test_every_optional_driver_defaults_to_n():
+    """What `sdkconfig_check.find_withdrawn()` rests on: outside the four
+    platform symbols, a CONFIG_DUNEOS_DRV_* sitting at y that no board declares
+    can only come from an older fragment, because Kconfig would have left it
+    off. Untrue here, and that guard silently starts refusing clean builds."""
+    for symbol, default in _kconfig_defaults().items():
+        if symbol.startswith("CONFIG_DUNEOS_DRV_") and symbol not in UNCONDITIONAL:
+            assert default == "n", f"{symbol} is default {default}, not n"
+
+
 # ---------------------------------------------------------------- LEG-33B ---
 
 @pytest.mark.parametrize("wifi,expected", [(True, True), (False, False)])

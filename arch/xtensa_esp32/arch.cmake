@@ -30,8 +30,10 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
         "${_S3_HAL}/hal_time.c"
     )
 
-    # Kept in sync with arch/xtensa_esp32s3/arch.cmake — same WHOLE_ARCHIVE
-    # over-link defect, same guards.
+    # The same guards as arch/xtensa_esp32s3/arch.cmake, against the same
+    # WHOLE_ARCHIVE over-link defect. Kept in sync by hand, not by a check, and
+    # the REQUIRES list below repeats that file's — dbt-only, so no IDF build
+    # sees the duplication criterion 11 forbids between the core and an arch.
     if(CONFIG_DUNEOS_DRV_I2C)
         list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_i2c.c")
     endif()
@@ -72,10 +74,10 @@ if(CONFIG_DUNEOS_DRV_ETH)
     )
 endif()
 
-# Unguarded on purpose: CONFIG_* is empty during the requirements phase, so a
-# CONFIG_DUNEOS_DRV_ETH guard here would hide the PHY headers from the very
-# board that needs them. idf_component.yml publishes all four only for target
-# esp32, which is also the only target that reaches this file.
+# Unguarded on purpose, to keep the no-CONFIG-guard-on-REQUIRES rule one rule
+# with no exception worth arguing about. It costs nothing: idf_component.yml
+# publishes all four only for target esp32, which is also the only target that
+# gets past the guard at the head of this file.
 list(APPEND DUNEOS_KERNEL_REQUIRES
     espressif__lan87xx   # hal/hal_phy.c:13
     espressif__ksz80xx   # hal/hal_phy.c:14
