@@ -192,3 +192,43 @@ def test_the_qemu_boards_are_not_caught_by_their_own_fragment(regenerated_source
         effective = dict(declared)
         effective[SYMBOL] = "3584"
         assert sc.find_conflicts(declared, effective) == []
+
+
+# --- withdrawal: a driver the board no longer declares (LEG-32) --------------
+
+def test_a_driver_the_sources_dropped_is_a_conflict():
+    """find_conflicts walks the declared symbols, so it cannot see one that is
+    no longer declared. LEG-32 removed CONFIG_DUNEOS_DRV_LOGIC from seven
+    boards; a build dir keeping it links a driver no board asked for."""
+    declared = {"CONFIG_DUNEOS_DRV_GPIO": "y"}
+    effective = {"CONFIG_DUNEOS_DRV_GPIO": "y", "CONFIG_DUNEOS_DRV_LOGIC": "y"}
+    assert sc.find_conflicts(declared, effective) == []
+    assert sc.find_withdrawn(declared, effective) == [
+        ("CONFIG_DUNEOS_DRV_LOGIC", "n", "y")]
+
+
+def test_a_driver_off_in_the_build_is_not_a_withdrawal():
+    assert sc.find_withdrawn({}, {"CONFIG_DUNEOS_DRV_LOGIC": "n"}) == []
+
+
+def test_the_withdrawal_rule_stays_inside_the_bspgen_namespace():
+    """Only CONFIG_DUNEOS_DRV_* is bspgen's to own. Widening this to every
+    symbol would refuse a build over any of ESP-IDF's own thousands."""
+    effective = {"CONFIG_SPIRAM": "y", "CONFIG_DUNEOS_APP_ARENA_KB": "y",
+                 "CONFIG_DUNEOS_TARGET_QEMU": "y"}
+    assert sc.find_withdrawn({}, effective) == []
+
+
+def test_a_build_dir_predating_the_logic_withdrawal_is_refused(tmp_path,
+                                                               regenerated_sources):
+    """Criterion 20, end to end: the fragment esp32s3-qemu carried before this
+    cycle, against the one it carries now."""
+    declared = sc.declared_config(sc.default_sources("esp32s3-qemu"))
+    assert "CONFIG_DUNEOS_DRV_LOGIC" not in declared
+    stale = tmp_path / "sdkconfig"
+    stale.write_text("".join(f"{k}={v}\n" for k, v in declared.items())
+                     + "CONFIG_DUNEOS_DRV_LOGIC=y\n")
+    printed = []
+    with pytest.raises(SystemExit):
+        sc.enforce("esp32s3-qemu", stale, printer=printed.append)
+    assert "CONFIG_DUNEOS_DRV_LOGIC" in "\n".join(printed)

@@ -101,6 +101,11 @@ board:
   #     scl_pin: 1
   #     freq_hz: 400000
 
+  # /dev/logic0 — i2cscope's bus sniffer (apps/user/i2cscope).
+  logic:
+
+  wifi: true
+
   # Display: ST7789 240×135 served by userspace libst7789 over /dev/spi-1.
   # Pins below are the device-specific GPIOs (CS/DC/RST/BL); the SPI bus
   # itself is declared above under spi: id=3.

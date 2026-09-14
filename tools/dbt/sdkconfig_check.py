@@ -25,6 +25,12 @@ Only genuine contradictions are reported. A symbol a source declares but the
 build sdkconfig does not carry at all is left alone: Kconfig legitimately drops a
 symbol whose dependencies are unmet, and turning that into a refusal would block
 the build instead of protecting the board.
+
+The mirror case — a symbol the sources stopped declaring — is caught only inside
+the CONFIG_DUNEOS_DRV_* namespace, which bspgen owns end to end. LEG-32 withdrew
+CONFIG_DUNEOS_DRV_LOGIC from seven boards; walking the declared symbols cannot
+see that, because the symbol is no longer among them, and the build dir would
+have gone on linking the driver.
 """
 from pathlib import Path
 
@@ -66,6 +72,19 @@ def find_conflicts(declared: dict, effective: dict) -> list:
         if got != want:
             conflicts.append((sym, want, got))
     return sorted(conflicts)
+
+
+# Every optional driver is `default n` in kernel/duneos_kernel/Kconfig and the
+# four platform ones are emitted for every board, so a driver symbol sitting at
+# y that no source declares can only have come from an older fragment.
+DRIVER_PREFIX = "CONFIG_DUNEOS_DRV_"
+
+
+def find_withdrawn(declared: dict, effective: dict) -> list:
+    """(symbol, n, y) for drivers a build dir keeps that the board dropped."""
+    return sorted((sym, NOT_SET, val) for sym, val in effective.items()
+                  if sym.startswith(DRIVER_PREFIX) and val == "y"
+                  and sym not in declared)
 
 
 def declared_config(sources) -> dict:
@@ -124,7 +143,8 @@ def check_build_sdkconfig(board: str, sdkconfig) -> list:
     if not declared:
         return []
     effective = parse_sdkconfig(sdkconfig.read_text(encoding="utf-8"))
-    return find_conflicts(declared, effective)
+    return sorted(find_conflicts(declared, effective)
+                  + find_withdrawn(declared, effective))
 
 
 def enforce(board: str, sdkconfig, printer=print) -> None:

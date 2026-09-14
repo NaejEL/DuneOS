@@ -23,7 +23,7 @@ config DUNEOS_DRV_KLOG
 
 config DUNEOS_DRV_GPIO
     bool "GPIO chip (/dev/gpiochip0)"
-    default n
+    default y
     help
         Enable /dev/gpiochip0 for native ESP32 GPIO access via ioctl().
         Uses esp_driver_gpio (gpio_config, gpio_get/set_level, gpio_set_pull_mode).

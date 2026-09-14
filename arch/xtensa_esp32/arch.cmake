@@ -9,8 +9,9 @@
 #
 # Guard: CONFIG_IDF_TARGET_ESP32 (normal build phase) or DUNEOS_ARCH (dbt / Phase 28+).
 # NOTE: CONFIG_IDF_TARGET_ESP32 is not available in the requirements phase;
-# xtensa_esp32s3/arch.cmake adds esp_eth/esp_netif to REQUIRES for all Xtensa targets
-# so the Ethernet headers are always present at configure time.
+# xtensa_esp32s3/arch.cmake adds esp_eth for all Xtensa targets and
+# duneos_kernel/CMakeLists.txt adds esp_netif unconditionally, so the Ethernet
+# headers are present at configure time.
 
 if(NOT CONFIG_IDF_TARGET_ESP32
    AND NOT DUNEOS_ARCH STREQUAL "xtensa_esp32")
@@ -29,8 +30,21 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
         "${_S3_HAL}/hal_time.c"
     )
 
-    # Kept in sync with arch/xtensa_esp32s3/arch.cmake — same WHOLE_ARCHIVE
-    # over-link defect, same guards.
+    # Guards against the same WHOLE_ARCHIVE over-link defect as
+    # arch/xtensa_esp32s3/arch.cmake, on the same four drivers — but the two
+    # files are no longer a copy of each other, and nothing checks that they
+    # converge. Since the LEG-33 trim, that file drops the `driver` umbrella,
+    # carries esp_hw_support, and guards hal_logic.c on CONFIG_DUNEOS_DRV_LOGIC;
+    # this block does none of the three. Adding those here is untested — no
+    # tracked board is both plain-ESP32 and dbt-built — so the divergence is
+    # recorded rather than guessed at. A plain-ESP32 board declaring `logic:`
+    # under a dbt build is the case that would need the fifth guard and
+    # esp_hw_support; write the guard when that board exists.
+    #
+    # The list is dbt-only either way, so no IDF build sees the core-vs-arch
+    # duplication that
+    # tools/dbt/tests/test_cmake_requires.py::test_no_component_is_declared_both_unconditionally_and_per_arch
+    # enforces. This arch-vs-arch case has no check.
     if(CONFIG_DUNEOS_DRV_I2C)
         list(APPEND DUNEOS_KERNEL_SRCS "${_S3_HAL}/hal_i2c.c")
     endif()
@@ -58,7 +72,6 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
         esp_adc
         esp_timer
         esp_eth
-        esp_netif
     )
 endif()
 
@@ -70,10 +83,15 @@ if(CONFIG_DUNEOS_DRV_ETH)
         "${CMAKE_CURRENT_LIST_DIR}/hal/hal_eth.c"
         "${CMAKE_CURRENT_LIST_DIR}/hal/hal_phy.c"
     )
-    list(APPEND DUNEOS_KERNEL_REQUIRES
-        espressif__lan87xx
-        espressif__ksz80xx
-        espressif__rtl8201
-        espressif__ip101
-    )
 endif()
+
+# Unguarded on purpose, to keep the no-CONFIG-guard-on-REQUIRES rule one rule
+# with no exception worth arguing about. It costs nothing: idf_component.yml
+# publishes all four only for target esp32, which is also the only target that
+# gets past the guard at the head of this file.
+list(APPEND DUNEOS_KERNEL_REQUIRES
+    espressif__lan87xx   # hal/hal_phy.c:13
+    espressif__ksz80xx   # hal/hal_phy.c:14
+    espressif__rtl8201   # hal/hal_phy.c:15
+    espressif__ip101     # hal/hal_phy.c:16
+)

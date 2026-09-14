@@ -31,7 +31,6 @@ list(APPEND DUNEOS_KERNEL_SRCS
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_uart.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_gpio.c"
     "${CMAKE_CURRENT_LIST_DIR}/hal/hal_time.c"
-    "${CMAKE_CURRENT_LIST_DIR}/hal/hal_logic.c"
 )
 
 # Peripheral HALs are gated on the symbol that already gates their sole consumer.
@@ -41,6 +40,10 @@ list(APPEND DUNEOS_KERNEL_SRCS
 # busy-waits forever under qemu-xtensa on a board that has no ADC at all.
 # Guard SRCS only: CONFIG_* is empty during the ESP-IDF requirements phase, so the
 # same guard on DUNEOS_KERNEL_REQUIRES would hide headers from boards that need them.
+if(CONFIG_DUNEOS_DRV_LOGIC)
+    list(APPEND DUNEOS_KERNEL_SRCS "${CMAKE_CURRENT_LIST_DIR}/hal/hal_logic.c")
+endif()
+
 if(CONFIG_DUNEOS_DRV_I2C)
     list(APPEND DUNEOS_KERNEL_SRCS "${CMAKE_CURRENT_LIST_DIR}/hal/hal_i2c.c")
 endif()
@@ -59,20 +62,21 @@ endif()
 
 # ESP-IDF component deps required by the HAL implementations above.
 # These are ARCH-SCOPED: a RISC-V arch.cmake would list different deps here.
-# Phase 26: driver + esp_driver_spi + esp_driver_sdspi removable once vfs.c
-#           SD init migrates from direct SPI to hal_spi/hal_gpio.
+# Phase 26: esp_driver_spi + esp_driver_sdspi removable once vfs.c SD init
+#           migrates from direct SPI to hal_spi/hal_gpio.
+# The `driver` umbrella was dropped here: every driver/*.h consumer below is
+# already covered by a named esp_driver_* component. esp_netif was a duplicate
+# of the unconditional entry in kernel/duneos_kernel/CMakeLists.txt.
 list(APPEND DUNEOS_KERNEL_REQUIRES
-    xtensa
-    driver
-    esp_hw_support      # hal_logic.c: esp_cpu cycle counter + esp_clk_cpu_freq
-    esp_driver_uart
-    esp_driver_gpio
-    esp_driver_i2c
-    esp_driver_spi
-    esp_driver_sdspi    # vfs.c SD SPI init — Phase 26 (VFS natif)
-    esp_driver_pcnt
-    esp_adc
-    esp_timer
-    esp_eth             # Ethernet headers available for all Xtensa targets;
-    esp_netif           # hal_eth.c impl lives in arch/xtensa_esp32/ (RMII, plain ESP32 only)
-)
+    xtensa              # kernel/duneos_kernel/src/supervisor.c:55
+    esp_hw_support      # hal/hal_logic.c:16 — esp_cpu cycle counter + esp_clk_cpu_freq
+    esp_driver_uart     # hal/hal_uart.c:9
+    esp_driver_gpio     # hal/hal_gpio.c:9
+    esp_driver_i2c      # hal/hal_i2c.c:9
+    esp_driver_spi      # hal/hal_spi.c:9
+    esp_driver_sdspi    # kernel/duneos_kernel/src/vfs.c:263
+    esp_driver_pcnt     # hal/hal_encoder.c:22
+    esp_adc             # hal/hal_adc.c:12
+    esp_timer           # hal/hal_time.c:10
+    esp_eth             # ../xtensa_esp32/hal/hal_eth.c:19 — headers for all Xtensa
+)                       # targets; the RMII impl is plain-ESP32 only

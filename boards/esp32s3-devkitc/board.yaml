@@ -7,6 +7,8 @@ board:
   psram_size_mb: 8
   psram_type: opi   # OPI PSRAM, 80 MHz
 
+  wifi: true
+
   uart:
     - id: 0
       tx_pin: 43

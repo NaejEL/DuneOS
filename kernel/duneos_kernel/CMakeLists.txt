@@ -53,34 +53,41 @@ set(DUNEOS_KERNEL_SRCS
 # ── Phase 27 (OSAL): replace with duneos_osal.h + freertos_osal.c ──────────
 # supervisor.c, task.c, symbols.c, klog.c, api.c, drv_input.c, input backends,
 # drv_fb_st7789.c, drv_usb_cdc.c
+# esp_ringbuf was here for a klog ring buffer that no longer exists: the tree
+# has no Ringbuffer call left (drv_usb_cdc.c uses xStreamBuffer).
 set(DUNEOS_KERNEL_REQUIRES
-    freertos
-    esp_ringbuf         # klog.c ring buffer — replace with pure-C (Phase 27)
-    pthread
-    esp_system          # esp_restart, esp_get_free_heap_size → hal_sys.h (Phase 27)
-    esp_libc            # C library shims
+    freertos            # src/klog.c:23
+    pthread             # src/api.c:22
+    esp_system          # src/api.c:29 — esp_restart, esp_get_free_heap_size → hal_sys.h (Phase 27)
+    esp_libc            # src/klog.c:79 (vsnprintf)
 )
 
 # ── Phase 26 (VFS natif): replace esp_vfs with duneos_vfs ──────────────────
 # vfs.c, vfs_dev.c, vfs_tmp.c
 list(APPEND DUNEOS_KERNEL_REQUIRES
-    fatfs               # SD FatFS — stays until VFS native (Phase 26)
-    vfs                 # esp_vfs_register — duneos_vfs (Phase 26)
-    joltwallet__littlefs # /flash LittleFS — third_party/ copy exists; unify (Phase 26)
+    fatfs                # src/vfs.c:4
+    vfs                  # src/vfs_tmp.c:13
+    joltwallet__littlefs # src/vfs.c:5 — third_party/ holds a second copy; unify (Phase 26)
 )
 
 # ── Phase 26 (hal_net.h): replace with arch/*/hal/hal_net.c ────────────────
 # drv_wifi.c, drv_raw80211.c
 list(APPEND DUNEOS_KERNEL_REQUIRES
-    nvs_flash           # WiFi credentials — move to app layer (Phase 26)
-    esp_wifi            # drv_wifi.c → hal_net.h (Phase 26)
-    esp_netif           # drv_wifi.c → hal_net.h (Phase 26)
-    esp_event           # drv_wifi.c, drv_usb.c → hal_net.h (Phase 26)
+    nvs_flash           # src/drivers/net/drv_wifi.c:26
+    esp_wifi            # src/drivers/net/drv_wifi.c:22
+    esp_netif           # src/drivers/net/drv_wifi.c:23
+    esp_event           # src/drivers/net/drv_wifi.c:24
 )
 
 # ── TinyUSB: ESP32-S2/S3/P4 only (no USB OTG on plain ESP32/C3/H2) ─────────
+# The one REQUIRES append in this tree that is allowed to sit under a
+# CONFIG_DUNEOS_* guard, and the test that forbids the pattern names it
+# explicitly: idf_component.yml gates espressif/esp_tinyusb on the target, so
+# on esp32/esp32c3 the component does not exist and an unconditional REQUIRES
+# is a hard configure error. Its headers are only reached from sources guarded
+# by the same two symbols.
 if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)
-    list(APPEND DUNEOS_KERNEL_REQUIRES espressif__esp_tinyusb)
+    list(APPEND DUNEOS_KERNEL_REQUIRES espressif__esp_tinyusb) # src/drivers/usb/drv_usb.c:28
 endif()
 
 # ESP-IDF's requirements phase re-runs this file through `cmake -P`, where
