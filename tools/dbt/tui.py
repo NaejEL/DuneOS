@@ -30,7 +30,6 @@ from rich.text import Text
 from .constants import DUNEOS_ROOT, write_board_file
 from .setup import _BOARD_FILE, _PORT_FILE, _list_boards, _list_ports, find_idf_root
 from .manifest import find_apps
-from .flashimg import _stage, _create_image, _find_esptool, _get_sysbin_offset, _get_board_name
 from .bspgen import list_boards as bspgen_list_boards, generate_for_board
 
 
@@ -1204,6 +1203,44 @@ class ProfileEditorScreen(Screen):
 # Main TUI
 # ---------------------------------------------------------------------------
 
+def _dbt_argv(*args: str) -> list[str]:
+    return [sys.executable, str(DUNEOS_ROOT / "tools" / "dbt.py"), *args]
+
+
+def system_flash_argv() -> list[str]:
+    return _dbt_argv("system", "flash")
+
+
+def gate_argv(*flags: str) -> list[str]:
+    return _dbt_argv("test", *flags)
+
+
+def gate_status(rc: int) -> tuple[str, str]:
+    """(label, colour) for a finished `dbt test` run.
+
+    Exit 3 is "a gate could not run", which `dbt test` keeps distinct from a
+    failure on purpose. Painting it red here would throw that away for the one
+    user who sees it.
+    """
+    if rc == 0:
+        return "all gates passed", "#3fb950"
+    if rc == 3:
+        return "a gate could not run — see the reason above", "#d29922"
+    return f"a gate failed (exit {rc})", "#f85149"
+
+
+def terminate_child(proc) -> bool:
+    """Stop a running child; False when there was nothing to stop."""
+    if proc is None or proc.poll() is not None:
+        return False
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    return True
+
+
 _MENU: list[tuple[str, str, str] | None] = [
     # -- Image composition (Phase 25 profile-driven workflow) ----
     ("profile-edit", "e", "Edit Profile…"),
@@ -1212,7 +1249,7 @@ _MENU: list[tuple[str, str, str] | None] = [
     None,
     # -- Flash actions (the device) ----
     ("flash-kernel", "f", "Flash Kernel"),
-    ("flash-sysbin", "s", "Flash Sysbin (/flash)"),
+    ("flash-sysbin", "s", "Flash System (active profile)"),
     ("monitor",      "m", "Monitor"),
     None,
     # -- SD actions ----
@@ -1221,6 +1258,11 @@ _MENU: list[tuple[str, str, str] | None] = [
     # -- Build (independent) ----
     ("build-all",    "b", "Build All"),
     ("build-app",    "a", "Build App…"),
+    None,
+    # -- Tests ----
+    ("test-run",     "t", "Run Tests"),
+    ("test-full",    "T", "Run Tests + Fuzz + QEMU"),
+    ("cancel",       "x", "Cancel Running Task"),
     None,
     # -- Advanced ----
     ("bspgen",       "g", "BSP Gen…"),
@@ -1238,6 +1280,10 @@ class DbtApp(App):
     CSS        = CSS
     ANIMATIONS = False
 
+    # The child of the running _stream(), so `x` can stop a 180 s QEMU gate.
+    _proc: subprocess.Popen | None = None
+    _cancelled: bool = False
+
     BINDINGS = [
         Binding("e", "do('profile-edit')", "Edit Profile"),
         Binding("P", "do('profile-pick')", "Switch Profile"),
@@ -1248,6 +1294,9 @@ class DbtApp(App):
         Binding("d", "do('flash-sd')",     "Deploy SD"),
         Binding("b", "do('build-all')",    "Build All"),
         Binding("a", "do('build-app')",    "Build App"),
+        Binding("t", "do('test-run')",     "Run Tests"),
+        Binding("T", "do('test-full')",    "Tests+Fuzz+QEMU"),
+        Binding("x", "do('cancel')",       "Cancel"),
         Binding("g", "do('bspgen')",       "BSP Gen"),
         Binding("c", "do('board')",        "Board"),
         Binding("p", "do('port')",         "Port"),
@@ -1312,6 +1361,9 @@ class DbtApp(App):
             "build-all":    self._run_build_all,
             "build-app":    self._pick_and_build,
             "flash-sd":     self._run_flash_sd,
+            "test-run":     self._run_tests,
+            "test-full":    self._run_tests_full,
+            "cancel":       self._run_cancel,
             "bspgen":       self._run_bspgen,
             "board":        self._run_board_pick,
             "port":         self._run_port_pick,
@@ -1384,10 +1436,14 @@ class DbtApp(App):
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, cwd=cwd or DUNEOS_ROOT, env=env,
         )
-        for line in proc.stdout:
-            self.call_from_thread(self._log_ansi, line.rstrip())
-        proc.wait()
-        return proc.returncode
+        self._proc = proc
+        try:
+            for line in proc.stdout:
+                self.call_from_thread(self._log_ansi, line.rstrip())
+            proc.wait()
+            return proc.returncode
+        finally:
+            self._proc = None
 
     def _guard(self, need_board=True, need_port=True, need_idf=True) -> bool:
         """Check config; post error modal and return False if anything is missing."""
@@ -1538,50 +1594,60 @@ class DbtApp(App):
 
     @work(thread=True, exclusive=True)
     def _worker_flash_sysbin(self) -> None:
-        import shutil as _sh
         self.call_from_thread(self._set_busy, True)
         try:
             if not self._guard(need_idf=False):
                 return
-            self.call_from_thread(self._log, "\n[bold]── Flash Sysbin ──[/bold]")
-
-            dbt = DUNEOS_ROOT / "tools" / "dbt.py"
-            rc  = self._stream([sys.executable, str(dbt), "buildall"])
+            from .system import active_profile_name
+            name = active_profile_name() or "(none — press P)"
+            self.call_from_thread(
+                self._log, f"\n[bold]── Flash System — profile '{name}' ──[/bold]")
+            rc = self._stream(system_flash_argv())
             if rc != 0:
                 self.call_from_thread(
-                    self._err, "Build errors", f"buildall exited {rc}")
-                return
-
-            staging = DUNEOS_ROOT / "build" / "sysbin_staging"
-            if staging.exists():
-                _sh.rmtree(staging)
-            n = _stage(staging, _get_board_name())
-            self.call_from_thread(self._log, f"  {n} app(s) staged")
-
-            out = DUNEOS_ROOT / "build" / "sysbin.bin"
-            _create_image(staging, out)
-            self.call_from_thread(self._log,
-                f"  image  [dim]{out.stat().st_size // 1024} KB[/dim]")
-
-            esptool = _find_esptool()
-            if not esptool:
-                self.call_from_thread(self._err, "esptool not found", "")
-                return
-            port   = _port()
-            offset = _get_sysbin_offset(_get_board_name())
-            self.call_from_thread(self._log,
-                f"  flashing @ {hex(offset)} → {port} …")
-            rc = self._stream([esptool, "--port", port, "--baud", "460800",
-                               "write_flash", hex(offset), str(out)])
-            if rc != 0:
-                self.call_from_thread(
-                    self._err, "Flash failed",
-                    f"exit {rc} — is {port} free?")
+                    self._err, "Flash failed", f"dbt system flash exited {rc}")
                 return
             self.call_from_thread(self._log,
-                "[bold #3fb950]✓  Sysbin flashed![/bold #3fb950]")
+                "[bold #3fb950]✓  System flashed![/bold #3fb950]")
         finally:
             self.call_from_thread(self._set_busy, False)
+
+    # -- Tests ───────────────────────────────────────────────────────────────
+
+    def _run_tests(self) -> None:
+        self._worker_tests()
+
+    def _run_tests_full(self) -> None:
+        self._worker_tests_full()
+
+    @work(thread=True, exclusive=True)
+    def _worker_tests(self) -> None:
+        self._run_gates(gate_argv())
+
+    @work(thread=True, exclusive=True)
+    def _worker_tests_full(self) -> None:
+        self._run_gates(gate_argv("--fuzz", "--qemu"))
+
+    def _run_gates(self, argv: list[str]) -> None:
+        self.call_from_thread(self._set_busy, True)
+        self._cancelled = False
+        try:
+            self.call_from_thread(
+                self._log, f"\n[bold]── {' '.join(argv[2:])} ──[/bold]  [dim]x to cancel[/dim]")
+            rc = self._stream(argv)
+            if self._cancelled:
+                self.call_from_thread(self._log, "[#8b949e]cancelled[/#8b949e]")
+                return
+            label, colour = gate_status(rc)
+            self.call_from_thread(self._log, f"[{colour}]{label}[/{colour}]")
+        finally:
+            self.call_from_thread(self._set_busy, False)
+
+    def _run_cancel(self) -> None:
+        self._cancelled = True
+        if not terminate_child(self._proc):
+            self._cancelled = False
+            self._log("[dim]nothing running[/dim]")
 
     # -- Monitor ─────────────────────────────────────────────────────────────
 

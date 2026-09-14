@@ -159,10 +159,17 @@ def check_profile(profile: dict) -> int:
 
     sdk_lines = _read_sdkconfig(board)
     app_map = _app_map()
-    all_apps_in_profile = list(profile.get("apps_flash", [])) + list(profile.get("apps_sd", []))
+    all_apps_in_profile = dedup(list(profile.get("apps_flash", []))
+                                + list(profile.get("apps_sd", [])))
 
     errors   = 0   # hard errors (block build): missing apps, broken init refs
     warnings = 0   # soft mismatches: app over-grants perms, or kernel under-equips
+
+    for key in ("apps_flash", "apps_sd"):
+        for name in duplicates(list(profile.get(key, []))):
+            print(f"  ⚠ '{name}' is listed more than once in {key} — "
+                  f"staged once; remove the repeat")
+            warnings += 1
 
     # Hard error: apps listed in profile that don't exist
     missing_apps = [a for a in all_apps_in_profile if a not in app_map]
@@ -207,8 +214,8 @@ def check_profile(profile: dict) -> int:
             print(f"  ⚠ {prob}")
             warnings += 1
 
-    n_flash = len(profile.get("apps_flash", []))
-    n_sd    = len(profile.get("apps_sd", []))
+    n_flash = len(dedup(profile.get("apps_flash", [])))
+    n_sd    = len(dedup(profile.get("apps_sd", [])))
     if errors == 0:
         suffix = f", {warnings} warning(s) — perms vs kernel config" if warnings else ""
         print(f"  ✓ profile OK ({n_flash} apps in /bin, {n_sd} on /sd){suffix}")
@@ -225,9 +232,8 @@ def build_profile(profile: dict, plugin, arch, cpu, board_cfg, tc) -> int:
     """Compile every app listed in apps_flash + apps_sd. Returns 0/1."""
     from .builder import build_single, clean_single
     app_map = _app_map()
-    targets = list(dict.fromkeys(
-        list(profile.get("apps_flash", [])) + list(profile.get("apps_sd", []))
-    ))
+    targets = dedup(list(profile.get("apps_flash", []))
+                    + list(profile.get("apps_sd", [])))
     if not targets:
         print("  (profile lists no apps — nothing to build)")
         return 0
@@ -308,6 +314,21 @@ def kernel_image_size() -> int:
     return 0
 
 
+def dedup(names: list[str]) -> list[str]:
+    """Profile app lists are name lists; a repeat is a typo, not two payloads.
+    Order preserved so listings stay in the author's order."""
+    return list(dict.fromkeys(names))
+
+
+def duplicates(names: list[str]) -> list[str]:
+    seen, dup = set(), []
+    for n in names:
+        if n in seen and n not in dup:
+            dup.append(n)
+        seen.add(n)
+    return dup
+
+
 def compute_image_sizes(profile: dict) -> dict:
     """Aggregate the projected image size from a profile.
 
@@ -321,8 +342,8 @@ def compute_image_sizes(profile: dict) -> dict:
       per_app_sd:       [(name, size), …] sorted desc
     """
     parts = parse_partition_sizes(profile["board"])
-    flash_apps = profile.get("apps_flash", [])
-    sd_apps    = profile.get("apps_sd",    [])
+    flash_apps = dedup(profile.get("apps_flash", []))
+    sd_apps    = dedup(profile.get("apps_sd",    []))
 
     per_app_flash = sorted(((n, app_elf_size(n)) for n in flash_apps),
                            key=lambda t: -t[1])

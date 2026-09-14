@@ -37,7 +37,6 @@ apps_flash:
 - ifconfig
 - iw
 - ping
-- tail
 - input
 - gpio
 - battery

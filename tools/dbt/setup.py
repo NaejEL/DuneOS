@@ -421,10 +421,10 @@ def cmd_setup(args) -> None:
              "\n[bold green]Setup complete![/bold green]\n\n"
              "Next:\n"
              "  [cyan]python tools/dbt.py flash kernel[/cyan]    ← build & flash kernel\n"
-             "  [cyan]python tools/dbt.py flash sysbin[/cyan]    ← build & flash /flash partition\n",
+             "  [cyan]python tools/dbt.py system flash[/cyan]   ← build & flash the sysbin image\n",
              "\nSetup complete!\n"
              "  python tools/dbt.py flash kernel\n"
-             "  python tools/dbt.py flash sysbin\n")
+             "  python tools/dbt.py system flash\n")
     else:
         _msg(console,
              "[red]✗ ESP-IDF v6.0.x not found.[/red]\n\n"

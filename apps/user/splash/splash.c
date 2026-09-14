@@ -4,7 +4,7 @@
  * Reads /flash/etc/splash/config.yaml:
  *   logo:        path to a .dr raster to blit centred (optional)
  *   duration_ms: how long to hold before exiting (optional, default 2000)
- * Drop a logo.png next to config.yaml and `dbt flashimg` converts it to
+ * Drop a logo.png next to config.yaml and `dbt system flash` converts it to
  * logo.dr automatically — a non-developer can change the splash with an image
  * editor, no toolchain. If no logo loads, falls back to procedural desert art.
  *

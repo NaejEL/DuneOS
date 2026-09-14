@@ -41,14 +41,17 @@ jobs:
           # textual: test_tui_sdkconfig_guard.py imports dbt.tui. A missing
           # import here is not one red test — it is a collection error that
           # aborts the whole run, so every dbt test would go unrun.
-          python -m pip install -c tools/constraints.txt pytest pyyaml textual
+          # littlefs-python: the LEG-36 image tests build a real LittleFS image
+          # to prove its size comes from partitions.csv. Without it they would
+          # error, not skip.
+          python -m pip install -c tools/constraints.txt pytest pyyaml textual littlefs-python
 
           # The floor counts tests that RAN, because a bug that mass-skips the
-          # suite clears a collected count. It sits a few below the current 384
+          # suite clears a collected count. It sits a few below the current 480
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=436
+          FLOOR=472
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml

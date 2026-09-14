@@ -8,7 +8,7 @@ Run without arguments → full-screen TUI (textual).
 Direct CLI commands:
     dbt setup                   Wizard: board, port, ESP-IDF
     dbt flash kernel            Build + flash the DuneOS kernel
-    dbt flash sysbin            Build apps + flash LittleFS partition
+    dbt system flash            Build + flash the sysbin image from a profile
     dbt flash sd <path>         Build all apps + deploy to SD card
     dbt build                   Build the app in the current directory
     dbt deploy <path>           Copy built app to SD card mount point
@@ -30,7 +30,6 @@ from .manifest import load_manifest, find_apps, _is_bin_app
 from .toolchain import get_board_plugin
 from .builder import build_single, clean_single, run
 from .deploy import deploy_single
-from .flashimg import cmd_flashimg
 from .setup import cmd_setup
 from .kernel import cmd_flash_kernel
 from .bspgen import cmd_bspgen
@@ -402,7 +401,6 @@ def cmd_system_flash(args) -> None:
     a.build   = False
     a.port    = getattr(args, "port", None)
     a.baud    = getattr(args, "baud", 460800)
-    a.safe    = False
     a.profile = profile
     cmd_flashimg(a)
 
@@ -478,6 +476,28 @@ def cmd_system_deploy(args) -> None:
 # main entry point
 # ---------------------------------------------------------------------------
 
+# LEG-36: both staged every built app, ignoring the profile, and overflowed the
+# sysbin partition. Refused by name rather than by argparse's "invalid choice",
+# which would not say what to type instead.
+_DELETED_VERBS = {
+    ("flash", "sysbin"): "dbt system flash",
+    ("flashimg",):       "dbt system flash",
+}
+
+
+def _refuse_deleted_verb(argv: list[str]) -> None:
+    for verb, replacement in _DELETED_VERBS.items():
+        if tuple(argv[:len(verb)]) == verb:
+            sys.exit(
+                f"ERROR: `dbt {' '.join(verb)}` is gone — it staged every built "
+                f"app instead of the active profile's.\n"
+                f"  Use `{replacement}` (pick the profile with `dbt system use "
+                f"<name>` or pass --profile).\n"
+                f"  Recovery images are profiles too: "
+                f"`dbt system flash --profile <board>-recovery`."
+            )
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -487,6 +507,8 @@ def main() -> None:
         from .tui import DbtApp
         DbtApp().run()
         return
+
+    _refuse_deleted_verb(sys.argv[1:])
 
     parser = argparse.ArgumentParser(
         prog="dbt",
@@ -538,21 +560,6 @@ def main() -> None:
         help="Open serial monitor after flashing")
     p_flash_kernel.set_defaults(func=cmd_flash_kernel)
 
-    p_flash_sysbin = flash_sub.add_parser(
-        "sysbin", help="Build apps + flash LittleFS sysbin partition")
-    p_flash_sysbin.add_argument(
-        "--no-build", dest="build", action="store_false", default=True,
-        help="Skip rebuilding apps before packaging")
-    p_flash_sysbin.add_argument(
-        "--port", help="Serial port (overrides .duneos_port)")
-    p_flash_sysbin.add_argument(
-        "--baud", type=int, default=460800,
-        help="Flash baud rate (default: 460800)")
-    p_flash_sysbin.add_argument(
-        "--safe", action="store_true",
-        help="Replace init.yaml with usb_shell-only (recovery mode)")
-    p_flash_sysbin.set_defaults(func=cmd_flashimg)
-
     p_flash_sd = flash_sub.add_parser(
         "sd", help="Build all apps + deploy to SD card mount point")
     p_flash_sd.add_argument("path", help="SD card mount point (e.g. /mnt/sd or E:\\)")
@@ -596,21 +603,6 @@ def main() -> None:
     # --- cleanall ---
     p_cleanall = sub.add_parser("cleanall", help="Remove build artefacts for all apps")
     p_cleanall.set_defaults(func=cmd_cleanall)
-
-    # --- flashimg (legacy alias for flash sysbin) ---
-    p_flashimg = sub.add_parser(
-        "flashimg",
-        help="[legacy] Build LittleFS sysbin image and flash — use 'flash sysbin' instead",
-    )
-    p_flashimg.add_argument("--build", action="store_true",
-                            help="Build all system apps before packaging")
-    p_flashimg.add_argument("--port",
-                            help="Serial port (overrides .duneos_port)")
-    p_flashimg.add_argument("--baud", type=int, default=460800,
-                            help="Flash baud rate (default: 460800)")
-    p_flashimg.add_argument("--safe", action="store_true",
-                            help="Replace init.yaml with usb_shell-only (recovery mode)")
-    p_flashimg.set_defaults(func=cmd_flashimg)
 
     # --- qemu (LEG-27 — hardware-free boot + loader smoke test) ---
     p_qemu = sub.add_parser(

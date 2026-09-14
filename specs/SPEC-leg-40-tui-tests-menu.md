@@ -1,5 +1,5 @@
 # LEG-40 — TUI Tests menu: run the gates and watch them live
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-36-40-dbt-verbs.md
 Depends on: LEG-17 (`dbt test` must exist first — LEG-39 was merged into it)
 
 ## Context
@@ -28,7 +28,15 @@ operation itself — it shells to `dbt` (`self._stream([sys.executable, dbt,
    scrollback.
 4. A gate whose tool is missing shows SKIPPED and names `dbt doctor` —
    never silently absent, never shown as passing.
-5. **The QEMU gate is not merely unwired — it is unreachable without
+5. **OBSOLETE — not implemented, and must not be.** The board problem was
+   resolved the other way round: `testing._probe_qemu()` reports the gate
+   unavailable when `.duneos_board` names no QEMU board, maps
+   `qemu.EXIT_CONFIG` to exit 3, and never writes the file. `dbt qemu` was
+   left as it is. The two acceptance criteria below that follow from this
+   section (`dbt qemu --board X` while `.duneos_board` names another board,
+   and the cross-board guard) are obsolete with it.
+
+   ~~**The QEMU gate is not merely unwired — it is unreachable without
    clobbering the developer's board.** `dbt qemu` does not write
    `.duneos_board`; it READS it and REFUSES when `--board` differs
    (`qemu.py:925`), instructing the user to `echo <qemu board> >
@@ -43,7 +51,7 @@ operation itself — it shells to `dbt` (`self._stream([sys.executable, dbt,
    board changes without a full clean, and `.duneos_board` is read on every
    configure), so the fix is a separate build directory per board, not the
    removal of the check. Resolve this before the TUI action, or the action
-   ships as a trap.
+   ships as a trap.~~
 
 ## Acceptance criteria
 
@@ -53,12 +61,9 @@ operation itself — it shells to `dbt` (`self._stream([sys.executable, dbt,
       into one RichLog.
 - [ ] A failing gate leaves a visibly failed status, not merely a non-zero
       line buried in the log.
-- [ ] `dbt qemu --board <qemu board> --build-dir <dir>` succeeds while
-      `.duneos_board` names a DIFFERENT board, and leaves that file
-      byte-identical. Test asserts content before and after, with the file
-      set to a physical board throughout.
-- [ ] The cross-board guard still fires where it must: a build directory
-      configured for one board must still refuse a different one.
+- ~~`dbt qemu --board <qemu board> --build-dir <dir>` succeeds while
+      `.duneos_board` names a DIFFERENT board~~ — obsolete, see §5.
+- ~~The cross-board guard still fires where it must~~ — obsolete, see §5.
 - [ ] A missing tool renders SKIPPED, and the summary is not green.
 - [ ] `pytest tools/dbt/tests -q` green; TUI tests run headless (no tty).
 

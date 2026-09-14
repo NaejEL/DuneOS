@@ -2,8 +2,8 @@
 #
 # Minimal flash payload: just usb_shell. Use when you want the device to
 # come up to the CDC console with nothing else running — e.g. after a
-# bricking series of crashing daemons. Equivalent to `dbt flashimg --safe`
-# but expressed as a profile so it's reproducible and inspectable.
+# bricking series of crashing daemons.
+#   dbt system flash --profile cardputer-recovery
 
 name: cardputer-recovery
 board: m5stack-cardputer
