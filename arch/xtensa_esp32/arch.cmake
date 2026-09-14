@@ -30,10 +30,19 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
         "${_S3_HAL}/hal_time.c"
     )
 
-    # The same guards as arch/xtensa_esp32s3/arch.cmake, against the same
-    # WHOLE_ARCHIVE over-link defect. Kept in sync by hand, not by a check, and
-    # the REQUIRES list below repeats that file's — dbt-only, so no IDF build
-    # sees the core-vs-arch duplication that
+    # Guards against the same WHOLE_ARCHIVE over-link defect as
+    # arch/xtensa_esp32s3/arch.cmake, on the same four drivers — but the two
+    # files are no longer a copy of each other, and nothing checks that they
+    # converge. Since the LEG-33 trim, that file drops the `driver` umbrella,
+    # carries esp_hw_support, and guards hal_logic.c on CONFIG_DUNEOS_DRV_LOGIC;
+    # this block does none of the three. Adding those here is untested — no
+    # tracked board is both plain-ESP32 and dbt-built — so the divergence is
+    # recorded rather than guessed at. A plain-ESP32 board declaring `logic:`
+    # under a dbt build is the case that would need the fifth guard and
+    # esp_hw_support; write the guard when that board exists.
+    #
+    # The list is dbt-only either way, so no IDF build sees the core-vs-arch
+    # duplication that
     # tools/dbt/tests/test_cmake_requires.py::test_no_component_is_declared_both_unconditionally_and_per_arch
     # enforces. This arch-vs-arch case has no check.
     if(CONFIG_DUNEOS_DRV_I2C)

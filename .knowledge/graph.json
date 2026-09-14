@@ -9701,13 +9701,18 @@
    "src": "arch/riscv32/reloc/loader_reloc_riscv.c"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "check",
    "src": "arch/xtensa_esp32/arch.cmake"
   },
   {
    "count": 1,
    "dst": "test_no_component_is_declared_both_unconditionally_and_per_arch",
+   "src": "arch/xtensa_esp32/arch.cmake"
+  },
+  {
+   "count": 1,
+   "dst": "write",
    "src": "arch/xtensa_esp32/arch.cmake"
   },
   {
@@ -32941,6 +32946,11 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
+   "count": 2,
+   "dst": "_cmake_gate",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
    "count": 3,
    "dst": "_eval_cond",
    "src": "tools/dbt/tests/kernel_macros.py"
@@ -32996,7 +33006,7 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "gate",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -33016,7 +33026,7 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "missing_macros",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -33216,6 +33226,11 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
+   "count": 2,
+   "dst": "_cmake_gate",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
    "count": 5,
    "dst": "_eval_cond",
    "src": "tools/dbt/tests/test_board_macros.py"
@@ -33231,7 +33246,7 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 3,
+   "count": 5,
    "dst": "check",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33257,6 +33272,11 @@
   },
   {
    "count": 1,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
    "dst": "generate",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33271,7 +33291,7 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "kernel_sources",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33317,6 +33337,11 @@
   },
   {
    "count": 1,
+   "dst": "test_an_or_guarded_source_is_scanned_when_only_one_symbol_is_enabled",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
    "dst": "test_every_macro_the_enabled_drivers_reference_is_defined",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33356,7 +33381,7 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "walk",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -39011,6 +39036,7 @@
    "_check_sdkconfig",
    "_ci_floor",
    "_close",
+   "_cmake_gate",
    "_col_staged_bytes",
    "_config_error",
    "_convert_etc_pngs",
@@ -40184,6 +40210,7 @@
    "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
    "test_an_icon_at_the_bound_is_accepted",
    "test_an_idf_config_symbol_leaves_its_branch_live",
+   "test_an_or_guarded_source_is_scanned_when_only_one_symbol_is_enabled",
    "test_an_over_long_icon_is_rejected",
    "test_an_unavailable_gate_is_not_a_pass",
    "test_an_unconfigured_build_directory_passes",

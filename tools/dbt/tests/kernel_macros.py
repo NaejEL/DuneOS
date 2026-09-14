@@ -82,6 +82,31 @@ def header_defined_names():
     return names
 
 
+_CMAKE_NON_AND = re.compile(r"\b(?:OR|NOT)\b")
+
+
+def _cmake_gate(stripped):
+    """The CONFIG_ symbols an `if()` requires, or the empty set when it is not
+    a plain conjunction of them.
+
+    missing_macros() satisfies a gate with `g <= configs`, which is an AND. A
+    condition holding OR or NOT does not mean that, and collapsing its operands
+    into one set turns `if(A OR B)` into `if(A AND B)`: the source is then
+    skipped for a board enabling only A, which compiles it — the LEG-31
+    blindness this module exists to remove, and invisible from the result.
+    `if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)` around
+    drv_usb.c is the instance in the tree; bspgen emits the two independently.
+
+    Such a condition is therefore refused rather than translated, and the
+    statement counts as unguarded. That over-demands — a board enabling neither
+    still gets the file scanned — which is a false positive a reader dismisses,
+    the direction this module always fails in.
+    """
+    if _CMAKE_NON_AND.search(stripped):
+        return frozenset()
+    return frozenset(t for t in _TOKEN.findall(stripped) if t.startswith("CONFIG_"))
+
+
 def _expand(text, variables):
     for name, value in variables.items():
         text = text.replace("${%s}" % name, value)
@@ -108,8 +133,7 @@ def cmake_sources(cmake_path):
                 variables[m.group(1)] = _expand(m.group(2), variables)
             stripped = line.strip()
             if stripped.startswith("if("):
-                stack.append(frozenset(t for t in _TOKEN.findall(stripped)
-                                       if t.startswith("CONFIG_")))
+                stack.append(_cmake_gate(stripped))
                 continue
             if stripped.startswith(("elseif(", "else(")) and stack:
                 stack[-1] = frozenset()

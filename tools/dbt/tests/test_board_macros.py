@@ -151,6 +151,22 @@ def test_an_idf_config_symbol_leaves_its_branch_live():
         "defined(CONFIG_DUNEOS_DRV_I2C)", defines, {"CONFIG_DUNEOS_DRV_I2C"}) == 1
 
 
+# The other direction the gate walk must not take. `if(A OR B)` collapsed into
+# one set is satisfied only when both are enabled, so a board enabling one of
+# them compiles the source while the check skips it — LEG-31 blindness reached
+# through the CMake guard rather than through the C condition.
+def test_an_or_guarded_source_is_scanned_when_only_one_symbol_is_enabled():
+    usb = next(p for p in km.kernel_sources("esp32s3") if p.name == "drv_usb.c")
+    gates = km.kernel_sources("esp32s3")[usb]
+    assert any(g <= {"CONFIG_DUNEOS_DRV_USB_MSC"} for g in gates), \
+        "drv_usb.c is guarded by `MSC OR CDC`; a board with msc: and no cdc: " \
+        "compiles it and must not be skipped"
+    assert km._cmake_gate("if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)") \
+        == frozenset()
+    # A plain conjunction still narrows, or the check would demand everything.
+    assert km._cmake_gate("if(CONFIG_DUNEOS_DRV_I2C)") == frozenset({"CONFIG_DUNEOS_DRV_I2C"})
+
+
 # UNRESOLVABLE is an allow-list, and an allow-list nobody rereads is how a check
 # stops checking. Pin it to the tree the way GUARDED_EXCEPTIONS is pinned.
 def test_the_unresolvable_allowlist_still_names_something_real():
