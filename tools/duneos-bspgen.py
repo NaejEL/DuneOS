@@ -41,10 +41,15 @@ Any top-level key not in KNOWN_BOARD_KEYS is a hard error — see that set.
       spi_id: N        references spi[].id
       cd_pin: N        -1 if not present
   i2c:
-    - id: N
-      sda_pin: N
-      scl_pin: N
+    - id: N            One bus MUST carry id: 0 — the kernel I2C stack is
+      sda_pin: N       single-bus and names bus 0 literally (i2c_bus.c,
+      scl_pin: N       drv_i2c.c "/dev/i2c-0", vfs.c board.info).
       freq_hz: N
+  logic:               Bare key, no value. Presence enables /dev/logic0
+                       (CONFIG_DUNEOS_DRV_LOGIC, ADR 020).
+  wifi          bool   Opt-in: the radio is enabled only on `wifi: true`.
+                       Every other peripheral block is presence-tested; this
+                       key used to default to True and gave an ESP32-P4 a radio.
   display:
       driver: st7789 | ili9341 | ...
       width: N
@@ -141,7 +146,7 @@ KNOWN_BOARD_KEYS = {
     # console and boot
     "console", "recovery_pin",
     # buses and peripherals
-    "uart", "i2c", "spi", "usb", "gpio_expanders",
+    "uart", "i2c", "spi", "usb", "gpio_expanders", "logic",
     "sd_card", "has_sd", "display", "leds", "buttons", "encoder",
     "keyboard", "keyboard_matrix", "battery", "network", "wifi",
     # declared hardware not modelled by any generator yet
@@ -191,6 +196,17 @@ def validate(board: dict, yaml_path: Path) -> None:
             f"       Unknown keys are refused rather than ignored: a typo in a typed key "
             f"generates cleanly and silently leaves the board on the SDK default.\n"
             f"       Valid keys: {', '.join(sorted(KNOWN_BOARD_KEYS))}")
+
+    i2c_buses = board.get("i2c") or []
+    if i2c_buses:
+        ids = [b.get("id") for b in i2c_buses]
+        if 0 not in ids:
+            die(f"board '{board['name']}' declares i2c{ids} but no bus with id: 0. "
+                "The kernel I2C stack is single-bus by construction and names bus 0 "
+                "literally: i2c_bus.c reads DUNEOS_I2C0_SDA_PIN/_SCL_PIN/_FREQ_HZ, "
+                "drv_i2c.c exposes it as /dev/i2c-0, vfs.c publishes its pins in "
+                "board.info. CONFIG_DUNEOS_DRV_I2C would be emitted and the build "
+                "would fail on the undefined macros. Renumber the bus to 0.")
 
     if "sd_card" in board:
         sd = board["sd_card"]
@@ -303,6 +319,8 @@ def generate(board: dict) -> str:
             _define("DUNEOS_NUM_RAW_SPI_BUSES",   len(raw_buses)),
             "",
         ]
+        # idx is the /dev/spi-N index, not the yaml id, and must stay a dense
+        # 1-based counter: drv_spi.c:321-341 probes DUNEOS_SPI1/2/3_HOST by #ifdef.
         for idx, bus in enumerate(raw_buses, start=1):
             spi_id = bus["id"]
             shared = (spi_id == sd_spi_id)
@@ -794,8 +812,10 @@ def generate_sdkconfig_board(board: dict) -> str:
     # ---- DuneOS drivers ----
     lines += ["# DuneOS kernel drivers", "CONFIG_DUNEOS_DRV_NULL=y",
               "CONFIG_DUNEOS_DRV_UART=y", "CONFIG_DUNEOS_DRV_KLOG=y",
-              "CONFIG_DUNEOS_DRV_GPIO=y",
-              "CONFIG_DUNEOS_DRV_LOGIC=y", ""]
+              "CONFIG_DUNEOS_DRV_GPIO=y", ""]
+
+    if "logic" in board:
+        lines += ["CONFIG_DUNEOS_DRV_LOGIC=y", ""]
 
     if board.get("i2c"):
         lines += ["CONFIG_DUNEOS_DRV_I2C=y", ""]
@@ -878,7 +898,7 @@ def generate_sdkconfig_board(board: dict) -> str:
             lines.append("")
             break
 
-    if board.get("wifi", True):
+    if board.get("wifi") is True:
         lines += ["CONFIG_DUNEOS_DRV_WIFI=y", ""]
 
     # usb_mode already computed above for console selection

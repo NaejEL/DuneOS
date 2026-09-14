@@ -612,7 +612,7 @@ mis-attributed a later failure:
    on `esp32s3-qemu-psram` (LEG-30).
 5. **`.duneos_board` race** — concurrent board resolution during the build, fixed in PR #4.
 
-Three further findings came out of the same work and are now tracked rather than fixed:
+Three further findings came out of the same work and are now closed:
 **LEG-31**, **LEG-32** and **LEG-33** (Milestones 2 and 3). None of the eight was visible to the
 static audit that produced this roadmap; all eight came from running the system. **That is the
 argument for Milestone 0, and it is now an observation rather than a prediction.**
@@ -683,21 +683,18 @@ suite still prints that count separately so it stays visible until specced.
 | LEG-14 | No CONTRIBUTING file and no "Contributing" section | minor | XS | — | [specs/SPEC-leg-pin-and-share-dependencies.md](specs/SPEC-leg-pin-and-share-dependencies.md) | DONE |
 | LEG-15 | `file(GLOB)` over `arch.cmake` and over `firmware/blobs/*.dap` without `CONFIGURE_DEPENDS`. Both carry it now, guarded off in CMake script mode where it is a hard error | minor | XS | — | [specs/SPEC-leg-pin-and-share-dependencies.md](specs/SPEC-leg-pin-and-share-dependencies.md) | DONE |
 | LEG-16 | 4 IDF components at `version: "*"` (lan87xx, ksz80xx, rtl8201, ip101). Bounded at the versions an esp32 resolution actually selects | minor | S | LEG-07 | [specs/SPEC-leg-pin-and-share-dependencies.md](specs/SPEC-leg-pin-and-share-dependencies.md) | DONE |
-| LEG-31 | Latent compile break: `CONFIG_DUNEOS_DRV_I2C` means "an I2C section exists" but gates code that dereferences bus 0 by name — a board declaring `i2c: [{id: 1}]` does not build | major | S | — | [specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md](specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md) | TODO |
-| LEG-32 | `CONFIG_DUNEOS_DRV_LOGIC=y` emitted for every board against a `default n` Kconfig | minor | M | — | [specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md](specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md) | TODO |
+| LEG-31 | Latent compile break: `CONFIG_DUNEOS_DRV_I2C` means "an I2C section exists" but gates code that dereferences bus 0 by name — a board declaring `i2c: [{id: 1}]` does not build. `validate()` now refuses an `i2c:` list without `id: 0`, and `tools/dbt/tests/kernel_macros.py` derives, per board, every `DUNEOS_*` macro the enabled drivers reference and checks the generated header defines it — with the id-1 board as the negative control that must fail | major | S | — | [specs/SPEC-leg-31-32-33-board-config-correctness.md](specs/SPEC-leg-31-32-33-board-config-correctness.md) | DONE |
+| LEG-32 | `CONFIG_DUNEOS_DRV_LOGIC=y` emitted for every board against a `default n` Kconfig. Now gated on a bare `logic:` key, declared by `m5stack-cardputer` alone; `CONFIG_DUNEOS_DRV_GPIO` became `default y` rather than the reverse, GPIO being platform and not peripheral. Verified on `esp32s3-qemu`: no logic object compiled, `drv_logic_register` absent from `duneos.map` | minor | M | — | [specs/SPEC-leg-31-32-33-board-config-correctness.md](specs/SPEC-leg-31-32-33-board-config-correctness.md) | DONE |
 | LEG-38 | A test that reads a gitignored build artefact is green only on the machine that produced it — four recorded instances, the last three green having tested nothing. The root `conftest.py` now fails any test that opens one, ignore status coming from git | major | S | — | [specs/SPEC-leg-38-08-gates-that-test-nothing.md](specs/SPEC-leg-38-08-gates-that-test-nothing.md) | DONE |
 
 LEG-31 and LEG-32 come from the Milestone 0 bench work, not from the audit sweep. Both are build
 reproducibility, which is why they sit here rather than in Milestone 1.
 
-LEG-31 is **latent**: no board in the repository instantiates it, which is the only reason it has
-never fired. It is scored `major` on the failure it produces (a compile error inside `vfs.c` that
-points at the kernel instead of at the board file), not on its current frequency.
+LEG-31 was **latent** — no board instantiated it — so the observable behaviour is now the
+rejection: bspgen refuses the board rather than the compiler refusing the kernel.
 
-LEG-32's **product ruling is signed** (2026-09-05, parts 1 and 2 in the spec): `/dev/logic0` is a
-peripheral, declared by a bare `logic:` key with no pin list, on `m5stack-cardputer` only, and
-`CONFIG_DUNEOS_DRV_GPIO` is explicitly out of its scope. Its four open questions are closed. **It is
-ready to build** — the `M` size is schema plus guard, not design.
+LEG-32 landed with `CONFIG_DUNEOS_DRV_GPIO` absorbed as agreed: emitted for every board, so
+`default y`. The pinning test holds the unconditional set at `{NULL, UART, KLOG, GPIO}`.
 
 ### Milestone 3 — Remaining test safety net and documentation consistency
 
@@ -710,16 +707,14 @@ ready to build** — the `M` size is schema plus guard, not design.
 | LEG-21 | No test command in CLAUDE.md or README. `CONTRIBUTING.md` is now the single copy of the four pre-PR gates; CLAUDE.md, README and `docs/testing.md` link to it and a test enforces the uniqueness | minor | XS | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-22 | The ADR count was announced as 17 against 41 actual. Both `README.md:23` and `CLAUDE.md` now say **42**, the real count of `docs/adr/*.md` minus `README.md` | minor | XS | — | [specs/SPEC-leg-20-doc-coherence-batch.md](specs/SPEC-leg-20-doc-coherence-batch.md) | DONE |
 | LEG-23 | No git tag across 213 commits, no VERSION and no CHANGELOG | minor | S | — | [specs/SPEC-leg-20-doc-coherence-batch.md](specs/SPEC-leg-20-doc-coherence-batch.md) | TODO |
-| LEG-33 | REQUIRES over-declaration in `arch.cmake` / kernel `CMakeLists.txt`, plus the WiFi opt-out polarity in bspgen | minor | XS | — | [specs/SPEC-leg-33-requires-over-declaration.md](specs/SPEC-leg-33-requires-over-declaration.md) | TODO |
+| LEG-33 | REQUIRES over-declaration in `arch.cmake` / kernel `CMakeLists.txt`, plus the WiFi opt-out polarity in bspgen. `driver`, `esp_netif` and `esp_ringbuf` deleted — the `m5stack-cardputer` map holds the same 4741 symbols before and after; every surviving entry names a consumer by `file:line`. WiFi is opt-in, so `esp32p4-devkitm` stops claiming a radio it has no hardware for | minor | XS | — | [specs/SPEC-leg-31-32-33-board-config-correctness.md](specs/SPEC-leg-31-32-33-board-config-correctness.md) | DONE |
 | LEG-40 | `dbt tui` exposes 13 actions and **no test action** (zero occurrences of qemu/pytest/test/fuzz in `tui.py`), though `_stream()` + `RichLog` already stream a `Popen` live. Blocked twice over: the TUI only shells to `dbt`, so it needs LEG-17's `dbt test`; and the QEMU gate is **unreachable without clobbering `.duneos_board`** — `dbt qemu` reads that file and refuses when `--board` differs (`qemu.py:925`), so exposing the action as-is ships a trap that breaks the developer's physical-board selection | minor | M | LEG-17 | [specs/SPEC-leg-40-tui-tests-menu.md](specs/SPEC-leg-40-tui-tests-menu.md) | PROPOSED |
 | LEG-41 | **Unbounded cJSON recursion on the boot stack, driven by file content.** `loader.c:1124` parses each `.dap`'s embedded manifest with `cJSON_ParseWithLength()`; cJSON's `parse_value -> parse_object -> parse_value` descent is mutually recursive at **~64 B per nesting level** (measured by objdump: `parse_value` 32 B, `parse_object`/`parse_array` 32 B, `parse_string` 48 B) and `CJSON_NESTING_LIMIT` is **1000** (`third_party/cjson/cJSON.h:137`) — about 64 KiB. The boot scan parses the manifest of every `.dap` it finds, on `main_task`, whose worst measured peak is **4276 B of 5120 B (844 B free, 784 B after the 60 B watchpoint)**: roughly **12 further nesting levels consume the whole margin** — and 480 B of that descent is the *floor*, not the one-level case, since a manifest is itself an object and even a flat one pays it. The manifest is a file anyone can drop on the SD card, opened by the scan without ever being run. **Same failure mode as LEG-37** — overflow into the adjacent heap, TLSF corruption, watchdog loop, never a stack report — but reached by a file instead of a refactor. Found 2026-09-06 by a reviewer chasing a wrong figure in the LEG-05 stack ledger; **not a LEG-05 regression**, the path predates the split | major | S | — | [specs/SPEC-leg-41-manifest-json-recursion.md](specs/SPEC-leg-41-manifest-json-recursion.md) | **DONE** — `duneos_manifest_scan_depth()` walks the raw section bytes in one loop with four scalar locals: no recursion, no VLA, no callee, verified a **32 B leaf** in the linked image (`entry a1, 32`, and `objdump -r` shows only self-referential branches). It gates `extract_manifest()` above the only `cJSON_ParseWithLength()` call site in the firmware, so an over-nested manifest is refused **having spent no descent at all** — rejected before the recursion, not by surviving it. **The limit is 4, derived and not picked**: the chain is `416 + 64n` B, held at or below the **672 B fixed-depth maximum** that already binds this path (38cb7ef); `416 + 64*5 = 736 > 672` is why it is not 5. Real manifests reach depth 3 — one level of headroom, and all 57 built `.duneos_manifest` sections still parse. Rejection is `ESP_ERR_INVALID_SIZE` with a named reason, placed **before** the pre-existing "parse error — boot with defaults; return ESP_OK" branch, so `duneos_loader_load` fails the load and `duneos_loader_scan` skips the `.dap`: a hostile manifest cannot slip through as an app carrying default permissions. `CJSON_NESTING_LIMIT=16` is set in the component's `target_compile_definitions`, not patched into `third_party/cjson`, so a submodule update cannot silently drop it — a second net, not the mechanism. Mutation-verified two ways (raising the constant; widening the comparison), each failing the host suite at exit 2, and the host case asserts stock cJSON *accepts* the depth-64 blob the bound rejects, so it is provably about the bound. A differential fuzz against stock cJSON and an ASan/UBSan run on non-NUL-terminated buffers were done in the authoring session and found nothing, but neither harness is in the tree — not reproducible from the repo. **Measured on hardware 2026-09-07**, three boots: 860/860/908 B free, worst case **peak 4260 B of 5120, 860 B free, 800 B after the watchpoint**, against a 4276 B / 844 B / 784 B baseline — the **worst-case margin is unchanged**, as the derivation predicted, the 16 B being boot-to-boot variance rather than a gain |
 
-LEG-33 was **re-sized from S to XS after re-verification**: seven of the nine entries the audit
-listed as over-declared are in fact referenced and must stay. What remains is one verified duplicate
-(`esp_netif` in `arch/xtensa_esp32s3/arch.cmake`) plus one build-verifiable candidate (the `driver`
-umbrella). The bulk of the spec's work is now documenting, by `file:line`, why each surviving entry
-stays — which is what stops the next audit re-filing it. Its `main/main.c:72` stale-comment item
-migrated to LEG-20's batch, where the documentation sweep of the flash-root paths lives.
+LEG-33's deletions are proven by link identity, not by grep: the `driver` umbrella's transitive
+dependencies appear in no `#include`. `esp32s3-devkitc`, `lilygo-t-embed-cc1101` and `kincony-A16`
+— none of them built by CI — were each built clean after the trim. Its `main/main.c:72`
+stale-comment item migrated to LEG-20's batch.
 
 ### Deferred — not scheduled in this cycle
 
@@ -747,11 +742,8 @@ LEG-04 is executed (PR #8), so what this section sequences is now:
 2. **LEG-36** — a hardware-found packaging defect with no spec yet, plus its `_SYSBIN_SIZE`
    duplicate. It is the only open finding that broke a real workflow on real hardware.
 
-**LEG-31, LEG-32 and LEG-33 are deliberately NOT next**, despite LEG-32's ruling being signed and
-LEG-33 being XS. They are build-system correctness, not security, and LEG-31 is latent — no board
-in the repository instantiates it, so nothing is failing today. They wait behind the loader
-hardening the bench was built to enable. Taking them first would be choosing the cheap work over
-the work that motivated Milestone 0.
+**LEG-31, LEG-32 and LEG-33 shipped together**, in one branch, once the loader hardening that
+motivated Milestone 0 was done.
 
 ---
 

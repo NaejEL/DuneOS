@@ -9,8 +9,9 @@
 #
 # Guard: CONFIG_IDF_TARGET_ESP32 (normal build phase) or DUNEOS_ARCH (dbt / Phase 28+).
 # NOTE: CONFIG_IDF_TARGET_ESP32 is not available in the requirements phase;
-# xtensa_esp32s3/arch.cmake adds esp_eth/esp_netif to REQUIRES for all Xtensa targets
-# so the Ethernet headers are always present at configure time.
+# xtensa_esp32s3/arch.cmake adds esp_eth for all Xtensa targets and
+# duneos_kernel/CMakeLists.txt adds esp_netif unconditionally, so the Ethernet
+# headers are present at configure time.
 
 if(NOT CONFIG_IDF_TARGET_ESP32
    AND NOT DUNEOS_ARCH STREQUAL "xtensa_esp32")
@@ -58,7 +59,6 @@ if(DUNEOS_ARCH STREQUAL "xtensa_esp32")
         esp_adc
         esp_timer
         esp_eth
-        esp_netif
     )
 endif()
 
@@ -70,10 +70,15 @@ if(CONFIG_DUNEOS_DRV_ETH)
         "${CMAKE_CURRENT_LIST_DIR}/hal/hal_eth.c"
         "${CMAKE_CURRENT_LIST_DIR}/hal/hal_phy.c"
     )
-    list(APPEND DUNEOS_KERNEL_REQUIRES
-        espressif__lan87xx
-        espressif__ksz80xx
-        espressif__rtl8201
-        espressif__ip101
-    )
 endif()
+
+# Unguarded on purpose: CONFIG_* is empty during the requirements phase, so a
+# CONFIG_DUNEOS_DRV_ETH guard here would hide the PHY headers from the very
+# board that needs them. idf_component.yml publishes all four only for target
+# esp32, which is also the only target that reaches this file.
+list(APPEND DUNEOS_KERNEL_REQUIRES
+    espressif__lan87xx   # hal/hal_phy.c:13
+    espressif__ksz80xx   # hal/hal_phy.c:14
+    espressif__rtl8201   # hal/hal_phy.c:15
+    espressif__ip101     # hal/hal_phy.c:16
+)

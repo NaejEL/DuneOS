@@ -966,7 +966,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "candidate",
    "src": "ROADMAP.md"
   },
@@ -1073,6 +1073,11 @@
   {
    "count": 1,
    "dst": "drv_input_push_event",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "drv_logic_register",
    "src": "ROADMAP.md"
   },
   {
@@ -1193,6 +1198,11 @@
   {
    "count": 1,
    "dst": "dup2",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
    "src": "ROADMAP.md"
   },
   {
@@ -1376,7 +1386,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 9,
+   "count": 8,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1491,7 +1501,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "validate",
    "src": "ROADMAP.md"
   },
@@ -27897,6 +27907,106 @@
   },
   {
    "count": 2,
+   "dst": "BSPGEN",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 2,
+   "dst": "KNOWN_BOARD_KEYS",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "Risks",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "candidate",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "drv_logic_register",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_dev_register",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "emit",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 3,
+   "dst": "fail",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 3,
+   "dst": "gate",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "generate",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 3,
+   "dst": "generate_sdkconfig_board",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
+   "dst": "regenerated_root",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 2,
+   "dst": "step",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 6,
+   "dst": "validate",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 2,
    "dst": "Context",
    "src": "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md"
   },
@@ -32111,12 +32221,17 @@
    "src": "tools/dbt/qemu.py"
   },
   {
+   "count": 2,
+   "dst": "DRIVER_PREFIX",
+   "src": "tools/dbt/sdkconfig_check.py"
+  },
+  {
    "count": 3,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/sdkconfig_check.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "NOT_SET",
    "src": "tools/dbt/sdkconfig_check.py"
   },
@@ -32143,6 +32258,11 @@
   {
    "count": 2,
    "dst": "find_conflicts",
+   "src": "tools/dbt/sdkconfig_check.py"
+  },
+  {
+   "count": 2,
+   "dst": "find_withdrawn",
    "src": "tools/dbt/sdkconfig_check.py"
   },
   {
@@ -32781,6 +32901,111 @@
    "src": "tools/dbt/tests/conftest.py"
   },
   {
+   "count": 2,
+   "dst": "ARCH_DIRS_BY_CPU",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 5,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_branch_dead",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_cmake_sources",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 3,
+   "dst": "_expand",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_live_refs",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_only_defined_tests",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_strip_comment",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "board_config_macros",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "check",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "emit",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 6,
+   "dst": "enabled_configs",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 5,
+   "dst": "gate",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "header_defined_names",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "kernel_sources",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 3,
+   "dst": "missing",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "missing_macros",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "patterns",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "tracked_files",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
    "count": 1,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/tests/test_board_file.py"
@@ -32904,6 +33129,281 @@
    "count": 6,
    "dst": "write_board_file",
    "src": "tools/dbt/tests/test_board_file.py"
+  },
+  {
+   "count": 4,
+   "dst": "BSPGEN",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 4,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "_tracked_boards",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "generate",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "generate_sdkconfig_board",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "kernel_sources",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 5,
+   "dst": "missing",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "missing_macros",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "mkdir",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "stderr",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_macro_the_enabled_drivers_reference_is_defined",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_check_fails_on_a_bus_numbered_one",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_source_scan_reaches_the_guarded_drivers",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 2,
+   "dst": "validate",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 5,
+   "dst": "BASE",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 2,
+   "dst": "BSPGEN",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 2,
+   "dst": "RADIO_BOARDS",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 4,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 3,
+   "dst": "UNCONDITIONAL",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 6,
+   "dst": "_board_dict",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 10,
+   "dst": "_emitted",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 3,
+   "dst": "_kconfig_defaults",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 2,
+   "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 6,
+   "dst": "_tracked_boards",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "generate_sdkconfig_board",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_emitted_driver_symbol_is_declared_in_kconfig",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_unconditional_symbol_defaults_to_y",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_exactly_one_tracked_board_enables_logic",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_logic_is_emitted_only_for_a_board_declaring_it",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_only_four_driver_symbols_are_emitted_for_every_board",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_boards_that_carry_a_radio_are_the_four_expected_ones",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_wifi_follows_the_declaration",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_wifi_is_absent_when_the_key_is_absent",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_wifi_per_tracked_board_matches_the_declaration",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
+   "count": 3,
+   "dst": "BASE",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 6,
+   "dst": "BSPGEN",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 4,
+   "dst": "FAKE_YAML",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 1,
+   "dst": "KNOWN_BOARD_KEYS",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 3,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 2,
+   "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 2,
+   "dst": "_tracked_boards",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 3,
+   "dst": "_with_i2c",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_board_carrying_bus_zero_or_no_bus_passes",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_board_declaring_logic_passes_validate",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_bus_numbered_one_is_refused",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_new_rule_rejects_no_existing_board",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
+   "count": 5,
+   "dst": "validate",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
   },
   {
    "count": 13,
@@ -33429,6 +33929,91 @@
    "count": 5,
    "dst": "validate",
    "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
+  },
+  {
+   "count": 3,
+   "dst": "ALL_FILES",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 3,
+   "dst": "ARCH_CMAKES",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 3,
+   "dst": "GUARDED_EXCEPTIONS",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 5,
+   "dst": "KERNEL_CMAKE",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 6,
+   "dst": "MAIN_CMAKE",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 8,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 3,
+   "dst": "_main_requires",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 13,
+   "dst": "_rel",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 7,
+   "dst": "_requires_entries",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 10,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 2,
+   "dst": "missing",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 2,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_named_consumer_resolves",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_requires_entry_names_a_consumer",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_component_is_declared_both_unconditionally_and_per_arch",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_requires_entry_sits_under_a_config_guard",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_named_exception_is_still_the_one_it_claims_to_be",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
    "count": 3,
@@ -35061,6 +35646,11 @@
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
+   "count": 1,
+   "dst": "CONFIG_DUNEOS_APP_ARENA_KB",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
    "count": 2,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
@@ -35081,7 +35671,7 @@
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "declared_config",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
@@ -35091,12 +35681,12 @@
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "default_sources",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "enforce",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
@@ -35106,12 +35696,17 @@
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
-   "count": 7,
+   "count": 9,
    "dst": "find_conflicts",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
    "count": 3,
+   "dst": "find_withdrawn",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 5,
    "dst": "join",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
@@ -35136,13 +35731,28 @@
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "regenerated_sources",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
    "count": 1,
+   "dst": "test_a_build_dir_predating_the_logic_withdrawal_is_refused",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 1,
    "dst": "test_a_changed_value_is_a_conflict",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_driver_off_in_the_build_is_not_a_withdrawal",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_driver_the_sources_dropped_is_a_conflict",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
@@ -35223,6 +35833,11 @@
   {
    "count": 1,
    "dst": "test_the_qemu_boards_are_not_caught_by_their_own_fragment",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_withdrawal_rule_stays_inside_the_bspgen_namespace",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
@@ -36957,6 +37572,11 @@
   },
   {
    "count": 1,
+   "dst": "fail",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
    "dst": "free",
    "src": "tools/duneos-bspgen.py"
   },
@@ -37409,6 +38029,7 @@
    "specs/SPEC-leg-28-adc-linked-unconditionally.md",
    "specs/SPEC-leg-29-qemu-iram-dram-alias.md",
    "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md",
+   "specs/SPEC-leg-31-32-33-board-config-correctness.md",
    "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md",
    "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md",
    "specs/SPEC-leg-33-requires-over-declaration.md",
@@ -37456,11 +38077,16 @@
    "tools/dbt/testing.py",
    "tools/dbt/tests/__init__.py",
    "tools/dbt/tests/conftest.py",
+   "tools/dbt/tests/kernel_macros.py",
    "tools/dbt/tests/test_board_file.py",
+   "tools/dbt/tests/test_board_macros.py",
+   "tools/dbt/tests/test_bspgen_driver_symbols.py",
+   "tools/dbt/tests/test_bspgen_i2c_bus_zero.py",
    "tools/dbt/tests/test_bspgen_main_task_stack.py",
    "tools/dbt/tests/test_bspgen_qemu.py",
    "tools/dbt/tests/test_bspgen_uart.py",
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
+   "tools/dbt/tests/test_cmake_requires.py",
    "tools/dbt/tests/test_gates_cover.py",
    "tools/dbt/tests/test_manifest_depth_bound.py",
    "tools/dbt/tests/test_pure_logic.py",
@@ -37488,6 +38114,7 @@
    "AI_NUMERICHOST",
    "AI_NUMERICSERV",
    "AI_PASSIVE",
+   "ALL_FILES",
    "AMBIENT_BATTERY_PATH",
    "AMBIENT_KBD_PATH",
    "AMBIENT_STACK_PATH",
@@ -37499,12 +38126,15 @@
    "APP_ELF_NAME",
    "APP_FAILURE_PATTERNS",
    "ARCH",
+   "ARCH_CMAKES",
+   "ARCH_DIRS_BY_CPU",
    "ASSERTIONS",
    "Alternatives",
    "AppSelectScreen",
    "Architecture",
    "BANNER_BEGIN",
    "BANNER_END",
+   "BASE",
    "BASE_BOARD",
    "BATTERY_CHARGING",
    "BATTERY_DISCHARGING",
@@ -37612,6 +38242,7 @@
    "DLOGE",
    "DLOGI",
    "DLOGW",
+   "DRIVER_PREFIX",
    "DR_BLIT_MAX_W",
    "DUNEOS_ABI_VERSION",
    "DUNEOS_API_SYMBOL",
@@ -37766,6 +38397,7 @@
    "GPIO_PULL_UP",
    "GPIO_PULL_UPDOWN",
    "GREEN_RUN_CONSOLE",
+   "GUARDED_EXCEPTIONS",
    "GUARD_NAMES",
    "Gate",
    "HAL_I2C_MAX_DEVICES",
@@ -37813,6 +38445,7 @@
    "IP_TOS",
    "IP_TTL",
    "JSON_MAX",
+   "KERNEL_CMAKE",
    "KERNEL_SERVED_BATTERY",
    "KEY_ALT",
    "KEY_BACKSPACE",
@@ -37865,6 +38498,7 @@
    "LOGIC_MAX_CHANNELS",
    "LOGIC_SET_CONFIG",
    "Licence",
+   "MAIN_CMAKE",
    "MANIFESTS",
    "MANIFEST_JSON_FILE",
    "MANIFEST_SECTION",
@@ -37961,6 +38595,7 @@
    "QEMU_TOOL",
    "QEMU_TOOL_VERSION",
    "RADAR_DEV",
+   "RADIO_BOARDS",
    "RAN_FAILED",
    "RAN_LABEL",
    "RAN_MARKER",
@@ -38157,6 +38792,7 @@
    "TRACKED",
    "UNAVAILABLE",
    "UNAVAILABLE_RC",
+   "UNCONDITIONAL",
    "USAGE",
    "VADDR_EXHAUSTED_LOG",
    "VALID_CPUS",
@@ -38195,12 +38831,14 @@
    "_bat_arg",
    "_battery_block",
    "_board",
+   "_board_dict",
    "_board_display_size",
    "_board_file_changed_under_run",
    "_board_key_get",
    "_board_yaml",
    "_boot_assertions",
    "_bootstrap",
+   "_branch_dead",
    "_build_profile_dict",
    "_build_sysbin",
    "_called_names",
@@ -38210,6 +38848,7 @@
    "_check_sdkconfig",
    "_ci_floor",
    "_close",
+   "_cmake_sources",
    "_col_staged_bytes",
    "_config_error",
    "_convert_etc_pngs",
@@ -38222,9 +38861,11 @@
    "_done",
    "_draw_text_8x8",
    "_duneos_driver_record",
+   "_emitted",
    "_entry_points",
    "_err",
    "_espressif_roots",
+   "_expand",
    "_fake_tools_tree",
    "_find_esptool",
    "_find_gdb",
@@ -38262,13 +38903,16 @@
    "_iter_functions",
    "_json_depth",
    "_junit_counts",
+   "_kconfig_defaults",
    "_kill_idf",
    "_list_boards",
    "_list_ports",
+   "_live_refs",
    "_load_apps",
    "_load_bspgen",
    "_log",
    "_log_ansi",
+   "_main_requires",
    "_make_opts",
    "_manifest_sources",
    "_menu_selected",
@@ -38276,6 +38920,7 @@
    "_nested_get",
    "_on_pick",
    "_on_result",
+   "_only_defined_tests",
    "_open_profile_editor",
    "_open_setup",
    "_opt",
@@ -38305,6 +38950,8 @@
    "_reap_live_idf_procs",
    "_refresh",
    "_refresh_status",
+   "_rel",
+   "_requires_entries",
    "_run",
    "_run_board_pick",
    "_run_bspgen",
@@ -38333,11 +38980,14 @@
    "_storage_block",
    "_stream",
    "_string_args",
+   "_strip_comment",
    "_submodule_prefixes",
    "_to_rgb565",
    "_track",
+   "_tracked_boards",
    "_valid",
    "_venv_python",
+   "_with_i2c",
    "_worker_bspgen",
    "_worker_bspgen_all",
    "_worker_build_all",
@@ -38405,6 +39055,7 @@
    "blip_xy",
    "blit_scaled",
    "blob",
+   "board_config_macros",
    "board_info_int",
    "boom",
    "bq27220_op_close",
@@ -38750,6 +39401,7 @@
    "emit_start",
    "emit_stop",
    "emit_uart",
+   "enabled_configs",
    "enc15",
    "enc_block",
    "enc_event_cb",
@@ -38794,6 +39446,7 @@
    "find_known",
    "find_qemu",
    "find_toolchain_root",
+   "find_withdrawn",
    "flaky",
    "flash_kernel",
    "flash_size_from_opts",
@@ -38860,6 +39513,7 @@
    "has_vcd",
    "hdr_of",
    "head_fd",
+   "header_defined_names",
    "header_text",
    "hexnib",
    "hi20_get",
@@ -38914,6 +39568,7 @@
    "kconfig_symbol",
    "kernel_idle",
    "kernel_image_size",
+   "kernel_sources",
    "klog_capture_rom_output",
    "klog_d",
    "klog_e",
@@ -38978,6 +39633,7 @@
    "meta_match",
    "minimal",
    "missing",
+   "missing_macros",
    "mkdir",
    "mkdir_p",
    "mod_step",
@@ -39286,9 +39942,13 @@
    "sx1509_write_pair",
    "sx1509_write_reg",
    "t_report",
+   "test_a_board_carrying_bus_zero_or_no_bus_passes",
+   "test_a_board_declaring_logic_passes_validate",
    "test_a_board_without_psram_never_reports_a_mismatch",
    "test_a_board_without_psram_stays_silent_about_the_cross_check",
    "test_a_board_without_the_hardware_raises_capability_missing",
+   "test_a_build_dir_predating_the_logic_withdrawal_is_refused",
+   "test_a_bus_numbered_one_is_refused",
    "test_a_calloc_payload_exiting_non_zero_is_seen_as_an_app_failure",
    "test_a_changed_value_is_a_conflict",
    "test_a_clean_build_directory_proceeds_silently",
@@ -39301,6 +39961,8 @@
    "test_a_detected_psram_size_clears_the_unavailable_warning",
    "test_a_different_app_does_not_satisfy_the_scan_assertion",
    "test_a_driver_backed_permission_names_its_config",
+   "test_a_driver_off_in_the_build_is_not_a_withdrawal",
+   "test_a_driver_the_sources_dropped_is_a_conflict",
    "test_a_failed_calloc_check_fails_the_run",
    "test_a_failed_classification_is_not_remembered",
    "test_a_failed_write_leaves_the_old_value_intact",
@@ -39406,14 +40068,20 @@
    "test_escapes",
    "test_every_build_or_flash_entry_point_calls_the_guard",
    "test_every_constraint_is_an_exact_pin",
+   "test_every_emitted_driver_symbol_is_declared_in_kconfig",
    "test_every_gate_green_exits_zero",
    "test_every_install_site_passes_the_constraints_file",
    "test_every_installed_package_is_pinned",
    "test_every_key_used_by_every_board_in_the_tree_is_known",
+   "test_every_macro_the_enabled_drivers_reference_is_defined",
    "test_every_missing_field_is_named_at_once",
+   "test_every_named_consumer_resolves",
    "test_every_payload_has_a_source_directory_and_a_manifest",
    "test_every_read_mode_is_classified",
+   "test_every_requires_entry_names_a_consumer",
+   "test_every_unconditional_symbol_defaults_to_y",
    "test_every_xtensa_cpu_accepts_the_flag",
+   "test_exactly_one_tracked_board_enables_logic",
    "test_exit_codes_are_all_distinct",
    "test_explicit_console_uart_suppresses_the_secondary_console",
    "test_extent_arithmetic",
@@ -39442,6 +40110,7 @@
    "test_license_and_notice_are_tracked_and_advertised",
    "test_literals",
    "test_lock_files_are_no_longer_ignored",
+   "test_logic_is_emitted_only_for_a_board_declaring_it",
    "test_metachars",
    "test_missing_app_marker_is_reported",
    "test_missing_file_and_seed_fallback",
@@ -39449,12 +40118,14 @@
    "test_n_and_not_set_are_the_same_statement",
    "test_no_capability_resolves_to_no_source",
    "test_no_component_is_declared_at_any_version",
+   "test_no_component_is_declared_both_unconditionally_and_per_arch",
    "test_no_copy_of_the_parser_survives_under_apps_or_tests",
    "test_no_hardware_board_generates_the_symbol",
    "test_no_key_emits_nothing",
    "test_no_other_board_generates_the_symbol",
    "test_no_permission_decodes_to_nothing",
    "test_no_qemu_key_emits_no_symbol",
+   "test_no_requires_entry_sits_under_a_config_guard",
    "test_no_secondary_symbol_on_a_chip_without_usb_serial_jtag",
    "test_no_tracked_file_exceeds_the_size_bound",
    "test_node_limit",
@@ -39463,6 +40134,7 @@
    "test_non_uart_consoles_emit_no_secondary_symbol",
    "test_notice_covers_every_third_party_directory",
    "test_null_store",
+   "test_only_four_driver_symbols_are_emitted_for_every_board",
    "test_only_one_file_parses_the_known_yaml_grammar",
    "test_only_the_measured_boards_declare_the_key",
    "test_only_the_qemu_boards_declare_the_flag",
@@ -39524,10 +40196,12 @@
    "test_submodule_paths_are_out_of_scope",
    "test_the_board_fragment_wins_over_the_root_defaults",
    "test_the_board_key_is_also_looked_up_under_board",
+   "test_the_boards_that_carry_a_radio_are_the_four_expected_ones",
    "test_the_calloc_payload_is_part_of_the_bench",
    "test_the_cardputer_value_carries_its_derivation",
    "test_the_cardputer_value_is_the_measured_one",
    "test_the_cheap_gates_come_first",
+   "test_the_check_fails_on_a_bus_numbered_one",
    "test_the_closed_rows_are_marked_done",
    "test_the_console_patterns_anchor_per_line_not_per_capture",
    "test_the_declared_psram_size_is_not_a_mismatch",
@@ -39551,8 +40225,10 @@
    "test_the_loader_guards_the_write_path_on_the_symbol",
    "test_the_marker_label_claims_only_that_app_main_ran",
    "test_the_message_says_interference_not_firmware",
+   "test_the_named_exception_is_still_the_one_it_claims_to_be",
    "test_the_names_and_the_config_map_cover_the_same_bits",
    "test_the_nested_gitignore_files_are_in_the_cache_signature",
+   "test_the_new_rule_rejects_no_existing_board",
    "test_the_non_zero_codes_are_distinct_and_not_argparse_usage",
    "test_the_pre_pr_gate_list_lives_in_exactly_one_file",
    "test_the_psram_cross_check_reports_when_it_could_not_run",
@@ -39567,6 +40243,7 @@
    "test_the_roadmap_suite_count_matches_the_makefile",
    "test_the_scan_finds_the_known_entry_points",
    "test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one",
+   "test_the_source_scan_reaches_the_guarded_drivers",
    "test_the_stack_watchpoint_is_project_wide",
    "test_the_three_apps_link_the_shared_parser",
    "test_the_tracked_yaml_next_to_it_is_allowed",
@@ -39574,6 +40251,7 @@
    "test_the_unavailable_cross_check_is_a_warning_not_a_verdict",
    "test_the_unavailable_sentinel_is_not_a_process_exit_code",
    "test_the_venv_dbt_bootstraps_can_run_the_pytest_gate",
+   "test_the_withdrawal_rule_stays_inside_the_bspgen_namespace",
    "test_the_word_panic_alone_is_not_a_panic",
    "test_the_written_fragment_matches_the_yaml",
    "test_two_back_to_back_frames",
@@ -39587,6 +40265,9 @@
    "test_vfs_served_permissions_require_no_driver",
    "test_wdt",
    "test_whitespace_around_a_declaration_does_not_change_the_symbol",
+   "test_wifi_follows_the_declaration",
+   "test_wifi_is_absent_when_the_key_is_absent",
+   "test_wifi_per_tracked_board_matches_the_declaration",
    "test_worked_examples",
    "test_write_board_file_leaves_no_temporary_behind",
    "test_write_board_file_never_truncates_in_place",
@@ -39613,6 +40294,7 @@
    "tmpfs_unlink",
    "tmpfs_write",
    "to_write_ptr",
+   "tracked_files",
    "try_bin_dir",
    "type_of",
    "uart_dev_init",

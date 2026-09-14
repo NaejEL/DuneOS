@@ -9,6 +9,8 @@ board:
   psram_type: opi
   console: usb_jtag
 
+  wifi: true
+
   uart:
     - id: 0
       tx_pin: 43

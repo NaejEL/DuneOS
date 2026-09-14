@@ -48,7 +48,7 @@ jobs:
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=377
+          FLOOR=425
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml
@@ -236,6 +236,22 @@ jobs:
           python tools/duneos-bspgen.py boards/${{ matrix.board }}/board.yaml
           python tools/dbt.py qemu --board ${{ matrix.board }} \
                                    --build-dir build-${{ matrix.board }}
+
+      # LEG-32 criterion 6: neither QEMU board declares `logic:`, so the logic
+      # capture device must not be compiled and must not reach the link. The
+      # kernel is WHOLE_ARCHIVE, so a source that slips back into SRCS is
+      # force-linked rather than dropped — the map is the proof.
+      - name: /dev/logic0 is not linked on a board that did not declare it
+        run: |
+          BUILD=build-${{ matrix.board }}
+          if find "$BUILD" -name 'drv_logic.c.obj' -o -name 'hal_logic.c.obj' | grep -q .; then
+            echo "::error::logic driver compiled for ${{ matrix.board }}, which declares no logic:"
+            exit 1
+          fi
+          if grep -q 'drv_logic_register' "$BUILD/duneos.map"; then
+            echo "::error::drv_logic_register reached the link on ${{ matrix.board }}"
+            exit 1
+          fi
 
   apps-build:
     runs-on: ubuntu-latest
