@@ -276,7 +276,7 @@ Isolate the kernel to begin the exit from the Espressif framework. **The scope o
 
 ### Phase 24.7 — Safe boot & recovery 🟡 CODE COMPLETE, hardware validation open
 
-**Why here (before Phase 25):** an `init.yaml` that launches a `restart: always` service which crashes at startup puts the board into a restart loop. On the CardPuter, with no dedicated boot button and no accessible UART, the only way out is `dbt flash sysbin` — which assumes USB MSC mounts BEFORE the crash. That is not guaranteed. Phase 25 (`dbt system deploy`) will automate deployments that can introduce exactly this bug → we must be able to recover before then.
+**Why here (before Phase 25):** an `init.yaml` that launches a `restart: always` service which crashes at startup puts the board into a restart loop. On the CardPuter, with no dedicated boot button and no accessible UART, the only way out is `dbt system flash` — which assumes USB MSC mounts BEFORE the crash. That is not guaranteed. Phase 25 (`dbt system deploy`) will automate deployments that can introduce exactly this bug → we must be able to recover before then.
 
 **Minimal scope**:
 
@@ -338,7 +338,7 @@ Eliminates hardcoded device paths (`/dev/disp0`, `/dev/spi-1`, etc.) in the SDK 
 - [x] **gfx.h doc**: explains BUFFERED vs STREAM + use cases.
 
 > **Real cost**: ~100 LoC in gfx.c. API added: `gfx_open_mode(mode)`. Existing apps (g_shell, gfx_demo, future ones) opt in through the flag.
-> **Device test pending**: `dbt flash kernel` + `dbt flashimg` then `gfx_demo` on the CardPuter with g_shell in init.yaml must no longer exit 16. The SPI conflict warning may remain — that is Phase 24.11.
+> **Device test pending**: `dbt flash kernel` + `dbt system flash` then `gfx_demo` on the CardPuter with g_shell in init.yaml must no longer exit 16. The SPI conflict warning may remain — that is Phase 24.11.
 
 ---
 
@@ -549,7 +549,7 @@ This test bench is achievable with no hardware and without emulating a single pe
 - `idf.py qemu` ships with IDF v6.0.1 (`tools/idf_py_actions/qemu_ext.py`): it produces
   `qemu_flash.bin` + `qemu_efuse.bin`, exposes serial on `socket:5555` and GDB on `3333`.
 - DuneOS mounts its LittleFS `sysbin` filesystem **first** and scans `/bin` before the SD card, and
-  `dbt flashimg` already builds that image with embedded apps. **The end-to-end `.dap` path is
+  `dbt system flash` already builds that image with embedded apps. **The end-to-end `.dap` path is
   therefore testable under QEMU with no emulated peripheral.**
 - `tests/host/Makefile` already exists with three tests and the CI job `Run host unit tests`
   already runs them: the host bench is grafted onto it, not created from scratch.
@@ -829,7 +829,7 @@ somebody who already owns the board.
 
 **Route B — full-image install.** One artefact (bootloader + partition table + app + `sysbin`
 image) flashed with esptool or M5Burner. This is the honest shape for an OS: it takes the device
-over, table included, and every invariant holds unchanged. `dbt flashimg` today builds and flashes
+over, table included, and every invariant holds unchanged. `dbt system flash` today builds and flashes
 **only** the `sysbin` LittleFS image, so what is missing is the merge into a single distributable
 `.bin`, a documented one-liner, a release artefact, and possibly an M5Burner entry.
 

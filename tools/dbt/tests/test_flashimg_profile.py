@@ -203,7 +203,7 @@ def test_overflow_is_a_named_error_not_a_traceback(monkeypatch, tmp_path, capsys
     message = str(exc.value)
     out = capsys.readouterr().out + message
     partition, staged = _sizes(message)
-    assert partition == 0x10000 and staged > partition >= 200 * 1024 - 200 * 1024
+    assert partition == 0x10000 and staged > partition
     assert staged >= 200 * 1024
     assert "tb-p" in message and BOARD in message
     assert "LittleFSError" not in out
@@ -302,3 +302,31 @@ def test_no_tracked_doc_names_a_deleted_verb():
                                        "dbt flashimg")):
                 hits.append(f"{path.relative_to(REPO_ROOT)}:{lineno}: {line.strip()}")
     assert not hits, "deleted verbs still documented:\n" + "\n".join(hits)
+
+
+# One CSV row, one integer syntax. The offset and the size used to be read by
+# two parsers that disagreed: int(x, 0) for the offset, shorthand-aware for the
+# size. ESP-IDF accepts `1M`/`256K` in both columns.
+@pytest.mark.parametrize("text,expected", [
+    ("0x190000", 0x190000), ("1048576", 1048576),
+    ("1M", 1024 * 1024), ("256K", 256 * 1024),
+    ("1MB", 1024 * 1024), (" 64K ", 64 * 1024),
+    ("", None), ("garbage", None), ("1G", None),
+])
+def test_partition_integers_have_one_syntax(text, expected):
+    from dbt.system import parse_csv_int
+    assert parse_csv_int(text) == expected
+
+
+def test_a_shorthand_offset_is_read_not_crashed_on(tmp_path, monkeypatch):
+    board = tmp_path / "boards" / "b"
+    board.mkdir(parents=True)
+    (board / "partitions.csv").write_text(
+        "# Name, Type, SubType, Offset, Size\n"
+        "factory, app,  factory, 0x10000, 1M\n"
+        "sysbin,  data, spiffs,  1M,      256K\n"
+    )
+    from dbt import flashimg, system
+    monkeypatch.setattr(flashimg, "DUNEOS_ROOT", tmp_path)
+    monkeypatch.setattr(system, "DUNEOS_ROOT", tmp_path)
+    assert flashimg._sysbin_row("b") == (1024 * 1024, 256 * 1024)

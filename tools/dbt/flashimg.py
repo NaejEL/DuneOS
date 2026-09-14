@@ -68,12 +68,16 @@ def _sysbin_row(board_name: str | None) -> tuple[int, int]:
             f"  Looked in {csv_path}.\n"
             f"  Run `python tools/duneos-bspgen.py boards/{board_name}/board.yaml`."
         )
-    from .system import parse_partition_sizes
+    from .system import parse_csv_int, parse_partition_sizes
     size = parse_partition_sizes(board_name).get("sysbin", 0)
     if size <= 0:
         sys.exit(f"ERROR: board '{board_name}': unreadable sysbin size "
                  f"{row[4]!r} in {csv_path}.")
-    return int(row[3], 0), size
+    offset = parse_csv_int(row[3])
+    if offset is None:
+        sys.exit(f"ERROR: board '{board_name}': unreadable sysbin offset "
+                 f"{row[3]!r} in {csv_path}.")
+    return offset, size
 
 
 def _get_sysbin_offset(board_name: str | None) -> int:

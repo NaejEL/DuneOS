@@ -277,19 +277,32 @@ def parse_partition_sizes(board: str) -> dict[str, int]:
         if len(cols) < 5:
             continue
         name, _typ, _sub, _off, size = cols[:5]
-        try:
-            out[name] = int(size, 0)   # accepts "0x180000"
-        except ValueError:
-            # ESP-IDF also accepts "1M" / "256K" shorthand.
-            sz = size.upper().rstrip("B")
-            mult = 1
-            if sz.endswith("K"): mult, sz = 1024,        sz[:-1]
-            elif sz.endswith("M"): mult, sz = 1024*1024, sz[:-1]
-            try:
-                out[name] = int(sz) * mult
-            except ValueError:
-                pass
+        value = parse_csv_int(size)
+        if value is not None:
+            out[name] = value
     return out
+
+
+def parse_csv_int(text: str) -> int | None:
+    """A partitions.csv integer, or None. Hex, decimal, or ESP-IDF's 1M/256K.
+
+    Shared so the offset and the size of one row cannot be read by two parsers
+    that disagree on what they accept.
+    """
+    try:
+        return int(text, 0)
+    except ValueError:
+        pass
+    sz = text.strip().upper().rstrip("B")
+    mult = 1
+    if sz.endswith("K"):
+        mult, sz = 1024, sz[:-1]
+    elif sz.endswith("M"):
+        mult, sz = 1024 * 1024, sz[:-1]
+    try:
+        return int(sz) * mult
+    except ValueError:
+        return None
 
 
 def app_elf_size(app_name: str) -> int:

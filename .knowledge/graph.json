@@ -31882,6 +31882,11 @@
   },
   {
    "count": 2,
+   "dst": "parse_csv_int",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
    "dst": "parse_partition_sizes",
    "src": "tools/dbt/flashimg.py"
   },
@@ -33187,7 +33192,17 @@
   },
   {
    "count": 2,
+   "dst": "parse_csv_int",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 2,
    "dst": "parse_partition_sizes",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
    "src": "tools/dbt/system.py"
   },
   {
@@ -34756,7 +34771,7 @@
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
-   "count": 4,
+   "count": 6,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
@@ -34867,6 +34882,11 @@
   },
   {
    "count": 1,
+   "dst": "_sysbin_row",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
    "dst": "app_elf_size",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
@@ -34926,7 +34946,7 @@
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "mkdir",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
@@ -34936,12 +34956,17 @@
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
+   "count": 2,
+   "dst": "parse_csv_int",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
    "count": 1,
    "dst": "parse_partition_sizes",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "read",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
@@ -34958,6 +34983,11 @@
   {
    "count": 1,
    "dst": "stderr",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_shorthand_offset_is_read_not_crashed_on",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
@@ -35018,6 +35048,11 @@
   {
    "count": 1,
    "dst": "test_overflow_is_a_named_error_not_a_traceback",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_partition_integers_have_one_syntax",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
@@ -41145,6 +41180,7 @@
    "panel_targets",
    "panicked",
    "parse_cmd",
+   "parse_csv_int",
    "parse_flash_args",
    "parse_flash_size",
    "parse_hex",
@@ -41459,6 +41495,7 @@
    "test_a_run_at_the_floor_passes",
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
+   "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
    "test_a_stale_build_directory_is_refused",
@@ -41633,6 +41670,7 @@
    "test_parse_flash_size",
    "test_parse_flash_size_rejects_non_literal_sizes",
    "test_parses_values_and_unset_symbols",
+   "test_partition_integers_have_one_syntax",
    "test_pathlib_readers_are_intercepted_too",
    "test_pathological",
    "test_pick_gdb_port_does_not_hand_out_a_port_twice_in_a_row",

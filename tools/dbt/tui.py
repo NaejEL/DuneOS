@@ -1289,7 +1289,7 @@ class DbtApp(App):
         Binding("P", "do('profile-pick')", "Switch Profile"),
         Binding("k", "do('system-check')", "Check Profile"),
         Binding("f", "do('flash-kernel')", "Flash Kernel"),
-        Binding("s", "do('flash-sysbin')", "Flash Sysbin"),
+        Binding("s", "do('flash-sysbin')", "Flash System"),
         Binding("m", "do('monitor')",      "Monitor"),
         Binding("d", "do('flash-sd')",     "Deploy SD"),
         Binding("b", "do('build-all')",    "Build All"),

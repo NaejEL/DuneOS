@@ -167,9 +167,12 @@ guard fails any test that opens them.
     distinct "could not run" label for 3, differing from the 1-label and
     containing no "fail".
 16. A running gate is cancellable: the cancel path terminates the child and
-    reports cancelled, neither pass nor fail. **Not testable headlessly:**
-    Textual's own worker cancellation, key routing and rendering — stated rather
-    than silently dropped, and covered by a manual `dbt tui` run noted in the PR.
+    reports cancelled, neither pass nor fail. **Correction, verified during the
+    cycle:** the "not testable headlessly" caveat this criterion shipped with was
+    wrong. Textual's `App.run_test()` drives a real event loop — key routing,
+    live cancellation of a real child, and the three status renderings were all
+    exercised that way. Only terminal-level presentation on a real tty (footer
+    layout, colour on a given terminal) stays unproven.
 17. `.duneos_board` is untouched by a TUI test run: argv carries no board flag
     and the new code performs no write to `BOARD_FILE`.
 18. Suite green; `FLOOR` raised by exactly the number of tests added, same commit.
