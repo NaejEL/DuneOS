@@ -432,9 +432,9 @@
 {"lang": "python", "lines": 280, "path": "tools/dbt/testing.py", "sha256": "a18e941759f8f0c5605fa9ef0816f820367fb51b2363194231235ff3f6193f5a", "size": 10287}
 {"lang": "python", "lines": 0, "path": "tools/dbt/tests/__init__.py", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "size": 0}
 {"lang": "python", "lines": 28, "path": "tools/dbt/tests/conftest.py", "sha256": "0f4eb8821daca028de4a4f129c90f109ce3b6dbe3764db580ee3ee9e52119ab5", "size": 1060}
-{"lang": "python", "lines": 342, "path": "tools/dbt/tests/kernel_macros.py", "sha256": "c56779648fc19ad883f71045163fec79cbbaa667262880d7b81ad089e9e15687", "size": 14327}
+{"lang": "python", "lines": 354, "path": "tools/dbt/tests/kernel_macros.py", "sha256": "142d809a9b2caa20956f8fd79b208039306661048dc042b410eb2b27009abde9", "size": 15083}
 {"lang": "python", "lines": 129, "path": "tools/dbt/tests/test_board_file.py", "sha256": "42261a67efbb722f3ccc4eb982fd52ca2cfe2f0069462cbf5040bbc8fafd6b8d", "size": 4837}
-{"lang": "python", "lines": 181, "path": "tools/dbt/tests/test_board_macros.py", "sha256": "11f3b7f55c414a5d888e21016023f1fae29976ac9820b77482d9a8e73170f75e", "size": 8236}
+{"lang": "python", "lines": 185, "path": "tools/dbt/tests/test_board_macros.py", "sha256": "21fece3fe74a9d4b8174fff74c48db12f4460e841f58b75b6ca6f35a50f92586", "size": 8511}
 {"lang": "python", "lines": 143, "path": "tools/dbt/tests/test_bspgen_driver_symbols.py", "sha256": "15b04849b97bbf86ba2dcf8174f8bb0867cf25dae9bd7897ba86b12acf6798ca", "size": 5266}
 {"lang": "python", "lines": 71, "path": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py", "sha256": "a5a1c4cf9020597b212a87901a4b81ca1c37b1449b7e58415fbd34a0c8ef50d0", "size": 2116}
 {"lang": "python", "lines": 255, "path": "tools/dbt/tests/test_bspgen_main_task_stack.py", "sha256": "4dace9f5b53dd8f76ae75903e59bb3c557f4a172e73d3eb78ad6d26673052c43", "size": 9784}

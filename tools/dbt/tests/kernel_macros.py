@@ -97,12 +97,24 @@ def _cmake_gate(stripped):
     `if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)` around
     drv_usb.c is the instance in the tree; bspgen emits the two independently.
 
-    Such a condition is therefore refused rather than translated, and the
-    statement counts as unguarded. That over-demands — a board enabling neither
+    A condition whose parens do not balance on this line is refused for the
+    same reason: cmake_sources() hands over the opening line only, so the `OR`
+    of a wrapped `if(A\n   OR B)` would never reach the test above and the
+    operands already read would collapse to `{A}` — the same AND, reached by a
+    pure reformat. test_the_cmake_parse_drops_no_source promises a source can
+    leave the parse only by leaving the file, never by being reformatted; the
+    gate has to hold that promise too.
+
+    Either way the condition is refused rather than translated and the statement
+    counts as unguarded. That over-demands — a board enabling neither symbol
     still gets the file scanned — which is a false positive a reader dismisses,
-    the direction this module always fails in.
+    the direction this translation is allowed to fail in. It is not a claim
+    about the module: a dropped source and a skipped #else branch both
+    under-report, which is why the self-checks in this file exist.
     """
     if _CMAKE_NON_AND.search(stripped):
+        return frozenset()
+    if stripped.count("(") != stripped.count(")"):
         return frozenset()
     return frozenset(t for t in _TOKEN.findall(stripped) if t.startswith("CONFIG_"))
 

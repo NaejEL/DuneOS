@@ -163,6 +163,10 @@ def test_an_or_guarded_source_is_scanned_when_only_one_symbol_is_enabled():
         "compiles it and must not be skipped"
     assert km._cmake_gate("if(CONFIG_DUNEOS_DRV_USB_MSC OR CONFIG_DUNEOS_DRV_USB_CDC)") \
         == frozenset()
+    # cmake_sources() sees the opening line alone, so a wrapped condition hides
+    # its OR on the line that never reaches the test above. Same AND, reached by
+    # a reformat rather than by an edit.
+    assert km._cmake_gate("if(CONFIG_DUNEOS_DRV_USB_MSC") == frozenset()
     # A plain conjunction still narrows, or the check would demand everything.
     assert km._cmake_gate("if(CONFIG_DUNEOS_DRV_I2C)") == frozenset({"CONFIG_DUNEOS_DRV_I2C"})
 

@@ -32986,7 +32986,7 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "cmake_sources",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -33001,12 +33001,12 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "fail",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
-   "count": 9,
+   "count": 10,
    "dst": "gate",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -33047,6 +33047,11 @@
   },
   {
    "count": 1,
+   "dst": "read",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 2,
    "dst": "report",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
@@ -33068,6 +33073,11 @@
   {
    "count": 2,
    "dst": "substitute_identifier",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_cmake_parse_drops_no_source",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
@@ -33226,7 +33236,7 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "_cmake_gate",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
@@ -33256,7 +33266,7 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "cmake_sources",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
