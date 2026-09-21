@@ -187,7 +187,7 @@ def test_every_installed_package_is_pinned(blob):
 def test_every_install_site_passes_the_constraints_file(blob):
     sites = [line for line in pip_install_lines(blob(".github/workflows/ci.yml"))
              if packages_on(line)]
-    assert len(sites) == 4, f"expected 4 dependency installs in ci.yml, found {len(sites)}"
+    assert len(sites) == 6, f"expected 6 dependency installs in ci.yml, found {len(sites)}"
     for line in sites:
         assert "-c tools/constraints.txt" in line, f"unconstrained install: {line}"
 

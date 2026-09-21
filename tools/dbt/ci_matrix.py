@@ -24,10 +24,25 @@ except ImportError:
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
+# Kept identical to duneos-bspgen.py's VALID_CPUS / XTENSA_CPUS. A cpu outside
+# VALID_CPUS is a typo, not a future architecture: classifying it as riscv32
+# would hide it in `excluded` today and silently promote it to a build the day
+# arch/riscv32/arch.cmake lands, where it would fail in bspgen instead.
+VALID_CPUS = {"esp32", "esp32s2", "esp32s3",
+              "esp32c2", "esp32c3", "esp32c5", "esp32c6",
+              "esp32h2", "esp32p4"}
 XTENSA_CPUS = {"esp32", "esp32s2", "esp32s3"}
 
 OUTPUT_KEYS = ("kernel_boards", "qemu_boards", "check_profiles",
                "build_profiles", "excluded")
+
+# An empty matrix is valid YAML that expands to zero jobs and reports success,
+# so these three must never be empty on a tree that has any board at all.
+NON_EMPTY_KEYS = ("kernel_boards", "qemu_boards", "build_profiles")
+
+
+class MatrixError(Exception):
+    pass
 
 
 def arch_dir_for_cpu(cpu: str) -> str:
@@ -43,22 +58,42 @@ def _boards(root: Path) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for path in sorted((root / "boards").glob("*/board.yaml")):
         name = path.parent.name
-        board = _load(path).get("board") or {}
+        board = _load(path).get("board")
+        if not isinstance(board, dict):
+            out[name] = {"cpu": None, "qemu": False, "arch_dir": None,
+                         "reason": "board.yaml has no `board:` mapping"}
+            continue
         cpu = board.get("cpu")
         if not cpu:
             out[name] = {"cpu": None, "qemu": False, "arch_dir": None,
                          "reason": "board.cpu is absent"}
             continue
+        if cpu not in VALID_CPUS:
+            out[name] = {"cpu": cpu, "qemu": False, "arch_dir": None,
+                         "reason": f"cpu {cpu!r} is not one bspgen accepts"}
+            continue
         arch_dir = arch_dir_for_cpu(cpu)
         buildable = (root / "arch" / arch_dir / "arch.cmake").is_file()
         out[name] = {
             "cpu": cpu,
-            "qemu": board.get("qemu") is True,
+            # bspgen refuses a non-boolean `qemu:`, so anything else here is a
+            # board.yaml that will not generate. Demoting it silently would drop
+            # its boot gate with nothing red, so it is an error, not a default.
+            "qemu": _qemu_flag(name, board),
             "arch_dir": arch_dir,
             "reason": None if buildable
                       else f"cpu {cpu}: arch/{arch_dir}/arch.cmake absent",
         }
     return out
+
+
+def _qemu_flag(board_name: str, board: dict) -> bool:
+    qemu = board.get("qemu", False)
+    if not isinstance(qemu, bool):
+        raise MatrixError(
+            f"boards/{board_name}/board.yaml: board.qemu must be a boolean, got "
+            f"{type(qemu).__name__} ({qemu!r}) — write `qemu: true` or omit it")
+    return qemu
 
 
 def _profiles(root: Path) -> dict[str, dict]:
@@ -85,8 +120,17 @@ def discover(root: Path = REPO_ROOT) -> dict:
 
     check_profiles = sorted(n for n, p in profiles.items() if p["board"] in buildable)
 
+    # A profile whose board does not exist belongs to no bucket: it would be
+    # neither checked nor reported, and no completeness assertion over the
+    # boards can see it. Named here so it is a failure rather than a silence.
+    orphans = sorted(n for n, p in profiles.items()
+                     if p["board"] not in boards)
+
     build_profiles = []
     for board in sorted(buildable):
+        # Most apps wins; ties go to the alphabetically first name so the
+        # emitted matrix is stable across runs and machines, which a set or a
+        # dict-order pick would not be.
         candidates = sorted((n for n, p in profiles.items()
                              if p["board"] == board and p["n_apps"] >= 1),
                             key=lambda n: (-profiles[n]["n_apps"], n))
@@ -100,6 +144,7 @@ def discover(root: Path = REPO_ROOT) -> dict:
         "check_profiles": check_profiles,
         "build_profiles": build_profiles,
         "excluded": excluded,
+        "orphan_profiles": orphans,
     }
 
 
@@ -110,7 +155,12 @@ def main(argv=None) -> int:
                         help="File to append 'key=<json>' lines to")
     args = parser.parse_args(argv)
 
-    matrix = discover(args.root)
+    try:
+        matrix = discover(args.root)
+    except MatrixError as exc:
+        print(f"ci_matrix: {exc}", file=sys.stderr)
+        return 1
+
     lines = [f"{key}={json.dumps(matrix[key], separators=(',', ':'))}"
              for key in OUTPUT_KEYS]
 
@@ -120,6 +170,16 @@ def main(argv=None) -> int:
         print(line)
     for board, reason in matrix["excluded"].items():
         print(f"excluded: {board} — {reason}", file=sys.stderr)
+
+    empty = [key for key in NON_EMPTY_KEYS if not matrix[key]]
+    if empty:
+        print(f"ci_matrix: {', '.join(empty)} empty — the matching jobs would "
+              f"expand to zero entries and report success", file=sys.stderr)
+    if matrix["orphan_profiles"]:
+        print(f"ci_matrix: profiles naming no existing board: "
+              f"{', '.join(matrix['orphan_profiles'])}", file=sys.stderr)
+    if empty or matrix["orphan_profiles"]:
+        return 1
 
     if args.github_output:
         with args.github_output.open("a", encoding="utf-8") as handle:
