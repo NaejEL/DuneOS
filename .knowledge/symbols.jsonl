@@ -23,8 +23,8 @@
 {"id": "CLAUDE.md::heading::Implementation Status", "kind": "heading", "lang": "markdown", "line": 206, "name": "Implementation Status", "path": "CLAUDE.md", "signature": "## Implementation Status"}
 {"id": "CLAUDE.md::heading::Key Technical Decisions", "kind": "heading", "lang": "markdown", "line": 233, "name": "Key Technical Decisions", "path": "CLAUDE.md", "signature": "## Key Technical Decisions"}
 {"id": "CLAUDE.md::heading::Hard-Won Lessons (do not repeat these mistakes)", "kind": "heading", "lang": "markdown", "line": 252, "name": "Hard-Won Lessons (do not repeat these mistakes)", "path": "CLAUDE.md", "signature": "## Hard-Won Lessons (do not repeat these mistakes)"}
-{"id": "CLAUDE.md::heading::Code Style & Constraints", "kind": "heading", "lang": "markdown", "line": 293, "name": "Code Style & Constraints", "path": "CLAUDE.md", "signature": "## Code Style & Constraints"}
-{"id": "CLAUDE.md::heading::References", "kind": "heading", "lang": "markdown", "line": 301, "name": "References", "path": "CLAUDE.md", "signature": "## References"}
+{"id": "CLAUDE.md::heading::Code Style & Constraints", "kind": "heading", "lang": "markdown", "line": 294, "name": "Code Style & Constraints", "path": "CLAUDE.md", "signature": "## Code Style & Constraints"}
+{"id": "CLAUDE.md::heading::References", "kind": "heading", "lang": "markdown", "line": 302, "name": "References", "path": "CLAUDE.md", "signature": "## References"}
 {"id": "CONTRIBUTING.md::heading::Contributing to DuneOS", "kind": "heading", "lang": "markdown", "line": 1, "name": "Contributing to DuneOS", "path": "CONTRIBUTING.md", "signature": "# Contributing to DuneOS"}
 {"id": "CONTRIBUTING.md::heading::Licence", "kind": "heading", "lang": "markdown", "line": 3, "name": "Licence", "path": "CONTRIBUTING.md", "signature": "## Licence"}
 {"id": "CONTRIBUTING.md::heading::Setting up", "kind": "heading", "lang": "markdown", "line": 12, "name": "Setting up", "path": "CONTRIBUTING.md", "signature": "## Setting up"}
