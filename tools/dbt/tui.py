@@ -1595,14 +1595,21 @@ class DbtApp(App):
     @work(thread=True, exclusive=True)
     def _worker_flash_sysbin(self) -> None:
         self.call_from_thread(self._set_busy, True)
+        self._cancelled = False
         try:
             if not self._guard(need_idf=False):
                 return
             from .system import active_profile_name
             name = active_profile_name() or "(none — press P)"
             self.call_from_thread(
-                self._log, f"\n[bold]── Flash System — profile '{name}' ──[/bold]")
+                self._log,
+                f"\n[bold]── Flash System — profile '{name}' ──[/bold]"
+                "  [dim]x to cancel[/dim]")
             rc = self._stream(system_flash_argv())
+            # x SIGTERMs the child, so rc is a signal, not a flash failure.
+            if self._cancelled:
+                self.call_from_thread(self._log, "[#8b949e]cancelled[/#8b949e]")
+                return
             if rc != 0:
                 self.call_from_thread(
                     self._err, "Flash failed", f"dbt system flash exited {rc}")

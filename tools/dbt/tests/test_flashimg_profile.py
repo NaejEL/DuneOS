@@ -5,6 +5,7 @@ gitignored, and the root conftest read guard fails any test that opens them.
 """
 
 import inspect
+import os
 import re
 import subprocess
 import sys
@@ -18,8 +19,6 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from dbt import flashimg, system  # noqa: E402
 from dbt import manifest as manifest_mod  # noqa: E402
 from dbt.qemu import QEMU_BOARDS  # noqa: E402
-
-DBT = REPO_ROOT / "tools" / "dbt.py"
 
 BOARD = "tb-devkit"
 PARTITIONS = (
@@ -73,19 +72,33 @@ class _Args:
         self.__dict__.update(kw)
 
 
+def _run_cli(*argv: str) -> subprocess.CompletedProcess:
+    """Run dbt's argument parser in a child, bypassing tools/dbt.py.
+
+    tools/dbt.py is a bootstrap wrapper: outside tools/.dbt-venv it creates the
+    venv and pip-installs from PyPI before re-execing. A unit test must not
+    depend on the network, nor write a venv into the repo tree, so these tests
+    enter at dbt.cli.main() instead.
+    """
+    env = dict(os.environ)
+    tools = str(REPO_ROOT / "tools")
+    env["PYTHONPATH"] = tools + os.pathsep + env.get("PYTHONPATH", "")
+    return subprocess.run(
+        [sys.executable, "-c", "from dbt.cli import main; main()", *argv],
+        capture_output=True, text=True, cwd=str(REPO_ROOT), env=env)
+
+
 # --- criterion 1 -----------------------------------------------------------
 
 @pytest.mark.parametrize("argv", [["flash", "sysbin"], ["flashimg"]])
 def test_deleted_verb_refused_by_name(argv):
-    proc = subprocess.run([sys.executable, str(DBT), *argv],
-                          capture_output=True, text=True, cwd=str(REPO_ROOT))
+    proc = _run_cli(*argv)
     assert proc.returncode != 0
     assert "dbt system flash" in proc.stdout + proc.stderr
 
 
 def test_flash_help_no_longer_lists_sysbin():
-    proc = subprocess.run([sys.executable, str(DBT), "flash", "--help"],
-                          capture_output=True, text=True, cwd=str(REPO_ROOT))
+    proc = _run_cli("flash", "--help")
     assert proc.returncode == 0
     assert "sysbin" not in proc.stdout
 
@@ -298,8 +311,10 @@ def test_no_tracked_doc_names_a_deleted_verb():
     hits = []
     for path in targets:
         for lineno, line in enumerate(path.read_text().splitlines(), 1):
+            # `--safe` went with the verbs: it was an option of `flash sysbin`
+            # and `flashimg`, and no surviving verb accepts it.
             if any(v in line for v in ("flash sysbin", "dbt.py flashimg",
-                                       "dbt flashimg")):
+                                       "dbt flashimg", "--safe")):
                 hits.append(f"{path.relative_to(REPO_ROOT)}:{lineno}: {line.strip()}")
     assert not hits, "deleted verbs still documented:\n" + "\n".join(hits)
 

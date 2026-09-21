@@ -34786,7 +34786,7 @@
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
-   "count": 13,
+   "count": 12,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
@@ -34863,6 +34863,11 @@
   {
    "count": 6,
    "dst": "_rooted",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_run_cli",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
@@ -35088,6 +35093,11 @@
   {
    "count": 1,
    "dst": "validate_manifest",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "write",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
@@ -38351,7 +38361,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 35,
+   "count": 36,
    "dst": "_log",
    "src": "tools/dbt/tui.py"
   },
@@ -38656,7 +38666,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 53,
+   "count": 54,
    "dst": "call_from_thread",
    "src": "tools/dbt/tui.py"
   },
@@ -40429,6 +40439,7 @@
    "_run_bspgen",
    "_run_build_all",
    "_run_cancel",
+   "_run_cli",
    "_run_flash_kernel",
    "_run_flash_sd",
    "_run_flash_sysbin",

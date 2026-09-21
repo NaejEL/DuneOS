@@ -125,7 +125,10 @@ def _no_fit_message(board_name: str, profile_name: str, staged: int,
         f"  board:     {board_name}\n"
         f"  Drop apps from profiles/{profile_name}/profile.yaml — "
         f"`dbt system size --profile {profile_name}` lists the biggest — or "
-        f"grow the sysbin partition in boards/{board_name}/board.yaml."
+        f"grow _SYSBIN_SIZE in tools/duneos-bspgen.py and re-run "
+        f"`python tools/duneos-bspgen.py boards/{board_name}/board.yaml`.\n"
+        f"  (board.yaml has no sysbin knob, and partitions.csv is generated — "
+        f"editing it by hand is reverted by the next bspgen run.)"
     )
 
 

@@ -217,7 +217,7 @@ def check_profile(profile: dict) -> int:
     n_flash = len(dedup(profile.get("apps_flash", [])))
     n_sd    = len(dedup(profile.get("apps_sd", [])))
     if errors == 0:
-        suffix = f", {warnings} warning(s) — perms vs kernel config" if warnings else ""
+        suffix = f", {warnings} warning(s) — see above" if warnings else ""
         print(f"  ✓ profile OK ({n_flash} apps in /bin, {n_sd} on /sd){suffix}")
         return 0
     print(f"  {errors} error(s), {warnings} warning(s) — fix the errors before build")
