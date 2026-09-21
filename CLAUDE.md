@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # First-time setup (or after switching boards):
 echo m5stack-cardputer > .duneos_board                       # gitignored, per-developer
-echo COM13 > .duneos_port                                    # gitignored, used by dbt flashimg
+echo COM13 > .duneos_port                                    # gitignored, used by dbt system flash
 python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml  # generates sdkconfig.board, partitions.csv, board_config.h, idf_target.txt
 
 # Build kernel: idf.py build  (or IDE equivalent)
@@ -39,7 +39,7 @@ python ../../../tools/dbt.py info
 
 # Build sysbin image + flash it (LittleFS image with /init.yaml + embedded apps; the
 # image mounts at the root, so its paths carry no /flash prefix)
-python tools/dbt.py flashimg                # uses .duneos_port
+python tools/dbt.py system flash            # uses .duneos_port
 
 # Interactive TUI (board picker, init editor, build/flash actions)
 python tools/dbt.py tui

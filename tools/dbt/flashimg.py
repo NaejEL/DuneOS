@@ -2,8 +2,9 @@
 flashimg — DuneOS sysbin LittleFS image builder and flasher
 ============================================================
 
-Creates a 1 MB LittleFS image suitable for flashing to the 'sysbin' partition,
-then optionally flashes it directly to the device.
+Creates the LittleFS image for the board's 'sysbin' partition, then optionally
+flashes it to the device. Always driven by a profile: `dbt system flash` and
+`dbt qemu` are the two entry points.
 
 Port is read from (in priority order):
   1. --port CLI argument
@@ -26,9 +27,7 @@ from .toolchain import get_board_plugin
 from .builder import build_single
 from .deploy import deploy_single
 
-_SYSBIN_SIZE   = 0x100000   # 1 MB — must match partitions.csv
 _LFS_BLOCK_SIZE = 4096
-_LFS_BLOCK_COUNT = _SYSBIN_SIZE // _LFS_BLOCK_SIZE   # 256
 _LFS_READ_SIZE  = 256
 _LFS_PROG_SIZE  = 256
 
@@ -50,29 +49,43 @@ def _find_port(cli_port: str | None) -> str | None:
     return os.environ.get("DUNEOS_PORT")
 
 
-def _get_sysbin_offset(board_name: str | None) -> int:
-    """Read sysbin partition offset from the board's (or root) partitions.csv."""
-    candidates = []
-    if board_name:
-        candidates.append(DUNEOS_ROOT / "boards" / board_name / "partitions.csv")
-    candidates.append(DUNEOS_ROOT / "partitions.csv")
-
-    for csv_path in candidates:
-        if not csv_path.exists():
-            continue
+def _sysbin_row(board_name: str | None) -> tuple[int, int]:
+    """(offset, size) of the board's sysbin partition, from partitions.csv."""
+    if not board_name:
+        sys.exit("ERROR: no board selected — write one to .duneos_board "
+                 "(`dbt system use <profile>`).")
+    csv_path = DUNEOS_ROOT / "boards" / board_name / "partitions.csv"
+    row = None
+    if csv_path.exists():
         for line in csv_path.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("#") or not line:
-                continue
-            parts = [x.strip() for x in line.split(",")]
-            if len(parts) >= 4 and parts[0] == "sysbin":
-                try:
-                    return int(parts[3], 16)
-                except ValueError:
-                    pass
+            parts = [x.strip() for x in line.strip().split(",")]
+            if len(parts) >= 5 and parts[0] == "sysbin":
+                row = parts
+                break
+    if row is None:
+        sys.exit(
+            f"ERROR: board '{board_name}' declares no 'sysbin' partition.\n"
+            f"  Looked in {csv_path}.\n"
+            f"  Run `python tools/duneos-bspgen.py boards/{board_name}/board.yaml`."
+        )
+    from .system import parse_csv_int, parse_partition_sizes
+    size = parse_partition_sizes(board_name).get("sysbin", 0)
+    if size <= 0:
+        sys.exit(f"ERROR: board '{board_name}': unreadable sysbin size "
+                 f"{row[4]!r} in {csv_path}.")
+    offset = parse_csv_int(row[3])
+    if offset is None:
+        sys.exit(f"ERROR: board '{board_name}': unreadable sysbin offset "
+                 f"{row[3]!r} in {csv_path}.")
+    return offset, size
 
-    # Fallback to the hardcoded default (8 MB board layout)
-    return 0x190000
+
+def _get_sysbin_offset(board_name: str | None) -> int:
+    return _sysbin_row(board_name)[0]
+
+
+def _get_sysbin_size(board_name: str | None) -> int:
+    return _sysbin_row(board_name)[1]
 
 
 def _get_board_name() -> str | None:
@@ -100,38 +113,70 @@ def _find_esptool() -> str | None:
     return None
 
 
-def _create_image(staging_dir: Path, out_path: Path) -> None:
-    """Pack staging_dir into a LittleFS image at out_path."""
+def _no_fit_message(board_name: str, profile_name: str, staged: int,
+                    capacity: int, metadata: bool = False) -> str:
+    why = ("the raw bytes fit but the filesystem metadata did not"
+           if metadata else "the staged bytes exceed the partition")
+    return (
+        f"ERROR: the image does not fit the sysbin partition — {why}.\n"
+        f"  partition: {capacity} bytes ({capacity / 1024:.1f} KiB)\n"
+        f"  staged:    {staged} bytes ({staged / 1024:.1f} KiB)\n"
+        f"  profile:   {profile_name}\n"
+        f"  board:     {board_name}\n"
+        f"  Drop apps from profiles/{profile_name}/profile.yaml — "
+        f"`dbt system size --profile {profile_name}` lists the biggest — or "
+        f"grow _SYSBIN_SIZE in tools/duneos-bspgen.py and re-run "
+        f"`python tools/duneos-bspgen.py boards/{board_name}/board.yaml`.\n"
+        f"  (board.yaml has no sysbin knob, and partitions.csv is generated — "
+        f"editing it by hand is reverted by the next bspgen run.)"
+    )
+
+
+def _staged_bytes(staging_dir: Path) -> int:
+    return sum(p.stat().st_size for p in staging_dir.rglob("*") if p.is_file())
+
+
+def _create_image(staging_dir: Path, out_path: Path, capacity: int,
+                  board_name: str, profile_name: str) -> None:
+    """Pack staging_dir into a LittleFS image of `capacity` bytes at out_path."""
     try:
-        from littlefs import LittleFS  # type: ignore
+        from littlefs import LittleFS, LittleFSError  # type: ignore
     except ImportError:
         sys.exit(
             "ERROR: littlefs-python is not installed.\n"
-            "  pip install littlefs-python\n"
-            "Then re-run:  python dbt.py flashimg"
+            "  pip install -c tools/constraints.txt littlefs-python\n"
+            "Then re-run:  python dbt.py system flash"
         )
 
     lfs = LittleFS(
         block_size=_LFS_BLOCK_SIZE,
-        block_count=_LFS_BLOCK_COUNT,
+        block_count=capacity // _LFS_BLOCK_SIZE,
         read_size=_LFS_READ_SIZE,
         prog_size=_LFS_PROG_SIZE,
     )
 
-    for root, _dirs, files in os.walk(staging_dir):
-        rel_root = Path(root).relative_to(staging_dir)
-        lfs_dir = "/" + str(rel_root).replace("\\", "/") if str(rel_root) != "." else ""
-        if lfs_dir:
-            try:
-                lfs.mkdir(lfs_dir)
-            except Exception:
-                pass
-        for fname in files:
-            src = Path(root) / fname
-            lfs_path = (lfs_dir + "/" + fname) if lfs_dir else ("/" + fname)
-            data = src.read_bytes()
-            with lfs.open(lfs_path, "wb") as lf:
-                lf.write(data)
+    try:
+        for root, _dirs, files in os.walk(staging_dir):
+            rel_root = Path(root).relative_to(staging_dir)
+            lfs_dir = "/" + str(rel_root).replace("\\", "/") if str(rel_root) != "." else ""
+            if lfs_dir:
+                try:
+                    lfs.mkdir(lfs_dir)
+                except LittleFSError as exc:
+                    if exc.code != LittleFSError.Error.LFS_ERR_EXIST:
+                        raise
+            for fname in files:
+                src = Path(root) / fname
+                lfs_path = (lfs_dir + "/" + fname) if lfs_dir else ("/" + fname)
+                data = src.read_bytes()
+                with lfs.open(lfs_path, "wb") as lf:
+                    lf.write(data)
+    except LittleFSError as exc:
+        if exc.code != LittleFSError.Error.LFS_ERR_NOSPC:
+            raise
+        sys.exit(_no_fit_message(board_name, profile_name,
+                                 _staged_bytes(staging_dir), capacity,
+                                 metadata=True))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(bytes(lfs.context.buffer))
@@ -150,29 +195,25 @@ _SAFE_INIT_YAML = """\
 # (Phase 24.7) — otherwise the normal /init.yaml + /sd/init.yaml
 # chain is used.
 #
-# `dbt flashimg --safe` flashes this content as /init.yaml instead
-# of the regular one, locking the device into safe mode permanently
-# until a normal flashimg is run.
+# To boot this set permanently, flash a recovery profile instead:
+# `dbt system flash --profile <board>-recovery`.
 services:
   - path: /bin/usb_shell.dap
     restart: always
 """
 
 
-def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
-           profile: dict | None = None, no_init: bool = False) -> int:
-    """
-    Copy built .dap files to staging_dir/bin/ and stage init.yaml.
+def _stage(staging_dir: Path, board_name: str, profile: dict,
+           no_init: bool = False) -> int:
+    """Copy the profile's built .dap files to staging_dir/bin/, render init.yaml.
 
-    Two modes:
-      * profile=None (legacy / `dbt flashimg`): stage ALL system apps, copy
-        boards/<board>/init.yaml verbatim.
-      * profile=<dict> (`dbt system flash`): stage ONLY the apps listed in
-        profile.apps_flash, render init.yaml from profile.init_flash.
-
-    safe_mode overrides both: writes the minimal usb_shell-only init.yaml.
-    /flash/init.yaml.safe is always staged for Phase 24.7 hold-key recovery.
+    /init.yaml.safe is staged unconditionally for Phase 24.7 hold-key recovery.
     """
+    if profile is None:
+        raise ValueError(
+            "_stage requires a profile — `dbt system flash --profile <name>` "
+            "supplies one; there is no stage-everything mode.")
+
     bin_dir = staging_dir / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
 
@@ -180,10 +221,7 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
     staged: list[str] = []
     from .manifest import load_manifest
 
-    # In profile mode, build a filter set of app names.
-    flash_set: set[str] | None = None
-    if profile is not None:
-        flash_set = set(profile.get("apps_flash", []))
+    flash_set = set(profile.get("apps_flash", []))
 
     for app_dir, is_bin in apps:
         elf = app_dir / "build" / "app.elf"
@@ -195,8 +233,7 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
         except SystemExit:
             continue
         app_name = manifest["name"]
-        # Profile filter: skip apps not listed in apps_flash.
-        if flash_set is not None and app_name not in flash_set:
+        if app_name not in flash_set:
             continue
         dest = bin_dir / f"{app_name}.dap"
         shutil.copy2(elf, dest)
@@ -217,7 +254,6 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
                 shutil.copy2(icon_src, icons_dir / f"{icon_name}.dr")
                 print(f"  staged → /share/icons/{icon_name}.dr")
 
-    # Stage init.yaml — three sources (or none at all):
     dest_init = staging_dir / "init.yaml"
     if no_init:
         # Leaving /flash without an init.yaml is what makes the kernel take the
@@ -225,11 +261,7 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
         # bench needs exactly that path, since it is the one that exercises the
         # loader's scan of /flash/bin.
         print("  [no-init] /init.yaml omitted — kernel will autoboot from /bin")
-    elif safe_mode:
-        dest_init.write_text(_SAFE_INIT_YAML)
-        print(f"  staged → /init.yaml  (SAFE MODE — usb_shell only)")
-    elif profile is not None:
-        # Render from profile.init_flash
+    else:
         lines = [
             f"# DuneOS /init.yaml — generated by `dbt system flash` from",
             f"# profile '{profile['name']}' (board: {profile['board']}).",
@@ -246,18 +278,6 @@ def _stage(staging_dir: Path, board_name: str, safe_mode: bool = False,
                 lines.append(f"    after: {after}")
         dest_init.write_text("\n".join(lines) + "\n")
         print(f"  staged → /init.yaml  (from profile '{profile['name']}')")
-    else:
-        board_init = DUNEOS_ROOT / "boards" / board_name / "init.yaml"
-        if board_init.exists():
-            shutil.copy2(board_init, dest_init)
-            print(f"  staged → /init.yaml  (from boards/{board_name}/init.yaml)")
-        else:
-            dest_init.write_text(
-                f"# DuneOS /flash/init.yaml for {board_name}\n"
-                f"# Create boards/{board_name}/init.yaml or a profile to populate.\n"
-                f"services:\n"
-            )
-            print(f"  [warn] boards/{board_name}/init.yaml not found — staged empty stub")
 
     # Always stage init.yaml.safe (Phase 24.7 hold-key recovery).
     safe_dest = staging_dir / "init.yaml.safe"
@@ -358,7 +378,17 @@ def _install_default_icons(staging_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def cmd_flashimg(args) -> None:
+    """Build (and optionally flash) the sysbin image for `args.profile`.
+
+    Reached through `dbt system flash` and `dbt qemu` only; both supply a
+    profile.
+    """
     board_name = getattr(args, "board", None) or _get_board_name()
+    profile = getattr(args, "profile", None)
+    if profile is None:
+        sys.exit("ERROR: the sysbin image is built from a profile. "
+                 "Run `dbt system flash --profile <name>`.")
+    capacity = _get_sysbin_size(board_name)
 
     if getattr(args, "build", False):
         print("Building system apps…")
@@ -378,21 +408,20 @@ def cmd_flashimg(args) -> None:
         shutil.rmtree(staging_dir)
 
     print("Staging apps…")
-    safe = getattr(args, "safe", False)
-    profile = getattr(args, "profile", None)
-    if safe:
-        print("  [SAFE MODE] init.yaml replaced with usb_shell-only.")
-    elif profile is not None:
-        print(f"  Profile-driven staging: '{profile['name']}'")
-    n = _stage(staging_dir, board_name, safe_mode=safe, profile=profile,
+    print(f"  Profile-driven staging: '{profile['name']}'")
+    n = _stage(staging_dir, board_name, profile,
                no_init=getattr(args, "no_init", False))
     print(f"  {n} app(s) staged\n")
 
+    staged = _staged_bytes(staging_dir)
+    if staged > capacity:
+        sys.exit(_no_fit_message(board_name, profile["name"], staged, capacity))
+
     out_path = out_dir / "sysbin.bin"
     print(f"Creating LittleFS image → {out_path}")
-    _create_image(staging_dir, out_path)
+    _create_image(staging_dir, out_path, capacity, board_name, profile["name"])
     size_kb = out_path.stat().st_size // 1024
-    print(f"  {size_kb} KB  ({_SYSBIN_SIZE // 1024} KB partition)\n")
+    print(f"  {size_kb} KB  ({capacity // 1024} KB partition)\n")
 
     # image_only stops before any serial resolution: `dbt qemu` must never
     # read .duneos_port, let alone touch a physical device.
@@ -404,7 +433,7 @@ def cmd_flashimg(args) -> None:
     if not port:
         print("Image ready. To flash:")
         print(f"  echo <PORT> > .duneos_port   # save for future use")
-        print(f"  python dbt.py flashimg --port <PORT>")
+        print(f"  python dbt.py system flash --port <PORT>")
         return
 
     esptool = _find_esptool()

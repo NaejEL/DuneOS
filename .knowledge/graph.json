@@ -246,6 +246,11 @@
    "src": "CLAUDE.md"
   },
   {
+   "count": 4,
+   "dst": "kill",
+   "src": "CLAUDE.md"
+  },
+  {
    "count": 1,
    "dst": "klog_capture_rom_output",
    "src": "CLAUDE.md"
@@ -291,6 +296,11 @@
    "src": "CLAUDE.md"
   },
   {
+   "count": 1,
+   "dst": "poll",
+   "src": "CLAUDE.md"
+  },
+  {
    "count": 5,
    "dst": "read",
    "src": "CLAUDE.md"
@@ -333,6 +343,11 @@
   {
    "count": 1,
    "dst": "vApplicationStackOverflowHook",
+   "src": "CLAUDE.md"
+  },
+  {
+   "count": 2,
+   "dst": "wait",
    "src": "CLAUDE.md"
   },
   {
@@ -451,6 +466,11 @@
    "src": "LICENSE.GPL-3.0"
   },
   {
+   "count": 2,
+   "dst": "terminate",
+   "src": "LICENSE.GPL-3.0"
+  },
+  {
    "count": 3,
    "dst": "DuneOS",
    "src": "NOTICE"
@@ -548,6 +568,11 @@
   {
    "count": 1,
    "dst": "ioctl",
+   "src": "README.md"
+  },
+  {
+   "count": 1,
+   "dst": "kill",
    "src": "README.md"
   },
   {
@@ -902,6 +927,11 @@
   },
   {
    "count": 1,
+   "dst": "_probe_qemu",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
    "dst": "_run_profile_edit",
    "src": "ROADMAP.md"
   },
@@ -913,6 +943,11 @@
   {
    "count": 1,
    "dst": "_run_system_check",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "_stage",
    "src": "ROADMAP.md"
   },
   {
@@ -1043,6 +1078,11 @@
   {
    "count": 1,
    "dst": "decode_perms",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "dedup",
    "src": "ROADMAP.md"
   },
   {
@@ -1231,7 +1271,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "gate",
    "src": "ROADMAP.md"
   },
@@ -1326,6 +1366,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 2,
+   "dst": "kill",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "klog_e",
    "src": "ROADMAP.md"
@@ -1386,7 +1431,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 8,
+   "count": 7,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1396,12 +1441,17 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "parse_partition_sizes",
    "src": "ROADMAP.md"
   },
   {
-   "count": 14,
+   "count": 7,
+   "dst": "poll",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 15,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -1511,7 +1561,12 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 11,
+   "count": 3,
+   "dst": "wait",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 12,
    "dst": "write",
    "src": "ROADMAP.md"
   },
@@ -3731,6 +3786,11 @@
    "src": "apps/system/btn_gpio/btn_gpio.c"
   },
   {
+   "count": 1,
+   "dst": "poll",
+   "src": "apps/system/btn_gpio/btn_gpio.c"
+  },
+  {
    "count": 2,
    "dst": "usleep",
    "src": "apps/system/btn_gpio/btn_gpio.c"
@@ -4366,6 +4426,11 @@
    "src": "apps/system/shell_core/shell_cmds.c"
   },
   {
+   "count": 1,
+   "dst": "dedup",
+   "src": "apps/system/shell_core/shell_cmds.c"
+  },
+  {
    "count": 4,
    "dst": "dirent",
    "src": "apps/system/shell_core/shell_cmds.c"
@@ -4756,6 +4821,11 @@
    "src": "apps/system/shell_core/shell_core.c"
   },
   {
+   "count": 6,
+   "dst": "kill",
+   "src": "apps/system/shell_core/shell_core.c"
+  },
+  {
    "count": 3,
    "dst": "load_history",
    "src": "apps/system/shell_core/shell_core.c"
@@ -4973,6 +5043,11 @@
   {
    "count": 3,
    "dst": "usleep",
+   "src": "apps/system/telnet_shell/telnet_shell.c"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "apps/system/telnet_shell/telnet_shell.c"
   },
   {
@@ -8132,6 +8207,11 @@
   },
   {
    "count": 1,
+   "dst": "poll",
+   "src": "apps/user/radar/radar.c"
+  },
+  {
+   "count": 1,
    "dst": "pthread_join",
    "src": "apps/user/radar/radar.c"
   },
@@ -8676,6 +8756,11 @@
    "src": "apps/user/test_hardening/test_hardening.c"
   },
   {
+   "count": 2,
+   "dst": "kill",
+   "src": "apps/user/test_hardening/test_hardening.c"
+  },
+  {
    "count": 3,
    "dst": "malloc",
    "src": "apps/user/test_hardening/test_hardening.c"
@@ -8763,6 +8848,11 @@
   {
    "count": 2,
    "dst": "thread_body",
+   "src": "apps/user/test_pthread/test_pthread.c"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "apps/user/test_pthread/test_pthread.c"
   },
   {
@@ -9507,6 +9597,11 @@
   },
   {
    "count": 2,
+   "dst": "poll",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 2,
    "dst": "poll_link",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9653,6 +9748,11 @@
   {
    "count": 2,
    "dst": "usleep",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 3,
+   "dst": "wait",
    "src": "apps/user/wifi/wifi.c"
   },
   {
@@ -10011,6 +10111,11 @@
    "src": "arch/xtensa_esp32s3/hal/hal_logic.c"
   },
   {
+   "count": 1,
+   "dst": "poll",
+   "src": "arch/xtensa_esp32s3/hal/hal_logic.c"
+  },
+  {
    "count": 2,
    "dst": "read",
    "src": "arch/xtensa_esp32s3/hal/hal_logic.c"
@@ -10018,6 +10123,11 @@
   {
    "count": 6,
    "dst": "read_mask",
+   "src": "arch/xtensa_esp32s3/hal/hal_logic.c"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "arch/xtensa_esp32s3/hal/hal_logic.c"
   },
   {
@@ -10073,6 +10183,11 @@
   {
    "count": 1,
    "dst": "duneos_hal_monotonic_us",
+   "src": "arch/xtensa_esp32s3/hal/hal_time.c"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "arch/xtensa_esp32s3/hal/hal_time.c"
   },
   {
@@ -11227,6 +11342,11 @@
   },
   {
    "count": 1,
+   "dst": "poll",
+   "src": "docs/adr/012-test-strategy.md"
+  },
+  {
+   "count": 1,
    "dst": "step",
    "src": "docs/adr/012-test-strategy.md"
   },
@@ -11268,6 +11388,11 @@
   {
    "count": 3,
    "dst": "ioctl",
+   "src": "docs/adr/013-network-architecture.md"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
    "src": "docs/adr/013-network-architecture.md"
   },
   {
@@ -11546,6 +11671,11 @@
    "src": "docs/adr/016-captured-app-exit.md"
   },
   {
+   "count": 3,
+   "dst": "kill",
+   "src": "docs/adr/016-captured-app-exit.md"
+  },
+  {
    "count": 4,
    "dst": "malloc",
    "src": "docs/adr/016-captured-app-exit.md"
@@ -11563,6 +11693,11 @@
   {
    "count": 3,
    "dst": "spawn",
+   "src": "docs/adr/016-captured-app-exit.md"
+  },
+  {
+   "count": 3,
+   "dst": "wait",
    "src": "docs/adr/016-captured-app-exit.md"
   },
   {
@@ -11782,6 +11917,11 @@
   },
   {
    "count": 2,
+   "dst": "poll",
+   "src": "docs/adr/019-linux-device-interface-semantics.md"
+  },
+  {
+   "count": 2,
    "dst": "read",
    "src": "docs/adr/019-linux-device-interface-semantics.md"
   },
@@ -11841,8 +11981,18 @@
    "src": "docs/adr/020-logic-capture-device.md"
   },
   {
+   "count": 2,
+   "dst": "poll",
+   "src": "docs/adr/020-logic-capture-device.md"
+  },
+  {
    "count": 4,
    "dst": "read",
+   "src": "docs/adr/020-logic-capture-device.md"
+  },
+  {
+   "count": 2,
+   "dst": "wait",
    "src": "docs/adr/020-logic-capture-device.md"
   },
   {
@@ -12246,6 +12396,11 @@
    "src": "docs/adr/027-ambient-system-state.md"
   },
   {
+   "count": 2,
+   "dst": "poll",
+   "src": "docs/adr/027-ambient-system-state.md"
+  },
+  {
    "count": 6,
    "dst": "read",
    "src": "docs/adr/027-ambient-system-state.md"
@@ -12357,6 +12512,11 @@
   },
   {
    "count": 1,
+   "dst": "kill",
+   "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
+  },
+  {
+   "count": 1,
    "dst": "launch",
    "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
   },
@@ -12433,6 +12593,11 @@
   {
    "count": 1,
    "dst": "human",
+   "src": "docs/adr/029-app-stack-auto-sizing.md"
+  },
+  {
+   "count": 2,
+   "dst": "kill",
    "src": "docs/adr/029-app-stack-auto-sizing.md"
   },
   {
@@ -13416,6 +13581,11 @@
    "src": "docs/adr/README.md"
   },
   {
+   "count": 2,
+   "dst": "kill",
+   "src": "docs/adr/README.md"
+  },
+  {
    "count": 1,
    "dst": "launch",
    "src": "docs/adr/README.md"
@@ -13722,6 +13892,11 @@
   },
   {
    "count": 1,
+   "dst": "kill",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 1,
    "dst": "launch",
    "src": "docs/backlog.md"
   },
@@ -13778,6 +13953,11 @@
   {
    "count": 2,
    "dst": "stat",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 1,
+   "dst": "terminate",
    "src": "docs/backlog.md"
   },
   {
@@ -13858,6 +14038,11 @@
   {
    "count": 1,
    "dst": "human",
+   "src": "docs/cli-audit-2026-06.md"
+  },
+  {
+   "count": 2,
+   "dst": "kill",
    "src": "docs/cli-audit-2026-06.md"
   },
   {
@@ -15001,6 +15186,11 @@
    "src": "kernel/duneos_kernel/include/duneos/dev_driver.h"
   },
   {
+   "count": 2,
+   "dst": "poll",
+   "src": "kernel/duneos_kernel/include/duneos/dev_driver.h"
+  },
+  {
    "count": 6,
    "dst": "read",
    "src": "kernel/duneos_kernel/include/duneos/dev_driver.h"
@@ -15607,6 +15797,11 @@
   },
   {
    "count": 1,
+   "dst": "wait",
+   "src": "kernel/duneos_kernel/include/duneos/hal_time.h"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "kernel/duneos_kernel/include/duneos/hal_uart.h"
   },
@@ -15747,6 +15942,11 @@
   },
   {
    "count": 1,
+   "dst": "dedup",
+   "src": "kernel/duneos_kernel/include/duneos/init.h"
+  },
+  {
+   "count": 1,
    "dst": "duneos_init_load",
    "src": "kernel/duneos_kernel/include/duneos/init.h"
   },
@@ -15763,6 +15963,11 @@
   {
    "count": 1,
    "dst": "scan",
+   "src": "kernel/duneos_kernel/include/duneos/init.h"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "kernel/duneos_kernel/include/duneos/init.h"
   },
   {
@@ -16138,6 +16343,11 @@
   {
    "count": 1,
    "dst": "stat",
+   "src": "kernel/duneos_kernel/include/duneos/libdune.h"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "kernel/duneos_kernel/include/duneos/libdune.h"
   },
   {
@@ -16692,6 +16902,11 @@
   },
   {
    "count": 2,
+   "dst": "poll",
+   "src": "kernel/duneos_kernel/include/duneos/socket.h"
+  },
+  {
+   "count": 2,
    "dst": "pollfd",
    "src": "kernel/duneos_kernel/include/duneos/socket.h"
   },
@@ -16997,6 +17212,11 @@
   },
   {
    "count": 2,
+   "dst": "kill",
+   "src": "kernel/duneos_kernel/include/duneos/supervisor.h"
+  },
+  {
+   "count": 2,
    "dst": "launch",
    "src": "kernel/duneos_kernel/include/duneos/supervisor.h"
   },
@@ -17018,6 +17238,11 @@
   {
    "count": 1,
    "dst": "snapshot",
+   "src": "kernel/duneos_kernel/include/duneos/supervisor.h"
+  },
+  {
+   "count": 2,
+   "dst": "wait",
    "src": "kernel/duneos_kernel/include/duneos/supervisor.h"
   },
   {
@@ -17168,6 +17393,11 @@
   {
    "count": 1,
    "dst": "scan",
+   "src": "kernel/duneos_kernel/include/duneos/wifi.h"
+  },
+  {
+   "count": 3,
+   "dst": "wait",
    "src": "kernel/duneos_kernel/include/duneos/wifi.h"
   },
   {
@@ -19567,6 +19797,11 @@
   },
   {
    "count": 2,
+   "dst": "dedup",
+   "src": "kernel/duneos_kernel/src/drivers/net/drv_wifi.c"
+  },
+  {
+   "count": 2,
    "dst": "duneos_netif_wait_ip",
    "src": "kernel/duneos_kernel/src/drivers/net/drv_wifi.c"
   },
@@ -20077,6 +20312,11 @@
   },
   {
    "count": 1,
+   "dst": "kill",
+   "src": "kernel/duneos_kernel/src/klog.c"
+  },
+  {
+   "count": 1,
    "dst": "klog_capture_rom_output",
    "src": "kernel/duneos_kernel/src/klog.c"
   },
@@ -20436,6 +20676,11 @@
    "src": "kernel/duneos_kernel/src/supervisor.c"
   },
   {
+   "count": 1,
+   "dst": "kill",
+   "src": "kernel/duneos_kernel/src/supervisor.c"
+  },
+  {
    "count": 5,
    "dst": "klog_d",
    "src": "kernel/duneos_kernel/src/supervisor.c"
@@ -20558,6 +20803,11 @@
   {
    "count": 1,
    "dst": "vApplicationStackOverflowHook",
+   "src": "kernel/duneos_kernel/src/supervisor.c"
+  },
+  {
+   "count": 2,
+   "dst": "wait",
    "src": "kernel/duneos_kernel/src/supervisor.c"
   },
   {
@@ -20948,6 +21198,11 @@
   {
    "count": 2,
    "dst": "opendir",
+   "src": "kernel/duneos_kernel/src/symbols.c"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
    "src": "kernel/duneos_kernel/src/symbols.c"
   },
   {
@@ -21553,6 +21808,11 @@
   {
    "count": 1,
    "dst": "opendir",
+   "src": "kernel/duneos_kernel/src/vfs_dev.c"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
    "src": "kernel/duneos_kernel/src/vfs_dev.c"
   },
   {
@@ -23146,6 +23406,11 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
+   "count": 1,
+   "dst": "kill",
+   "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
    "count": 19,
    "dst": "klog_d",
    "src": "kernel/duneos_loader/src/loader.c"
@@ -24691,6 +24956,11 @@
    "src": "sdk/display/libst7789.c"
   },
   {
+   "count": 1,
+   "dst": "wait",
+   "src": "sdk/display/libst7789.c"
+  },
+  {
    "count": 3,
    "dst": "write",
    "src": "sdk/display/libst7789.c"
@@ -24923,6 +25193,11 @@
   {
    "count": 1,
    "dst": "ui_size",
+   "src": "sdk/game/libgame.c"
+  },
+  {
+   "count": 3,
+   "dst": "wait",
    "src": "sdk/game/libgame.c"
   },
   {
@@ -26852,12 +27127,22 @@
   },
   {
    "count": 1,
+   "dst": "kill",
+   "src": "sdkconfig.defaults"
+  },
+  {
+   "count": 1,
    "dst": "launch",
    "src": "sdkconfig.defaults"
   },
   {
    "count": 1,
    "dst": "malloc",
+   "src": "sdkconfig.defaults"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
    "src": "sdkconfig.defaults"
   },
   {
@@ -27388,6 +27673,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-17-realign-adr-012.md"
+  },
+  {
+   "count": 1,
+   "dst": "duplicates",
    "src": "specs/SPEC-leg-17-realign-adr-012.md"
   },
   {
@@ -27972,6 +28262,11 @@
   },
   {
    "count": 1,
+   "dst": "duplicates",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
    "dst": "emit",
    "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
   },
@@ -28357,6 +28652,171 @@
   },
   {
    "count": 1,
+   "dst": "BOARD_FILE",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "EXIT_CONFIG",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "Risks",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "UNAVAILABLE_RC",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "_build_sysbin",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 4,
+   "dst": "_create_image",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "_find_esptool",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "_probe_qemu",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 9,
+   "dst": "_stage",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 3,
+   "dst": "_stream",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "action_do",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 3,
+   "dst": "check_profile",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "cmd_flashimg",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "cmd_system_flash",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 3,
+   "dst": "compute_image_sizes",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "dispatch",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 5,
+   "dst": "fail",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 6,
+   "dst": "gate",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "inspect",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 4,
+   "dst": "missing",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "parse_partition_sizes",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 2,
+   "dst": "render",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "run_gates",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "settled",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "terminate",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
+   "dst": "verdict",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 4,
+   "dst": "write",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 1,
    "dst": "Context",
    "src": "specs/SPEC-leg-37-per-board-main-stack.md"
   },
@@ -28501,6 +28961,11 @@
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
   },
   {
+   "count": 1,
+   "dst": "duplicates",
+   "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
+  },
+  {
    "count": 2,
    "dst": "fail",
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
@@ -28542,12 +29007,22 @@
   },
   {
    "count": 1,
+   "dst": "EXIT_CONFIG",
+   "src": "specs/SPEC-leg-40-tui-tests-menu.md"
+  },
+  {
+   "count": 1,
    "dst": "Risks",
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
   },
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-40-tui-tests-menu.md"
+  },
+  {
+   "count": 1,
+   "dst": "_probe_qemu",
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
   },
   {
@@ -28571,7 +29046,7 @@
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
   },
   {
-   "count": 9,
+   "count": 10,
    "dst": "gate",
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
   },
@@ -28828,6 +29303,11 @@
   {
    "count": 1,
    "dst": "monitor",
+   "src": "specs/SPEC-radar-ld2450.md"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
    "src": "specs/SPEC-radar-ld2450.md"
   },
   {
@@ -29396,6 +29876,11 @@
    "src": "tests/host/test_elf_scan.c"
   },
   {
+   "count": 1,
+   "dst": "dedup",
+   "src": "tests/host/test_elf_scan.c"
+  },
+  {
    "count": 3,
    "dst": "dirent",
    "src": "tests/host/test_elf_scan.c"
@@ -29488,6 +29973,11 @@
   {
    "count": 1,
    "dst": "t_report",
+   "src": "tests/host/test_elf_scan.c"
+  },
+  {
+   "count": 1,
+   "dst": "terminate",
    "src": "tests/host/test_elf_scan.c"
   },
   {
@@ -29683,6 +30173,11 @@
   {
    "count": 1,
    "dst": "verdict",
+   "src": "tests/host/test_elf_validate.c"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "tests/host/test_elf_validate.c"
   },
   {
@@ -30757,6 +31252,11 @@
   },
   {
    "count": 2,
+   "dst": "_refuse_deleted_verb",
+   "src": "tools/dbt/cli.py"
+  },
+  {
+   "count": 2,
    "dst": "active_profile_name",
    "src": "tools/dbt/cli.py"
   },
@@ -30836,7 +31336,7 @@
    "src": "tools/dbt/cli.py"
   },
   {
-   "count": 7,
+   "count": 4,
    "dst": "cmd_flashimg",
    "src": "tools/dbt/cli.py"
   },
@@ -30961,7 +31461,7 @@
    "src": "tools/dbt/cli.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "join",
    "src": "tools/dbt/cli.py"
   },
@@ -31221,12 +31721,12 @@
    "src": "tools/dbt/deploy.py"
   },
   {
-   "count": 10,
+   "count": 8,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 4,
+   "count": 3,
    "dst": "DuneOS",
    "src": "tools/dbt/flashimg.py"
   },
@@ -31277,6 +31777,11 @@
   },
   {
    "count": 2,
+   "dst": "_get_sysbin_size",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
    "dst": "_ignore",
    "src": "tools/dbt/flashimg.py"
   },
@@ -31286,8 +31791,23 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 2,
+   "count": 3,
+   "dst": "_no_fit_message",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 3,
    "dst": "_stage",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 3,
+   "dst": "_staged_bytes",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 3,
+   "dst": "_sysbin_row",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -31346,11 +31866,6 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 1,
-   "dst": "minimal",
-   "src": "tools/dbt/flashimg.py"
-  },
-  {
    "count": 2,
    "dst": "missing",
    "src": "tools/dbt/flashimg.py"
@@ -31363,6 +31878,16 @@
   {
    "count": 2,
    "dst": "open",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
+   "dst": "parse_csv_int",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
+   "dst": "parse_partition_sizes",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -31381,7 +31906,7 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "stat",
    "src": "tools/dbt/flashimg.py"
   },
@@ -31396,7 +31921,7 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "write",
    "src": "tools/dbt/flashimg.py"
   },
@@ -32122,6 +32647,11 @@
   },
   {
    "count": 2,
+   "dst": "poll",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
+   "count": 2,
    "dst": "progress_report",
    "src": "tools/dbt/qemu.py"
   },
@@ -32482,6 +33012,11 @@
   },
   {
    "count": 1,
+   "dst": "kill",
+   "src": "tools/dbt/stackusage.py"
+  },
+  {
+   "count": 1,
    "dst": "recommend",
    "src": "tools/dbt/stackusage.py"
   },
@@ -32611,6 +33146,16 @@
    "src": "tools/dbt/system.py"
   },
   {
+   "count": 7,
+   "dst": "dedup",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 2,
+   "dst": "duplicates",
+   "src": "tools/dbt/system.py"
+  },
+  {
    "count": 3,
    "dst": "find_apps",
    "src": "tools/dbt/system.py"
@@ -32647,7 +33192,17 @@
   },
   {
    "count": 2,
+   "dst": "parse_csv_int",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 2,
    "dst": "parse_partition_sizes",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
    "src": "tools/dbt/system.py"
   },
   {
@@ -34211,6 +34766,341 @@
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
+   "count": 13,
+   "dst": "BOARD",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 6,
+   "dst": "DUNEOS_ROOT",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "PARTITIONS",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "QEMU_BOARDS",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 12,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "SMOKE_APP",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_Args",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "_FullFS",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "__init__",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "_app_map",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_board_tree",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 4,
+   "dst": "_build_image",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "_build_sysbin",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "_create_image",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 4,
+   "dst": "_fake_apps",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "_get_board_name",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_get_sysbin_size",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "_read_sdkconfig",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 6,
+   "dst": "_rooted",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_run_cli",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_sizes",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 6,
+   "dst": "_stage",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "_stub_image",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "_sysbin_row",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "app_elf_size",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "check_app",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "check_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "cmd_flashimg",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "cmd_system_flash",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "compute_image_sizes",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "duplicates",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "find_apps",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 3,
+   "dst": "inspect",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "load_manifest",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "load_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 6,
+   "dst": "mkdir",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "parse_csv_int",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "parse_partition_sizes",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "stat",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "stderr",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_shorthand_offset_is_read_not_crashed_on",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_board_without_a_sysbin_partition_is_refused_by_name",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_check_profile_warns_on_a_duplicate",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_contest_profile_lists_each_app_once",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_deleted_verb_refused_by_name",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_duplicate_app_is_counted_once",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_board_with_an_init_yaml_has_a_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_flash_help_no_longer_lists_sysbin",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_image_size_comes_from_partitions_csv",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_init_yaml_safe_is_staged",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_sysbin_size_literal_left_in_flashimg",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_tracked_doc_names_a_deleted_verb",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_overflow_is_a_named_error_not_a_traceback",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_partition_integers_have_one_syntax",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_qemu_build_sysbin_reaches_stage_with_a_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_recovery_profile_stages_exactly_one_app",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_residual_littlefs_enospc_is_the_same_named_error",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_stage_profile_has_no_default",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_stage_rejects_none_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_system_flash_reaches_stage_with_a_profile",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "validate_manifest",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "write",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
    "count": 3,
    "dst": "PARSER_SOURCE",
    "src": "tools/dbt/tests/test_gates_cover.py"
@@ -34926,6 +35816,11 @@
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
+   "count": 2,
+   "dst": "kill",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
    "count": 12,
    "dst": "missing",
    "src": "tools/dbt/tests/test_qemu.py"
@@ -34958,6 +35853,11 @@
   {
    "count": 2,
    "dst": "pick_gdb_port",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
+   "count": 3,
+   "dst": "poll",
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
@@ -35488,6 +36388,11 @@
   {
    "count": 25,
    "dst": "verdict",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
@@ -36572,6 +37477,271 @@
   },
   {
    "count": 1,
+   "dst": "BOARD_FILE",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 5,
+   "dst": "DbtApp",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "Gate",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 3,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "WORKERS",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "_FakeApp",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 4,
+   "dst": "_FakeProc",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "__init__",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "_binding_ids",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_create_image",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "_dispatch_ids",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_find_esptool",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_log",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 3,
+   "dst": "_menu_ids",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_run_cancel",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 4,
+   "dst": "_run_gates",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_set_busy",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 5,
+   "dst": "_source",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_stage",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "_stream",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "_worker_flash_sysbin",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "_worker_tests",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "_worker_tests_full",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "action_do",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "call_from_thread",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 6,
+   "dst": "gate_argv",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 5,
+   "dst": "gate_status",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "inspect",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "kill",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 2,
+   "dst": "system_flash_argv",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "terminate",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 4,
+   "dst": "terminate_child",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_cancelled_run_is_neither_pass_nor_fail",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_tui_gate_run_never_touches_the_board_file",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_binding_keys_are_unique",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_exit_3_is_not_rendered_as_a_failure",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_full_gate_argv_adds_only_fuzz_and_qemu",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_gate_argv_is_exactly_dbt_test",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_gate_status_labels",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_menu_bindings_and_dispatch_agree",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_sysbin_worker_shells_out_to_system_flash",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_terminate_child_kills_a_child_that_ignores_terminate",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_terminate_child_reports_nothing_to_stop",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_terminate_child_stops_a_running_gate",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_test_workers_are_thin_shells",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_tui_no_longer_imports_the_staging_internals",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "write_board_file",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
    "dst": "ARCH",
    "src": "tools/dbt/toolchain/__init__.py"
   },
@@ -36876,6 +38046,11 @@
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
+   "count": 2,
+   "dst": "kill",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
    "count": 1,
    "dst": "launch",
    "src": "tools/dbt/toolchain/esp_idf.py"
@@ -36903,6 +38078,11 @@
   {
    "count": 4,
    "dst": "monitor",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
+   "count": 2,
+   "dst": "poll",
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
@@ -36956,6 +38136,11 @@
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
+   "count": 2,
+   "dst": "wait",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
    "count": 3,
    "dst": "write",
    "src": "tools/dbt/toolchain/esp_idf.py"
@@ -36981,7 +38166,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 20,
+   "count": 18,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/tui.py"
   },
@@ -37028,6 +38213,11 @@
   {
    "count": 3,
    "dst": "ProfilePreviewModal",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 1,
+   "dst": "Running",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37086,8 +38276,8 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 2,
-   "dst": "_create_image",
+   "count": 3,
+   "dst": "_dbt_argv",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37096,28 +38286,13 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 20,
+   "count": 18,
    "dst": "_err",
-   "src": "tools/dbt/tui.py"
-  },
-  {
-   "count": 2,
-   "dst": "_find_esptool",
    "src": "tools/dbt/tui.py"
   },
   {
    "count": 3,
    "dst": "_flash_bar",
-   "src": "tools/dbt/tui.py"
-  },
-  {
-   "count": 3,
-   "dst": "_get_board_name",
-   "src": "tools/dbt/tui.py"
-  },
-  {
-   "count": 2,
-   "dst": "_get_sysbin_offset",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37186,7 +38361,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 34,
+   "count": 36,
    "dst": "_log",
    "src": "tools/dbt/tui.py"
   },
@@ -37246,13 +38421,18 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 11,
+   "count": 10,
    "dst": "_port",
    "src": "tools/dbt/tui.py"
   },
   {
    "count": 3,
    "dst": "_predecessor_restart",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 9,
+   "dst": "_profile",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37287,6 +38467,11 @@
   },
   {
    "count": 2,
+   "dst": "_run_cancel",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
    "dst": "_run_flash_kernel",
    "src": "tools/dbt/tui.py"
   },
@@ -37298,6 +38483,11 @@
   {
    "count": 2,
    "dst": "_run_flash_sysbin",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 3,
+   "dst": "_run_gates",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37326,6 +38516,16 @@
    "src": "tools/dbt/tui.py"
   },
   {
+   "count": 2,
+   "dst": "_run_tests",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
+   "dst": "_run_tests_full",
+   "src": "tools/dbt/tui.py"
+  },
+  {
    "count": 5,
    "dst": "_save",
    "src": "tools/dbt/tui.py"
@@ -37341,13 +38541,13 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 15,
+   "count": 17,
    "dst": "_set_busy",
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 2,
-   "dst": "_stage",
+   "count": 4,
+   "dst": "_sizes",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37356,7 +38556,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 11,
+   "count": 12,
    "dst": "_stream",
    "src": "tools/dbt/tui.py"
   },
@@ -37393,6 +38593,16 @@
   {
    "count": 2,
    "dst": "_worker_flash_sysbin",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
+   "dst": "_worker_tests",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
+   "dst": "_worker_tests_full",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37446,7 +38656,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 4,
+   "count": 6,
    "dst": "active_profile_name",
    "src": "tools/dbt/tui.py"
   },
@@ -37456,7 +38666,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 53,
+   "count": 54,
    "dst": "call_from_thread",
    "src": "tools/dbt/tui.py"
   },
@@ -37488,6 +38698,11 @@
   {
    "count": 13,
    "dst": "compose",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 1,
+   "dst": "dedup",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37526,8 +38741,23 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "free",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 4,
+   "dst": "gate",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 3,
+   "dst": "gate_argv",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
+   "dst": "gate_status",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37546,8 +38776,13 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "join",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 1,
+   "dst": "kill",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -37611,6 +38846,11 @@
    "src": "tools/dbt/tui.py"
   },
   {
+   "count": 1,
+   "dst": "poll",
+   "src": "tools/dbt/tui.py"
+  },
+  {
    "count": 3,
    "dst": "quit",
    "src": "tools/dbt/tui.py"
@@ -37641,7 +38881,7 @@
    "src": "tools/dbt/tui.py"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "stat",
    "src": "tools/dbt/tui.py"
   },
@@ -37651,8 +38891,28 @@
    "src": "tools/dbt/tui.py"
   },
   {
+   "count": 2,
+   "dst": "system_flash_argv",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 1,
+   "dst": "terminate",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
+   "dst": "terminate_child",
+   "src": "tools/dbt/tui.py"
+  },
+  {
    "count": 1,
    "dst": "unlink",
+   "src": "tools/dbt/tui.py"
+  },
+  {
+   "count": 2,
+   "dst": "wait",
    "src": "tools/dbt/tui.py"
   },
   {
@@ -38158,6 +39418,9 @@
    "profiles/cardputer-default/profile.yaml",
    "profiles/cardputer-net/profile.yaml",
    "profiles/cardputer-recovery/profile.yaml",
+   "profiles/esp32c3-devkitc-default/profile.yaml",
+   "profiles/esp32p4-devkitm-default/profile.yaml",
+   "profiles/esp32s3-devkitc-default/profile.yaml",
    "profiles/kincony-a16-default/profile.yaml",
    "profiles/t-embed-default/profile.yaml",
    "profiles/t-embed-recovery/profile.yaml",
@@ -38229,6 +39492,7 @@
    "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md",
    "specs/SPEC-leg-33-requires-over-declaration.md",
    "specs/SPEC-leg-34-bound-section-extents.md",
+   "specs/SPEC-leg-36-40-dbt-verbs.md",
    "specs/SPEC-leg-37-per-board-main-stack.md",
    "specs/SPEC-leg-38-08-gates-that-test-nothing.md",
    "specs/SPEC-leg-38-tests-must-not-read-generated-files.md",
@@ -38282,6 +39546,7 @@
    "tools/dbt/tests/test_bspgen_uart.py",
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
    "tools/dbt/tests/test_cmake_requires.py",
+   "tools/dbt/tests/test_flashimg_profile.py",
    "tools/dbt/tests/test_gates_cover.py",
    "tools/dbt/tests/test_manifest_depth_bound.py",
    "tools/dbt/tests/test_pure_logic.py",
@@ -38292,6 +39557,7 @@
    "tools/dbt/tests/test_sdkconfig_guard_coverage.py",
    "tools/dbt/tests/test_testing.py",
    "tools/dbt/tests/test_tui_sdkconfig_guard.py",
+   "tools/dbt/tests/test_tui_tests_menu.py",
    "tools/dbt/toolchain/__init__.py",
    "tools/dbt/toolchain/esp_idf.py",
    "tools/dbt/tui.py",
@@ -38750,6 +40016,7 @@
    "OPTIONAL_KEYS",
    "PANIC_PATTERNS",
    "PARSER_SOURCE",
+   "PARTITIONS",
    "PATH_LEN",
    "PATH_MAX_LEN",
    "PAYLOADS",
@@ -39001,6 +40268,7 @@
    "WIFI_INIT_MIN_LARGEST_BLOCK",
    "WIFI_SCAN_PATH",
    "WIFI_W",
+   "WORKERS",
    "XF_LOG",
    "XF_MAX",
    "XTENSA_CPUS",
@@ -39008,6 +40276,9 @@
    "_DUNEOS_DRV_CAT",
    "_DUNEOS_DRV_CAT2",
    "_DUNEOS_SOCKET_NEED_SELECT",
+   "_FakeApp",
+   "_FakeProc",
+   "_FullFS",
    "_Guard",
    "_NotEvaluable",
    "_Unclassifiable",
@@ -39028,15 +40299,18 @@
    "_bar",
    "_bat_arg",
    "_battery_block",
+   "_binding_ids",
    "_board",
    "_board_dict",
    "_board_display_size",
    "_board_file_changed_under_run",
    "_board_key_get",
+   "_board_tree",
    "_board_yaml",
    "_boot_assertions",
    "_bootstrap",
    "_branch_dead",
+   "_build_image",
    "_build_profile_dict",
    "_build_sysbin",
    "_called_names",
@@ -39051,10 +40325,12 @@
    "_config_error",
    "_convert_etc_pngs",
    "_create_image",
+   "_dbt_argv",
    "_declared_limit",
    "_define",
    "_deploy_data",
    "_deps_satisfied",
+   "_dispatch_ids",
    "_display_block",
    "_done",
    "_draw_text_8x8",
@@ -39065,6 +40341,7 @@
    "_espressif_roots",
    "_eval_cond",
    "_expand",
+   "_fake_apps",
    "_fake_tools_tree",
    "_find_esptool",
    "_find_gdb",
@@ -39075,6 +40352,7 @@
    "_fmt_kb",
    "_get_board_name",
    "_get_sysbin_offset",
+   "_get_sysbin_size",
    "_git",
    "_got",
    "_got_path",
@@ -39115,9 +40393,11 @@
    "_main_requires",
    "_make_opts",
    "_manifest_sources",
+   "_menu_ids",
    "_menu_selected",
    "_msg",
    "_nested_get",
+   "_no_fit_message",
    "_on_pick",
    "_on_result",
    "_open_profile_editor",
@@ -39139,6 +40419,7 @@
    "_probe_pytest",
    "_probe_qemu",
    "_probe_toolchain",
+   "_profile",
    "_progress_markers",
    "_prompt",
    "_qemu_missing",
@@ -39149,15 +40430,20 @@
    "_reap_live_idf_procs",
    "_refresh",
    "_refresh_status",
+   "_refuse_deleted_verb",
    "_rel",
    "_requires_entries",
+   "_rooted",
    "_run",
    "_run_board_pick",
    "_run_bspgen",
    "_run_build_all",
+   "_run_cancel",
+   "_run_cli",
    "_run_flash_kernel",
    "_run_flash_sd",
    "_run_flash_sysbin",
+   "_run_gates",
    "_run_idf",
    "_run_monitor",
    "_run_payload",
@@ -39167,6 +40453,8 @@
    "_run_pytest",
    "_run_qemu",
    "_run_system_check",
+   "_run_tests",
+   "_run_tests_full",
    "_save",
    "_sd_bar",
    "_sd_path",
@@ -39174,12 +40462,17 @@
    "_seed_build_dir",
    "_set_busy",
    "_sets_the_symbol_by_hand",
+   "_sizes",
+   "_source",
    "_stage",
+   "_staged_bytes",
    "_status_text",
    "_storage_block",
    "_stream",
    "_string_args",
+   "_stub_image",
    "_submodule_prefixes",
+   "_sysbin_row",
    "_to_rgb565",
    "_track",
    "_tracked_boards",
@@ -39193,6 +40486,8 @@
    "_worker_flash_kernel",
    "_worker_flash_sd",
    "_worker_flash_sysbin",
+   "_worker_tests",
+   "_worker_tests_full",
    "_write_flash_image",
    "action_cycle_after",
    "action_cycle_restart",
@@ -39371,6 +40666,7 @@
    "declared_root",
    "decode",
    "decode_perms",
+   "dedup",
    "default_sources",
    "deploy_single",
    "depth_of",
@@ -39591,6 +40887,7 @@
    "duneos_wifi_sta_disconnect",
    "duneos_write",
    "dup2",
+   "duplicates",
    "elf_corpus_build",
    "elf_corpus_read",
    "elf_log_reject",
@@ -39670,6 +40967,8 @@
    "game_over",
    "game_wait",
    "gate",
+   "gate_argv",
+   "gate_status",
    "gen_demo",
    "generate",
    "generate_for_board",
@@ -39769,6 +41068,7 @@
    "kernel_idle",
    "kernel_image_size",
    "kernel_sources",
+   "kill",
    "klog_capture_rom_output",
    "klog_d",
    "klog_e",
@@ -39891,6 +41191,7 @@
    "panel_targets",
    "panicked",
    "parse_cmd",
+   "parse_csv_int",
    "parse_flash_args",
    "parse_flash_size",
    "parse_hex",
@@ -39918,6 +41219,7 @@
    "place_food",
    "pline",
    "policy_str",
+   "poll",
    "poll_link",
    "pollfd",
    "pool_find",
@@ -40145,7 +41447,10 @@
    "sx1509_read_reg",
    "sx1509_write_pair",
    "sx1509_write_reg",
+   "system_flash_argv",
    "t_report",
+   "terminate",
+   "terminate_child",
    "test_a_board_carrying_bus_zero_or_no_bus_passes",
    "test_a_board_declaring_logic_passes_validate",
    "test_a_board_without_psram_never_reports_a_mismatch",
@@ -40154,6 +41459,7 @@
    "test_a_build_dir_predating_the_logic_withdrawal_is_refused",
    "test_a_bus_numbered_one_is_refused",
    "test_a_calloc_payload_exiting_non_zero_is_seen_as_an_app_failure",
+   "test_a_cancelled_run_is_neither_pass_nor_fail",
    "test_a_changed_value_is_a_conflict",
    "test_a_clean_build_directory_proceeds_silently",
    "test_a_clean_exit_code_is_not_read_as_an_app_failure",
@@ -40200,12 +41506,14 @@
    "test_a_run_at_the_floor_passes",
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
+   "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
    "test_a_symbol_absent_from_the_build_is_not_a_conflict",
    "test_a_transient_git_failure_does_not_narrow_the_signature",
+   "test_a_tui_gate_run_never_touches_the_board_file",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
    "test_absent_slots_are_zeroed",
    "test_absent_submodules_make_the_host_gate_unavailable",
@@ -40237,6 +41545,8 @@
    "test_bad_header_and_tail_rejected",
    "test_bad_ptr",
    "test_bad_tail_does_not_wedge_the_parser",
+   "test_binding_keys_are_unique",
+   "test_board_without_a_sysbin_partition_is_refused_by_name",
    "test_boolean_is_rejected",
    "test_boot_banners_are_counted_once_each_across_chunks",
    "test_both_globs_carry_configure_depends",
@@ -40246,6 +41556,7 @@
    "test_caches_and_paths_outside_the_repo_are_never_classified",
    "test_capacity_limit",
    "test_cardputer_board_yaml_declares_radar_uart",
+   "test_check_profile_warns_on_a_duplicate",
    "test_classes",
    "test_comments_and_blank_lines_are_ignored",
    "test_compile_errors",
@@ -40253,17 +41564,20 @@
    "test_compose_flash_image_rejects_overflow",
    "test_compose_flash_image_rejects_overlap",
    "test_conflicts_are_reported_in_a_stable_order",
+   "test_contest_profile_lists_each_app_once",
    "test_contributing_names_the_commands_that_exist",
    "test_dead_payload_is_an_assertion_failure_not_a_timeout",
    "test_declared_psram_mb_reads_the_board_yaml",
    "test_declared_psram_size_reaches_the_emulator",
    "test_declared_value_is_emitted_verbatim",
    "test_default_console_leaves_the_secondary_console_alone",
+   "test_deleted_verb_refused_by_name",
    "test_denial_does_not_depend_on_the_file_existing",
    "test_devcontainer_is_tracked_and_pinned_to_the_ci_tag",
    "test_display_resolves_to_the_board_s_backend",
    "test_divzero",
    "test_dot",
+   "test_duplicate_app_is_counted_once",
    "test_each_payload_asserts_on_its_own_app_not_another",
    "test_embedded_manifest_nests_within_the_bound",
    "test_empty_output_matches_nothing",
@@ -40272,6 +41586,7 @@
    "test_eof_after_the_settle_window_is_a_pass",
    "test_eof_inside_the_settle_window_is_not_a_pass",
    "test_escapes",
+   "test_every_board_with_an_init_yaml_has_a_profile",
    "test_every_build_or_flash_entry_point_calls_the_guard",
    "test_every_constraint_is_an_exact_pin",
    "test_every_emitted_driver_symbol_is_declared_in_kconfig",
@@ -40290,6 +41605,7 @@
    "test_every_unconditional_symbol_defaults_to_y",
    "test_every_xtensa_cpu_accepts_the_flag",
    "test_exactly_one_tracked_board_enables_logic",
+   "test_exit_3_is_not_rendered_as_a_failure",
    "test_exit_codes_are_all_distinct",
    "test_explicit_console_uart_suppresses_the_secondary_console",
    "test_extent_arithmetic",
@@ -40297,19 +41613,25 @@
    "test_find_qemu_prefers_the_newest_version_directory",
    "test_find_qemu_resolves_from_the_idf_tools_tree",
    "test_find_qemu_returns_none_when_nothing_is_installed",
+   "test_flash_help_no_longer_lists_sysbin",
    "test_flash_size_is_required",
    "test_flash_size_reaches_the_composed_image",
    "test_format_klog_ring_after_a_wrap_restores_oldest_first",
    "test_format_klog_ring_before_the_first_wrap",
    "test_format_klog_ring_handles_an_untouched_ring",
+   "test_full_gate_argv_adds_only_fuzz_and_qemu",
+   "test_gate_argv_is_exactly_dbt_test",
+   "test_gate_status_labels",
    "test_generate_emits_all_uart_entries",
    "test_generate_without_i2c_emits_no_i2c_defines",
    "test_good_log_matches_every_assertion",
    "test_header_byte_inside_garbage",
    "test_heap",
    "test_idle_and_noise",
+   "test_image_size_comes_from_partitions_csv",
    "test_incremental_feed_matches_the_same_things_as_one_shot",
    "test_index_is_lf_only",
+   "test_init_yaml_safe_is_staged",
    "test_junit_counts_are_read_from_a_real_report",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
    "test_leg_18_records_the_board_that_closed_it",
@@ -40319,6 +41641,7 @@
    "test_literals",
    "test_lock_files_are_no_longer_ignored",
    "test_logic_is_emitted_only_for_a_board_declaring_it",
+   "test_menu_bindings_and_dispatch_agree",
    "test_metachars",
    "test_missing_app_marker_is_reported",
    "test_missing_file_and_seed_fallback",
@@ -40335,6 +41658,8 @@
    "test_no_qemu_key_emits_no_symbol",
    "test_no_requires_entry_sits_under_a_config_guard",
    "test_no_secondary_symbol_on_a_chip_without_usb_serial_jtag",
+   "test_no_sysbin_size_literal_left_in_flashimg",
+   "test_no_tracked_doc_names_a_deleted_verb",
    "test_no_tracked_file_exceeds_the_size_bound",
    "test_node_limit",
    "test_non_integer_is_rejected",
@@ -40348,6 +41673,7 @@
    "test_only_the_qemu_boards_declare_the_flag",
    "test_opening_a_denied_path_fails_the_test_that_did_it",
    "test_other_bit_positions",
+   "test_overflow_is_a_named_error_not_a_traceback",
    "test_panic_during_the_settle_window_beats_a_full_match",
    "test_panic_patterns_are_detected",
    "test_parse_flash_args",
@@ -40355,6 +41681,7 @@
    "test_parse_flash_size",
    "test_parse_flash_size_rejects_non_literal_sizes",
    "test_parses_values_and_unset_symbols",
+   "test_partition_integers_have_one_syntax",
    "test_pathlib_readers_are_intercepted_too",
    "test_pathological",
    "test_pick_gdb_port_does_not_hand_out_a_port_twice_in_a_row",
@@ -40368,6 +41695,7 @@
    "test_qemu_and_fuzz_are_opt_in",
    "test_qemu_as_a_yaml_string_is_rejected",
    "test_qemu_boards_generate_with_the_secondary_console_off",
+   "test_qemu_build_sysbin_reaches_stage_with_a_profile",
    "test_qemu_extra_args_suppress_the_open_eth_nic",
    "test_qemu_false_emits_no_symbol",
    "test_qemu_is_unavailable_on_a_cardputer_checkout",
@@ -40383,8 +41711,10 @@
    "test_readme_states_the_linking_position",
    "test_realistic",
    "test_reaping_kills_a_tracked_process_group",
+   "test_recovery_profile_stages_exactly_one_app",
    "test_repeated_start",
    "test_repo_has_manifests",
+   "test_residual_littlefs_enospc_is_the_same_named_error",
    "test_resync_over_garbage",
    "test_root_gitattributes_defers_to_the_generated_index",
    "test_run_loop_completes_on_a_good_run",
@@ -40401,7 +41731,15 @@
    "test_settle_window_elapsing_reports_complete",
    "test_signal_and_exit_hooks_are_installed_once",
    "test_single_boot_banner_is_not_a_reboot",
+   "test_stage_profile_has_no_default",
+   "test_stage_rejects_none_profile",
    "test_submodule_paths_are_out_of_scope",
+   "test_sysbin_worker_shells_out_to_system_flash",
+   "test_system_flash_reaches_stage_with_a_profile",
+   "test_terminate_child_kills_a_child_that_ignores_terminate",
+   "test_terminate_child_reports_nothing_to_stop",
+   "test_terminate_child_stops_a_running_gate",
+   "test_test_workers_are_thin_shells",
    "test_the_board_fragment_wins_over_the_root_defaults",
    "test_the_board_key_is_also_looked_up_under_board",
    "test_the_boards_that_carry_a_radio_are_the_four_expected_ones",
@@ -40466,6 +41804,7 @@
    "test_the_withdrawal_rule_stays_inside_the_bspgen_namespace",
    "test_the_word_panic_alone_is_not_a_panic",
    "test_the_written_fragment_matches_the_yaml",
+   "test_tui_no_longer_imports_the_staging_internals",
    "test_two_back_to_back_frames",
    "test_unaligned_is_rejected",
    "test_unchanged_board_file_is_not_reported",
@@ -40561,6 +41900,7 @@
    "var_set",
    "vcd_next_path",
    "verdict",
+   "wait",
    "walk",
    "wdt_timer_cb",
    "write",

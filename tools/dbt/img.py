@@ -6,7 +6,7 @@ ESP32, i.e. little-endian). Apps load it via <duneos/image.h> and blit it
 through <duneos/gfx.h> at zero decode cost.
 
 We rely on Pillow only at conversion time; the apps themselves don't need it.
-Pillow import is lazy so `dbt buildall` / `dbt flashimg` keep working on
+Pillow import is lazy so `dbt buildall` / `dbt system flash` keep working on
 machines without it.
 """
 from __future__ import annotations

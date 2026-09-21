@@ -866,7 +866,6 @@ def _build_sysbin(board: str, build_dir: Path, app: str = SMOKE_APP) -> Path:
 
     a = _Args()
     a.build      = False
-    a.safe       = False
     a.port       = None
     a.board      = board
     a.image_only = True

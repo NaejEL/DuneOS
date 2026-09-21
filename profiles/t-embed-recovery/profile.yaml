@@ -1,8 +1,11 @@
 # DuneOS image profile — LilyGo T-Embed CC1101 recovery image.
 #
-# Available outside `--safe` flash: hold KEY_BTN at power-on instead, which
-# loads /init.yaml.safe (the same content, automatically staged).
-# This profile is for the permanent-fallback case.
+# Minimal flash payload: just usb_shell.
+#   dbt system flash --profile t-embed-recovery
+#
+# The other way in is the hold-key path: hold KEY_BTN at power-on, which loads
+# /init.yaml.safe (the same content, automatically staged). This profile is for
+# the permanent-fallback case.
 
 name: t-embed-recovery
 board: lilygo-t-embed-cc1101

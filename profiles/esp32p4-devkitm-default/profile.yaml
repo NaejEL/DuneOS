@@ -1,0 +1,13 @@
+# Derived from boards/esp32p4-devkitm/init.yaml, which declares no service
+# (its only entry is commented out). Lists stay empty so the image this
+# profile produces matches what that board booted before profiles were
+# mandatory. Add apps here, not to the board's init.yaml.
+
+name: esp32p4-devkitm-default
+board: esp32p4-devkitm
+description: "esp32p4-devkitm — empty image, no boot service"
+
+apps_flash: []
+init_flash: []
+apps_sd: []
+init_sd: []
