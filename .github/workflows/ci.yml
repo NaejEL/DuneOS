@@ -47,11 +47,11 @@ jobs:
           python -m pip install -c tools/constraints.txt pytest pyyaml textual littlefs-python
 
           # The floor counts tests that RAN, because a bug that mass-skips the
-          # suite clears a collected count. It sits a few below the current 490
+          # suite clears a collected count. It sits a few below the current 508
           # so that adding one xfail or platform skipif — junit reports both as
           # skipped — does not redden CI, while a mass-skip lands far under it.
           # Raise it when tests are added; a drop is the suite shrinking.
-          FLOOR=482
+          FLOOR=500
 
           set +e
           python -m pytest -q --junitxml=pytest-report.xml
@@ -165,9 +165,36 @@ jobs:
           path: tests/host/fuzz_artifacts/
           if-no-files-found: ignore
 
+  # The board and profile matrices are derived from the tree, never listed
+  # here: a board enters CI the day its architecture gets an arch/<a>/arch.cmake,
+  # with no workflow edit. tools/dbt/tests/test_ci_matrix.py fails on a literal.
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      kernel_boards: ${{ steps.matrix.outputs.kernel_boards }}
+      qemu_boards: ${{ steps.matrix.outputs.qemu_boards }}
+      check_profiles: ${{ steps.matrix.outputs.check_profiles }}
+      build_profiles: ${{ steps.matrix.outputs.build_profiles }}
+      excluded: ${{ steps.matrix.outputs.excluded }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Derive the matrix
+        id: matrix
+        run: |
+          python -m pip install -c tools/constraints.txt pyyaml
+          python tools/dbt/ci_matrix.py --github-output "$GITHUB_OUTPUT"
+
   kernel-build:
+    needs: discover
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0.1
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.discover.outputs.kernel_boards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -177,33 +204,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: pip-kernel-${{ hashFiles('tools/duneos-bspgen.py') }}
+          key: pip-kernel-${{ hashFiles('tools/constraints.txt') }}
 
-      - name: Generate board support files
-        run: |
-          echo m5stack-cardputer > .duneos_board
-          . $IDF_PATH/export.sh
-          pip install -c tools/constraints.txt pyyaml
-          python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml
-
-      # On dev machines the rule is `dbt flash kernel --build-only`, never raw
-      # idf.py — but inside the espressif/idf container idf.py directly is
-      # acceptable: the container IS the pinned toolchain dbt would discover.
-      - name: Build kernel
+      # `dbt flash kernel --build-only` rather than raw idf.py: it runs bspgen
+      # and the sdkconfig guard in the same step, and pins IDF_TARGET from the
+      # board's idf_target.txt, which a bare idf.py in this container does not.
+      - name: Build kernel for ${{ matrix.board }}
+        env:
+          BOARD: ${{ matrix.board }}
         run: |
           git config --global --add safe.directory '*'
           . $IDF_PATH/export.sh
-          idf.py build
+          pip install -c tools/constraints.txt pyyaml
+          echo "$BOARD" > .duneos_board
+          python tools/dbt.py flash kernel --build-only
 
   # Hardware-free boot + loader smoke test (ADR 039 / SPEC-leg-27).
   # One job per board: sdkconfig is board-specific and CMake aborts on an
   # unclean switch, so each board gets its own build dir AND its own sdkconfig
   # (dbt qemu passes -D SDKCONFIG=<build-dir>/sdkconfig).
   #
-  # BOTH LEGS GATE. `esp32s3-qemu` exercises the loader's DRAM allocation
-  # branch, `esp32s3-qemu-psram` the `#ifdef CONFIG_SPIRAM` one, and a
-  # regression in either turns CI red the day it lands. `fail-fast: false` so
-  # one red leg still reports the other.
+  # EVERY LEG GATES. The two QEMU boards exercise the loader's DRAM and its
+  # `#ifdef CONFIG_SPIRAM` allocation branches respectively, and a regression in
+  # either turns CI red the day it lands. `fail-fast: false` so one red leg
+  # still reports the other.
   #
   # The PSRAM leg was diagnostic-only (`continue-on-error`) until SPEC-leg-30:
   # `idf.py qemu` hardcodes `-m 32M` for every ESP32-S3 and ESP-IDF maps
@@ -211,12 +235,13 @@ jobs:
   # window and left the flash mmap of the partition table with nothing.
   # `dbt qemu` now sizes the machine from the board's own `psram_size_mb`.
   qemu-smoke:
+    needs: discover
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0.1
     strategy:
       fail-fast: false
       matrix:
-        board: [esp32s3-qemu, esp32s3-qemu-psram]
+        board: ${{ fromJSON(needs.discover.outputs.qemu_boards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -260,9 +285,47 @@ jobs:
             exit 1
           fi
 
-  apps-build:
+  # One container for all of them: `system check` is seconds of YAML and
+  # manifest validation, so a job per profile would be pure container pull.
+  profile-check:
+    needs: discover
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Validate every in-scope profile
+        env:
+          KERNEL_BOARDS: ${{ needs.discover.outputs.kernel_boards }}
+          QEMU_BOARDS: ${{ needs.discover.outputs.qemu_boards }}
+          CHECK_PROFILES: ${{ needs.discover.outputs.check_profiles }}
+        run: |
+          git config --global --add safe.directory '*'
+          . $IDF_PATH/export.sh
+          pip install -c tools/constraints.txt pyyaml
+          # check_profile reads boards/<b>/sdkconfig.board for the capability
+          # warnings; it is generated, so this job generates it (LEG-38).
+          for board in $(python -c 'import json,os; print(" ".join(json.loads(os.environ["KERNEL_BOARDS"]) + json.loads(os.environ["QEMU_BOARDS"])))'); do
+            python tools/duneos-bspgen.py "boards/$board/board.yaml"
+          done
+          # Every profile runs even after one fails: the point of checking all
+          # of them in one job is a single log listing all of them.
+          rc=0
+          for profile in $(python -c 'import json,os; print(" ".join(json.loads(os.environ["CHECK_PROFILES"])))'); do
+            python tools/dbt.py system check --profile "$profile" || rc=1
+          done
+          exit $rc
+
+  apps-build:
+    needs: discover
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.0.1
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(needs.discover.outputs.build_profiles) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -272,16 +335,28 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: pip-apps-${{ hashFiles('tools/dbt.py') }}
+          key: pip-apps-${{ hashFiles('tools/constraints.txt') }}
 
-      # dbt's find_compiler() resolves xtensa-esp32s3-elf-gcc from PATH first;
-      # sourcing export.sh is what puts the container's toolchain there, so no
+      # dbt's find_compiler() resolves the cross-gcc from PATH first; sourcing
+      # export.sh is what puts the container's toolchain there, so no
       # .duneos_idf / IDF_PATH plumbing is needed for app builds.
-      - name: Build contest profile apps
+      - name: Build ${{ matrix.profile }}
+        env:
+          PROFILE: ${{ matrix.profile }}
         run: |
           git config --global --add safe.directory '*'
-          echo m5stack-cardputer > .duneos_board
           . $IDF_PATH/export.sh
           pip install -c tools/constraints.txt pyyaml
-          python tools/duneos-bspgen.py boards/m5stack-cardputer/board.yaml
-          python tools/dbt.py system build --profile cardputer-contest
+          board=$(python -c 'import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))["board"])' "profiles/$PROFILE/profile.yaml")
+          echo "$board" > .duneos_board
+          python tools/duneos-bspgen.py "boards/$board/board.yaml"
+          python tools/dbt.py system build --profile "$PROFILE"
+
+      # Report, not a gate: `dbt system size` exits 0 for artefacts this job
+      # never builds (the kernel), so it can only inform.
+      - name: Size report for ${{ matrix.profile }}
+        env:
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          . $IDF_PATH/export.sh
+          python tools/dbt.py system size --profile "$PROFILE"

@@ -1,4 +1,4 @@
-Status: PROPOSED
+Status: SUPERSEDED by specs/SPEC-leg-10-ci-matrix-derived.md
 
 # SPEC-leg-10 — Broaden CI to several boards and profiles
 
