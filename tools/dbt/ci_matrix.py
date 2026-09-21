@@ -64,9 +64,9 @@ def _boards(root: Path) -> dict[str, dict]:
                          "reason": "board.yaml has no `board:` mapping"}
             continue
         cpu = board.get("cpu")
-        if not cpu:
+        if not cpu or not isinstance(cpu, str):
             out[name] = {"cpu": None, "qemu": False, "arch_dir": None,
-                         "reason": "board.cpu is absent"}
+                         "reason": "board.cpu is absent or not a string"}
             continue
         if cpu not in VALID_CPUS:
             out[name] = {"cpu": cpu, "qemu": False, "arch_dir": None,
@@ -96,11 +96,17 @@ def _qemu_flag(board_name: str, board: dict) -> bool:
     return qemu
 
 
+def _app_list(value) -> list:
+    return list(value) if isinstance(value, list) else []
+
+
 def _profiles(root: Path) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for path in sorted((root / "profiles").glob("*/profile.yaml")):
         profile = _load(path)
-        apps = list(profile.get("apps_flash") or []) + list(profile.get("apps_sd") or [])
+        # list() on a bare string yields its characters, so `apps_flash: abc`
+        # would score 3 and could win the build_profiles election.
+        apps = _app_list(profile.get("apps_flash")) + _app_list(profile.get("apps_sd"))
         out[path.parent.name] = {
             "board": profile.get("board"),
             "n_apps": len(set(apps)),

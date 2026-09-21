@@ -288,14 +288,32 @@ def test_every_matrix_is_a_fromjson_of_a_discover_output():
     assert_matrix_is_derived(workflow_from(CI_YML.read_text(encoding="utf-8")))
 
 
+def tracked_names() -> set[str]:
+    names = {p.parent.name for p in (REPO_ROOT / "boards").glob("*/board.yaml")}
+    return names | {p.parent.name
+                    for p in (REPO_ROOT / "profiles").glob("*/profile.yaml")}
+
+
 def test_no_board_or_profile_name_appears_as_a_matrix_value():
     workflow = workflow_from(CI_YML.read_text(encoding="utf-8"))
-    names = {p.parent.name for p in (REPO_ROOT / "boards").glob("*/board.yaml")}
-    names |= {p.parent.name for p in (REPO_ROOT / "profiles").glob("*/profile.yaml")}
+    names = tracked_names()
     for value in matrix_values(workflow):
         rendered = value if isinstance(value, str) else " ".join(map(str, value))
         for name in names:
             assert name not in rendered, f"'{name}' is a literal matrix value"
+
+
+# The matrix is only half of it. `echo m5stack-cardputer > .duneos_board` in a
+# step body is what this cycle removed, and it is not a matrix value — a literal
+# reintroduced there would pin one board again with every wiring test green.
+def test_no_board_or_profile_name_appears_in_a_step_body():
+    text = CI_YML.read_text(encoding="utf-8")
+    body = "\n".join(line for line in text.splitlines()
+                     if not line.lstrip().startswith("#"))
+    for name in tracked_names():
+        assert name not in body, (
+            f"'{name}' is hardcoded in ci.yml; the matrix must come from "
+            f"discover, and so must anything derived from it")
 
 
 INJECTIONS = [
@@ -377,3 +395,37 @@ def test_main_refuses_a_non_boolean_qemu(tmp_path, capsys):
     write_board(root, "bad", cpu="esp32s3", qemu="true")
     assert main(["--root", str(root)]) == 1
     assert "must be a boolean" in capsys.readouterr().err
+
+
+# Malformed YAML must reach the named-reason path, not a TypeError traceback:
+# main() catches MatrixError only, so an unhashable cpu would kill discover
+# with a stack trace where every other bad shape gets a sentence.
+@pytest.mark.parametrize("cpu", [["esp32s3"], {"a": 1}, 32, None])
+def test_a_non_string_cpu_gets_a_named_reason(tmp_path, cpu):
+    root = clone(REPO_ROOT, tmp_path / "tree")
+    (root / "boards" / "odd").mkdir()
+    (root / "boards" / "odd" / "board.yaml").write_text(
+        yaml.safe_dump({"board": {"name": "odd", "cpu": cpu}}), encoding="utf-8")
+    result = discover(root)
+    assert "odd" in result["excluded"]
+    assert "cpu" in result["excluded"]["odd"]
+
+
+# 67 distinct characters — above cardputer-contest's 44 distinct apps, so a
+# scalar read as characters would take its place in the election.
+SCALAR_LONG = ("abcdefghijklmnopqrstuvwxyz"
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+               "0123456789-.+_/")
+
+
+def test_a_scalar_apps_flash_does_not_win_the_election(tmp_path):
+    root = clone(REPO_ROOT, tmp_path / "tree")
+    (root / "profiles" / "zz-scalar").mkdir()
+    (root / "profiles" / "zz-scalar" / "profile.yaml").write_text(
+        yaml.safe_dump({"board": "m5stack-cardputer",
+                        "apps_flash": SCALAR_LONG}),
+        encoding="utf-8")
+    # One app if read as a name; 60 distinct characters if read as a sequence.
+    assert discover(root)["build_profiles"] == ["cardputer-contest",
+                                                "kincony-a16-default",
+                                                "t-embed-default"]

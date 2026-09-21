@@ -31366,6 +31366,11 @@
    "src": "tools/dbt/ci_matrix.py"
   },
   {
+   "count": 3,
+   "dst": "_app_list",
+   "src": "tools/dbt/ci_matrix.py"
+  },
+  {
    "count": 2,
    "dst": "_boards",
    "src": "tools/dbt/ci_matrix.py"
@@ -34926,7 +34931,7 @@
    "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "CI_YML",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
@@ -34941,7 +34946,7 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "MatrixError",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
@@ -34956,8 +34961,13 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 16,
+   "count": 18,
    "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 2,
+   "dst": "SCALAR_LONG",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
@@ -34981,12 +34991,12 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 7,
+   "count": 9,
    "dst": "clone",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 23,
+   "count": 27,
    "dst": "discover",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
@@ -35001,8 +35011,13 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "join",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 1,
+   "dst": "kill",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
@@ -35016,12 +35031,12 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 7,
+   "count": 9,
    "dst": "mkdir",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 2,
+   "count": 5,
    "dst": "read",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
@@ -35032,12 +35047,27 @@
   },
   {
    "count": 1,
+   "dst": "step",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 1,
    "dst": "test_a_new_board_fails_the_expected_membership",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
    "count": 1,
+   "dst": "test_a_non_string_cpu_gets_a_named_reason",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 1,
    "dst": "test_a_profile_on_an_unlisted_board_fails_completeness",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_scalar_apps_flash_does_not_win_the_election",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
@@ -35112,6 +35142,11 @@
   },
   {
    "count": 1,
+   "dst": "test_no_board_or_profile_name_appears_in_a_step_body",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 1,
    "dst": "test_non_boolean_qemu_is_an_error_not_a_demotion",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
@@ -35148,6 +35183,11 @@
   {
    "count": 1,
    "dst": "test_unknown_cpu_is_not_silently_called_riscv",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 3,
+   "dst": "tracked_names",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
@@ -40658,6 +40698,7 @@
    "Roadmap",
    "Running",
    "SAMPLE_PERIOD_MS",
+   "SCALAR_LONG",
    "SCAN_EXPECT_MACHINE",
    "SCAN_PATH",
    "SCAN_PERIOD_MS",
@@ -40819,6 +40860,7 @@
    "_all_board_names",
    "_app_failures",
    "_app_from_path",
+   "_app_list",
    "_app_map",
    "_as_config_error",
    "_bar",
@@ -42031,6 +42073,7 @@
    "test_a_missing_source_file_is_skipped",
    "test_a_missing_workflow_leaves_the_floor_unset",
    "test_a_new_board_fails_the_expected_membership",
+   "test_a_non_string_cpu_gets_a_named_reason",
    "test_a_non_string_icon_is_rejected",
    "test_a_normal_run_passes",
    "test_a_policy_symbol_turned_off_in_the_build_is_a_conflict",
@@ -42044,6 +42087,7 @@
    "test_a_run_at_the_floor_passes",
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
+   "test_a_scalar_apps_flash_does_not_win_the_election",
    "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
@@ -42199,6 +42243,7 @@
    "test_missing_qemu_exits_with_its_own_code",
    "test_n_and_not_set_are_the_same_statement",
    "test_no_board_or_profile_name_appears_as_a_matrix_value",
+   "test_no_board_or_profile_name_appears_in_a_step_body",
    "test_no_capability_resolves_to_no_source",
    "test_no_component_is_declared_at_any_version",
    "test_no_component_is_declared_both_unconditionally_and_per_arch",
@@ -42406,6 +42451,7 @@
    "tmpfs_write",
    "to_write_ptr",
    "tracked_files",
+   "tracked_names",
    "try_bin_dir",
    "type_of",
    "uart_dev_init",
