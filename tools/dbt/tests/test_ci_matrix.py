@@ -264,7 +264,7 @@ def test_adding_riscv_arch_cmake_pulls_both_boards_in(tmp_path):
     assert_matrix_is_derived(workflow_from(CI_YML.read_text(encoding="utf-8")))
 
 
-# --- Criterion 3: an unlisted board reddens the completeness test --------
+# --- Criterion 3: an unlisted board reddens the expected-membership list -
 
 def test_a_new_board_fails_the_expected_membership(tmp_path):
     root = clone(REPO_ROOT, tmp_path / "tree")
@@ -275,7 +275,7 @@ def test_a_new_board_fails_the_expected_membership(tmp_path):
         assert_expected_membership(matrix)
 
 
-def test_a_profile_on_an_unlisted_board_fails_completeness(tmp_path):
+def test_a_profile_on_an_unlisted_board_fails_the_expected_membership(tmp_path):
     root = clone(REPO_ROOT, tmp_path / "tree")
     write_profile(root, "extra", "m5stack-cardputer", ["cat"])
     with pytest.raises(AssertionError):
@@ -425,7 +425,8 @@ def test_a_scalar_apps_flash_does_not_win_the_election(tmp_path):
         yaml.safe_dump({"board": "m5stack-cardputer",
                         "apps_flash": SCALAR_LONG}),
         encoding="utf-8")
-    # One app if read as a name; 60 distinct characters if read as a sequence.
+    # 0 apps once the scalar is rejected; 67 distinct characters if it were
+    # read as a sequence, which would outscore cardputer-contest's 44.
     assert discover(root)["build_profiles"] == ["cardputer-contest",
                                                 "kincony-a16-default",
                                                 "t-embed-default"]

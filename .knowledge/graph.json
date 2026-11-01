@@ -27512,6 +27512,11 @@
   },
   {
    "count": 1,
+   "dst": "EXPECTED",
+   "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
+  },
+  {
+   "count": 1,
    "dst": "Risks",
    "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
   },
@@ -35036,7 +35041,7 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
-   "count": 5,
+   "count": 4,
    "dst": "read",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
@@ -35062,7 +35067,7 @@
   },
   {
    "count": 1,
-   "dst": "test_a_profile_on_an_unlisted_board_fails_completeness",
+   "dst": "test_a_profile_on_an_unlisted_board_fails_the_expected_membership",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
@@ -42077,7 +42082,7 @@
    "test_a_non_string_icon_is_rejected",
    "test_a_normal_run_passes",
    "test_a_policy_symbol_turned_off_in_the_build_is_a_conflict",
-   "test_a_profile_on_an_unlisted_board_fails_completeness",
+   "test_a_profile_on_an_unlisted_board_fails_the_expected_membership",
    "test_a_psram_size_the_board_never_declared_is_reported",
    "test_a_qemu_config_exit_is_reported_as_unavailable",
    "test_a_real_early_exit_is_still_an_assertion_failure",

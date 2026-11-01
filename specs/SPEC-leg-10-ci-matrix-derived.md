@@ -113,8 +113,10 @@ superseded spec marked.
    boards into `kernel_boards` and their profiles into `check_profiles`, with no
    change to `ci.yml`.** This is the criterion that proves the derivation.
 3. A synthetic `boards/<new>/board.yaml` added to a `tmp_path` tree with nothing
-   else updated fails the completeness test — asserted directly, not by
-   expecting a red run.
+   else updated fails the expected-membership assertion (the `EXPECTED` list),
+   while the completeness assertion still holds — completeness is vacuous for a
+   new board, which lands in `kernel_boards` like any other. Asserted directly,
+   not by expecting a red run.
 4. The wiring test fails when a literal board name is injected into a matrix
    value of a copy of `ci.yml` under `tmp_path`.
 5. All 4 `kernel-build` matrix entries green on the branch head. **No entry
