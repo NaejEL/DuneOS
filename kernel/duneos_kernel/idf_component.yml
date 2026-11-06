@@ -20,8 +20,12 @@ dependencies:
   #
   # Floors are the versions the solver actually selected for target esp32 with
   # IDF 6.0.1, not chosen values: 1.0.0 for three of them, 1.0.1 for rtl8201
-  # because that is its lowest published release. No CI job builds an esp32
-  # board, so re-resolve a kincony-A16 configure by hand before widening these.
+  # because that is its lowest published release. Since LEG-10 the kincony-A16
+  # kernel-build job resolves these on every run, against the registry rather
+  # than against dependencies.lock, which pins target esp32s3 and so does not
+  # cover them (docs/backlog.md BL-LOCK-PER-TARGET). Widening a floor is
+  # therefore a live-registry change: re-resolve a kincony-A16 configure and
+  # read the job's resolution, do not assume the lock froze it.
   espressif/lan87xx:
     version: "^1.0.0"
     rules:
