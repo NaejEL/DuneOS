@@ -107,6 +107,11 @@
   },
   {
    "count": 1,
+   "dst": "blob",
+   "src": "CLAUDE.md"
+  },
+  {
+   "count": 1,
    "dst": "build_kernel",
    "src": "CLAUDE.md"
   },
@@ -236,7 +241,7 @@
    "src": "CLAUDE.md"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "gate",
    "src": "CLAUDE.md"
   },
@@ -306,7 +311,7 @@
    "src": "CLAUDE.md"
   },
   {
-   "count": 5,
+   "count": 8,
    "dst": "read",
    "src": "CLAUDE.md"
   },
