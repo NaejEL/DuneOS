@@ -301,6 +301,20 @@ def generate(board: dict) -> str:
                 _define("DUNEOS_SD_CS_PIN",    spi_bus["cs_pin"]),
                 _define("DUNEOS_SD_FREQ_KHZ",  freq_khz),
                 _define("DUNEOS_SD_CD_PIN",    cd_pin),
+            ]
+            # Does anything else sit on the SD's SPI host? On a shared bus the
+            # SD mount OWNS spi_bus_initialize (see the raw-bus block below:
+            # "drv_spi attaches instead of init"), so vfs.c must not free the
+            # bus when the mount fails — an absent card would take the display
+            # and any raw device down with it. Measured on a t-embed 2026-11-11:
+            # no card -> spi_bus_free -> st7789 spi_bus_add_device INVALID_STATE.
+            _sd_spi_id = sd.get("spi_id")
+            _tenants = [b for b in board.get("spi", [])
+                        if b.get("role") == "raw" and b.get("id") == _sd_spi_id]
+            if board.get("display", {}).get("spi_id") == _sd_spi_id:
+                _tenants.append("display")
+            lines += [
+                _define("DUNEOS_SD_BUS_SHARED", 1 if _tenants else 0),
                 "",
             ]
 

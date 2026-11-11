@@ -279,7 +279,15 @@ esp_err_t duneos_vfs_mount_sd(void)
         klog_e(TAG, "SD mount failed: %s", esp_err_to_name(err));
         if (err == ESP_FAIL)
             klog_e(TAG, "Is a FAT-formatted SD card inserted?");
+#if !DUNEOS_SD_BUS_SHARED
+        /* Only when this bus is ours alone. On a shared bus the SD mount owns
+         * spi_bus_initialize and the display and raw devices merely attach
+         * (bspgen: "drv_spi attaches instead of init"), so freeing it here
+         * takes them down over an absent card — a non-fatal condition. The
+         * t-embed showed it as st7789 spi_bus_add_device: ESP_ERR_INVALID_STATE
+         * and a black screen whenever no card was inserted. */
         spi_bus_free(DUNEOS_SD_SPI_HOST);
+#endif
         return err;
     }
 
@@ -436,7 +444,9 @@ esp_err_t duneos_vfs_deinit(void)
 #if DUNEOS_HAS_SD
     if (s_sd_mounted) {
         esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, s_card);
-        spi_bus_free(DUNEOS_SD_SPI_HOST);
+#if !DUNEOS_SD_BUS_SHARED
+        spi_bus_free(DUNEOS_SD_SPI_HOST);   /* see the mount path above */
+#endif
         s_card       = NULL;
         s_sd_mounted = false;
     }

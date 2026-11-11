@@ -180,7 +180,12 @@ int duneos_init_load(duneos_init_config_t *cfg)
      * crash-looping daemon by holding a button at power-on. */
     bool safe = recovery_pin_held();
     if (safe) {
-        klog_w(TAG, "recovery pin held — booting safe mode (%s)",
+        /* E, not W: klog forwards only E to the console (klog.c:102), and the
+         * situation this message describes — a board you are rescuing — is
+         * exactly the one where no shell exists to read the ring back. A
+         * recovery boot the operator cannot see gives no feedback that holding
+         * the pin worked. Validated on a t-embed 2026-11-11. */
+        klog_e(TAG, "recovery pin held — booting safe mode (%s)",
                DUNEOS_INIT_PATH_FLASH_SAFE);
     }
 

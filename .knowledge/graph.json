@@ -20241,7 +20241,7 @@
    "src": "kernel/duneos_kernel/src/init.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "klog_e",
    "src": "kernel/duneos_kernel/src/init.c"
   },
@@ -20251,7 +20251,7 @@
    "src": "kernel/duneos_kernel/src/init.c"
   },
   {
-   "count": 8,
+   "count": 7,
    "dst": "klog_w",
    "src": "kernel/duneos_kernel/src/init.c"
   },
@@ -20296,7 +20296,7 @@
    "src": "kernel/duneos_kernel/src/init.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "read",
    "src": "kernel/duneos_kernel/src/init.c"
   },
@@ -39571,7 +39571,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 83,
+   "count": 84,
    "dst": "_define",
    "src": "tools/duneos-bspgen.py"
   },
@@ -39596,7 +39596,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "free",
    "src": "tools/duneos-bspgen.py"
   },
