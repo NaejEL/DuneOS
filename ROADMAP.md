@@ -385,8 +385,21 @@ Eliminates hardcoded device paths (`/dev/disp0`, `/dev/spi-1`, etc.) in the SDK 
 
 The launcher dropped every non-`INPUT_EV_KEY` event, so the T-Embed rendered a carousel its rotary could not move. Apps now dispatch on nine intents translated in `sdk/input/libinput.c` from the board's own `ioctl(INPUT_GET_TOPOLOGY)` answer — [ADR 042](docs/adr/042-input-intents-in-the-sdk.md). A button declares `intent:` (not `code:`), long-press ships so vocabulary reachability is a board-declaration property, and the on-screen keyboard costs nothing in an app that does not list it. Migrated: launcher, waves, wifi's prompt; `snake`/`tetris` leave the t-embed profile.
 
-- [ ] **Board validation, both boards (LEG-37)**: criteria 18 and 19 of `specs/SPEC-input-portability.md` — rotary direction and one-notch-per-item on the T-Embed, launcher/waves/g_shell unchanged on the CardPuter, and the text entry presenting the vkbd on one board and the line editor on the other. `counts_per_step: 1` and the encoder direction are hardware facts no host test can check.
+Flash/RAM cost (criterion 15), measured against `9df68b5` with `xtensa-esp32s3-elf-size -A`:
+
+| app | lists vkbd? | `.text` | `.rodata`(+`str1.1`) | `.data` | `.bss` | total |
+| --- | --- | --- | --- | --- | --- | --- |
+| launcher | no | +1038 | +80 | 0 | **0** | **+1118** |
+| waves | no | +1016 | +58 | −4 | **0** | **+1070** |
+| wifi | yes | +2018 | +211 | 0 | **+168** | **+2397** |
+
+`.bss` is flat for the two apps that keep their translation state on the stack. wifi's **+168 B** is the file-scope `duneos_input_t s_dev` — `quit()` and the scan-wait loop both need it, and the app declares `heap_size` so it always runs spawned, where BSS sits inside its own slot's bounds. Zero-byte claim: `ui_text_entry.o`'s only undefined symbols are `ui_input_{init,draw,intent}` — no vkbd symbol at all — and launcher's ELF carries 0 vkbd/text-entry symbols against wifi's 8.
+
+- [ ] **Board validation, both boards (LEG-37)**: criteria 18 and 19 of `specs/SPEC-input-portability.md` — rotary direction and one-notch-per-item on the T-Embed, launcher/waves/g_shell unchanged on the CardPuter, and the text entry presenting the vkbd on one board and the line editor on the other. Encoder direction (A/B swap) is a hardware fact no host test can check. `wifi` is in the `t-embed-gfx` profile because it is the only app exercising the vkbd.
+  - **If the rotary skips or loses steps, suspect contact bounce before `counts_per_step`.** There is **no PCNT glitch filter anywhere in the tree** (`pcnt_unit_set_glitch_filter` is never called); the PO's working reference for this board needs 5000 ns. Unfiltered bounce puts spurious counts across the ±8 limit between watch events — each becomes a phantom detent — and `translate_rel`'s reversal-discard then drops real steps too, which reads exactly like "steps impossible to recover". Out of scope for this cycle; named here so nobody spends a day on `counts_per_step` instead.
+  - **`counts_per_step` is in detents, and 1 is correct.** The arch HAL already divides (`hal_encoder.c` watches ±`DETENT_COUNTS`=4 and clears the counter). Raising it makes navigation **slower**, never faster.
 - [ ] **PO call**: the spec's criterion 1 (`KEY_UP`→PREV) and its `ui_wave` pan/zoom assignment together invert waves' arrow roles on the CardPuter, against criterion 18's "waves navigation unchanged". Implemented as the spec says; the bench decides which half moves.
+- [ ] **Follow-up — one place should own the detent ratio.** `hal_encoder.c:28` `#define DETENT_COUNTS 4` sits in arch code no board can override, upstream of and multiplicative with the SDK's `counts_per_step`, so the YAML parameter can only ever divide further: a board whose detent is genuinely 2 raw counts **cannot be expressed at all**. The two backends (PCNT and the GPIO fallback) agree at 4 by coincidence of two independently hardcoded constants, not by design — which defeats this cycle's own goal of one declaration per hardware fact. Make it board-declared (`board.yaml` → bspgen → arch HAL) so one place owns the whole ratio. Spec under-specification, found in verification round 1; deliberately not fixed here.
 
 ---
 
@@ -556,6 +569,48 @@ what forced DUP-05. Adding the writer to the SDK closes that pair.
 `sdk/ui/*` against `gfx.c`, `libdune/src/*` against the kernel VFS, `qemu.py`,
 `tui.py`, `capabilities.py`, `kb_iomatrix.c` against `drv_input.c`, and the
 `/tmp/state/wifi_scan` blob format.
+
+## 4ter. No magic value in kernel or arch code — HIGH PRIORITY (2026-11-11)
+
+**The ADR already exists, twice. What is missing is enforcement.**
+
+ADR 015 states the principle and names the symptom: *"the system pretends to be
+configuration-driven but actually requires code edits at every level"*, and
+promises that adding a display becomes *"one line in board.yaml … zero kernel
+touch, zero app touch"*. ADR 018 goes further, mandates sizing tables from
+`sizeof(descs)/sizeof(descs[0])` — *"no magic ceiling"* — and records that a
+hardcoded value **contradicts ADR 015**.
+
+Three violations were found in a single hardware session on 2026-11-11, and in
+all three the ADR predated the code:
+
+| Violation | Where | Effect |
+| --- | --- | --- |
+| Display geometry describing no real panel | `boards/lilygo-t-embed-cc1101/board.yaml` | 240x280 vs a 320x170 panel. Nothing contradicted it because no graphical app had ever run on that board. |
+| A declared pin nothing drove | same, `pwr_enable_pin` under `lora:`/`rfid:` | bspgen kept the keys only so validation passed; no macro emitted, so the peripheral 3V3 rail stayed off and SD + display + radio ran on leakage. |
+| A hardware constant in arch code | `arch/xtensa_esp32s3/hal/hal_encoder.c:28` `DETENT_COUNTS 4` | Imposes 4 counts per detent on every board of that architecture, upstream of and multiplicative with the board-declared divisor, so a board whose detent is 2 counts cannot be expressed at all. |
+
+A 43rd ADR restating the rule would change nothing: the rule was already there
+and already written twice. **A check would.** bspgen owns the `DUNEOS_*` macro
+vocabulary, so a pin number, a frequency, a count or a geometry literal in
+`kernel/` or `arch/` that does not arrive through a generated macro is
+detectable mechanically.
+
+Owed, each its own cycle:
+
+- **MAGIC-01** — a gate that fails when a hardware literal appears in `kernel/`
+  or `arch/` outside a generated macro. Size M. The hard part is the false-positive
+  rate, not the detection: a check noisy enough to be ignored is worse than none.
+- **MAGIC-02** — make `DETENT_COUNTS` board-declared (`board.yaml` → bspgen →
+  arch HAL) so one place owns the whole encoder ratio. Size S.
+- **MAGIC-03** — no PCNT glitch filter exists anywhere in the tree
+  (`pcnt_unit_set_glitch_filter` appears nowhere). A known-good firmware for the
+  t-embed needs 5000 ns; unfiltered contact bounce produces phantom detents the
+  accumulator turns into phantom intents, and is invisible to every host test.
+  Board-declared, size S.
+- **MAGIC-04** — `MAX_APPS 32` in `apps/user/launcher/launcher.c` caps the app
+  list with no justification recorded and no report when it is hit: a launcher
+  that hides applications silently. Size XS.
 
 ## 5. Technical debt — the 2026-09 legacy audit
 

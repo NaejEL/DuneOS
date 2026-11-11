@@ -7,11 +7,8 @@
  * ui_input_t line editor; on a board without one it is the on-screen keyboard.
  * The app writes one flow and gets the right one.
  *
- * The vkbd is reached ONLY through the backend the app passes in. There is no
- * weak symbol and no registry, so an app that does not list $SDK/ui/ui_vkbd.c
- * and $SDK/ui/ui_vkbd_draw.c in its sources links zero bytes of keyboard code —
- * which matters because app code shares a 64 KiB exec pool and a board with a
- * physical keyboard would otherwise pay for one it cannot use.
+ * The vkbd is reached only through the backend the app passes in — see the
+ * zero-cost note in <duneos/ui_vkbd.h>.
  *
  *   ui_vkbd_backend()   an app that wants the fallback passes this
  *   NULL                an app that does not: the line editor on every board

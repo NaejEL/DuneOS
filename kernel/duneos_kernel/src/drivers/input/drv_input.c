@@ -9,6 +9,7 @@
 #include "duneos/dev_driver.h"
 #include "duneos/driver_init.h"
 #include "duneos/input_ioctl.h"
+#include "duneos/hal_time.h"
 #include "duneos/klog.h"
 #include "drv_input_priv.h"
 #include "board_config.h"
@@ -37,13 +38,24 @@ static SemaphoreHandle_t s_data_sem;
 
 static const duneos_dev_driver_t s_drv_input;   /* fwd ref for select notify */
 
+/* Both userspace producers inject time_ms = 0 (btn_gpio.c, kb_iomatrix.c): a
+ * daemon has no cheap monotonic clock and the ring is the one place every event
+ * passes through. Stamping here is what makes long-press resolvable at all —
+ * sdk/input resolves short vs long from the press/release interval, and a
+ * constant 0 made that interval permanently 0. An event that already carries a
+ * timestamp (enc_quadrature, from the PCNT ISR) keeps its own. Done outside the
+ * critical section so no HAL call runs inside it. */
 void drv_input_push_event(const input_event_t *ev)
 {
+    input_event_t stamped = *ev;
+    if (stamped.time_ms == 0)
+        stamped.time_ms = (uint32_t)(duneos_hal_monotonic_us() / 1000);
+
     portENTER_CRITICAL(&s_mux);
     bool was_empty = (s_head == s_tail);
     int next = (s_head + 1) % INPUT_RING_SIZE;
     if (next != s_tail) {
-        s_ring[s_head] = *ev;
+        s_ring[s_head] = stamped;
         s_head = next;
     }
     portEXIT_CRITICAL(&s_mux);

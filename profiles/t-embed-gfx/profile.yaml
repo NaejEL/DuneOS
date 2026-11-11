@@ -27,6 +27,13 @@ apps_flash:
 # with a warning rather than be dropped from the image — see docs/backlog.md.
 - gfx_demo
 - waves
+# wifi is here for criterion 19: it is the app whose passphrase prompt goes
+# through the text-entry entry point, so it is the only way to see the on-screen
+# keyboard presented on a board with no physical keys. wifi_daemon ships with it
+# but is NOT auto-started (same reason as the CardPuter contest profile: the
+# WiFi runtime costs ~40-50 KiB DRAM); the app starts it on demand.
+- wifi
+- wifi_daemon
 # a few coreutils so the image is useful if a shell ever lands
 - ls
 - cat

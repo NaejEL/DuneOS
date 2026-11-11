@@ -225,6 +225,15 @@ it; the ioctl is the carrier). Migrating the remaining 8 raw readers.
   4-counts-per-notch detent cannot be derived from YAML; a wrong
   counts-per-step makes navigation feel broken while every host test passes.
   Criterion 18 is the only check.
+  **Correction, verification round 1:** this paragraph's unit is wrong, and the
+  wording misled the build. The arch HAL already divides — `hal_encoder.c`
+  watches ±`DETENT_COUNTS` (4) and clears the counter in the callback, so one
+  notch reaches the app as a single `REL_WHEEL` of ±1. `counts_per_step` is
+  therefore in **detents**, items-per-detent is `1 / counts_per_step`, and the
+  shipped value is **1**. Raising it to "match a 2- or 4-count detent" makes
+  navigation 2× or 4× slower, not faster. The raw-count half of the ratio is not
+  expressible in YAML at all, because `DETENT_COUNTS` is hardcoded in arch code
+  no board can override — recorded as a ROADMAP item, out of scope here.
 - **`code:` → `intent:` is a breaking board-schema change.** Only two boards
   declare buttons, but bspgen must reject the old spelling with a named error
   rather than silently emitting nothing.

@@ -41,6 +41,12 @@ INTENT_TO_KEY = {
 BUTTON_INTENTS = frozenset(INTENT_TO_KEY)
 
 # A rotary axis drives one pair. `alt` is the second axis ui_wave zooms with.
+#
+# counts_per_step is in the unit the axis EMITS, which for a rotary is detents:
+# the arch HAL watches +/-DETENT_COUNTS and clears, so one notch arrives as a
+# single REL_WHEEL of +/-1. Items-per-detent is therefore 1 / counts_per_step —
+# raising it slows navigation down. See the ROADMAP item on making DETENT_COUNTS
+# board-declared; until then the raw-count half of the ratio is not expressible.
 AXIS_INTENTS = {
     "primary": ("PREV", "NEXT"),
     "alt":     ("ALT_PREV", "ALT_NEXT"),

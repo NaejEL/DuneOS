@@ -8,10 +8,7 @@ heap_size: 8192
 capabilities:
   - display
 sources:
-  # The translation core and its fd wrapper, listed explicitly rather than
-  # pulled by a capability: `capabilities: [input]` already means the producer
-  # side (the kb/btn pin defines for the scanning daemons), and listing the
-  # sources is what keeps each app paying only for what it uses.
+  # Listed explicitly, not pulled by a capability — see tools/dbt/capabilities.py.
   - $SDK/input/libinput.c
   - $SDK/input/libinput_fd.c
   - $SDK/ui/ui.c

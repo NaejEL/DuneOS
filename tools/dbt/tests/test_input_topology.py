@@ -261,10 +261,15 @@ def test_every_tracked_board_generates(path):
     BSPGEN.generate(flatten(path))
 
 
-def test_exactly_the_two_expected_boards_declare_buttons():
+def test_only_the_t_embed_declares_a_buttons_list():
+    """One board, not two. The spec says "only two boards declare buttons", but
+    the CardPuter declares `keyboard_matrix:` — it has no `buttons:` entry at
+    all, so exactly one board's buttons carry an `intent:`.
+
+    If this grows, the new board's buttons need `intent:` and its reachability
+    needs looking at; failing here is what makes that a decision.
+    """
     with_buttons = [p for p in tracked_board_yamls() if flatten(p).get("buttons")]
-    # If this grows, the new board's buttons need `intent:` and its reachability
-    # needs looking at — the point of failing here is to make that a decision.
     assert len(with_buttons) == 1, with_buttons
     assert "lilygo-t-embed-cc1101" in with_buttons[0]
 
@@ -384,3 +389,40 @@ def test_the_batch_clamp_matches_the_c_header():
     m = re.search(r"#define\s+INPUT_INTENT_BATCH_MAX\s+(\d+)", text)
     assert m, "INPUT_INTENT_BATCH_MAX is gone from input_ioctl.h"
     assert int(m.group(1)) == BATCH_CLAMP
+
+
+# --- The long-press mechanism needs a real clock on the event ---------------
+#
+# The host suite for the translation core fabricates time_ms, which is correct
+# (LEG-38: construct what you assert against) and is exactly why it cannot see
+# a producer that never sets one. Both userspace producers inject time_ms = 0,
+# so unless the ring stamps it, every press/release interval is 0 and a button
+# declaring intent_long can only ever yield its short intent. That is a dead
+# mechanism whose reachability we would still be crediting.
+
+DRV_INPUT_C = (REPO_ROOT / "kernel" / "duneos_kernel" / "src" / "drivers"
+               / "input" / "drv_input.c")
+
+
+def test_the_ring_stamps_a_missing_timestamp():
+    src = DRV_INPUT_C.read_text(encoding="utf-8")
+    push = src.split("void drv_input_push_event", 1)[1].split("\n}", 1)[0]
+    assert "time_ms == 0" in push, \
+        "drv_input_push_event no longer detects an unstamped event"
+    assert "duneos_hal_monotonic_us" in push, \
+        "drv_input_push_event no longer stamps time_ms from the monotonic clock"
+    # It must not overwrite a timestamp the producer did set: enc_quadrature
+    # stamps from the PCNT ISR and that value is the accurate one.
+    assert "stamped.time_ms = " in push and push.count("stamped.time_ms") == 2
+
+
+@pytest.mark.parametrize("producer", [
+    "apps/system/btn_gpio/btn_gpio.c",
+    "apps/system/kb_iomatrix/kb_iomatrix.c",
+])
+def test_a_producer_injecting_zero_relies_on_that_stamp(producer):
+    """Both inject `.time_ms = 0`. This records the dependency, so removing the
+    stamp above breaks a test that names the reason rather than silently
+    disabling long-press on every board."""
+    src = (REPO_ROOT / producer).read_text(encoding="utf-8")
+    assert ".time_ms = 0" in src

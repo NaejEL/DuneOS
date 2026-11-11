@@ -131,7 +131,11 @@ typedef struct {
     uint16_t code;             /* REL_*                                      */
     uint8_t  intent_neg;       /* intent for a negative delta                */
     uint8_t  intent_pos;
-    uint16_t counts_per_step;  /* counts the axis must accumulate per intent */
+    /* Axis steps per intent, in whatever unit the axis already emits — for a
+     * rotary that is DETENTS, because the HAL divides raw quadrature counts
+     * down to one REL_WHEEL per notch. 1 = one intent per notch; higher is
+     * slower, not faster. */
+    uint16_t counts_per_step;
 } input_axis_map_t;
 
 /* Flat POD, copied out by ioctl. An all-zero topology (n_keys == n_axes == 0,

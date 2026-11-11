@@ -13,13 +13,17 @@
  * ---------------------------------------------------------------------------
  * LIMITATION — this layer is opt-in, and most of the tree has not opted in.
  *
- * Ten apps still open /dev/input/event0 and switch on KEY_* codes directly.
- * They are unchanged and they are KEYBOARD-ONLY: on a board whose only input
- * is a rotary they receive INPUT_EV_REL events they do not read, and appear
- * frozen. That is a known half-migration, not a bug to rediscover. An app
- * becomes portable by reading intents through this header; nothing else makes
- * it portable, and no kernel change will (drv_input stays evdev-faithful, ADR
- * 019, so the raw rotary delta ui_wave needs survives).
+ * SIX apps still open /dev/input/event0 and switch on KEY_* codes directly:
+ * bin/input, drview, files, g_shell, i2cscope, radar. (Nine did before this
+ * cycle; launcher, waves and wifi were migrated. btn_gpio and kb_iomatrix also
+ * open the device but only to inject — they are producers, not readers.)
+ *
+ * Those six are unchanged and they are KEYBOARD-ONLY: on a board whose only
+ * input is a rotary they receive INPUT_EV_REL events they do not read, and
+ * appear frozen. That is a known half-migration, not a bug to rediscover. An
+ * app becomes portable by reading intents through this header; nothing else
+ * makes it portable, and no kernel change will (drv_input stays evdev-faithful,
+ * ADR 019, so the raw rotary delta ui_wave needs survives).
  *
  * 2-D continuous control — snake, tetris, sdk/game — is NOT expressible as
  * intents and is not meant to be. Those keep raw codes by design.
