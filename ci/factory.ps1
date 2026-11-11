@@ -52,8 +52,11 @@ Write-Host "Log     : $logFile"
 
 $env:CLAUDE_CODE_DISABLE_BACKGROUND_TASKS = '1'
 $env:CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS = '0'
-& claude @claudeArgs | Tee-Object -FilePath $logFile
+# 'Continue': under 'Stop', Windows PowerShell 5.1 turns each redirected stderr line into a terminating error.
+$ErrorActionPreference = 'Continue'
+& claude @claudeArgs 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $logFile
 $status = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
 
 Write-Host "claude exit: exit code $status"
 exit $status

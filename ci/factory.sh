@@ -69,7 +69,7 @@ echo "Mode    : $([ "$yolo" -eq 1 ] && echo 'YOLO (permissions ignored)' || echo
 echo "Log     : $log_file"
 
 set +e
-"${cmd[@]}" | tee "$log_file"
+"${cmd[@]}" 2>&1 | tee "$log_file"
 status="${PIPESTATUS[0]}"
 set -e
 

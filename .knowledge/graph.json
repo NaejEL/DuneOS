@@ -10402,6 +10402,11 @@
   },
   {
    "count": 1,
+   "dst": "stderr",
+   "src": "ci/factory.ps1"
+  },
+  {
+   "count": 1,
    "dst": "missing",
    "src": "ci/factory.sh"
   },
