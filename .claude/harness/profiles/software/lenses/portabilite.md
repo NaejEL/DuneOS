@@ -1,0 +1,1 @@
+- **(b) `portabilite`** (`PORT-`) — absolute paths "works on my machine", hard-coded environment config, unpinned / outdated / vulnerable dependencies, scripts not portable across Windows/Unix, missing CI, non-reproducible build;

@@ -156,7 +156,7 @@
 {"lang": "yaml", "lines": 40, "path": "boards/esp32s3-qemu/board.yaml", "sha256": "ada3bf67c1dd4c35d07355814cd77d6c515e13af8c1ae85b7702bb2f4b21a7db", "size": 1435}
 {"lang": "yaml", "lines": 53, "path": "boards/kincony-A16/board.yaml", "sha256": "c07ce7f883ebcd49632e91b84019c57c37254f52e1fdd305ac13db8b828620d4", "size": 1025}
 {"lang": "yaml", "lines": 5, "path": "boards/kincony-A16/init.yaml", "sha256": "68296d7fee15f1ed9ecf16e36751b1b95e549d9b2dfdf754c146669e829553ab", "size": 155}
-{"lang": "yaml", "lines": 122, "path": "boards/lilygo-t-embed-cc1101/board.yaml", "sha256": "7a1c33044fb8aa85cad45748d9f4c845ed69c085843b4c0611d4a18e533e2ceb", "size": 2965}
+{"lang": "yaml", "lines": 124, "path": "boards/lilygo-t-embed-cc1101/board.yaml", "sha256": "d76eb59a5ffc105e3b38ffc7689ac2a1a84d78e4b556571c8fa40ff7c45e8aad", "size": 3072}
 {"lang": "yaml", "lines": 9, "path": "boards/lilygo-t-embed-cc1101/init.yaml", "sha256": "e4a2a2905c49ab033cb9ca135f3b133963ab90e8808107abbca0d9da81530e5b", "size": 263}
 {"lang": "yaml", "lines": 173, "path": "boards/m5stack-cardputer/board.yaml", "sha256": "8f3e828f454599f2a5618094e95f7e3345e6fd6a72a977766f65f8358554f3a7", "size": 7064}
 {"lang": "yaml", "lines": 14, "path": "boards/m5stack-cardputer/etc/kb_iomatrix/config.yaml", "sha256": "b835ae96d22dc76f27623128a12245dbb6998e63e96732a6549a549127c56b32", "size": 735}
@@ -166,8 +166,8 @@
 {"lang": "other", "lines": 5, "path": "boards/m5stack-cardputer/etc/wifi/known.yaml.example", "sha256": "9586320188a4cbe78903bd8d613a22a62e5e77269e16bf59ac7ea25172a3eec5", "size": 200}
 {"lang": "other", "lines": 8, "path": "boards/m5stack-cardputer/etc/wifi_daemon/config.yaml.example", "sha256": "1571834e8404c64cfa0daadc8d3f2b37ac7ca04b3258af370364be30e7c2da9b", "size": 342}
 {"lang": "yaml", "lines": 11, "path": "boards/m5stack-cardputer/init.yaml", "sha256": "a7298799d34776858b2dfc653e8cd8fc8e0ae22f6fba7a07fa6adb473284580c", "size": 303}
-{"lang": "powershell", "lines": 44, "path": "ci/factory.ps1", "sha256": "75081559f6e7bfaa144aa7dd9792b921391e2ba647806c4c6a31172842adc47b", "size": 1517}
-{"lang": "shell", "lines": 56, "path": "ci/factory.sh", "sha256": "4c51e9eedef72e4cb8f2f3e7e63d6a7646fd9f2074ca1f5f14c6e81df1580fc8", "size": 1585}
+{"lang": "powershell", "lines": 60, "path": "ci/factory.ps1", "sha256": "e0b2a6168de38e5c7dbc8824f1a56bcb9ef8defac872c9125fc9193852b383cf", "size": 2066}
+{"lang": "shell", "lines": 78, "path": "ci/factory.sh", "sha256": "e9c071acf4645a3a4947b9673f401464991f1b52067dad13539aba401f14f606", "size": 2482}
 {"lang": "python", "lines": 215, "path": "conftest.py", "sha256": "4afa71520d3162398668b3bc801811840c0d900c721f86e7c7dd5bffc3de0e14", "size": 7746}
 {"lang": "markdown", "lines": 52, "path": "docs/adr/000-process.md", "sha256": "ff77b8f41a05661d24a118c2516147325675f3dfd374feb31ec8a928d33d1357", "size": 2858}
 {"lang": "markdown", "lines": 34, "path": "docs/adr/001-error-model.md", "sha256": "646650ba0283136c280fc6ab0e75e500700973b89cde1690fad63afffe2cc5d3", "size": 3701}

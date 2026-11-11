@@ -1,0 +1,790 @@
+{
+  "name": "software",
+  "schema_version": 1,
+  "fallback": true,
+  "fragments": {
+    "orchestrator": "orchestrator.md",
+    "install": "install.md",
+    "scout": "scout.md",
+    "orchestrator_body": "bodies/orchestrator.md"
+  },
+  "roles": [
+    {
+      "name": "factory-planner",
+      "mission": "roles/factory-planner.md",
+      "read_only": true,
+      "tools": "Read, Glob, Grep",
+      "model_role": "factory.planner",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/factory-planner.md",
+      "description": "Analyzes a need and the existing code to draft a specification with testable acceptance criteria and open questions. Read-only.",
+      "body": "bodies/factory-planner.md"
+    },
+    {
+      "name": "factory-builder",
+      "mission": "roles/factory-builder.md",
+      "read_only": false,
+      "tools": null,
+      "model_role": "factory.builder",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/factory-builder.md",
+      "description": "Strictly implements an approved specification — architecture, code and tests in a single context — then runs build and tests before handing back.",
+      "body": "bodies/factory-builder.md"
+    },
+    {
+      "name": "factory-verifier",
+      "mission": "roles/factory-verifier.md",
+      "read_only": true,
+      "tools": "Read, Glob, Grep, Bash",
+      "model_role": "factory.verifier",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/factory-verifier.md",
+      "description": "Adversarial verification of an implementation against its spec — runs the tests, tries to break it, returns a strict JSON verdict. Never modifies the code.",
+      "body": "bodies/factory-verifier.md"
+    }
+  ],
+  "model_roles": [
+    "factory.planner",
+    "factory.builder",
+    "factory.verifier"
+  ],
+  "model_presets": {},
+  "loop": {
+    "max_iterations": 3,
+    "entry_role": "builder",
+    "phases": [
+      {
+        "kind": "plan",
+        "agent": "factory-planner"
+      },
+      {
+        "kind": "gate",
+        "ids": [
+          "factory-run.questions",
+          "factory-run.approval"
+        ]
+      },
+      {
+        "kind": "build",
+        "agent": "factory-builder"
+      },
+      {
+        "kind": "verify",
+        "agent": "factory-verifier"
+      },
+      {
+        "kind": "record"
+      }
+    ]
+  },
+  "artefacts": [
+    {
+      "kind": "spec",
+      "dir": "specs",
+      "glob": "SPEC-*.md",
+      "status_proposed": "Status: PROPOSED",
+      "status_ready": "Status: APPROVED",
+      "status_blocked": "Status: BLOCKED",
+      "status_delivered": "Status: DELIVERED",
+      "status_legacy": {"proposed": "Statut : PROPOSEE", "ready": "Statut : APPROUVEE", "blocked": "Statut : BLOQUEE", "delivered": "Statut : LIVREE"},
+      "status_done": null
+    }
+  ],
+  "verifier": {
+    "required_true": [
+      "tests_passed"
+    ],
+    "issue_kinds": []
+  },
+  "deterministic_checks": [
+    "vulnerabilities",
+    "secrets"
+  ],
+  "settings": {
+    "deny_by_stack": {
+      "node": [
+        "Read(./node_modules/**)",
+        "Read(./dist/**)"
+      ],
+      "dotnet": [
+        "Read(./**/bin/**)",
+        "Read(./**/obj/**)"
+      ],
+      "python": [
+        "Read(./.venv/**)",
+        "Read(./**/__pycache__/**)",
+        "Read(./.pytest_cache/**)"
+      ],
+      "cpp": [
+        "Read(./build/**)"
+      ],
+      "rust": [
+        "Read(./target/**)"
+      ]
+    },
+    "deny_generic": [
+      "Read(./factory-logs/**)",
+      "Read(./.git/objects/**)"
+    ],
+    "deny_if_present": {
+      "dirs": [],
+      "suffixes": [],
+      "cache": false
+    }
+  },
+  "gitignore": [
+    "factory-logs/",
+    ".harness/runs/",
+    ".harness/tmp/"
+  ],
+  "tasks": {
+    "inputs": [
+      {
+        "id": "factorySpec",
+        "type": "promptString",
+        "description": "Path of the approved spec (specs/SPEC-*.md)"
+      }
+    ],
+    "tasks": [
+      {
+        "label": "Factory: CI run",
+        "type": "shell",
+        "command": "./ci/factory.sh ${input:factorySpec}",
+        "windows": {
+          "command": "pwsh -File ci/factory.ps1 ${input:factorySpec}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Factory: CI run (YOLO)",
+        "type": "shell",
+        "command": "./ci/factory.sh ${input:factorySpec} --yolo",
+        "windows": {
+          "command": "pwsh -File ci/factory.ps1 ${input:factorySpec} -Yolo"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Factory: nouvelle spec (session)",
+        "type": "shell",
+        "command": "echo 'Open Claude Code and type: /factory-run \"<your need>\"'",
+        "problemMatcher": []
+      }
+    ]
+  },
+  "ci": {
+    "script": "factory",
+    "command": "/factory-run",
+    "max_turns": 100,
+    "status_line": "Status: APPROVED",
+    "logs_dir": "factory-logs"
+  },
+  "orchestrator": {
+    "name": "factory-run",
+    "alias_of": null,
+    "description": "Runs one cycle of the software factory (Planner → human gate on the spec → Builder → Verifier with a fix loop) on a need or an approved spec.",
+    "argument_hint": "<need | spec path> [--models \"role=modele;...\"] [--autonomy gate|auto] [--ship <cible> | --no-ship] [--worktree]"
+  },
+  "gate_namespaces": [],
+  "gates": [
+    {
+      "id": "audit.software.framing",
+      "source": "audit:framing",
+      "kind": "b",
+      "options": "2 / 3 / 4 ; risk first / quick wins / foundations / proposed order",
+      "default": "3 / risk first",
+      "rationale": "computed by PZ-01 and PZ-02: make it reliable first, milestones computed (roadmap 4.2)",
+      "headless": "stop"
+    },
+    {
+      "id": "audit.software.order",
+      "source": "audit:order",
+      "kind": "b",
+      "options": "Severity first / Quick wins / Everything that blocks / Keep the order ; Detail them / List them in one line / Omit them",
+      "default": "Severity first / Detail them",
+      "rationale": "marked default in the attack order; detailing loses nothing",
+      "headless": "default"
+    },
+    {
+      "id": "audit.software.assignment",
+      "source": "audit:assignment",
+      "kind": "b",
+      "options": "Milestone 1 / Milestone 2 / Last milestone / Exclude from roadmap",
+      "default": "PZ-02 computation",
+      "rationale": "milestones computed by PZ-02 from the severity, nothing is excluded",
+      "headless": "stop",
+      "free": true,
+      "repeat": 4
+    }
+  ],
+  "journal_names": [
+    "software-factory",
+    "factory-run"
+  ],
+  "lens_sets": [
+    {
+      "name": "legacy",
+      "lenses": [
+        "hygiene",
+        "portabilite",
+        "qualite",
+        "filet"
+      ],
+      "plan": "roadmap",
+      "deliverable_section": "roadmap",
+      "spec_prefix": "leg",
+      "cap_option": "--max-specs",
+      "cap": 25,
+      "cap_default": 15,
+      "statuses": [
+        "A_FAIRE",
+        "EN_COURS",
+        "FAIT",
+        "REPORTE"
+      ],
+      "gates": [
+        "audit.software.framing",
+        "audit.software.assignment"
+      ],
+      "fragment": "lenses/_legacy-phase.md",
+      "map_fragment": "lenses/_legacy-map.md"
+    },
+    {
+      "name": "vibecode",
+      "lenses": [
+        "acces",
+        "injection",
+        "metier",
+        "maintenabilite",
+        "evolutivite"
+      ],
+      "plan": "attack",
+      "deliverable_section": "attack",
+      "spec_prefix": null,
+      "cap_option": "--max-findings",
+      "cap": 30,
+      "cap_default": 15,
+      "statuses": [
+        "A_FAIRE",
+        "EN_COURS",
+        "FAIT",
+        "REPORTE"
+      ],
+      "gates": [
+        "audit.software.order",
+        "audit.drop-security"
+      ],
+      "fragment": "lenses/_vibecode-phase.md",
+      "map_fragment": "lenses/_vibecode-map.md",
+      "intro_fragment": "lenses/_vibecode-intro.md"
+    }
+  ],
+  "lenses": [
+    {
+      "name": "hygiene",
+      "prefix": "HYG",
+      "set": "legacy",
+      "fragment": "lenses/hygiene.md",
+      "debt": "accumulation",
+      "shape": "occurrence",
+      "ordering": "severity_size",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_legacy-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": false,
+      "dedup_key": "file-line-category",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction"
+      ],
+      "deliverable": {
+        "section": "roadmap",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      },
+      "git_prefinding": true
+    },
+    {
+      "name": "portabilite",
+      "prefix": "PORT",
+      "set": "legacy",
+      "fragment": "lenses/portabilite.md",
+      "debt": "accumulation",
+      "shape": "occurrence",
+      "ordering": "severity_size",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_legacy-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": false,
+      "dedup_key": "file-line-category",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction"
+      ],
+      "deliverable": {
+        "section": "roadmap",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "qualite",
+      "prefix": "QUAL",
+      "set": "legacy",
+      "fragment": "lenses/qualite.md",
+      "debt": "accumulation",
+      "shape": "occurrence",
+      "ordering": "severity_size",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_legacy-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": false,
+      "dedup_key": "file-line-category",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction"
+      ],
+      "deliverable": {
+        "section": "roadmap",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "filet",
+      "prefix": "FIL",
+      "set": "legacy",
+      "fragment": "lenses/filet.md",
+      "debt": "accumulation",
+      "shape": "occurrence",
+      "ordering": "severity_size",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_legacy-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": false,
+      "dedup_key": "file-line-category",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction"
+      ],
+      "deliverable": {
+        "section": "roadmap",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "acces",
+      "prefix": "ACC",
+      "set": "vibecode",
+      "fragment": "lenses/acces.md",
+      "debt": "generation",
+      "shape": "pattern",
+      "ordering": "critical_first",
+      "axis": "securite",
+      "axis_rank": 1,
+      "unauditable": "finding",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_vibecode-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": true,
+      "dedup_key": "pattern",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [
+        "trust_map"
+      ],
+      "validator_fields": [
+        "severity_correction",
+        "axis_correction",
+        "difficulty_correction"
+      ],
+      "deliverable": {
+        "section": "attack",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "injection",
+      "prefix": "INJ",
+      "set": "vibecode",
+      "fragment": "lenses/injection.md",
+      "debt": "generation",
+      "shape": "pattern",
+      "ordering": "critical_first",
+      "axis": "securite",
+      "axis_rank": 1,
+      "unauditable": "finding",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_vibecode-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": true,
+      "dedup_key": "pattern",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [
+        "trust_map"
+      ],
+      "validator_fields": [
+        "severity_correction",
+        "axis_correction",
+        "difficulty_correction"
+      ],
+      "deliverable": {
+        "section": "attack",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "metier",
+      "prefix": "MET",
+      "set": "vibecode",
+      "fragment": "lenses/metier.md",
+      "debt": "generation",
+      "shape": "pattern",
+      "ordering": "critical_first",
+      "axis": "securite",
+      "axis_rank": 1,
+      "unauditable": "finding",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_vibecode-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": true,
+      "dedup_key": "pattern",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [
+        "trust_map"
+      ],
+      "validator_fields": [
+        "severity_correction",
+        "axis_correction",
+        "difficulty_correction"
+      ],
+      "deliverable": {
+        "section": "attack",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "maintenabilite",
+      "prefix": "MNT",
+      "set": "vibecode",
+      "fragment": "lenses/maintenabilite.md",
+      "debt": "generation",
+      "shape": "pattern",
+      "ordering": "critical_first",
+      "axis": "maintenabilite",
+      "axis_rank": 2,
+      "unauditable": "finding",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_vibecode-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": true,
+      "dedup_key": "pattern",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [
+        "reimpl_pairs"
+      ],
+      "validator_fields": [
+        "severity_correction",
+        "axis_correction",
+        "difficulty_correction"
+      ],
+      "deliverable": {
+        "section": "attack",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    },
+    {
+      "name": "evolutivite",
+      "prefix": "EVO",
+      "set": "vibecode",
+      "fragment": "lenses/evolutivite.md",
+      "debt": "generation",
+      "shape": "pattern",
+      "ordering": "critical_first",
+      "axis": "evolutivite",
+      "axis_rank": 3,
+      "unauditable": "finding",
+      "no_run": false,
+      "no_protocol": false,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction"
+      ],
+      "size_scale": "dev",
+      "critical_definition": "lenses/_vibecode-phase.md",
+      "subagent_type": null,
+      "model_role": "audit.auditor",
+      "stack_agnostic": true,
+      "dedup_key": "pattern",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "structural"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "severity_correction",
+        "axis_correction",
+        "difficulty_correction"
+      ],
+      "deliverable": {
+        "section": "attack",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE"
+        ]
+      }
+    }
+  ],
+  "detection": {
+    "accept": 3,
+    "reject": 2,
+    "criteria": [
+      {
+        "id": "manifest-node",
+        "kind": "glob",
+        "weight": 2,
+        "pattern": "package.json"
+      },
+      {
+        "id": "manifest-dotnet",
+        "kind": "glob",
+        "weight": 2,
+        "pattern": "*.csproj"
+      },
+      {
+        "id": "manifest-go",
+        "kind": "glob",
+        "weight": 2,
+        "pattern": "go.mod"
+      },
+      {
+        "id": "manifest-rust",
+        "kind": "glob",
+        "weight": 2,
+        "pattern": "Cargo.toml"
+      },
+      {
+        "id": "manifest-python-package",
+        "kind": "content",
+        "weight": 2,
+        "glob": "pyproject.toml",
+        "regex": "^\\[project\\]"
+      },
+      {
+        "id": "sources",
+        "kind": "dir",
+        "weight": 1,
+        "path": "src"
+      },
+      {
+        "id": "tests",
+        "kind": "dir",
+        "weight": 1,
+        "path": "test"
+      },
+      {
+        "id": "tests-plural",
+        "kind": "dir",
+        "weight": 1,
+        "path": "tests"
+      },
+      {
+        "id": "ci",
+        "kind": "glob",
+        "weight": 1,
+        "pattern": ".github/workflows/*.yml"
+      },
+      {
+        "id": "software-package",
+        "kind": "judgement",
+        "weight": 2,
+        "question": "Does the project contain a real, deliverable software package, distinct from a research corpus?"
+      }
+    ]
+  },
+  "audit_sections": [
+    "roadmap",
+    "attack",
+    "detail"
+  ],
+  "params": [
+    {
+      "name": "stacks",
+      "source": "detected",
+      "required": false
+    },
+    {
+      "name": "interpreter",
+      "source": "detected",
+      "required": true
+    },
+    {
+      "name": "build_command",
+      "source": "judgement",
+      "required": false
+    },
+    {
+      "name": "test_command",
+      "source": "judgement",
+      "required": false
+    },
+    {
+      "name": "lint_command",
+      "source": "judgement",
+      "required": false
+    },
+    {
+      "name": "conventions",
+      "source": "judgement",
+      "required": false
+    },
+    {
+      "name": "extra_tools",
+      "source": "judgement",
+      "required": false
+    }
+  ]
+}

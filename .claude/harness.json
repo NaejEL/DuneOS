@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "autonomy": "auto",
+  "profiles": [
+    {
+      "name": "software",
+      "added": "2026-11-11",
+      "by": "scout"
+    }
+  ],
+  "skills": {
+    "software-factory": {
+      "repo_commit": "9d5459f374b92c1fa7a13dc28ec8f60a9551e501",
+      "repo_describe": "2.1.1",
+      "repo_dirty": false,
+      "core_version": "4.0.1",
+      "installed_at": "2026-11-11T17:40:21+01:00",
+      "updated_at": "2026-11-11T18:18:10+01:00",
+      "options": {
+        "stacks": [
+          "cpp"
+        ],
+        "interpreter": "python3",
+        "ci": [
+          "ci/factory.ps1",
+          "ci/factory.sh"
+        ],
+        "code_index_offered": false
+      },
+      "params": {
+        "build_command": "idf.py build for the kernel, HAL and main (must pass with no new warning); python tools/dbt.py buildall for the .dap apps, libdune and sdk — on Windows run both from PowerShell, never Bash (MSYS breaks ESP-IDF's export.bat)",
+        "test_command": "python -m pytest tools/dbt/tests -q for the Python tooling (create tools/dbt/tests/ on the first spec touching Python); for C, a clean idf.py build plus the checks named in the acceptance criteria, or a host gcc test for pure logic with no ESP-IDF dependency",
+        "conventions": "read `CLAUDE.md` first (Hard-Won Lessons, Key Technical Decisions) and `docs/adr/`; kernel in C17, no C++, error convention `int` 0 / -errno (ADR 001); never hand-edit bspgen-generated files; any exported-symbol or ABI struct change bumps `DUNEOS_ABI_VERSION` in `abi.h`",
+        "extra_tools": [
+          "PowerShell(git *)",
+          "PowerShell(python *)",
+          "PowerShell(idf.py *)"
+        ]
+      },
+      "files": {
+        ".claude/agents/factory-builder.md": {
+          "kind": "generated",
+          "blocks": {
+            "harness.frontmatter": "dc261bad17088746c4a6d165887a26ea0530177818402dfdc0436c7b562417a9",
+            "harness.body": "83b96bcc901e04cec3323c0c0e046326a60a57fd7d7eb3269f7807ee8ef74bf9"
+          }
+        },
+        ".claude/agents/factory-planner.md": {
+          "kind": "generated",
+          "blocks": {
+            "harness.frontmatter": "394fe43da821f742590bcae9ba67ae2f3328bbfd8f163829ebee20026b21d583",
+            "harness.body": "b8bf4ae47f95820360a429cb7c9530cc909f718bec5ad48391ab2d6276226a5c"
+          }
+        },
+        ".claude/agents/factory-verifier.md": {
+          "kind": "generated",
+          "blocks": {
+            "harness.frontmatter": "7860fa8debc79e38ce6c28eea97fd622010ecc2e03d0e806c29a446d87cec728",
+            "harness.body": "ed26942c7b15b187266893e4f1c54d93f36fd5e9df93756fe880c64b3b56b854"
+          }
+        },
+        ".claude/harness/MANIFEST.json": {
+          "kind": "copied"
+        },
+        ".claude/settings.json": {
+          "kind": "merged"
+        },
+        ".claude/skills/factory-run/SKILL.md": {
+          "kind": "generated",
+          "blocks": {
+            "harness.frontmatter": "cd4e9561b47ff6e20a603c8981c7bf9c8c8a3859b82fe21ef3eb7a063f107100",
+            "harness.profile.software": "9ae3d7321fcc5318ce9fe61e36cfabbed04bd7fbcfe1f93003ba6108b47d539b"
+          }
+        },
+        ".gitignore": {
+          "kind": "merged"
+        },
+        ".vscode/tasks.json": {
+          "kind": "merged"
+        },
+        "ci/factory.ps1": {
+          "kind": "generated",
+          "blocks": {
+            "harness.ci": "fe3238bcb134fb4d5a9ce78cd0ac4d0a500c358991239680f5606533efa1ad2a"
+          }
+        },
+        "ci/factory.sh": {
+          "kind": "generated",
+          "blocks": {
+            "harness.ci": "890ce2cada408ecda2ee3b707e1919655a533e05f292f53625f8bf21cf8b8bad"
+          }
+        }
+      }
+    },
+    "code-index": {
+      "repo_commit": "9d5459f374b92c1fa7a13dc28ec8f60a9551e501",
+      "repo_describe": "2.1.1",
+      "repo_dirty": false,
+      "tool_version": "1.0.1",
+      "installed_at": "2026-11-11T17:44:25+01:00",
+      "updated_at": "2026-11-11T18:18:26+01:00",
+      "options": {
+        "no_wire": false,
+        "hooks": "commit",
+        "interpreter": "python3"
+      },
+      "contributes": [
+        "mcp__rgkb__search",
+        "mcp__rgkb__definition",
+        "mcp__rgkb__symbols",
+        "mcp__rgkb__neighbors",
+        "mcp__rgkb__file_card",
+        "mcp__rgkb__notes",
+        "mcp__rgkb__status",
+        "Bash(python3 .claude/rgkb/rgkb.py *)"
+      ],
+      "files": {
+        ".claude/agents/factory-builder.md": {
+          "kind": "generated",
+          "blocks": {
+            "rgkb": "acb5e38966330939902bc1a6ea5585d8201b38add2af0e2a11b5c520f75ce717"
+          }
+        },
+        ".claude/agents/factory-planner.md": {
+          "kind": "generated",
+          "blocks": {
+            "rgkb": "f387d5ad9043d7b7c7c773eec7959aa4562f88c34d7e3d4269900b6ca60d422a"
+          }
+        },
+        ".claude/agents/factory-verifier.md": {
+          "kind": "generated",
+          "blocks": {
+            "rgkb": "43b0ff150fc8542603671d32368aa683084eca8d6a79b934d0fecd889d1d12e6"
+          }
+        },
+        ".claude/rgkb/rgkb.py": {
+          "kind": "copied"
+        },
+        ".claude/settings.json": {
+          "kind": "merged"
+        },
+        ".claude/skills/factory-run/SKILL.md": {
+          "kind": "generated",
+          "blocks": {
+            "rgkb": "d7b7dc18a8cf315f0b61878fff201fe7e76e1e4568b6f263edc323a21d3bc048"
+          }
+        },
+        ".knowledge/config.json": {
+          "kind": "merged"
+        },
+        ".mcp.json": {
+          "kind": "merged"
+        },
+        ".vscode/tasks.json": {
+          "kind": "merged"
+        }
+      }
+    }
+  },
+  "inferred_from": "pre-core"
+}
