@@ -51,6 +51,11 @@
    "src": "CLAUDE.md"
   },
   {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "CLAUDE.md"
+  },
+  {
    "count": 2,
    "dst": "Permissions",
    "src": "CLAUDE.md"
@@ -111,7 +116,7 @@
    "src": "CLAUDE.md"
   },
   {
-   "count": 41,
+   "count": 43,
    "dst": "board",
    "src": "CLAUDE.md"
   },
@@ -143,6 +148,11 @@
   {
    "count": 3,
    "dst": "commit",
+   "src": "CLAUDE.md"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
    "src": "CLAUDE.md"
   },
   {
@@ -266,6 +276,11 @@
    "src": "CLAUDE.md"
   },
   {
+   "count": 1,
+   "dst": "ioctl",
+   "src": "CLAUDE.md"
+  },
+  {
    "count": 4,
    "dst": "kill",
    "src": "CLAUDE.md"
@@ -296,7 +311,7 @@
    "src": "CLAUDE.md"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "missing",
    "src": "CLAUDE.md"
   },
@@ -311,7 +326,7 @@
    "src": "CLAUDE.md"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "open",
    "src": "CLAUDE.md"
   },
@@ -321,7 +336,7 @@
    "src": "CLAUDE.md"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "read",
    "src": "CLAUDE.md"
   },
@@ -706,6 +721,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 4,
+   "dst": "DETENT_COUNTS",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "DUNEOS_ABI_VERSION",
    "src": "ROADMAP.md"
@@ -808,6 +828,11 @@
   {
    "count": 1,
    "dst": "LOADER_MAX_SECTION_BYTES",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "MAX_APPS",
    "src": "ROADMAP.md"
   },
   {
@@ -1041,7 +1066,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 117,
+   "count": 129,
    "dst": "board",
    "src": "ROADMAP.md"
   },
@@ -1086,7 +1111,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 12,
+   "count": 14,
    "dst": "check",
    "src": "ROADMAP.md"
   },
@@ -1186,7 +1211,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "draw",
    "src": "ROADMAP.md"
   },
@@ -1356,7 +1381,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "gate",
    "src": "ROADMAP.md"
   },
@@ -1506,7 +1531,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 7,
+   "count": 8,
    "dst": "missing",
    "src": "ROADMAP.md"
   },
@@ -1546,6 +1571,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 1,
+   "dst": "quit",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 18,
    "dst": "read",
    "src": "ROADMAP.md"
@@ -1561,7 +1591,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "report",
    "src": "ROADMAP.md"
   },
@@ -1586,7 +1616,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 11,
+   "count": 12,
    "dst": "scan",
    "src": "ROADMAP.md"
   },
@@ -1661,7 +1691,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "wait",
    "src": "ROADMAP.md"
   },
@@ -7447,11 +7477,6 @@
   },
   {
    "count": 1,
-   "dst": "defines",
-   "src": "apps/user/launcher/duneos.yaml"
-  },
-  {
-   "count": 1,
    "dst": "dlog",
    "src": "apps/user/launcher/duneos.yaml"
   },
@@ -10612,7 +10637,17 @@
   },
   {
    "count": 1,
+   "dst": "DETENT_COUNTS",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "INTENT_TO_KEY",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "REL_WHEEL",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
@@ -10621,7 +10656,7 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -10638,11 +10673,6 @@
   {
    "count": 2,
    "dst": "read",
-   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
-  },
-  {
-   "count": 1,
-   "dst": "step",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
@@ -16896,7 +16926,7 @@
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "REL_WHEEL",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
@@ -20261,6 +20291,11 @@
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
+   "count": 1,
+   "dst": "duneos_hal_monotonic_us",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
    "count": 2,
    "dst": "enc_quadrature_init",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
@@ -20278,6 +20313,11 @@
   {
    "count": 1,
    "dst": "free",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "inject",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
@@ -25256,7 +25296,7 @@
    "src": "profiles/t-embed-default/profile.yaml"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "board",
    "src": "profiles/t-embed-gfx/profile.yaml"
   },
@@ -26722,6 +26762,11 @@
   },
   {
    "count": 1,
+   "dst": "inject",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
    "dst": "input_ioctl",
    "src": "sdk/input/include/duneos/input.h"
   },
@@ -26731,7 +26776,7 @@
    "src": "sdk/input/include/duneos/input.h"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "open",
    "src": "sdk/input/include/duneos/input.h"
   },
@@ -27986,7 +28031,7 @@
    "src": "sdk/ui/include/duneos/ui_pager.h"
   },
   {
-   "count": 6,
+   "count": 5,
    "dst": "board",
    "src": "sdk/ui/include/duneos/ui_text_entry.h"
   },
@@ -28018,11 +28063,6 @@
   {
    "count": 1,
    "dst": "ui_vkbd_backend",
-   "src": "sdk/ui/include/duneos/ui_text_entry.h"
-  },
-  {
-   "count": 1,
-   "dst": "ui_vkbd_draw",
    "src": "sdk/ui/include/duneos/ui_text_entry.h"
   },
   {
@@ -29151,6 +29191,11 @@
    "src": "specs/SPEC-input-portability.md"
   },
   {
+   "count": 2,
+   "dst": "DETENT_COUNTS",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
    "count": 1,
    "dst": "DUNEOS_ABI_VERSION",
    "src": "specs/SPEC-input-portability.md"
@@ -29246,7 +29291,7 @@
    "src": "specs/SPEC-input-portability.md"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "REL_WHEEL",
    "src": "specs/SPEC-input-portability.md"
   },
@@ -29281,7 +29326,7 @@
    "src": "specs/SPEC-input-portability.md"
   },
   {
-   "count": 25,
+   "count": 26,
    "dst": "board",
    "src": "specs/SPEC-input-portability.md"
   },
@@ -29296,7 +29341,7 @@
    "src": "specs/SPEC-input-portability.md"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "commit",
    "src": "specs/SPEC-input-portability.md"
   },
@@ -35356,6 +35401,11 @@
    "src": "tools/dbt/input_map.py"
   },
   {
+   "count": 2,
+   "dst": "DETENT_COUNTS",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
    "count": 4,
    "dst": "ERASE",
    "src": "tools/dbt/input_map.py"
@@ -35426,7 +35476,7 @@
    "src": "tools/dbt/input_map.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "REL_WHEEL",
    "src": "tools/dbt/input_map.py"
   },
@@ -35456,7 +35506,7 @@
    "src": "tools/dbt/input_map.py"
   },
   {
-   "count": 19,
+   "count": 20,
    "dst": "board",
    "src": "tools/dbt/input_map.py"
   },
@@ -39247,6 +39297,11 @@
   },
   {
    "count": 2,
+   "dst": "DRV_INPUT_C",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
    "dst": "DUNEOS_INPUT_HAS_KEYBOARD",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -39321,7 +39376,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 5,
+   "count": 7,
    "dst": "REPO_ROOT",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -39356,7 +39411,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 39,
+   "count": 42,
    "dst": "board",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -39373,6 +39428,16 @@
   {
    "count": 7,
    "dst": "defines",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 3,
+   "dst": "drv_input_push_event",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_hal_monotonic_us",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
@@ -39401,7 +39466,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "inject",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -39472,6 +39537,11 @@
   },
   {
    "count": 1,
+   "dst": "test_a_producer_injecting_zero_relies_on_that_stamp",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
    "dst": "test_a_rotary_and_two_buttons_emit_the_expected_map",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -39502,17 +39572,17 @@
   },
   {
    "count": 1,
-   "dst": "test_exactly_the_two_expected_boards_declare_buttons",
-   "src": "tools/dbt/tests/test_input_topology.py"
-  },
-  {
-   "count": 1,
    "dst": "test_intent_case_is_normalised",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
    "count": 1,
    "dst": "test_no_board_reaches_an_intent_outside_the_vocabulary",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_only_the_t_embed_declares_a_buttons_list",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
@@ -39543,6 +39613,11 @@
   {
    "count": 1,
    "dst": "test_the_old_code_spelling_is_rejected_by_name",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_ring_stamps_a_missing_timestamp",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
@@ -43391,7 +43466,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "BATCH_CLAMP",
    "src": "tools/duneos-bspgen.py"
   },
@@ -43521,7 +43596,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 93,
+   "count": 92,
    "dst": "_define",
    "src": "tools/duneos-bspgen.py"
   },
@@ -44298,6 +44373,7 @@
    "DLOGI",
    "DLOGW",
    "DRIVER_PREFIX",
+   "DRV_INPUT_C",
    "DR_BLIT_MAX_W",
    "DUNEOS_ABI_VERSION",
    "DUNEOS_API_SYMBOL",
@@ -46191,6 +46267,7 @@
    "test_a_password_is_typable_with_four_intents_only",
    "test_a_policy_symbol_turned_off_in_the_build_is_a_conflict",
    "test_a_press_and_its_release_are_one_intent",
+   "test_a_producer_injecting_zero_relies_on_that_stamp",
    "test_a_profile_on_an_unlisted_board_fails_the_expected_membership",
    "test_a_psram_size_the_board_never_declared_is_reported",
    "test_a_qemu_config_exit_is_reported_as_unavailable",
@@ -46326,7 +46403,6 @@
    "test_every_unconditional_symbol_defaults_to_y",
    "test_every_xtensa_cpu_accepts_the_flag",
    "test_exactly_one_tracked_board_enables_logic",
-   "test_exactly_the_two_expected_boards_declare_buttons",
    "test_exit_3_is_not_rendered_as_a_failure",
    "test_exit_codes_are_all_distinct",
    "test_explicit_console_uart_suppresses_the_secondary_console",
@@ -46407,6 +46483,7 @@
    "test_only_one_file_parses_the_known_yaml_grammar",
    "test_only_the_measured_boards_declare_the_key",
    "test_only_the_qemu_boards_declare_the_flag",
+   "test_only_the_t_embed_declares_a_buttons_list",
    "test_opening_a_denied_path_fails_the_test_that_did_it",
    "test_other_bit_positions",
    "test_overflow_is_a_named_error_not_a_traceback",
@@ -46546,6 +46623,7 @@
    "test_the_refusal_does_not_raise_into_the_ui_thread",
    "test_the_rejection_names_the_board_and_the_value",
    "test_the_rejection_names_the_file_and_lists_the_valid_keys",
+   "test_the_ring_stamps_a_missing_timestamp",
    "test_the_roadmap_suite_count_matches_the_makefile",
    "test_the_scan_finds_the_known_entry_points",
    "test_the_scan_reaches_the_core_and_the_guarded_drivers",

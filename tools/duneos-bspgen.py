@@ -698,7 +698,6 @@ def generate_input_topology(board: dict) -> list[str]:
 
     out = [header, _define("DUNEOS_INPUT_TOPOLOGY", 1),
            _define("DUNEOS_INPUT_HAS_KEYBOARD", 1 if topo["has_keyboard"] else 0),
-           _define("DUNEOS_INPUT_BATCH_MAX", BATCH_CLAMP),
            _define("DUNEOS_INPUT_N_KEYS", len(topo["keys"])),
            _define("DUNEOS_INPUT_N_AXES", len(topo["axes"]))]
 

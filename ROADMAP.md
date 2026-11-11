@@ -381,7 +381,7 @@ Eliminates hardcoded device paths (`/dev/disp0`, `/dev/spi-1`, etc.) in the SDK 
 
 ---
 
-### Phase 24.14 — Input portability: intents, not key codes ✅ (board validation open)
+### Phase 24.14 — Input portability: intents, not key codes 🟡 CODE COMPLETE, hardware validation open
 
 The launcher dropped every non-`INPUT_EV_KEY` event, so the T-Embed rendered a carousel its rotary could not move. Apps now dispatch on nine intents translated in `sdk/input/libinput.c` from the board's own `ioctl(INPUT_GET_TOPOLOGY)` answer — [ADR 042](docs/adr/042-input-intents-in-the-sdk.md). A button declares `intent:` (not `code:`), long-press ships so vocabulary reachability is a board-declaration property, and the on-screen keyboard costs nothing in an app that does not list it. Migrated: launcher, waves, wifi's prompt; `snake`/`tetris` leave the t-embed profile.
 
@@ -571,6 +571,10 @@ what forced DUP-05. Adding the writer to the SDK closes that pair.
 `/tmp/state/wifi_scan` blob format.
 
 ## 4ter. No magic value in kernel or arch code — HIGH PRIORITY (2026-11-11)
+
+*Opened at the Product Owner's explicit request during the input-portability
+cycle, not by that cycle's spec. MAGIC-02 and MAGIC-03 come from it; MAGIC-01
+and MAGIC-04 are separate findings parked here because they are the same class.*
 
 **The ADR already exists, twice. What is missing is enforcement.**
 

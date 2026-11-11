@@ -1,11 +1,11 @@
-{"lang": "markdown", "lines": 309, "path": "CLAUDE.md", "sha256": "fde7b98799a72990e2c6b53609aba89a790d73da7be8793acabbfc172094bac1", "size": 33085}
+{"lang": "markdown", "lines": 310, "path": "CLAUDE.md", "sha256": "19dc6cf5c0727beef263b8ee3a5f684552b56d0faae54e06e96fb22fd9994f1e", "size": 34098}
 {"lang": "other", "lines": 72, "path": "CMakeLists.txt", "sha256": "177dd3ed8c566b2f288cd2590c59874febac1403f98b4ca2073da4af7e7079f6", "size": 3081}
 {"lang": "markdown", "lines": 83, "path": "CONTRIBUTING.md", "sha256": "2b80e4dc18e7f5fb430ec178a6b6b9c9e62d26466d98b7115378b306167e3f17", "size": 3835}
 {"lang": "other", "lines": 165, "path": "LICENSE", "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118", "size": 7652}
 {"lang": "other", "lines": 674, "path": "LICENSE.GPL-3.0", "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986", "size": 35149}
 {"lang": "other", "lines": 46, "path": "NOTICE", "sha256": "bdfd3d56352bfb039156cf6b1407d397d14ddf69139447fc51f942d7ae5c5362", "size": 2061}
 {"lang": "markdown", "lines": 351, "path": "README.md", "sha256": "db7469e05685934da14aee35949542b39b3868c8b00f62c407a4b3e364656cb9", "size": 20293}
-{"lang": "markdown", "lines": 1129, "path": "ROADMAP.md", "sha256": "765ae43cd5f534d89914007aa56085f3c3b561e568ffbc416285b8c45e9fcc3b", "size": 131362}
+{"lang": "markdown", "lines": 1188, "path": "ROADMAP.md", "sha256": "5b9cad8c8386f0344f2fdbe87e06213614bef2bb9079ee05e2ff1f2ee2622b75", "size": 136862}
 {"lang": "cpp", "lines": 48, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "683fa79c950b2df3176f16629d6629e571eae31c1c3262d2cf98ee610e1c0e44", "size": 1477}
 {"lang": "yaml", "lines": 7, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "6dbddf714eaeb8d2f9643a96173ea4ce03ba48ebe5b431c220c9a54c68b2a240", "size": 168}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
@@ -102,7 +102,7 @@
 {"lang": "other", "lines": 21, "path": "apps/user/i2cscope/scenarios/template.scn", "sha256": "18b9244114febb87fa46866be394a503cb55f5d4463956baa2737c1f3d068c83", "size": 656}
 {"lang": "cpp", "lines": 253, "path": "apps/user/i2cscope/sniff.c", "sha256": "0a30b07c7018db9302a43f5498794c86ffebe140dc12dd911ac8bcefc50b87ba", "size": 8953}
 {"lang": "cpp", "lines": 164, "path": "apps/user/i2cscope/xfer.c", "sha256": "0fe44e17e600e073338dbf8f11800370227eb9945282e59e4448de00ec726e0e", "size": 5503}
-{"lang": "yaml", "lines": 23, "path": "apps/user/launcher/duneos.yaml", "sha256": "7461a850bb75fabcb16f72e608e149fce778a3f630a5842eac84ddc40fcdeefb", "size": 832}
+{"lang": "yaml", "lines": 20, "path": "apps/user/launcher/duneos.yaml", "sha256": "17e0e5cca6f94d96c53246ca01618dbd3f0116bb836944a62e4c4ba5464be1a2", "size": 622}
 {"lang": "cpp", "lines": 296, "path": "apps/user/launcher/launcher.c", "sha256": "887f5946a62a917703ae61011cf45862fd1a7bcfb90bd5097f736ecf2115f8b9", "size": 10936}
 {"lang": "yaml", "lines": 13, "path": "apps/user/qemu_calloc/duneos.yaml", "sha256": "ef4fbd744d77158bedef1995de51d4454c07b955734a4428b65c4b94d819b491", "size": 608}
 {"lang": "cpp", "lines": 288, "path": "apps/user/qemu_calloc/qemu_calloc.c", "sha256": "c2ffcc2e16f78ee4d04093a12726f75330ef70f6a835947adca00d48bc14dc81", "size": 11949}
@@ -130,7 +130,7 @@
 {"lang": "cpp", "lines": 33, "path": "apps/user/uart_echo/uart_echo.c", "sha256": "d317adb10668c5a9fcbaa142b143f1bfcad9fa95b4724708cd2c12775d62ac58", "size": 805}
 {"lang": "yaml", "lines": 16, "path": "apps/user/waves/duneos.yaml", "sha256": "535c8448cadf1beba0fcec3f7686bddad7977a2cc271cab46f2daf096c348bd7", "size": 366}
 {"lang": "cpp", "lines": 317, "path": "apps/user/waves/waves.c", "sha256": "5d2870e4a13865da2c3e536521167d733d00c5e6618217cec9fa0d52b6cf078c", "size": 9901}
-{"lang": "yaml", "lines": 23, "path": "apps/user/wifi/duneos.yaml", "sha256": "93e35db64ac92d58e2045a7fb22da2ab0be3da49ba0c141cc5c6b827eff124df", "size": 756}
+{"lang": "yaml", "lines": 22, "path": "apps/user/wifi/duneos.yaml", "sha256": "b08f1ea34d5af9c1580b661f45c0e54993b6a89c31f060bc9078a2573325dcde", "size": 698}
 {"lang": "cpp", "lines": 533, "path": "apps/user/wifi/wifi.c", "sha256": "1d6d73d3f80361b369a402633d55a45085ba7344b2c535310d22195b81c6079d", "size": 16206}
 {"lang": "cpp", "lines": 24, "path": "arch/riscv32/reloc/loader_reloc_riscv.c", "sha256": "8e061fd19764753046c3301a02cb425502a2f56d2b090e94928a856f8cd76778", "size": 1042}
 {"lang": "other", "lines": 97, "path": "arch/xtensa_esp32/arch.cmake", "sha256": "358f460c131cd395b40fe8763afbb3015ef56bfb34e98e5aeb7b11b18ea27767", "size": 3989}
@@ -156,7 +156,7 @@
 {"lang": "yaml", "lines": 40, "path": "boards/esp32s3-qemu/board.yaml", "sha256": "ada3bf67c1dd4c35d07355814cd77d6c515e13af8c1ae85b7702bb2f4b21a7db", "size": 1435}
 {"lang": "yaml", "lines": 53, "path": "boards/kincony-A16/board.yaml", "sha256": "c07ce7f883ebcd49632e91b84019c57c37254f52e1fdd305ac13db8b828620d4", "size": 1025}
 {"lang": "yaml", "lines": 5, "path": "boards/kincony-A16/init.yaml", "sha256": "68296d7fee15f1ed9ecf16e36751b1b95e549d9b2dfdf754c146669e829553ab", "size": 155}
-{"lang": "yaml", "lines": 156, "path": "boards/lilygo-t-embed-cc1101/board.yaml", "sha256": "6b09a99b2c4662232f2df4e011aaad5d8f760b178d6bd57b48aebb86d1655ea2", "size": 5142}
+{"lang": "yaml", "lines": 159, "path": "boards/lilygo-t-embed-cc1101/board.yaml", "sha256": "88e71a35a90dd668cab93a0d1179cafdc2cd66f1d184099af19d034fae77ded7", "size": 5340}
 {"lang": "yaml", "lines": 9, "path": "boards/lilygo-t-embed-cc1101/init.yaml", "sha256": "e4a2a2905c49ab033cb9ca135f3b133963ab90e8808107abbca0d9da81530e5b", "size": 263}
 {"lang": "yaml", "lines": 173, "path": "boards/m5stack-cardputer/board.yaml", "sha256": "8f3e828f454599f2a5618094e95f7e3345e6fd6a72a977766f65f8358554f3a7", "size": 7064}
 {"lang": "yaml", "lines": 14, "path": "boards/m5stack-cardputer/etc/kb_iomatrix/config.yaml", "sha256": "b835ae96d22dc76f27623128a12245dbb6998e63e96732a6549a549127c56b32", "size": 735}
@@ -211,8 +211,8 @@
 {"lang": "markdown", "lines": 63, "path": "docs/adr/039-qemu-test-bench.md", "sha256": "73e7d8cefc607f43ace676bf4334ab4d77f32f4757fc465f0ab1620effadfb76", "size": 11353}
 {"lang": "markdown", "lines": 73, "path": "docs/adr/040-config-layering.md", "sha256": "faf97911b9ad078034e89044c3e93288b45015814c33d6b97d4cb800b3066807", "size": 12843}
 {"lang": "markdown", "lines": 66, "path": "docs/adr/041-test-harness-keep-tassert.md", "sha256": "28105b7a15afe01d42e5883814922bff8caa68d72279e4f4d0301c104aaea436", "size": 3342}
-{"lang": "markdown", "lines": 86, "path": "docs/adr/042-input-intents-in-the-sdk.md", "sha256": "2054b1fb7042089113ee3d46d6ce6fe528f6aa7e28d6ec57206799ad8c59578b", "size": 4764}
-{"lang": "markdown", "lines": 74, "path": "docs/adr/README.md", "sha256": "7ce44d4afb37e5c3141ed98a52032749c331a77d6d4da248386d72f7665cb33e", "size": 21508}
+{"lang": "markdown", "lines": 90, "path": "docs/adr/042-input-intents-in-the-sdk.md", "sha256": "9cea53850334ae53dd6069bb2b1893edbdef543398db366f16b0b27df8c8f44c", "size": 5108}
+{"lang": "markdown", "lines": 74, "path": "docs/adr/README.md", "sha256": "99929546e2c2b791aa7ce544156f4294ecaa2152aa8c9b9df83c7458bbc6ba3c", "size": 21508}
 {"lang": "other", "lines": 0, "path": "docs/assets/splash_procedural.dr", "sha256": "87ec853679e1c67d67cac8819edc0cf6c30b91de9c77629a257119c0c4956f61", "size": 64808}
 {"lang": "markdown", "lines": 217, "path": "docs/audit-ram-2026-06.md", "sha256": "795105a420f0acc66fdfec2b05b92719302817c056dbeb118af432a4c3583cd7", "size": 13994}
 {"lang": "markdown", "lines": 71, "path": "docs/backlog.md", "sha256": "231efcf7ef555593f1783f5e079bb7338493d9aced60310b2f50440b245b0391", "size": 23486}
@@ -246,7 +246,7 @@
 {"lang": "cpp", "lines": 32, "path": "kernel/duneos_kernel/include/duneos/hal_uart.h", "sha256": "11095890aa8fff77ef23112db18e76203dbc370e6e80a5ccd0077ffa527effeb", "size": 1217}
 {"lang": "cpp", "lines": 63, "path": "kernel/duneos_kernel/include/duneos/i2c_ioctl.h", "sha256": "56580cb22be97f20e0d72634821400224cc92fb9c2d794492b65edb0ccf2d5c8", "size": 2595}
 {"lang": "cpp", "lines": 78, "path": "kernel/duneos_kernel/include/duneos/init.h", "sha256": "eb8971607a42f779a57c6f808f31d91bc9f6a6af1d6c1de2280f0b6f7d00aab1", "size": 2858}
-{"lang": "cpp", "lines": 162, "path": "kernel/duneos_kernel/include/duneos/input_ioctl.h", "sha256": "fb2b6b24dfdfc76dbb4dc10f26bee6f97673daeafa52e1e6614eb31c7b4d7c5d", "size": 6698}
+{"lang": "cpp", "lines": 166, "path": "kernel/duneos_kernel/include/duneos/input_ioctl.h", "sha256": "44f662340dba5626686ed6815bc4c367b5a614df9c12c2398d15a5292496b721", "size": 6911}
 {"lang": "cpp", "lines": 55, "path": "kernel/duneos_kernel/include/duneos/klog.h", "sha256": "9e33bf5c5188e9fb7e9e18b5a82d28377d844c318b75e26183c361037b92dd45", "size": 2087}
 {"lang": "cpp", "lines": 195, "path": "kernel/duneos_kernel/include/duneos/libdune.h", "sha256": "d9a0264a9f7c74f1c2b421948d6dd3a884293a313d084c9fa185c1ef1382306f", "size": 8425}
 {"lang": "cpp", "lines": 73, "path": "kernel/duneos_kernel/include/duneos/logic_ioctl.h", "sha256": "2405ad27452e7343e5f08d41462a189d99a15c9c0c2b381ba32ccfecc0a62ec2", "size": 2888}
@@ -278,7 +278,7 @@
 {"lang": "cpp", "lines": 35, "path": "kernel/duneos_kernel/src/drivers/gpio/gpiochip_table.h", "sha256": "4611763103fd1917788d22b6ce7d7afe51bc77f8a6585cac170b263f7ab92865", "size": 1555}
 {"lang": "cpp", "lines": 63, "path": "kernel/duneos_kernel/src/drivers/i2c_bus.c", "sha256": "33a5528bb47295432e4508101c664c50e78f482a29d4d8790d1a67b9b28a4a57", "size": 1931}
 {"lang": "cpp", "lines": 33, "path": "kernel/duneos_kernel/src/drivers/i2c_bus.h", "sha256": "e4a1558defab0296fb21e77fa78da33deac869385b087e96d3a4c83d673da5ac", "size": 1238}
-{"lang": "cpp", "lines": 182, "path": "kernel/duneos_kernel/src/drivers/input/drv_input.c", "sha256": "ee524188107ad623999e63cfb62e0e3816f1a2084f29665dbed66207763438b2", "size": 5632}
+{"lang": "cpp", "lines": 194, "path": "kernel/duneos_kernel/src/drivers/input/drv_input.c", "sha256": "87153f80b96faf8e1777f5eb127d2bc1f7804d748607cbb8ef16b910d0edcd94", "size": 6330}
 {"lang": "cpp", "lines": 12, "path": "kernel/duneos_kernel/src/drivers/input/drv_input_priv.h", "sha256": "1c6290d39f363403fbf765d7cbf0737cddd301c2117a3207106fcc6e229491c9", "size": 392}
 {"lang": "cpp", "lines": 49, "path": "kernel/duneos_kernel/src/drivers/input/enc_quadrature.c", "sha256": "d774d01e1219aa95e7a7203f945978ae57c99e20fc65bd620101b2999bd7e654", "size": 1487}
 {"lang": "cpp", "lines": 96, "path": "kernel/duneos_kernel/src/drivers/input/hal_encoder_fallback.c", "sha256": "b6f2b85b1b65d724133ff360d9498681efe95a56f141332ed8d70fb00a6b08fc", "size": 3019}
@@ -324,7 +324,7 @@
 {"lang": "yaml", "lines": 13, "path": "profiles/esp32s3-devkitc-default/profile.yaml", "sha256": "7eaf39ec2e8385be0e351aabc0c07afd0f8b7530db87ec90c99356587416d695", "size": 449}
 {"lang": "yaml", "lines": 24, "path": "profiles/kincony-a16-default/profile.yaml", "sha256": "1626d9f0432f823abff9b603c91b179ad0bdaf39248777e4e12677e41c5fd970", "size": 366}
 {"lang": "yaml", "lines": 42, "path": "profiles/t-embed-default/profile.yaml", "sha256": "ed9cb1a6cf71d1047d8688935dfdb7de530192070592d6ed5ff17208006b88c8", "size": 865}
-{"lang": "yaml", "lines": 53, "path": "profiles/t-embed-gfx/profile.yaml", "sha256": "47f61570234b6fc17a3e1e7a9592788d9f443a5222537bdea6a9510ba58cf8f6", "size": 1645}
+{"lang": "yaml", "lines": 60, "path": "profiles/t-embed-gfx/profile.yaml", "sha256": "8dca99d8887a3c026539889ee2c975163aaca525b4ea0bc22a4442140b8b4262", "size": 2049}
 {"lang": "yaml", "lines": 21, "path": "profiles/t-embed-recovery/profile.yaml", "sha256": "8516375d2d67bf394e58cc9544fe4319366478655fc9435da4660edd4435bed4", "size": 579}
 {"lang": "other", "lines": 6, "path": "pytest.ini", "sha256": "abbfe9857ccbb55b0894399727dda2372d63309ee6054a539996a4d5e3f96c00", "size": 231}
 {"lang": "cpp", "lines": 33, "path": "sdk/app/include/duneos/appmeta.h", "sha256": "ffc9acc77a564bb279f39ab27ff195aca9f55cb8c042d295c1b25eccb1b719bc", "size": 1325}
@@ -342,7 +342,7 @@
 {"lang": "cpp", "lines": 98, "path": "sdk/i2c/smbus.c", "sha256": "5e9eda80132649b417ed04fd24e87b3c3fa5f363b6b552a89fb30cddcfb787c4", "size": 3161}
 {"lang": "cpp", "lines": 85, "path": "sdk/image/include/duneos/image.h", "sha256": "d9e3ff60064612e99f24abd377e547fb5cd975533401d17bdec1f5d51f99eb02", "size": 2902}
 {"lang": "cpp", "lines": 125, "path": "sdk/image/libimage.c", "sha256": "6d1ee087a7698a7bc3a67b6177528293231f76a3a98f8e5804005281a019656d", "size": 3459}
-{"lang": "cpp", "lines": 111, "path": "sdk/input/include/duneos/input.h", "sha256": "1ce45baa039f652c69090391a97fcf3a391dc97b04eef095027d9dcd0350ce80", "size": 4882}
+{"lang": "cpp", "lines": 115, "path": "sdk/input/include/duneos/input.h", "sha256": "67d5be748f7d0c2420b0cf70958798e6244a619f082dbf8b090a6f86d357257e", "size": 5123}
 {"lang": "cpp", "lines": 181, "path": "sdk/input/libinput.c", "sha256": "2c26716871cac7e2bd9e6bcb3217422575a51a27e615e089e13459be3d6bbd2d", "size": 6380}
 {"lang": "cpp", "lines": 57, "path": "sdk/input/libinput_fd.c", "sha256": "56f8372fca6fc5729ca1e0fec52f6825d0966ae708feefdb510d23b831fe8bcb", "size": 1639}
 {"lang": "cpp", "lines": 85, "path": "sdk/log/dlog.c", "sha256": "17edcbe14b28b72c3f5f6d413902faf1b0be3e6838fcb3cfb8b29335a2c3f4fd", "size": 2534}
@@ -362,7 +362,7 @@
 {"lang": "cpp", "lines": 79, "path": "sdk/ui/include/duneos/ui_carousel.h", "sha256": "f7aaa3cfc7d4ee0efdf353685f8735037c3cc9b68ae71124bb5f41d6c172cf9c", "size": 3871}
 {"lang": "cpp", "lines": 37, "path": "sdk/ui/include/duneos/ui_hexview.h", "sha256": "69293b08107a5c2695d43c2b175f0fc9e37d37a65ecab8cac8720b294107eda6", "size": 1326}
 {"lang": "cpp", "lines": 41, "path": "sdk/ui/include/duneos/ui_pager.h", "sha256": "eeb52c9dd75e5281311790671fdcf6cb71f0d8a782575eeccea41564272c4d81", "size": 1482}
-{"lang": "cpp", "lines": 60, "path": "sdk/ui/include/duneos/ui_text_entry.h", "sha256": "8a4726bc07dbcbcaeb92c69746b57fa4c0e05be52ec5fa34b5e3650203c399ce", "size": 2332}
+{"lang": "cpp", "lines": 57, "path": "sdk/ui/include/duneos/ui_text_entry.h", "sha256": "3f43fc6c6d8b70b4d59dda0cd165ffd4a1e043d87f980d451ecac7824772f403", "size": 2067}
 {"lang": "cpp", "lines": 88, "path": "sdk/ui/include/duneos/ui_vkbd.h", "sha256": "51f5236c1fd2b4b7294b9a7648179e65ad948b4512690e9eb11ad9c38d7447d3", "size": 3468}
 {"lang": "cpp", "lines": 50, "path": "sdk/ui/include/duneos/ui_wave.h", "sha256": "75fab3a427b6c5ca9e4c3ebd092fa774e1abf5ab121731b026f4dc44348297eb", "size": 2093}
 {"lang": "cpp", "lines": 486, "path": "sdk/ui/ui.c", "sha256": "4aee8412358dd9d5a9f4e43f68eec7e2a42b05a72f0e94a63afeeaf0e56d7f6d", "size": 15224}
@@ -375,7 +375,7 @@
 {"lang": "cpp", "lines": 51, "path": "sdk/ui/ui_vkbd_draw.c", "sha256": "258aa31493df659e02d8a2409867da264f23ec199bca717fce0911ae2e8e5911", "size": 1581}
 {"lang": "cpp", "lines": 126, "path": "sdk/ui/ui_wave.c", "sha256": "142354f477518603dc000e3e0d1770b0d1ca02dcd54f1de2e86323f9318bff33", "size": 4498}
 {"lang": "other", "lines": 117, "path": "sdkconfig.defaults", "sha256": "1cb8cc0882691bcf4a4f8bdae6fa4bd99137fbe45bbf2545efe232427b13aff5", "size": 6174}
-{"lang": "markdown", "lines": 236, "path": "specs/SPEC-input-portability.md", "sha256": "cdf9c39f9395786236dca8fa041dcc9e2e8e66db57459b4d9e023c0421ff2d6e", "size": 13833}
+{"lang": "markdown", "lines": 249, "path": "specs/SPEC-input-portability.md", "sha256": "980cc980ab61b53c61514956972f0f1f4848123d5a9cde4259710a5aa8aee651", "size": 14834}
 {"lang": "markdown", "lines": 89, "path": "specs/SPEC-leg-01-harden-elf-validation.md", "sha256": "f8f6b20efbf23ee9d7aa10749b7568adb38cc658cb96f66bb3968203dc275079", "size": 4839}
 {"lang": "markdown", "lines": 155, "path": "specs/SPEC-leg-04-calloc-overflow.md", "sha256": "34db139a347ced58848977de6488e5046290f12dff9ed05daf7a1b6ea8275ea4", "size": 9265}
 {"lang": "markdown", "lines": 116, "path": "specs/SPEC-leg-05-split-loader-load.md", "sha256": "511537e7bc45e30adbd19b9bf2d6729cc087cfb286fa54405932b0aeeb83dbfe", "size": 7170}
@@ -441,7 +441,7 @@
 {"lang": "python", "lines": 78, "path": "tools/dbt/deploy.py", "sha256": "6c4948a45e7f45b033bd592ebc9721bf9226aa90a212950af7a15ef64bd3aa08", "size": 2756}
 {"lang": "python", "lines": 463, "path": "tools/dbt/flashimg.py", "sha256": "f78993191b1171b75893d58b5f4f63ca0739737075240a5d5e7b667a9ef7897a", "size": 18164}
 {"lang": "python", "lines": 250, "path": "tools/dbt/img.py", "sha256": "5419d62190f441415be9cc2cfd0aedcf14cee583cb108c8c37412ab2693fee34", "size": 8388}
-{"lang": "python", "lines": 205, "path": "tools/dbt/input_map.py", "sha256": "b53651be897b8902d14643c010ab2592cbf73ae03bcbd5c88cb49dd43313b7fb", "size": 7370}
+{"lang": "python", "lines": 211, "path": "tools/dbt/input_map.py", "sha256": "ad6263915ccccf624205990a2065c399df8c00f314dbe2ec31c6e11a13f1fe71", "size": 7774}
 {"lang": "python", "lines": 89, "path": "tools/dbt/kernel.py", "sha256": "4d26be09bd286900ee5e5a4b64b5aed121dd250b4c45cfc9e0f66e33a42581dc", "size": 3516}
 {"lang": "python", "lines": 124, "path": "tools/dbt/manifest.py", "sha256": "4bcdd6fe95a467b9ffb9e0c40c9f37abb69a99e5614e6bc190a865403649c9d1", "size": 4075}
 {"lang": "python", "lines": 1168, "path": "tools/dbt/qemu.py", "sha256": "59f6e6f4080c371d57695a9dbe88ec10c7f5c63b10f8cbb20974ac34b708b395", "size": 48975}
@@ -465,7 +465,7 @@
 {"lang": "python", "lines": 184, "path": "tools/dbt/tests/test_cmake_requires.py", "sha256": "78a07e61d2f32cf60de1357d2c209b888743ad5584dc62a52a18955359674a02", "size": 7055}
 {"lang": "python", "lines": 347, "path": "tools/dbt/tests/test_flashimg_profile.py", "sha256": "8afae134760879c71f4eb2ab38caf78c3cacc0cd4d1aee9485f2ca610ca96610", "size": 13875}
 {"lang": "python", "lines": 159, "path": "tools/dbt/tests/test_gates_cover.py", "sha256": "30fbc1aae19fee84a5d2b46a1191bc06d24a40ed440eb255cb56022a6dc2dd96", "size": 5886}
-{"lang": "python", "lines": 386, "path": "tools/dbt/tests/test_input_topology.py", "sha256": "c05df4d79fbb56e58f415a0173d37d04654759be36d09856c7798813ec1e2286", "size": 14562}
+{"lang": "python", "lines": 428, "path": "tools/dbt/tests/test_input_topology.py", "sha256": "85edab8e885f466e7a37f38aaf61f6b8d4712ecd66bb860639f43b1b2b0980b7", "size": 16538}
 {"lang": "python", "lines": 88, "path": "tools/dbt/tests/test_manifest_depth_bound.py", "sha256": "1accf71015ce9f61926ef17de6731ca6a79599567d3a729195455ae741784c03", "size": 3355}
 {"lang": "python", "lines": 169, "path": "tools/dbt/tests/test_pure_logic.py", "sha256": "4b41b475ac1abea7aeba74e6d04f162b659809acc348d8a5906eed0339ac3768", "size": 5633}
 {"lang": "python", "lines": 1026, "path": "tools/dbt/tests/test_qemu.py", "sha256": "d21992f135c20b45e1ac4dc5fe1270e1cdeb60fddc3f0449e867899e9efdb5be", "size": 37759}
@@ -479,4 +479,4 @@
 {"lang": "python", "lines": 118, "path": "tools/dbt/toolchain/__init__.py", "sha256": "22954102736d4534b30ee8c4a62394526fdfe97333f18f2d1ef217d534dac989", "size": 4105}
 {"lang": "python", "lines": 658, "path": "tools/dbt/toolchain/esp_idf.py", "sha256": "6893846aa8181b5d6d63e9ca9ef2013f0718d1c16ab02273330726a13961f9ba", "size": 25037}
 {"lang": "python", "lines": 1903, "path": "tools/dbt/tui.py", "sha256": "07246732099b597234c327b9038571210ed95d38d807f7ace2066fb77a391945", "size": 70869}
-{"lang": "python", "lines": 1126, "path": "tools/duneos-bspgen.py", "sha256": "072380c63e1d3feb29e4152ea2968ea18cc50a8217a74f83bfb10a873b26ed09", "size": 49831}
+{"lang": "python", "lines": 1125, "path": "tools/duneos-bspgen.py", "sha256": "1c34f43a66949925c87089c29d3b790c574eb4f56ed55b1debdb6f1d0a19464a", "size": 49772}

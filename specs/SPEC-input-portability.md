@@ -216,8 +216,12 @@ it; the ioctl is the carrier). Migrating the remaining 8 raw readers.
 - **Static buffers in captured apps** break `api_read` pointer validation
   (Hard-Won Lessons). The vkbd and translation state are caller-owned, never
   file-scope BSS.
-- **Half-migration.** 10 raw readers remain keyboard-only. Documented once, at
-  the top of `include/duneos/input.h`, and contradicted nowhere.
+- **Half-migration.** Raw readers remain keyboard-only. Documented once, at the
+  top of `include/duneos/input.h`, and contradicted nowhere.
+  **Correction, verification round 2:** this paragraph said 10 and the
+  out-of-scope line below says 8; both are wrong. 10 consumer TUs existed at
+  the base commit, 3 are migrated by this cycle and 1 is a library, leaving
+  **6 apps** — the figure `input.h` carries and the only one to trust.
 - **`DUNEOS_INPUT_DEV` is conditional** (`boardgen.py:93` emits it only when a
   board declares input), so the SDK must compile and behave with the define and
   the device both absent.
