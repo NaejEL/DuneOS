@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <dirent.h>
 
-#include "duneos/input_ioctl.h"
+#include "duneos/input.h"
 #include "duneos/gfx.h"
 #include "duneos/ui.h"
 #include "duneos/ui_wave.h"
@@ -41,7 +41,6 @@ extern void duneos_exit(int code);
 
 static gfx_ctx_t *g;
 static ui_t      *ui;
-static int        s_input = -1;
 static uint16_t   s_sw, s_sh;
 static int        s_bar_h;
 
@@ -269,10 +268,11 @@ void app_main(void)
 {
     g = gfx_open_mode(GFX_MODE_STREAM);
     if (!g) duneos_exit(10);
-    s_input = open("/dev/input/event0", O_RDONLY);
-    if (s_input < 0) { gfx_close(g); duneos_exit(11); }
+    /* On the stack, not file scope: translation state is caller-owned (input.h). */
+    duneos_input_t input;
+    if (duneos_input_open(&input) != 0) { gfx_close(g); duneos_exit(11); }
     ui = ui_create(g);
-    if (!ui) { close(s_input); gfx_close(g); duneos_exit(10); }
+    if (!ui) { duneos_input_close(&input); gfx_close(g); duneos_exit(10); }
 
     ui_size(ui, &s_sw, &s_sh);
     s_bar_h = 8 + 2 * ui_theme(ui)->pad;
@@ -282,29 +282,36 @@ void app_main(void)
     draw_browse();
 
     for (;;) {
-        input_event_t ev;
-        if (read(s_input, &ev, sizeof(ev)) != (int)sizeof(ev)) continue;
-        if (ev.type != INPUT_EV_KEY || ev.value == INPUT_VAL_RELEASE) continue;
-        uint16_t k = ev.code;
+        duneos_intent_t it[INPUT_INTENT_BATCH_MAX];
+        int n = duneos_input_read(&input, it, INPUT_INTENT_BATCH_MAX);
+        if (n <= 0) continue;
 
-        if (s_mode == MODE_WAVE) {
-            if (k == KEY_ESC) { s_mode = MODE_BROWSE; draw_browse(); }
-            else if (ui_wave_key(&s_wave, k)) draw_wave();
-            continue;
-        }
-        if (s_nfile == 0) { if (k == KEY_ESC) break; continue; }
+        for (int i = 0; i < n; i++) {
+            /* The wave view is the one widget with two axes: the primary pair
+             * pans and ALT_* zooms. A board that reaches no second axis pans
+             * only — its generated board_config.h names that gap. */
+            if (s_mode == MODE_WAVE) {
+                if (it[i].kind == INPUT_INTENT_BACK) { s_mode = MODE_BROWSE; draw_browse(); }
+                else if (ui_wave_intent(&s_wave, &it[i])) draw_wave();
+                continue;
+            }
+            if (s_nfile == 0) {
+                if (it[i].kind == INPUT_INTENT_BACK) goto done;
+                continue;
+            }
 
-        switch (ui_list_key(&s_list, k)) {
-        case UI_LIST_MOVED:  ui_list_draw(ui, &s_list); ui_flush(ui); break;
-        case UI_LIST_SELECT: open_vcd(); break;
-        case UI_LIST_CANCEL: goto done;
-        case UI_LIST_NONE:   break;
+            switch (ui_list_intent(&s_list, &it[i])) {
+            case UI_LIST_MOVED:  ui_list_draw(ui, &s_list); ui_flush(ui); break;
+            case UI_LIST_SELECT: open_vcd(); break;
+            case UI_LIST_CANCEL: goto done;
+            case UI_LIST_NONE:   break;
+            }
         }
     }
 
 done:
     ui_destroy(ui);
-    close(s_input);
+    duneos_input_close(&input);
     gfx_close(g);
     duneos_exit(0);
 }

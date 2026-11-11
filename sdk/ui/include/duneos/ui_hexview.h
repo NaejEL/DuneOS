@@ -32,3 +32,6 @@ void ui_hexview_draw(ui_t *ui, const ui_hexview_t *v);
 
 /* Up/Down scroll. Returns 1 if the view moved (redraw), 0 otherwise. */
 int ui_hexview_key(ui_hexview_t *v, uint16_t key);
+
+/* Portable entry point — see ui_list_intent. */
+int ui_hexview_intent(ui_hexview_t *v, const duneos_intent_t *it);

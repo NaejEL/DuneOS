@@ -32,7 +32,7 @@
 #include "duneos/ui.h"
 #include "duneos/ui_carousel.h"
 #include "duneos/appmeta.h"
-#include "duneos/input_ioctl.h"
+#include "duneos/input.h"
 #include "duneos/ambient.h"
 #include "duneos/dlog.h"
 
@@ -197,13 +197,13 @@ static void restore_sel(void)
  * The supervisor frees our RAM, runs the app in the freed space, and relaunches
  * us when it exits — so the launcher is never resident during a child, and a
  * RAM-hungry app (e.g. tetris' 32 KiB canvas) gets the contiguous block it needs. */
-static void launch(const char *path, gfx_ctx_t *gfx, ui_t *ui, int input)
+static void launch(const char *path, gfx_ctx_t *gfx, ui_t *ui, duneos_input_t *in)
 {
     DLOGI("launching %s", path);
     save_sel();
     ui_destroy(ui);
     gfx_close(gfx);
-    if (input >= 0) close(input);
+    duneos_input_close(in);
     duneos_supervisor_chain(path);
     duneos_exit(0);   /* does not return — supervisor takes over */
 }
@@ -220,11 +220,16 @@ void app_main(void)
     gfx_ctx_t *gfx = gfx_open_mode(GFX_MODE_STREAM);
     if (!gfx) { DLOGE("display open failed"); duneos_exit(10); }
 
-    int input = open("/dev/input/event0", O_RDONLY);
-    if (input < 0) { DLOGE("/dev/input/event0 open failed"); gfx_close(gfx); duneos_exit(11); }
+    /* Intents, not key codes: the T-Embed's rotary arrives as INPUT_EV_REL and
+     * this loop used to drop it, so the board rendered a launcher it could not
+     * navigate. State is on the stack — see the caller-owned note in input.h. */
+    duneos_input_t in;
+    if (duneos_input_open(&in) != 0) {
+        DLOGE("/dev/input/event0 open failed"); gfx_close(gfx); duneos_exit(11);
+    }
 
     ui_t *ui = ui_create(gfx);
-    if (!ui) { DLOGE("ui_create failed"); close(input); gfx_close(gfx); duneos_exit(10); }
+    if (!ui) { DLOGE("ui_create failed"); duneos_input_close(&in); gfx_close(gfx); duneos_exit(10); }
 
     scan_apps();
 
@@ -254,32 +259,38 @@ void app_main(void)
         /* Block on input, but wake every ~150 ms to refresh the modifier
          * indicator: one-shot held modifiers arm silently on release (no key
          * event), so we can't rely on input alone to drive the status bar. */
+        int ifd = duneos_input_fd(&in);
         fd_set rfds;
         FD_ZERO(&rfds);
-        FD_SET(input, &rfds);
+        FD_SET(ifd, &rfds);
         struct timeval tv = { 0, 150000 };
-        if (select(input + 1, &rfds, NULL, NULL, &tv) <= 0) {
+        if (select(ifd + 1, &rfds, NULL, NULL, &tv) <= 0) {
             ui_statusbar_top_poll(ui, "DuneOS");
             continue;
         }
 
-        input_event_t ev;
-        if (read(input, &ev, sizeof(ev)) != (int)sizeof(ev)) continue;
-        if (ev.type != INPUT_EV_KEY) continue;
-        if (ev.value == INPUT_VAL_RELEASE) { ui_statusbar_top_poll(ui, "DuneOS"); continue; }
-        if (s_count == 0) continue;
+        duneos_intent_t it[INPUT_INTENT_BATCH_MAX];
+        int n = duneos_input_read(&in, it, INPUT_INTENT_BATCH_MAX);
+        if (n <= 0 || s_count == 0) { ui_statusbar_top_poll(ui, "DuneOS"); continue; }
 
-        switch (ui_carousel_key(&s_car, ev.code)) {
-        case UI_CAROUSEL_MOVED:
-            render_home(ui);
-            break;
-        case UI_CAROUSEL_SELECT:
-            launch(s_paths[s_car.sel], gfx, ui, input);   /* hands off + exits */
-            break;
-        case UI_CAROUSEL_CANCEL:   /* launcher is home — Esc does not quit */
-        case UI_CAROUSEL_NONE:
-            ui_statusbar_top_poll(ui, "DuneOS");
-            break;
+        /* A fast spin yields several intents at once. Move through all of them
+         * and repaint once: one redraw per notch over SPI would lag behind the
+         * knob. */
+        bool moved = false;
+        for (int i = 0; i < n; i++) {
+            switch (ui_carousel_intent(&s_car, &it[i])) {
+            case UI_CAROUSEL_MOVED:
+                moved = true;
+                break;
+            case UI_CAROUSEL_SELECT:
+                launch(s_paths[s_car.sel], gfx, ui, &in);   /* hands off + exits */
+                break;
+            case UI_CAROUSEL_CANCEL:   /* launcher is home — Esc does not quit */
+            case UI_CAROUSEL_NONE:
+                break;
+            }
         }
+        if (moved) render_home(ui);
+        else       ui_statusbar_top_poll(ui, "DuneOS");
     }
 }

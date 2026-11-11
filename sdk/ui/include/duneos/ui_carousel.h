@@ -63,6 +63,9 @@ typedef enum {
  * cancel. Feed key codes from <duneos/input_ioctl.h>. */
 ui_carousel_event_t ui_carousel_key(ui_carousel_t *c, uint16_t key);
 
+/* Portable entry point — see ui_list_intent. */
+ui_carousel_event_t ui_carousel_intent(ui_carousel_t *c, const duneos_intent_t *it);
+
 /*
  * Resolve an app's icon to a `.dr` path via the ADR 023 search path:
  *   1. <dap_dir>/<name>.dr   (adjacent — side-loaded apps)

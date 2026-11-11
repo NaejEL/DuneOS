@@ -64,3 +64,16 @@ int ui_hexview_key(ui_hexview_t *v, uint16_t key)
     if (key == KEY_DOWN && v->scroll < max) { v->scroll++; return 1; }
     return 0;
 }
+
+/* One axis: both pairs scroll. */
+int ui_hexview_intent(ui_hexview_t *v, const duneos_intent_t *it)
+{
+    if (!it) return 0;
+    switch (it->kind) {
+    case INPUT_INTENT_PREV:
+    case INPUT_INTENT_ALT_PREV: return ui_hexview_key(v, KEY_UP);
+    case INPUT_INTENT_NEXT:
+    case INPUT_INTENT_ALT_NEXT: return ui_hexview_key(v, KEY_DOWN);
+    default:                    return 0;
+    }
+}

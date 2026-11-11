@@ -7,7 +7,8 @@ CFLAGS  += -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L
 ROOT    := ../..
 
 TESTS   := test_re test_i2c_decode test_known_yaml test_elf_validate \
-           test_elf_scan test_manifest_depth test_ld2450
+           test_elf_scan test_manifest_depth test_ld2450 \
+           test_input_intent test_ui_vkbd
 
 ELF_INC := -I$(ROOT)/kernel/duneos_loader/include
 ELF_SRC := $(ROOT)/kernel/duneos_loader/src/elf_parse.c
@@ -50,6 +51,24 @@ test_ld2450: test_ld2450.c $(ROOT)/sdk/sensor/libld2450.c \
              $(ROOT)/sdk/sensor/include/duneos/ld2450.h tassert.h
 	$(CC) $(CFLAGS) -I$(ROOT)/sdk/sensor/include test_ld2450.c \
 	    $(ROOT)/sdk/sensor/libld2450.c -o $@
+
+# The two pure halves of the input-portability layer. Both are compiled with the
+# same -Wall -Wextra -Werror as everything else here, which is the gate that
+# keeps them free of ESP-IDF, FreeRTOS and any fd: a dependency creeping back in
+# breaks this build before it reaches a board.
+test_input_intent: test_input_intent.c $(ROOT)/sdk/input/libinput.c \
+                   $(ROOT)/sdk/input/include/duneos/input.h \
+                   $(ROOT)/kernel/duneos_kernel/include/duneos/input_ioctl.h tassert.h
+	$(CC) $(CFLAGS) -I$(ROOT)/sdk/input/include \
+	    -I$(ROOT)/kernel/duneos_kernel/include \
+	    test_input_intent.c $(ROOT)/sdk/input/libinput.c -o $@
+
+test_ui_vkbd: test_ui_vkbd.c $(ROOT)/sdk/ui/ui_vkbd.c \
+              $(ROOT)/sdk/ui/include/duneos/ui_vkbd.h \
+              $(ROOT)/kernel/duneos_kernel/include/duneos/input_ioctl.h tassert.h
+	$(CC) $(CFLAGS) -I$(ROOT)/sdk/ui/include \
+	    -I$(ROOT)/kernel/duneos_kernel/include \
+	    test_ui_vkbd.c $(ROOT)/sdk/ui/ui_vkbd.c -o $@
 
 test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
                    $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h

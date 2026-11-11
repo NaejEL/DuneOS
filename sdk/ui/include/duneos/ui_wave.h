@@ -42,5 +42,9 @@ void ui_wave_draw(ui_t *ui, const ui_wave_t *w);
 /* Left/Right pan, Up/Down zoom. Returns 1 if the view moved (redraw). */
 int ui_wave_key(ui_wave_t *w, uint16_t key);
 
+/* Portable entry point — see ui_list_intent. The primary intent pair pans, the
+ * second (ALT_*) zooms. */
+int ui_wave_intent(ui_wave_t *w, const duneos_intent_t *it);
+
 /* Pixel x for a timestamp (clamped to the plot area) — for decode overlays. */
 int ui_wave_time_x(const ui_wave_t *w, uint32_t t_us);

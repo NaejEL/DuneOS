@@ -8,8 +8,11 @@
  * All buttons are assumed active-LOW with internal pull-up enabled. 10 ms
  * poll period provides natural contact debounce.
  *
- * Board-agnostic: pin numbers and key codes come from <duneos/board.h>,
- * emitted by boardgen.py from the active board's YAML.
+ * Board-agnostic: pin numbers come from <duneos/board.h>, emitted by
+ * boardgen.py from the active board's YAML. Each button declares an `intent:`
+ * there and boardgen derives the key code it injects, so the apps that read
+ * raw codes keep seeing what they always saw while sdk/input translates the
+ * same event into the intent.
  */
 
 #include <duneos/board.h>

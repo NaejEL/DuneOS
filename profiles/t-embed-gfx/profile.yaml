@@ -19,11 +19,14 @@ apps_flash:
 - launcher
 - logd
 - battery_pub
-# the probe set — written for the CardPuter, unmodified
+# the probe set. waves is migrated to intents and navigates with the rotary;
+# gfx_demo still reads raw key codes and is keyboard-only here.
+# snake and tetris are gone on purpose: both need 2-D continuous control, which
+# the intent vocabulary does not express and a rotary plus two buttons cannot
+# give them. An app that needs a keyboard should stay visible and launchable
+# with a warning rather than be dropped from the image — see docs/backlog.md.
 - gfx_demo
 - waves
-- snake
-- tetris
 # a few coreutils so the image is useful if a shell ever lands
 - ls
 - cat

@@ -381,6 +381,15 @@ Eliminates hardcoded device paths (`/dev/disp0`, `/dev/spi-1`, etc.) in the SDK 
 
 ---
 
+### Phase 24.14 — Input portability: intents, not key codes ✅ (board validation open)
+
+The launcher dropped every non-`INPUT_EV_KEY` event, so the T-Embed rendered a carousel its rotary could not move. Apps now dispatch on nine intents translated in `sdk/input/libinput.c` from the board's own `ioctl(INPUT_GET_TOPOLOGY)` answer — [ADR 042](docs/adr/042-input-intents-in-the-sdk.md). A button declares `intent:` (not `code:`), long-press ships so vocabulary reachability is a board-declaration property, and the on-screen keyboard costs nothing in an app that does not list it. Migrated: launcher, waves, wifi's prompt; `snake`/`tetris` leave the t-embed profile.
+
+- [ ] **Board validation, both boards (LEG-37)**: criteria 18 and 19 of `specs/SPEC-input-portability.md` — rotary direction and one-notch-per-item on the T-Embed, launcher/waves/g_shell unchanged on the CardPuter, and the text entry presenting the vkbd on one board and the line editor on the other. `counts_per_step: 1` and the encoder direction are hardware facts no host test can check.
+- [ ] **PO call**: the spec's criterion 1 (`KEY_UP`→PREV) and its `ui_wave` pan/zoom assignment together invert waves' arrow roles on the CardPuter, against criterion 18's "waves navigation unchanged". Implemented as the spec says; the bench decides which half moves.
+
+---
+
 ### Phase 24.9 — Kernel-side driver self-registration (ADR 015 Pattern 1) ✅
 
 Eliminates the hardcoded `#ifdef CONFIG_DUNEOS_DRV_*` + `extern void drv_*_register(void)` in `vfs_dev.c`. The Linux `module_init` pattern, **achieved through GCC constructors rather than an ELF section** (dodging ESP-IDF v6 linker friction).
@@ -740,7 +749,7 @@ LEG-32 landed with `CONFIG_DUNEOS_DRV_GPIO` absorbed as agreed: emitted for ever
 
 | ID | Finding | Severity | Size | Depends on | Spec | Status |
 |---|---|---|---|---|---|---|
-| LEG-17 | ADR 012 prescribed Greatest, a `dbt test` verb and `docs/testing.md`; the tree grew `tassert.h` and **7 suites** instead. ADR 041 supersedes it clause by clause, `dbt test` ships in `tools/dbt/testing.py`, `docs/testing.md` is written. LEG-39 closes with it: `pytest` is in `_DEPS`, so the venv dbt bootstraps can run the gate | major | M | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
+| LEG-17 | ADR 012 prescribed Greatest, a `dbt test` verb and `docs/testing.md`; the tree grew `tassert.h` and **9 suites** instead. ADR 041 supersedes it clause by clause, `dbt test` ships in `tools/dbt/testing.py`, `docs/testing.md` is written. LEG-39 closes with it: `pytest` is in `_DEPS`, so the venv dbt bootstraps can run the gate | major | M | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-18 | `test_known_yaml.c` compiled a copy of the wifi_daemon parser that had already diverged on the missing-file return the seed fallback branches on. One implementation now, `sdk/net/known_yaml.c`, compiled by the host suite; `iw` and `apps/user/wifi` link it too, which is how the empty-`ssid` bug surfaced — `iw` kept the entry and attached the following `psk:` to it, shifting every later one. **Validated on-board** on an m5stack-cardputer, 2026-09-13: the pre-existing `known.yaml` survived the sysbin flash and read back identical, `iw join` wrote a second entry with each `psk` on its own `ssid` and no shift, and `wifi_daemon` reread the file and reported `connected with SFR-ef60` (WPA2-PSK, channel 6) | major | S | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-19 | Untested pure logic. `tests/host/test_ld2450.c` covers both protocol worked examples, absent slots, bad header/tail and resync; `tools/dbt/tests/test_pure_logic.py` covers `validate_manifest`, `decode_perms` and `resolve` with their rejection paths | major | M | LEG-08 | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-20 | `font8x8.h` duplicated byte-for-byte between `apps/user/g_shell` and `sdk/display/include/duneos` | minor | XS | — | [specs/SPEC-leg-20-doc-coherence-batch.md](specs/SPEC-leg-20-doc-coherence-batch.md) | TODO |

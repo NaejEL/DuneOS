@@ -109,3 +109,18 @@ int ui_wave_key(ui_wave_t *w, uint16_t key)
     }
     return 0;
 }
+
+/* The only two-axis widget: the primary pair pans, the second zooms. On a
+ * rotary board the knob pans and zoom is unreachable unless the board declares
+ * a second axis — the generated board_config.h names that gap. */
+int ui_wave_intent(ui_wave_t *w, const duneos_intent_t *it)
+{
+    if (!it) return 0;
+    switch (it->kind) {
+    case INPUT_INTENT_PREV:     return ui_wave_key(w, KEY_LEFT);
+    case INPUT_INTENT_NEXT:     return ui_wave_key(w, KEY_RIGHT);
+    case INPUT_INTENT_ALT_PREV: return ui_wave_key(w, KEY_UP);
+    case INPUT_INTENT_ALT_NEXT: return ui_wave_key(w, KEY_DOWN);
+    default:                    return 0;
+    }
+}

@@ -7,7 +7,7 @@
 [[ADR-012]] chose **Greatest** as the test framework, a `dbt test` subcommand and a
 `docs/testing.md`, all scheduled for Phase 26. Phase 26 has not started. The
 testing that did get built arrived through other phases and looks nothing like
-the plan: `tests/host/tassert.h`, 41 hand-rolled lines, driving 7 host suites
+the plan: `tests/host/tassert.h`, 41 hand-rolled lines, driving 9 host suites
 plus a libFuzzer target under `make`, and a pytest tree for the Python tooling.
 No `dbt test`, no `docs/testing.md`.
 
