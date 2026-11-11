@@ -1,0 +1,50 @@
+name: t-embed-gfx
+board: lilygo-t-embed-cc1101
+description: "T-Embed graphical home — the portability probe: same apps as the
+  CardPuter contest profile, on a 240x280 portrait panel driven by a rotary
+  encoder instead of a 240x135 landscape panel driven by a keyboard."
+
+# No usb_shell: this board declares no `usb:` section, so drv_usb_cdc never
+# creates /dev/ttyUSB0 and usb_shell exits 1 on open(). Its console is
+# usb_jtag, for which no shell transport exists yet.
+#
+# No kb_iomatrix: input here is the kernel's quadrature encoder plus btn_gpio
+# for the two buttons, both feeding /dev/input/event0.
+#
+# Launchable apps live in /bin, not /sd/apps: there is no card in this board,
+# and the loader scans /bin first.
+apps_flash:
+- splash
+- btn_gpio
+- launcher
+- logd
+- battery_pub
+# the probe set — written for the CardPuter, unmodified
+- gfx_demo
+- waves
+- snake
+- tetris
+# a few coreutils so the image is useful if a shell ever lands
+- ls
+- cat
+- free
+- ps
+- services
+- reboot
+- input
+
+init_flash:
+- path: /bin/splash.dap
+  restart: no
+- path: /bin/btn_gpio.dap
+  restart: always
+- path: /bin/logd.dap
+  restart: always
+- path: /bin/battery_pub.dap
+  restart: always
+- path: /bin/launcher.dap
+  restart: always
+  after: splash
+
+apps_sd: []
+init_sd: []

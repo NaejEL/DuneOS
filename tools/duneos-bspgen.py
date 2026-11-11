@@ -144,7 +144,7 @@ KNOWN_BOARD_KEYS = {
     # memory and flash
     "flash_size_mb", "psram_size_mb", "psram_type", "main_task_stack",
     # console and boot
-    "console", "recovery_pin",
+    "console", "recovery_pin", "pwr_enable_pin",
     # buses and peripherals
     "uart", "i2c", "spi", "usb", "gpio_expanders", "logic",
     "sd_card", "has_sd", "display", "leds", "buttons", "encoder",
@@ -492,6 +492,17 @@ def generate(board: dict) -> str:
     # from a bricked init.yaml without re-flashing. The pin may overlap with
     # a regular `buttons:` entry; the check happens before any userspace
     # daemon configures the pin, and is non-destructive (input + pull-up).
+    pwr = board.get("pwr_enable_pin")
+    if pwr is not None:
+        lines += [
+            "/* ---------- Peripheral power rail ---------- */",
+            "/* Board gates its peripheral 3V3 (SD, display, radios) behind this pin.",
+            " * Driven high before any bus is brought up; without it those chips run",
+            " * on leakage and fail in ways that look like bus or protocol bugs. */",
+            _define("DUNEOS_BOARD_PWR_EN_PIN", pwr),
+            "",
+        ]
+
     rec = board.get("recovery_pin")
     if rec is not None:
         # Accept both shorthand `recovery_pin: 6` and dict

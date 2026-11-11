@@ -981,7 +981,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 4,
+   "count": 6,
    "dst": "blob",
    "src": "ROADMAP.md"
   },
@@ -1026,7 +1026,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 10,
+   "count": 11,
    "dst": "check",
    "src": "ROADMAP.md"
   },
@@ -1336,6 +1336,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 1,
+   "dst": "globmatch",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 7,
    "dst": "handler",
    "src": "ROADMAP.md"
@@ -1466,7 +1471,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 15,
+   "count": 18,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -1513,6 +1518,11 @@
   {
    "count": 1,
    "dst": "settled",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "sh_globmatch",
    "src": "ROADMAP.md"
   },
   {
@@ -6191,6 +6201,11 @@
    "src": "apps/user/gfx_demo/gfx_demo.c"
   },
   {
+   "count": 1,
+   "dst": "GFX_MAX_ROW_PX",
+   "src": "apps/user/gfx_demo/gfx_demo.c"
+  },
+  {
    "count": 2,
    "dst": "GFX_RED",
    "src": "apps/user/gfx_demo/gfx_demo.c"
@@ -10367,6 +10382,11 @@
   },
   {
    "count": 1,
+   "dst": "draw",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 2,
    "dst": "read",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -18097,6 +18117,11 @@
   },
   {
    "count": 2,
+   "dst": "ST7789_RAMCTRL",
+   "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
+  },
+  {
+   "count": 2,
    "dst": "ST7789_RAMWR",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
@@ -18116,7 +18141,7 @@
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "klog_e",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
@@ -18126,17 +18151,22 @@
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
+   "count": 1,
+   "dst": "missing",
+   "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
+  },
+  {
    "count": 2,
    "dst": "st7789_hw_clear",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
-   "count": 11,
+   "count": 12,
    "dst": "st7789_hw_cmd",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "st7789_hw_data",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
@@ -18148,6 +18178,11 @@
   {
    "count": 2,
    "dst": "st7789_hw_set_window",
+   "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
+  },
+  {
+   "count": 1,
+   "dst": "write",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
@@ -24222,6 +24257,16 @@
   },
   {
    "count": 1,
+   "dst": "free",
+   "src": "profiles/t-embed-gfx/profile.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "profiles/t-embed-gfx/profile.yaml"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "profiles/t-embed-recovery/profile.yaml"
   },
@@ -24396,6 +24441,11 @@
    "src": "sdk/display/gfx.c"
   },
   {
+   "count": 1,
+   "dst": "GFX_MAX_ROW_PX",
+   "src": "sdk/display/gfx.c"
+  },
+  {
    "count": 5,
    "dst": "GFX_STREAM_MAX_ROW_PX",
    "src": "sdk/display/gfx.c"
@@ -24448,6 +24498,11 @@
   {
    "count": 1,
    "dst": "fb_ioctl",
+   "src": "sdk/display/gfx.c"
+  },
+  {
+   "count": 1,
+   "dst": "fb_write",
    "src": "sdk/display/gfx.c"
   },
   {
@@ -24541,7 +24596,7 @@
    "src": "sdk/display/gfx.c"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "write",
    "src": "sdk/display/gfx.c"
   },
@@ -24623,6 +24678,11 @@
   {
    "count": 1,
    "dst": "GFX_GREEN",
+   "src": "sdk/display/include/duneos/gfx.h"
+  },
+  {
+   "count": 1,
+   "dst": "GFX_MAX_ROW_PX",
    "src": "sdk/display/include/duneos/gfx.h"
   },
   {
@@ -39571,7 +39631,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 84,
+   "count": 85,
    "dst": "_define",
    "src": "tools/duneos-bspgen.py"
   },
@@ -39591,7 +39651,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "fail",
    "src": "tools/duneos-bspgen.py"
   },
@@ -39988,6 +40048,7 @@
    "profiles/esp32s3-devkitc-default/profile.yaml",
    "profiles/kincony-a16-default/profile.yaml",
    "profiles/t-embed-default/profile.yaml",
+   "profiles/t-embed-gfx/profile.yaml",
    "profiles/t-embed-recovery/profile.yaml",
    "pytest.ini",
    "sdk/app/include/duneos/appmeta.h",
@@ -40402,6 +40463,7 @@
    "GFX_BLUE",
    "GFX_CYAN",
    "GFX_GREEN",
+   "GFX_MAX_ROW_PX",
    "GFX_RED",
    "GFX_RGB",
    "GFX_STREAM_MAX_ROW_PX",
@@ -40786,6 +40848,7 @@
    "ST7789_INVON",
    "ST7789_MADCTL",
    "ST7789_NORON",
+   "ST7789_RAMCTRL",
    "ST7789_RAMWR",
    "ST7789_RASET",
    "ST7789_SLPOUT",

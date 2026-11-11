@@ -17,6 +17,7 @@ static const char *TAG = "duneos/st7789_hw";
 #define ST7789_SLPOUT   0x11
 #define ST7789_NORON    0x13
 #define ST7789_INVON    0x21
+#define ST7789_RAMCTRL  0xB0
 #define ST7789_DISPON   0x29
 #define ST7789_CASET    0x2A
 #define ST7789_RASET    0x2B
@@ -88,15 +89,40 @@ esp_err_t st7789_hw_init(void)
 
     st7789_hw_cmd(ST7789_SWRESET); vTaskDelay(pdMS_TO_TICKS(120));
     st7789_hw_cmd(ST7789_SLPOUT);  vTaskDelay(pdMS_TO_TICKS(120));
-    st7789_hw_cmd(ST7789_COLMOD);
-    uint8_t colmod = 0x55;
-    st7789_hw_data(&colmod, 1);
+    /* Order and contents follow ESP-IDF's own st7789 panel driver: MADCTL,
+     * then COLMOD, then RAMCTRL. RAMCTRL (0xB0) was missing entirely, leaving
+     * the panel on its power-on data-transfer mode; {0x00,0xF0} is the
+     * big-endian default that driver programs for every ST7789. */
     st7789_hw_cmd(ST7789_MADCTL);
     uint8_t madctl = DUNEOS_DISPLAY_MADCTL;
     st7789_hw_data(&madctl, 1);
+    st7789_hw_cmd(ST7789_COLMOD);
+    uint8_t colmod = 0x55;
+    st7789_hw_data(&colmod, 1);
+    st7789_hw_cmd(ST7789_RAMCTRL);
+    uint8_t ramctrl[2] = { 0x00, 0xF0 };
+    st7789_hw_data(ramctrl, 2);
     st7789_hw_cmd(ST7789_INVON);
     st7789_hw_cmd(ST7789_NORON);  vTaskDelay(pdMS_TO_TICKS(10));
     st7789_hw_cmd(ST7789_DISPON); vTaskDelay(pdMS_TO_TICKS(10));
+
+    /* READBACK PROBE: ask the panel what it actually latched. 0x0B is
+     * RDDMADCTL; the ST7789 returns one dummy byte then the register. If this
+     * does not match what we wrote, the write is not reaching the panel and no
+     * amount of changing the value will matter. */
+    {
+        gpio_set_level(DUNEOS_DISPLAY_DC_PIN, 0);
+        spi_transaction_t c = { .length = 8, .flags = SPI_TRANS_USE_TXDATA,
+                                .tx_data = { 0x0B } };
+        spi_device_transmit(s_spi, &c);
+        gpio_set_level(DUNEOS_DISPLAY_DC_PIN, 1);
+        uint8_t rx[2] = {0, 0};
+        spi_transaction_t r = { .length = 16, .rxlength = 16, .rx_buffer = rx,
+                                .flags = 0, .tx_buffer = NULL };
+        esp_err_t rerr = spi_device_transmit(s_spi, &r);
+        klog_e(TAG, "RDDMADCTL rc=%d raw=%02X %02X (wrote 0x%02X)",
+               (int)rerr, rx[0], rx[1], (unsigned)DUNEOS_DISPLAY_MADCTL);
+    }
 
 #if DUNEOS_DISPLAY_BL_PIN >= 0
     gpio_set_level(DUNEOS_DISPLAY_BL_PIN, 1);

@@ -160,17 +160,23 @@ static void stream_write_area(gfx_ctx_t *c, int x, int y, int w, int h,
         disp_write_area(c->disp, (uint16_t)x, (uint16_t)y,
                                   (uint16_t)w, (uint16_t)h, pixels);
     } else {
-        /* FB0: position, write pixels row by row. FB_FLUSH happens at
+        /* FB0: one SET_POS + write PER ROW. fb_write memcpys linearly into
+         * the framebuffer at a byte offset (drv_fb_st7789.c:113), so a single
+         * write of w*h pixels lays the whole rect out along one row and wraps:
+         * an 8x8 glyph came out 64 px wide and 1 px high. The comment here
+         * already said "row by row"; the code did not. FB_FLUSH happens at
          * gfx_flush(). */
-        fb_pos_t pos = { .x = (uint16_t)x, .y = (uint16_t)y };
-        ioctl(c->fd, FB_SET_POS, &pos);
-        write(c->fd, pixels, (size_t)w * h * sizeof(uint16_t));
+        for (int row = 0; row < h; row++) {
+            fb_pos_t pos = { .x = (uint16_t)x, .y = (uint16_t)(y + row) };
+            ioctl(c->fd, FB_SET_POS, &pos);
+            write(c->fd, pixels + (size_t)row * w, (size_t)w * sizeof(uint16_t));
+        }
     }
 }
 
 /* Max display width DuneOS supports today. Used for stack-allocated row
  * buffers in STREAM mode. 320 covers ST7789 + most parallel TFTs. */
-#define GFX_STREAM_MAX_ROW_PX  320
+#define GFX_STREAM_MAX_ROW_PX  GFX_MAX_ROW_PX
 
 /* ---- drawing ------------------------------------------------------------- */
 

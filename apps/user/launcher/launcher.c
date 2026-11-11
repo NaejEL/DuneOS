@@ -59,7 +59,11 @@ static int         s_meta_ok;     /* of those, manifests read successfully    */
 
 static ui_carousel_t s_car;
 
-static const char *const k_dirs[] = { "/sd/apps" };
+/* The same places the loader scans (loader.c s_scan_dirs), in the same
+ * order. Scanning only /sd/apps left the launcher empty on any board
+ * without a working SD card — the flash image already carries apps in
+ * /bin, and the loader has always been willing to run them. */
+static const char *const k_dirs[] = { "/bin", "/sd/bin", "/sd/apps" };
 
 /* ----- discovery --------------------------------------------------------- */
 

@@ -17,6 +17,11 @@ board:
   # init failing, so the deeper success paths are NOT in the figure. Re-measure
   # with a card inserted and a working display before trimming it.
   main_task_stack: 5120
+  # LilyGO BOARD_POWERON: load switch for the peripheral 3V3 rail — SD card,
+  # ST7789 and CC1101 all sit behind it. Left low, they draw leakage only: the
+  # SD answers CMD0 at 400 kHz then times out on the first 20 MHz data read,
+  # and the panel renders noise with correct registers.
+  pwr_enable_pin: 15
   console: usb_jtag
 
   wifi: true
@@ -55,8 +60,16 @@ board:
 
   display:
     driver: st7789
-    width: 240
-    height: 280
+    # 1.9" 320x170 landscape. rotation 3 = MADCTL 0xA0 (MY|MV) turns the
+    # native portrait panel landscape. INVON is unconditional in
+    # st7789_hw.c:97 and this panel needs it.
+    # 1.9" 320x170 landscape. MADCTL 0xA0 = MY|MV and a 35 px gap on the
+    # short axis — the same transform a working esp_lcd setup uses for this
+    # panel. NOT SETTLED: text still renders mirrored and the orientation is
+    # unverified on hardware — 0xE0 was worse (third of the panel, glitching).
+    width: 320
+    height: 170
+    madctl: 0xA0
     # ST7789 shares SPI2 bus with SD and CC1101
     spi_host: SPI2_HOST
     mosi_pin: 9
@@ -66,8 +79,10 @@ board:
     rst_pin: 40
     bl_pin: 21
     freq_hz: 40000000
-    col_offset: 0   # ST7789 CASET offset — 240×280 panel fills the frame, no offset
-    row_offset: 0   # ST7789 RASET offset
+    # Native-portrait terms, crossed over when MV=1 (st7789_hw.c:146-149):
+    # the visible 170 columns are centred in the controller's 240.
+    col_offset: 35
+    row_offset: 0
 
   lora:
     type: cc1101

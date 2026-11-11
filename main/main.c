@@ -1,3 +1,4 @@
+#include "driver/gpio.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -145,6 +146,14 @@ void app_main(void)
 
 #ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     console_init();
+#endif
+
+#ifdef DUNEOS_BOARD_PWR_EN_PIN
+    /* Raise the peripheral rail before any bus comes up. The 50 ms is the
+     * card's power-up ramp, not decoration: SD needs a clean rail before CMD0. */
+    gpio_set_direction(DUNEOS_BOARD_PWR_EN_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(DUNEOS_BOARD_PWR_EN_PIN, 1);
+    vTaskDelay(pdMS_TO_TICKS(50));
 #endif
 
     /* duneos_vfs_init() calls drv_usb_preinit() as its very first action,

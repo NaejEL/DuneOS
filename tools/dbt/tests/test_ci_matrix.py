@@ -29,7 +29,8 @@ EXPECTED = {
     "qemu_boards": ["esp32s3-qemu", "esp32s3-qemu-psram"],
     "check_profiles": ["cardputer-contest", "cardputer-default", "cardputer-net",
                        "cardputer-recovery", "esp32s3-devkitc-default",
-                       "kincony-a16-default", "t-embed-default", "t-embed-recovery"],
+                       "kincony-a16-default", "t-embed-default", "t-embed-gfx",
+                       "t-embed-recovery"],
     "build_profiles": ["cardputer-contest", "kincony-a16-default", "t-embed-default"],
     "excluded": ["esp32c3-devkitc", "esp32p4-devkitm"],
 }
