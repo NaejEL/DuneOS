@@ -1,0 +1,21 @@
+{
+  "title": "# Brainstorm — $subject",
+  "idea_heading": "## The idea after confrontation",
+  "objections_heading": "## Objections that held",
+  "objection_line": "- $text",
+  "retained_heading": "## Retained angles (5 maximum)",
+  "retained_line": "$n. **$title** `[$marking]` — $body",
+  "discarded_heading": "## Discarded angles",
+  "discarded_table": ["| Angle | Marking | Round | Reason | Discarded by |", "| --- | --- | --- | --- | --- |"],
+  "discarded_row": "| $title | $marking | $round | $reason | $by |",
+  "not_retained_heading": "## Angles not retained in this cycle",
+  "not_retained_table": ["| Angle | Rank | Reason (beyond the cap of 5) |", "| --- | --- | --- |"],
+  "not_retained_row": "| $title | $rank | $reason |",
+  "not_retained_reason": "beyond the cap of 5",
+  "end_heading": "## End of session",
+  "end_line": "Rounds played: $played/$rounds. End: $end.",
+  "ends": {"ceiling": "ceiling reached", "early": "early exit", "requested": "convergence requested"},
+  "missing_line": "Lenses not queried (agent silent after a relaunch): $lenses.",
+  "markings": {"enonce": "in the brief", "hors-enonce": "outside the brief"},
+  "none": "—"
+}

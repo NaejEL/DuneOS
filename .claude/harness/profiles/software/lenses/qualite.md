@@ -1,0 +1,1 @@
+- **(c) `qualite`** (`QUAL-`) — obvious bugs, missing error handling (empty catches, ignored return codes), dead code, massive duplication, oversized functions or files, old TODO/FIXME;

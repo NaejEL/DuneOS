@@ -111,6 +111,11 @@
    "src": "CLAUDE.md"
   },
   {
+   "count": 41,
+   "dst": "board",
+   "src": "CLAUDE.md"
+  },
+  {
    "count": 1,
    "dst": "build_kernel",
    "src": "CLAUDE.md"
@@ -133,6 +138,11 @@
   {
    "count": 2,
    "dst": "close",
+   "src": "CLAUDE.md"
+  },
+  {
+   "count": 3,
+   "dst": "commit",
    "src": "CLAUDE.md"
   },
   {
@@ -371,6 +381,11 @@
    "src": "CMakeLists.txt"
   },
   {
+   "count": 9,
+   "dst": "board",
+   "src": "CMakeLists.txt"
+  },
+  {
    "count": 1,
    "dst": "read",
    "src": "CMakeLists.txt"
@@ -396,8 +411,18 @@
    "src": "CONTRIBUTING.md"
   },
   {
+   "count": 13,
+   "dst": "board",
+   "src": "CONTRIBUTING.md"
+  },
+  {
    "count": 1,
    "dst": "check",
+   "src": "CONTRIBUTING.md"
+  },
+  {
+   "count": 2,
+   "dst": "commit",
    "src": "CONTRIBUTING.md"
   },
   {
@@ -538,6 +563,11 @@
   {
    "count": 1,
    "dst": "blob",
+   "src": "README.md"
+  },
+  {
+   "count": 19,
+   "dst": "board",
    "src": "README.md"
   },
   {
@@ -691,6 +721,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 4,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "DUNEOS_MAX_REGISTERED_DRIVERS",
    "src": "ROADMAP.md"
@@ -752,7 +787,22 @@
   },
   {
    "count": 1,
+   "dst": "INPUT_EV_KEY",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
    "dst": "INPUT_INJECT_EVENT",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_UP",
    "src": "ROADMAP.md"
   },
   {
@@ -773,6 +823,11 @@
   {
    "count": 2,
    "dst": "MAX_SECTIONS",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "PREV",
    "src": "ROADMAP.md"
   },
   {
@@ -986,6 +1041,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 117,
+   "dst": "board",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "build_app_icon",
    "src": "ROADMAP.md"
@@ -1026,7 +1086,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 11,
+   "count": 12,
    "dst": "check",
    "src": "ROADMAP.md"
   },
@@ -1066,6 +1126,11 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 5,
+   "dst": "commit",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "compute_image_sizes",
    "src": "ROADMAP.md"
@@ -1101,12 +1166,17 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 3,
+   "dst": "defines",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "deploy_single",
    "src": "ROADMAP.md"
   },
   {
-   "count": 10,
+   "count": 11,
    "dst": "dispatch",
    "src": "ROADMAP.md"
   },
@@ -1366,7 +1436,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 7,
+   "count": 8,
    "dst": "ioctl",
    "src": "ROADMAP.md"
   },
@@ -1446,12 +1516,17 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 5,
+   "dst": "move",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 1,
    "dst": "nanosleep",
    "src": "ROADMAP.md"
   },
   {
-   "count": 7,
+   "count": 8,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1552,17 +1627,17 @@
   },
   {
    "count": 1,
+   "dst": "topology",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
    "dst": "ui_size",
    "src": "ROADMAP.md"
   },
   {
    "count": 1,
    "dst": "ui_statusbar",
-   "src": "ROADMAP.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "ROADMAP.md"
   },
   {
@@ -1623,6 +1698,11 @@
   {
    "count": 1,
    "dst": "battery_read",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 5,
+   "dst": "board",
    "src": "apps/system/battery_daemon/battery_daemon.c"
   },
   {
@@ -1698,6 +1778,11 @@
   {
    "count": 1,
    "dst": "battery_ioctl",
+   "src": "apps/system/battery_pub/battery_pub.c"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "apps/system/battery_pub/battery_pub.c"
   },
   {
@@ -1966,11 +2051,6 @@
    "src": "apps/system/bin/cp/cp.c"
   },
   {
-   "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/cp/cp.c"
-  },
-  {
    "count": 2,
    "dst": "write",
    "src": "apps/system/bin/cp/cp.c"
@@ -2023,11 +2103,6 @@
   {
    "count": 3,
    "dst": "show",
-   "src": "apps/system/bin/df/df.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/df/df.c"
   },
   {
@@ -2098,11 +2173,6 @@
   {
    "count": 7,
    "dst": "stat",
-   "src": "apps/system/bin/du/du.c"
-  },
-  {
-   "count": 2,
-   "dst": "usage",
    "src": "apps/system/bin/du/du.c"
   },
   {
@@ -2188,6 +2258,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "apps/system/bin/free/free.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "apps/system/bin/free/free.c"
   },
   {
@@ -2316,11 +2391,6 @@
    "src": "apps/system/bin/gpio/gpio.c"
   },
   {
-   "count": 5,
-   "dst": "usage",
-   "src": "apps/system/bin/gpio/gpio.c"
-  },
-  {
    "count": 1,
    "dst": "write",
    "src": "apps/system/bin/gpio/gpio.c"
@@ -2401,11 +2471,6 @@
    "src": "apps/system/bin/grep/grep.c"
   },
   {
-   "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/grep/grep.c"
-  },
-  {
    "count": 6,
    "dst": "write",
    "src": "apps/system/bin/grep/grep.c"
@@ -2463,11 +2528,6 @@
   {
    "count": 1,
    "dst": "read",
-   "src": "apps/system/bin/head/head.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/head/head.c"
   },
   {
@@ -2731,6 +2791,11 @@
    "src": "apps/system/bin/iw/iw.c"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "apps/system/bin/iw/iw.c"
+  },
+  {
    "count": 4,
    "dst": "close",
    "src": "apps/system/bin/iw/iw.c"
@@ -2828,11 +2893,6 @@
   {
    "count": 2,
    "dst": "update_known",
-   "src": "apps/system/bin/iw/iw.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/iw/iw.c"
   },
   {
@@ -3017,11 +3077,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/ls/ls.c"
-  },
-  {
-   "count": 1,
    "dst": "write",
    "src": "apps/system/bin/ls/ls.c"
   },
@@ -3077,11 +3132,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/mkdir/mkdir.c"
-  },
-  {
-   "count": 1,
    "dst": "DUNEOS_EXEC_ARGS_BUF_SIZE",
    "src": "apps/system/bin/mv/mv.c"
   },
@@ -3096,6 +3146,11 @@
    "src": "apps/system/bin/mv/mv.c"
   },
   {
+   "count": 2,
+   "dst": "move",
+   "src": "apps/system/bin/mv/mv.c"
+  },
+  {
    "count": 3,
    "dst": "rename",
    "src": "apps/system/bin/mv/mv.c"
@@ -3103,11 +3158,6 @@
   {
    "count": 3,
    "dst": "stat",
-   "src": "apps/system/bin/mv/mv.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/mv/mv.c"
   },
   {
@@ -3251,11 +3301,6 @@
    "src": "apps/system/bin/ping/ping.c"
   },
   {
-   "count": 2,
-   "dst": "usage",
-   "src": "apps/system/bin/ping/ping.c"
-  },
-  {
    "count": 1,
    "dst": "write",
    "src": "apps/system/bin/ping/ping.c"
@@ -3268,6 +3313,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "apps/system/bin/ps/ps.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "apps/system/bin/ps/ps.c"
   },
   {
@@ -3303,11 +3353,6 @@
   {
    "count": 3,
    "dst": "outf",
-   "src": "apps/system/bin/restart/restart.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/restart/restart.c"
   },
   {
@@ -3388,11 +3433,6 @@
   {
    "count": 2,
    "dst": "unlink",
-   "src": "apps/system/bin/rm/rm.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/rm/rm.c"
   },
   {
@@ -3488,11 +3528,6 @@
   {
    "count": 2,
    "dst": "subst",
-   "src": "apps/system/bin/sed/sed.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/sed/sed.c"
   },
   {
@@ -3602,11 +3637,6 @@
   },
   {
    "count": 2,
-   "dst": "usage",
-   "src": "apps/system/bin/tail/tail.c"
-  },
-  {
-   "count": 2,
    "dst": "usleep",
    "src": "apps/system/bin/tail/tail.c"
   },
@@ -3648,11 +3678,6 @@
   {
    "count": 2,
    "dst": "open",
-   "src": "apps/system/bin/touch/touch.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/touch/touch.c"
   },
   {
@@ -3717,13 +3742,13 @@
   },
   {
    "count": 1,
-   "dst": "usage",
+   "dst": "write",
    "src": "apps/system/bin/wc/wc.c"
   },
   {
    "count": 1,
-   "dst": "write",
-   "src": "apps/system/bin/wc/wc.c"
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "apps/system/btn_gpio/btn_gpio.c"
   },
   {
    "count": 1,
@@ -3781,6 +3806,11 @@
    "src": "apps/system/btn_gpio/btn_gpio.c"
   },
   {
+   "count": 4,
+   "dst": "board",
+   "src": "apps/system/btn_gpio/btn_gpio.c"
+  },
+  {
    "count": 1,
    "dst": "close",
    "src": "apps/system/btn_gpio/btn_gpio.c"
@@ -3816,6 +3846,11 @@
    "src": "apps/system/btn_gpio/btn_gpio.c"
   },
   {
+   "count": 1,
+   "dst": "read",
+   "src": "apps/system/btn_gpio/btn_gpio.c"
+  },
+  {
    "count": 2,
    "dst": "usleep",
    "src": "apps/system/btn_gpio/btn_gpio.c"
@@ -3843,6 +3878,11 @@
   {
    "count": 1,
    "dst": "DLOGI",
+   "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
+  },
+  {
+   "count": 2,
+   "dst": "DUNEOS_INPUT_DEV",
    "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
   },
   {
@@ -3981,6 +4021,11 @@
    "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
   },
   {
+   "count": 1,
+   "dst": "NEXT",
+   "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
+  },
+  {
    "count": 11,
    "dst": "NMODS",
    "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
@@ -3993,6 +4038,11 @@
   {
    "count": 2,
    "dst": "app_main",
+   "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
+  },
+  {
+   "count": 4,
+   "dst": "board",
    "src": "apps/system/kb_iomatrix/kb_iomatrix.c"
   },
   {
@@ -4596,6 +4646,11 @@
    "src": "apps/system/shell_core/shell_cmds.c"
   },
   {
+   "count": 1,
+   "dst": "move",
+   "src": "apps/system/shell_core/shell_cmds.c"
+  },
+  {
    "count": 2,
    "dst": "normalize_path",
    "src": "apps/system/shell_core/shell_cmds.c"
@@ -4736,8 +4791,8 @@
    "src": "apps/system/shell_core/shell_cmds.c"
   },
   {
-   "count": 2,
-   "dst": "usage",
+   "count": 1,
+   "dst": "upper",
    "src": "apps/system/shell_core/shell_cmds.c"
   },
   {
@@ -4846,6 +4901,11 @@
    "src": "apps/system/shell_core/shell_core.c"
   },
   {
+   "count": 1,
+   "dst": "insert",
+   "src": "apps/system/shell_core/shell_core.c"
+  },
+  {
    "count": 6,
    "dst": "kill",
    "src": "apps/system/shell_core/shell_core.c"
@@ -4853,6 +4913,11 @@
   {
    "count": 3,
    "dst": "load_history",
+   "src": "apps/system/shell_core/shell_core.c"
+  },
+  {
+   "count": 2,
+   "dst": "move",
    "src": "apps/system/shell_core/shell_core.c"
   },
   {
@@ -4936,6 +5001,11 @@
    "src": "apps/system/shell_core/shell_core.c"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "apps/system/telnet_shell/duneos.yaml"
+  },
+  {
    "count": 2,
    "dst": "dlog",
    "src": "apps/system/telnet_shell/duneos.yaml"
@@ -5008,6 +5078,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "apps/system/telnet_shell/telnet_shell.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "apps/system/telnet_shell/telnet_shell.c"
   },
   {
@@ -5278,6 +5353,11 @@
   {
    "count": 6,
    "dst": "blob",
+   "src": "apps/system/wifi_daemon/wifi_daemon.c"
+  },
+  {
+   "count": 3,
+   "dst": "board",
    "src": "apps/system/wifi_daemon/wifi_daemon.c"
   },
   {
@@ -6232,6 +6312,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "apps/user/gfx_demo/gfx_demo.c"
+  },
+  {
+   "count": 1,
    "dst": "draw",
    "src": "apps/user/gfx_demo/gfx_demo.c"
   },
@@ -6343,6 +6428,11 @@
   {
    "count": 2,
    "dst": "app_main",
+   "src": "apps/user/i2cscope/i2cscope.c"
+  },
+  {
+   "count": 7,
+   "dst": "board",
    "src": "apps/user/i2cscope/i2cscope.c"
   },
   {
@@ -6553,6 +6643,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "apps/user/i2cscope/i2cscope.h"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "apps/user/i2cscope/i2cscope.h"
   },
   {
@@ -6788,11 +6883,6 @@
   {
    "count": 2,
    "dst": "ui_titlebar",
-   "src": "apps/user/i2cscope/scan.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/user/i2cscope/scan.c"
   },
   {
@@ -7357,6 +7447,11 @@
   },
   {
    "count": 1,
+   "dst": "defines",
+   "src": "apps/user/launcher/duneos.yaml"
+  },
+  {
+   "count": 1,
    "dst": "dlog",
    "src": "apps/user/launcher/duneos.yaml"
   },
@@ -7402,12 +7497,12 @@
   },
   {
    "count": 1,
-   "dst": "INPUT_EV_KEY",
+   "dst": "INPUT_EV_REL",
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 1,
-   "dst": "INPUT_VAL_RELEASE",
+   "count": 2,
+   "dst": "INPUT_INTENT_BATCH_MAX",
    "src": "apps/user/launcher/launcher.c"
   },
   {
@@ -7446,7 +7541,12 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 4,
+   "count": 2,
+   "dst": "board",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 2,
    "dst": "close",
    "src": "apps/user/launcher/launcher.c"
   },
@@ -7487,6 +7587,26 @@
   },
   {
    "count": 2,
+   "dst": "duneos_input_close",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_fd",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_open",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_read",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 2,
    "dst": "duneos_supervisor_chain",
    "src": "apps/user/launcher/launcher.c"
   },
@@ -7511,11 +7631,6 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 1,
-   "dst": "input_ioctl",
-   "src": "apps/user/launcher/launcher.c"
-  },
-  {
    "count": 3,
    "dst": "launch",
    "src": "apps/user/launcher/launcher.c"
@@ -7526,7 +7641,7 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 7,
+   "count": 6,
    "dst": "open",
    "src": "apps/user/launcher/launcher.c"
   },
@@ -7541,7 +7656,7 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 7,
+   "count": 6,
    "dst": "read",
    "src": "apps/user/launcher/launcher.c"
   },
@@ -7602,7 +7717,7 @@
   },
   {
    "count": 1,
-   "dst": "ui_carousel_key",
+   "dst": "ui_carousel_intent",
    "src": "apps/user/launcher/launcher.c"
   },
   {
@@ -8411,6 +8526,11 @@
    "src": "apps/user/snake/snake.c"
   },
   {
+   "count": 2,
+   "dst": "erase",
+   "src": "apps/user/snake/snake.c"
+  },
+  {
    "count": 6,
    "dst": "game_cell",
    "src": "apps/user/snake/snake.c"
@@ -8523,6 +8643,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "apps/user/splash/splash.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "apps/user/splash/splash.c"
   },
   {
@@ -8946,6 +9071,11 @@
    "src": "apps/user/tetris/tetris.c"
   },
   {
+   "count": 13,
+   "dst": "board",
+   "src": "apps/user/tetris/tetris.c"
+  },
+  {
    "count": 4,
    "dst": "cell_set",
    "src": "apps/user/tetris/tetris.c"
@@ -9041,6 +9171,11 @@
    "src": "apps/user/tetris/tetris.c"
   },
   {
+   "count": 1,
+   "dst": "move",
+   "src": "apps/user/tetris/tetris.c"
+  },
+  {
    "count": 4,
    "dst": "render",
    "src": "apps/user/tetris/tetris.c"
@@ -9121,18 +9256,8 @@
    "src": "apps/user/waves/waves.c"
   },
   {
-   "count": 1,
-   "dst": "INPUT_EV_KEY",
-   "src": "apps/user/waves/waves.c"
-  },
-  {
-   "count": 1,
-   "dst": "INPUT_VAL_RELEASE",
-   "src": "apps/user/waves/waves.c"
-  },
-  {
    "count": 2,
-   "dst": "KEY_ESC",
+   "dst": "INPUT_INTENT_BATCH_MAX",
    "src": "apps/user/waves/waves.c"
   },
   {
@@ -9177,11 +9302,16 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "apps/user/waves/waves.c"
+  },
+  {
+   "count": 1,
    "dst": "capture",
    "src": "apps/user/waves/waves.c"
   },
   {
-   "count": 3,
+   "count": 1,
    "dst": "close",
    "src": "apps/user/waves/waves.c"
   },
@@ -9221,6 +9351,21 @@
    "src": "apps/user/waves/waves.c"
   },
   {
+   "count": 2,
+   "dst": "duneos_input_close",
+   "src": "apps/user/waves/waves.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_open",
+   "src": "apps/user/waves/waves.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_read",
+   "src": "apps/user/waves/waves.c"
+  },
+  {
    "count": 1,
    "dst": "fcntl",
    "src": "apps/user/waves/waves.c"
@@ -9246,17 +9391,12 @@
    "src": "apps/user/waves/waves.c"
   },
   {
-   "count": 1,
-   "dst": "input_ioctl",
-   "src": "apps/user/waves/waves.c"
-  },
-  {
    "count": 2,
    "dst": "next_char",
    "src": "apps/user/waves/waves.c"
   },
   {
-   "count": 4,
+   "count": 3,
    "dst": "open",
    "src": "apps/user/waves/waves.c"
   },
@@ -9281,7 +9421,7 @@
    "src": "apps/user/waves/waves.c"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "read",
    "src": "apps/user/waves/waves.c"
   },
@@ -9317,7 +9457,7 @@
   },
   {
    "count": 1,
-   "dst": "ui_list_key",
+   "dst": "ui_list_intent",
    "src": "apps/user/waves/waves.c"
   },
   {
@@ -9357,7 +9497,7 @@
   },
   {
    "count": 1,
-   "dst": "ui_wave_key",
+   "dst": "ui_wave_intent",
    "src": "apps/user/waves/waves.c"
   },
   {
@@ -9367,7 +9507,17 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "apps/user/wifi/duneos.yaml"
+  },
+  {
+   "count": 1,
    "dst": "ui_statusbar",
+   "src": "apps/user/wifi/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_draw",
    "src": "apps/user/wifi/duneos.yaml"
   },
   {
@@ -9391,23 +9541,8 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 2,
-   "dst": "INPUT_EV_KEY",
-   "src": "apps/user/wifi/wifi.c"
-  },
-  {
-   "count": 2,
-   "dst": "INPUT_VAL_RELEASE",
-   "src": "apps/user/wifi/wifi.c"
-  },
-  {
-   "count": 1,
-   "dst": "KEY_BACKSPACE",
-   "src": "apps/user/wifi/wifi.c"
-  },
-  {
-   "count": 2,
-   "dst": "KEY_ESC",
+   "count": 4,
+   "dst": "INPUT_INTENT_BATCH_MAX",
    "src": "apps/user/wifi/wifi.c"
   },
   {
@@ -9446,7 +9581,7 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "PSK_CAP",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9486,12 +9621,17 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
+   "count": 4,
+   "dst": "board",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
    "count": 3,
    "dst": "build_rows",
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 7,
+   "count": 5,
    "dst": "close",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9506,6 +9646,11 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
+   "count": 1,
+   "dst": "draw",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
    "count": 2,
    "dst": "draw_header",
    "src": "apps/user/wifi/wifi.c"
@@ -9516,13 +9661,38 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "draw_prompt",
    "src": "apps/user/wifi/wifi.c"
   },
   {
    "count": 4,
    "dst": "duneos_exit",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_input_close",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_input_fd",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_has_keyboard",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_open",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_input_read",
    "src": "apps/user/wifi/wifi.c"
   },
   {
@@ -9586,11 +9756,6 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 1,
-   "dst": "input_ioctl",
-   "src": "apps/user/wifi/wifi.c"
-  },
-  {
    "count": 6,
    "dst": "join",
    "src": "apps/user/wifi/wifi.c"
@@ -9611,12 +9776,17 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
+   "count": 1,
+   "dst": "move",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
    "count": 5,
    "dst": "now_ms",
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 6,
+   "count": 5,
    "dst": "open",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9637,16 +9807,16 @@
   },
   {
    "count": 2,
-   "dst": "prompt_key",
+   "dst": "prompt_intent",
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 7,
+   "count": 8,
    "dst": "quit",
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 7,
+   "count": 5,
    "dst": "read",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9676,7 +9846,7 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "scan",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9722,16 +9892,6 @@
   },
   {
    "count": 2,
-   "dst": "ui_input_draw",
-   "src": "apps/user/wifi/wifi.c"
-  },
-  {
-   "count": 1,
-   "dst": "ui_input_key",
-   "src": "apps/user/wifi/wifi.c"
-  },
-  {
-   "count": 2,
    "dst": "ui_list_draw",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9742,7 +9902,7 @@
   },
   {
    "count": 1,
-   "dst": "ui_list_key",
+   "dst": "ui_list_intent",
    "src": "apps/user/wifi/wifi.c"
   },
   {
@@ -9776,12 +9936,22 @@
    "src": "apps/user/wifi/wifi.c"
   },
   {
+   "count": 1,
+   "dst": "ui_text_entry_draw",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_backend",
+   "src": "apps/user/wifi/wifi.c"
+  },
+  {
    "count": 2,
    "dst": "usleep",
    "src": "apps/user/wifi/wifi.c"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "wait",
    "src": "apps/user/wifi/wifi.c"
   },
@@ -9829,6 +9999,21 @@
    "count": 1,
    "dst": "R_RISCV_LO12_S",
    "src": "arch/riscv32/reloc/loader_reloc_riscv.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "arch/riscv32/reloc/loader_reloc_riscv.c"
+  },
+  {
+   "count": 1,
+   "dst": "upper",
+   "src": "arch/riscv32/reloc/loader_reloc_riscv.c"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "arch/xtensa_esp32/arch.cmake"
   },
   {
    "count": 1,
@@ -9922,6 +10107,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "arch/xtensa_esp32/hal/hal_phy.c"
+  },
+  {
+   "count": 1,
    "dst": "duneos_hal_eth_get_link",
    "src": "arch/xtensa_esp32/hal/hal_phy.c"
   },
@@ -9969,6 +10159,16 @@
    "count": 1,
    "dst": "ARCH",
    "src": "arch/xtensa_esp32s3/arch.cmake"
+  },
+  {
+   "count": 2,
+   "dst": "board",
+   "src": "arch/xtensa_esp32s3/arch.cmake"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "arch/xtensa_esp32s3/hal/hal_adc.c"
   },
   {
    "count": 1,
@@ -10322,8 +10522,18 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "boards/esp32c3-devkitc/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "boards/esp32c3-devkitc/init.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "boards/esp32p4-devkitm/board.yaml"
   },
   {
    "count": 1,
@@ -10333,6 +10543,11 @@
   {
    "count": 1,
    "dst": "SPI_SET_CS",
+   "src": "boards/esp32s3-devkitc/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "boards/esp32s3-devkitc/board.yaml"
   },
   {
@@ -10347,8 +10562,23 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "boards/esp32s3-devkitc/init.yaml"
+  },
+  {
+   "count": 4,
+   "dst": "board",
+   "src": "boards/esp32s3-qemu-psram/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "free",
    "src": "boards/esp32s3-qemu-psram/board.yaml"
+  },
+  {
+   "count": 5,
+   "dst": "board",
+   "src": "boards/esp32s3-qemu/board.yaml"
   },
   {
    "count": 1,
@@ -10362,17 +10592,37 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "boards/kincony-A16/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "boards/kincony-A16/init.yaml"
   },
   {
    "count": 1,
-   "dst": "KEY_ENTER",
+   "dst": "board",
+   "src": "boards/kincony-A16/init.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "BACK",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
    "count": 1,
-   "dst": "KEY_ESC",
+   "dst": "INTENT_TO_KEY",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "VALIDATE",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 3,
+   "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
@@ -10392,6 +10642,11 @@
   },
   {
    "count": 1,
+   "dst": "step",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "boards/lilygo-t-embed-cc1101/init.yaml"
   },
@@ -10403,6 +10658,11 @@
   {
    "count": 1,
    "dst": "SPI_SET_CS",
+   "src": "boards/m5stack-cardputer/board.yaml"
+  },
+  {
+   "count": 6,
+   "dst": "board",
    "src": "boards/m5stack-cardputer/board.yaml"
   },
   {
@@ -10437,6 +10697,11 @@
   },
   {
    "count": 1,
+   "dst": "move",
+   "src": "boards/m5stack-cardputer/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "step",
    "src": "boards/m5stack-cardputer/board.yaml"
   },
@@ -10444,6 +10709,11 @@
    "count": 2,
    "dst": "write",
    "src": "boards/m5stack-cardputer/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
+   "src": "boards/m5stack-cardputer/etc/kb_iomatrix/config.yaml"
   },
   {
    "count": 1,
@@ -10492,11 +10762,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "boards/m5stack-cardputer/etc/selftest.sh"
-  },
-  {
-   "count": 1,
    "dst": "walk",
    "src": "boards/m5stack-cardputer/etc/selftest.sh"
   },
@@ -10511,6 +10776,11 @@
    "src": "boards/m5stack-cardputer/etc/splash/config.yaml"
   },
   {
+   "count": 2,
+   "dst": "board",
+   "src": "boards/m5stack-cardputer/etc/splash/config.yaml"
+  },
+  {
    "count": 1,
    "dst": "DuneOS",
    "src": "boards/m5stack-cardputer/etc/wifi_daemon/config.yaml.example"
@@ -10522,43 +10792,18 @@
   },
   {
    "count": 1,
-   "dst": "DuneOS",
-   "src": "ci/factory.ps1"
-  },
-  {
-   "count": 1,
    "dst": "Pattern",
    "src": "ci/factory.ps1"
   },
   {
    "count": 1,
-   "dst": "gate",
+   "dst": "read",
    "src": "ci/factory.ps1"
   },
   {
    "count": 1,
-   "dst": "human",
+   "dst": "stderr",
    "src": "ci/factory.ps1"
-  },
-  {
-   "count": 1,
-   "dst": "missing",
-   "src": "ci/factory.ps1"
-  },
-  {
-   "count": 1,
-   "dst": "DuneOS",
-   "src": "ci/factory.sh"
-  },
-  {
-   "count": 1,
-   "dst": "gate",
-   "src": "ci/factory.sh"
-  },
-  {
-   "count": 1,
-   "dst": "human",
-   "src": "ci/factory.sh"
   },
   {
    "count": 1,
@@ -10571,8 +10816,8 @@
    "src": "ci/factory.sh"
   },
   {
-   "count": 4,
-   "dst": "usage",
+   "count": 1,
+   "dst": "read",
    "src": "ci/factory.sh"
   },
   {
@@ -10782,6 +11027,11 @@
   },
   {
    "count": 1,
+   "dst": "commit",
+   "src": "docs/adr/001-error-model.md"
+  },
+  {
+   "count": 1,
    "dst": "convert",
    "src": "docs/adr/001-error-model.md"
   },
@@ -10867,6 +11117,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "docs/adr/003-memory-caps.md"
+  },
+  {
+   "count": 1,
    "dst": "check",
    "src": "docs/adr/003-memory-caps.md"
   },
@@ -10927,6 +11182,11 @@
   },
   {
    "count": 1,
+   "dst": "defines",
+   "src": "docs/adr/004-task-priorities.md"
+  },
+  {
+   "count": 1,
    "dst": "launch",
    "src": "docs/adr/004-task-priorities.md"
   },
@@ -10963,6 +11223,11 @@
   {
    "count": 1,
    "dst": "FLASH_MOUNT_POINT",
+   "src": "docs/adr/005-path-conventions.md"
+  },
+  {
+   "count": 6,
+   "dst": "board",
    "src": "docs/adr/005-path-conventions.md"
   },
   {
@@ -11081,6 +11346,11 @@
    "src": "docs/adr/007-multi-arch-smoke-test.md"
   },
   {
+   "count": 4,
+   "dst": "board",
+   "src": "docs/adr/007-multi-arch-smoke-test.md"
+  },
+  {
    "count": 1,
    "dst": "Alternatives",
    "src": "docs/adr/008-memory-fragmentation.md"
@@ -11103,6 +11373,11 @@
   {
    "count": 4,
    "dst": "DuneOS",
+   "src": "docs/adr/008-memory-fragmentation.md"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "docs/adr/008-memory-fragmentation.md"
   },
   {
@@ -11171,6 +11446,11 @@
    "src": "docs/adr/009-driver-boundary.md"
   },
   {
+   "count": 8,
+   "dst": "board",
+   "src": "docs/adr/009-driver-boundary.md"
+  },
+  {
    "count": 1,
    "dst": "capture",
    "src": "docs/adr/009-driver-boundary.md"
@@ -11178,6 +11458,11 @@
   {
    "count": 1,
    "dst": "clock_gettime",
+   "src": "docs/adr/009-driver-boundary.md"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "docs/adr/009-driver-boundary.md"
   },
   {
@@ -11233,6 +11518,11 @@
   {
    "count": 16,
    "dst": "Pattern",
+   "src": "docs/adr/010-arch-accelerators.md"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "docs/adr/010-arch-accelerators.md"
   },
   {
@@ -11366,6 +11656,11 @@
    "src": "docs/adr/012-test-strategy.md"
   },
   {
+   "count": 4,
+   "dst": "board",
+   "src": "docs/adr/012-test-strategy.md"
+  },
+  {
    "count": 1,
    "dst": "fail",
    "src": "docs/adr/012-test-strategy.md"
@@ -11416,6 +11711,11 @@
    "src": "docs/adr/013-network-architecture.md"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "docs/adr/013-network-architecture.md"
+  },
+  {
    "count": 1,
    "dst": "duneos_netif_wait_ip",
    "src": "docs/adr/013-network-architecture.md"
@@ -11433,11 +11733,6 @@
   {
    "count": 2,
    "dst": "scan",
-   "src": "docs/adr/013-network-architecture.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/adr/013-network-architecture.md"
   },
   {
@@ -11478,6 +11773,16 @@
   {
    "count": 1,
    "dst": "Resolution",
+   "src": "docs/adr/014-capability-resolution.md"
+  },
+  {
+   "count": 18,
+   "dst": "board",
+   "src": "docs/adr/014-capability-resolution.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "docs/adr/014-capability-resolution.md"
   },
   {
@@ -11542,6 +11847,11 @@
   },
   {
    "count": 1,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "docs/adr/015-declarative-driven-architecture.md"
+  },
+  {
+   "count": 1,
    "dst": "Decision",
    "src": "docs/adr/015-declarative-driven-architecture.md"
   },
@@ -11568,6 +11878,16 @@
   {
    "count": 5,
    "dst": "_board",
+   "src": "docs/adr/015-declarative-driven-architecture.md"
+  },
+  {
+   "count": 30,
+   "dst": "board",
+   "src": "docs/adr/015-declarative-driven-architecture.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "docs/adr/015-declarative-driven-architecture.md"
   },
   {
@@ -11633,6 +11953,11 @@
   {
    "count": 4,
    "dst": "app_main",
+   "src": "docs/adr/016-captured-app-exit.md"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "docs/adr/016-captured-app-exit.md"
   },
   {
@@ -11771,6 +12096,11 @@
    "src": "docs/adr/017-multi-function-device.md"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "docs/adr/017-multi-function-device.md"
+  },
+  {
    "count": 2,
    "dst": "check",
    "src": "docs/adr/017-multi-function-device.md"
@@ -11778,6 +12108,11 @@
   {
    "count": 1,
    "dst": "compose",
+   "src": "docs/adr/017-multi-function-device.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "docs/adr/017-multi-function-device.md"
   },
   {
@@ -11843,6 +12178,11 @@
   {
    "count": 1,
    "dst": "blob",
+   "src": "docs/adr/018-peripheral-instance-tables.md"
+  },
+  {
+   "count": 11,
+   "dst": "board",
    "src": "docs/adr/018-peripheral-instance-tables.md"
   },
   {
@@ -11991,6 +12331,11 @@
    "src": "docs/adr/020-logic-capture-device.md"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "docs/adr/020-logic-capture-device.md"
+  },
+  {
    "count": 12,
    "dst": "capture",
    "src": "docs/adr/020-logic-capture-device.md"
@@ -11998,6 +12343,11 @@
   {
    "count": 3,
    "dst": "decode",
+   "src": "docs/adr/020-logic-capture-device.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "docs/adr/020-logic-capture-device.md"
   },
   {
@@ -12053,6 +12403,11 @@
   {
    "count": 1,
    "dst": "Permissions",
+   "src": "docs/adr/021-pwm-device-interface.md"
+  },
+  {
+   "count": 4,
+   "dst": "board",
    "src": "docs/adr/021-pwm-device-interface.md"
   },
   {
@@ -12147,6 +12502,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "docs/adr/023-app-icon-assets.md"
+  },
+  {
+   "count": 1,
    "dst": "build_app_icon",
    "src": "docs/adr/023-app-icon-assets.md"
   },
@@ -12206,6 +12566,11 @@
    "src": "docs/adr/024-board-driven-responsive-views.md"
   },
   {
+   "count": 15,
+   "dst": "board",
+   "src": "docs/adr/024-board-driven-responsive-views.md"
+  },
+  {
    "count": 1,
    "dst": "free",
    "src": "docs/adr/024-board-driven-responsive-views.md"
@@ -12256,6 +12621,11 @@
    "src": "docs/adr/025-app-concurrency-ram-limited.md"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "docs/adr/025-app-concurrency-ram-limited.md"
+  },
+  {
    "count": 10,
    "dst": "free",
    "src": "docs/adr/025-app-concurrency-ram-limited.md"
@@ -12273,6 +12643,11 @@
   {
    "count": 3,
    "dst": "malloc",
+   "src": "docs/adr/025-app-concurrency-ram-limited.md"
+  },
+  {
+   "count": 2,
+   "dst": "move",
    "src": "docs/adr/025-app-concurrency-ram-limited.md"
   },
   {
@@ -12402,6 +12777,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "docs/adr/027-ambient-system-state.md"
+  },
+  {
+   "count": 1,
    "dst": "clock_gettime",
    "src": "docs/adr/027-ambient-system-state.md"
   },
@@ -12496,6 +12876,11 @@
    "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
+  },
+  {
    "count": 2,
    "dst": "compose",
    "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
@@ -12503,6 +12888,11 @@
   {
    "count": 3,
    "dst": "draw",
+   "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
+  },
+  {
+   "count": 1,
+   "dst": "erase",
    "src": "docs/adr/028-offscreen-canvas-partial-rendering.md"
   },
   {
@@ -12607,6 +12997,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "docs/adr/029-app-stack-auto-sizing.md"
+  },
+  {
+   "count": 1,
    "dst": "check",
    "src": "docs/adr/029-app-stack-auto-sizing.md"
   },
@@ -12647,11 +13042,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "docs/adr/029-app-stack-auto-sizing.md"
-  },
-  {
-   "count": 1,
    "dst": "Alternatives",
    "src": "docs/adr/030-wifi-frugal-memory.md"
   },
@@ -12677,6 +13067,11 @@
   },
   {
    "count": 3,
+   "dst": "board",
+   "src": "docs/adr/030-wifi-frugal-memory.md"
+  },
+  {
+   "count": 3,
    "dst": "free",
    "src": "docs/adr/030-wifi-frugal-memory.md"
   },
@@ -12688,11 +13083,6 @@
   {
    "count": 2,
    "dst": "scan",
-   "src": "docs/adr/030-wifi-frugal-memory.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/adr/030-wifi-frugal-memory.md"
   },
   {
@@ -12952,11 +13342,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "docs/adr/033-cli-coreutils-conventions.md"
-  },
-  {
-   "count": 1,
    "dst": "write",
    "src": "docs/adr/033-cli-coreutils-conventions.md"
   },
@@ -13063,6 +13448,11 @@
   {
    "count": 7,
    "dst": "DuneOS",
+   "src": "docs/adr/035-micropython-app.md"
+  },
+  {
+   "count": 7,
+   "dst": "board",
    "src": "docs/adr/035-micropython-app.md"
   },
   {
@@ -13183,6 +13573,11 @@
   {
    "count": 1,
    "dst": "SH_MAXVARS",
+   "src": "docs/adr/037-shell-scripting.md"
+  },
+  {
+   "count": 3,
+   "dst": "board",
    "src": "docs/adr/037-shell-scripting.md"
   },
   {
@@ -13331,6 +13726,11 @@
    "src": "docs/adr/039-qemu-test-bench.md"
   },
   {
+   "count": 22,
+   "dst": "board",
+   "src": "docs/adr/039-qemu-test-bench.md"
+  },
+  {
    "count": 1,
    "dst": "build_kernel",
    "src": "docs/adr/039-qemu-test-bench.md"
@@ -13431,6 +13831,11 @@
    "src": "docs/adr/040-config-layering.md"
   },
   {
+   "count": 52,
+   "dst": "board",
+   "src": "docs/adr/040-config-layering.md"
+  },
+  {
    "count": 2,
    "dst": "check",
    "src": "docs/adr/040-config-layering.md"
@@ -13453,6 +13858,11 @@
   {
    "count": 1,
    "dst": "malloc",
+   "src": "docs/adr/040-config-layering.md"
+  },
+  {
+   "count": 1,
+   "dst": "move",
    "src": "docs/adr/040-config-layering.md"
   },
   {
@@ -13491,6 +13901,11 @@
    "src": "docs/adr/041-test-harness-keep-tassert.md"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "docs/adr/041-test-harness-keep-tassert.md"
+  },
+  {
    "count": 5,
    "dst": "gate",
    "src": "docs/adr/041-test-harness-keep-tassert.md"
@@ -13499,6 +13914,171 @@
    "count": 1,
    "dst": "write",
    "src": "docs/adr/041-test-harness-keep-tassert.md"
+  },
+  {
+   "count": 1,
+   "dst": "ALT_NEXT",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "ALT_PREV",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "BACK",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "Consequences",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "Decision",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "ERASE",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "FB_GET_INFO",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_KEY",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_REL",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_INJECT_EVENT",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_DOWN",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_ENTER",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_LEFT",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_RIGHT",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_UP",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 3,
+   "dst": "NEXT",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 3,
+   "dst": "PREV",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "REL_WHEEL",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "TEXT",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "VALIDATE",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "_board",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 13,
+   "dst": "board",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 5,
+   "dst": "ioctl",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 1,
+   "dst": "reachable_intents",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "topology",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
    "count": 1,
@@ -13542,7 +14122,27 @@
   },
   {
    "count": 1,
+   "dst": "INPUT_EV_KEY",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "_board",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
    "dst": "blob",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 20,
+   "dst": "board",
    "src": "docs/adr/README.md"
   },
   {
@@ -13563,6 +14163,11 @@
   {
    "count": 1,
    "dst": "compose",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
    "src": "docs/adr/README.md"
   },
   {
@@ -13616,6 +14221,11 @@
    "src": "docs/adr/README.md"
   },
   {
+   "count": 1,
+   "dst": "ioctl",
+   "src": "docs/adr/README.md"
+  },
+  {
    "count": 2,
    "dst": "kill",
    "src": "docs/adr/README.md"
@@ -13633,6 +14243,11 @@
   {
    "count": 2,
    "dst": "minimal",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "move",
    "src": "docs/adr/README.md"
   },
   {
@@ -13677,17 +14292,17 @@
   },
   {
    "count": 1,
+   "dst": "topology",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
    "dst": "ui_size",
    "src": "docs/adr/README.md"
   },
   {
    "count": 1,
    "dst": "ui_statusbar_top",
-   "src": "docs/adr/README.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/adr/README.md"
   },
   {
@@ -13752,6 +14367,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "docs/audit-ram-2026-06.md"
+  },
+  {
+   "count": 1,
    "dst": "check",
    "src": "docs/audit-ram-2026-06.md"
   },
@@ -13788,6 +14408,11 @@
   {
    "count": 1,
    "dst": "missing",
+   "src": "docs/audit-ram-2026-06.md"
+  },
+  {
+   "count": 2,
+   "dst": "move",
    "src": "docs/audit-ram-2026-06.md"
   },
   {
@@ -13837,6 +14462,11 @@
   },
   {
    "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 1,
    "dst": "KEY_ESC",
    "src": "docs/backlog.md"
   },
@@ -13853,6 +14483,11 @@
   {
    "count": 2,
    "dst": "app_main",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 27,
+   "dst": "board",
    "src": "docs/backlog.md"
   },
   {
@@ -13881,8 +14516,18 @@
    "src": "docs/backlog.md"
   },
   {
+   "count": 2,
+   "dst": "commit",
+   "src": "docs/backlog.md"
+  },
+  {
    "count": 1,
    "dst": "convert",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "docs/backlog.md"
   },
   {
@@ -13926,7 +14571,7 @@
    "src": "docs/backlog.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "ioctl",
    "src": "docs/backlog.md"
   },
@@ -13958,6 +14603,11 @@
   {
    "count": 1,
    "dst": "mkdir",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 2,
+   "dst": "move",
    "src": "docs/backlog.md"
   },
   {
@@ -14043,6 +14693,11 @@
   {
    "count": 1,
    "dst": "blob",
+   "src": "docs/cli-audit-2026-06.md"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "docs/cli-audit-2026-06.md"
   },
   {
@@ -14162,11 +14817,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "docs/cli-audit-2026-06.md"
-  },
-  {
-   "count": 1,
    "dst": "walk",
    "src": "docs/cli-audit-2026-06.md"
   },
@@ -14241,6 +14891,11 @@
    "src": "docs/qemu-test-bench.md"
   },
   {
+   "count": 32,
+   "dst": "board",
+   "src": "docs/qemu-test-bench.md"
+  },
+  {
    "count": 1,
    "dst": "calloc",
    "src": "docs/qemu-test-bench.md"
@@ -14253,6 +14908,11 @@
   {
    "count": 1,
    "dst": "close",
+   "src": "docs/qemu-test-bench.md"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "docs/qemu-test-bench.md"
   },
   {
@@ -14391,6 +15051,16 @@
    "src": "docs/testing.md"
   },
   {
+   "count": 2,
+   "dst": "board",
+   "src": "docs/testing.md"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
+   "src": "docs/testing.md"
+  },
+  {
    "count": 1,
    "dst": "fail",
    "src": "docs/testing.md"
@@ -14438,6 +15108,11 @@
   {
    "count": 1,
    "dst": "blob",
+   "src": "kernel/duneos_kernel/CMakeLists.txt"
+  },
+  {
+   "count": 3,
+   "dst": "board",
    "src": "kernel/duneos_kernel/CMakeLists.txt"
   },
   {
@@ -14513,6 +15188,11 @@
   {
    "count": 1,
    "dst": "SPI_TRANSFER",
+   "src": "kernel/duneos_kernel/Kconfig"
+  },
+  {
+   "count": 4,
+   "dst": "board",
    "src": "kernel/duneos_kernel/Kconfig"
   },
   {
@@ -14831,6 +15511,11 @@
    "src": "kernel/duneos_kernel/include/duneos/api.h"
   },
   {
+   "count": 1,
+   "dst": "defines",
+   "src": "kernel/duneos_kernel/include/duneos/api.h"
+  },
+  {
    "count": 3,
    "dst": "dirent",
    "src": "kernel/duneos_kernel/include/duneos/api.h"
@@ -15082,6 +15767,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/include/duneos/battery_ioctl.h"
+  },
+  {
+   "count": 1,
    "dst": "close",
    "src": "kernel/duneos_kernel/include/duneos/battery_ioctl.h"
   },
@@ -15162,13 +15852,13 @@
   },
   {
    "count": 2,
-   "dst": "usage",
+   "dst": "write",
    "src": "kernel/duneos_kernel/include/duneos/bin_args.h"
   },
   {
-   "count": 2,
-   "dst": "write",
-   "src": "kernel/duneos_kernel/include/duneos/bin_args.h"
+   "count": 1,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "kernel/duneos_kernel/include/duneos/board.h"
   },
   {
    "count": 1,
@@ -15178,6 +15868,16 @@
   {
    "count": 4,
    "dst": "_board",
+   "src": "kernel/duneos_kernel/include/duneos/board.h"
+  },
+  {
+   "count": 7,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/include/duneos/board.h"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "kernel/duneos_kernel/include/duneos/board.h"
   },
   {
@@ -15418,11 +16118,6 @@
   {
    "count": 1,
    "dst": "open",
-   "src": "kernel/duneos_kernel/include/duneos/fb_ioctl.h"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "kernel/duneos_kernel/include/duneos/fb_ioctl.h"
   },
   {
@@ -16027,12 +16722,42 @@
   },
   {
    "count": 1,
+   "dst": "ABS_PRESSURE",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
+   "dst": "ABS_X",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
+   "dst": "ABS_Y",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
+   "dst": "BATCH_CLAMP",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
    "dst": "DUNEOS_PERM_INPUT",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
+   "dst": "FB_GET_INFO",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_EV_ABS",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
@@ -16047,7 +16772,37 @@
   },
   {
    "count": 2,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
    "dst": "INPUT_INJECT_EVENT",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_MAP_MAX_AXES",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_MAP_MAX_KEYS",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_TOPOLOGY_VERSION",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_TOPO_KEYBOARD",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
@@ -16086,7 +16841,7 @@
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_DOWN",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
@@ -16137,7 +16892,22 @@
   },
   {
    "count": 1,
+   "dst": "NEXT",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
    "dst": "REL_WHEEL",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 8,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
@@ -16146,13 +16916,18 @@
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
-   "count": 3,
+   "count": 5,
    "dst": "ioctl",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "read",
+   "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
+  },
+  {
+   "count": 2,
+   "dst": "topology",
    "src": "kernel/duneos_kernel/include/duneos/input_ioctl.h"
   },
   {
@@ -16238,6 +17013,11 @@
   {
    "count": 3,
    "dst": "app_main",
+   "src": "kernel/duneos_kernel/include/duneos/libdune.h"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "kernel/duneos_kernel/include/duneos/libdune.h"
   },
   {
@@ -16457,6 +17237,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/include/duneos/meminfo.h"
+  },
+  {
+   "count": 1,
    "dst": "consume",
    "src": "kernel/duneos_kernel/include/duneos/meminfo.h"
   },
@@ -16523,6 +17308,11 @@
   {
    "count": 2,
    "dst": "RAW80211_SET_IFACE",
+   "src": "kernel/duneos_kernel/include/duneos/raw80211_ioctl.h"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "kernel/duneos_kernel/include/duneos/raw80211_ioctl.h"
   },
   {
@@ -16913,6 +17703,11 @@
   {
    "count": 1,
    "dst": "close",
+   "src": "kernel/duneos_kernel/include/duneos/socket.h"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "kernel/duneos_kernel/include/duneos/socket.h"
   },
   {
@@ -17342,6 +18137,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/include/duneos/vfs.h"
+  },
+  {
+   "count": 1,
    "dst": "duneos_fs_info",
    "src": "kernel/duneos_kernel/include/duneos/vfs.h"
   },
@@ -17408,6 +18208,11 @@
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "kernel/duneos_kernel/include/duneos/wifi.h"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "kernel/duneos_kernel/include/duneos/wifi.h"
   },
   {
@@ -18187,6 +18992,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.h"
+  },
+  {
+   "count": 1,
    "dst": "cleanup",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.h"
   },
@@ -18497,6 +19307,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/src/drivers/drv_spi.c"
+  },
+  {
+   "count": 1,
    "dst": "close",
    "src": "kernel/duneos_kernel/src/drivers/drv_spi.c"
   },
@@ -18653,6 +19468,11 @@
   {
    "count": 1,
    "dst": "DUNEOS_DRIVER_REGISTER",
+   "src": "kernel/duneos_kernel/src/drivers/drv_uart.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "kernel/duneos_kernel/src/drivers/drv_uart.c"
   },
   {
@@ -18871,6 +19691,11 @@
    "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_mcp23017.c"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_mcp23017.c"
+  },
+  {
    "count": 2,
    "dst": "drv_gpiochip_mcp23017_register",
    "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_mcp23017.c"
@@ -18958,6 +19783,11 @@
   {
    "count": 4,
    "dst": "PCF8574_SLOT_MAX",
+   "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_pcf8574.c"
+  },
+  {
+   "count": 3,
+   "dst": "board",
    "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_pcf8574.c"
   },
   {
@@ -19141,6 +19971,11 @@
    "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_sx1509.c"
   },
   {
+   "count": 5,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_sx1509.c"
+  },
+  {
    "count": 3,
    "dst": "container_of",
    "src": "kernel/duneos_kernel/src/drivers/gpio/drv_gpiochip_sx1509.c"
@@ -19241,6 +20076,11 @@
    "src": "kernel/duneos_kernel/src/drivers/gpio/gpiochip_table.h"
   },
   {
+   "count": 5,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/src/drivers/gpio/gpiochip_table.h"
+  },
+  {
    "count": 3,
    "dst": "I2C_M_RD",
    "src": "kernel/duneos_kernel/src/drivers/i2c_bus.c"
@@ -19336,8 +20176,28 @@
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
+   "count": 3,
+   "dst": "DUNEOS_INPUT_HAS_KEYBOARD",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 4,
+   "dst": "DUNEOS_INPUT_N_AXES",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 4,
+   "dst": "DUNEOS_INPUT_N_KEYS",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
    "count": 1,
    "dst": "DuneOS",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
@@ -19346,8 +20206,38 @@
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
+   "count": 1,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_MAP_MAX_AXES",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_MAP_MAX_KEYS",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
    "count": 4,
    "dst": "INPUT_RING_SIZE",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_TOPOLOGY_VERSION",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_TOPO_KEYBOARD",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 3,
+   "dst": "board",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
@@ -19377,7 +20267,17 @@
   },
   {
    "count": 1,
+   "dst": "fail",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
    "dst": "feed",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 1,
+   "dst": "free",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
@@ -19401,7 +20301,7 @@
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
   {
-   "count": 3,
+   "count": 5,
    "dst": "ioctl",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
   },
@@ -19422,6 +20322,11 @@
   },
   {
    "count": 2,
+   "dst": "topology",
+   "src": "kernel/duneos_kernel/src/drivers/input/drv_input.c"
+  },
+  {
+   "count": 2,
    "dst": "drv_input_push_event",
    "src": "kernel/duneos_kernel/src/drivers/input/drv_input_priv.h"
   },
@@ -19438,6 +20343,11 @@
   {
    "count": 1,
    "dst": "REL_WHEEL",
+   "src": "kernel/duneos_kernel/src/drivers/input/enc_quadrature.c"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "kernel/duneos_kernel/src/drivers/input/enc_quadrature.c"
   },
   {
@@ -20201,6 +21111,11 @@
    "src": "kernel/duneos_kernel/src/init.c"
   },
   {
+   "count": 4,
+   "dst": "board",
+   "src": "kernel/duneos_kernel/src/init.c"
+  },
+  {
    "count": 1,
    "dst": "calloc",
    "src": "kernel/duneos_kernel/src/init.c"
@@ -20508,6 +21423,11 @@
   {
    "count": 2,
    "dst": "MULTI_HEAP_MIN_SIZE",
+   "src": "kernel/duneos_kernel/src/supervisor.c"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
    "src": "kernel/duneos_kernel/src/supervisor.c"
   },
   {
@@ -20928,6 +21848,11 @@
   {
    "count": 3,
    "dst": "__errno",
+   "src": "kernel/duneos_kernel/src/symbols.c"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "kernel/duneos_kernel/src/symbols.c"
   },
   {
@@ -21488,6 +22413,11 @@
   {
    "count": 9,
    "dst": "SD_MOUNT_POINT",
+   "src": "kernel/duneos_kernel/src/vfs.c"
+  },
+  {
+   "count": 5,
+   "dst": "board",
    "src": "kernel/duneos_kernel/src/vfs.c"
   },
   {
@@ -22146,6 +23076,11 @@
    "src": "kernel/duneos_loader/Kconfig"
   },
   {
+   "count": 2,
+   "dst": "board",
+   "src": "kernel/duneos_loader/Kconfig"
+  },
+  {
    "count": 1,
    "dst": "write",
    "src": "kernel/duneos_loader/Kconfig"
@@ -22568,6 +23503,11 @@
   {
    "count": 1,
    "dst": "STT_SECTION",
+   "src": "kernel/duneos_loader/include/duneos/elf.h"
+  },
+  {
+   "count": 2,
+   "dst": "upper",
    "src": "kernel/duneos_loader/include/duneos/elf.h"
   },
   {
@@ -23281,6 +24221,11 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
+   "count": 8,
+   "dst": "board",
+   "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
    "count": 2,
    "dst": "calloc",
    "src": "kernel/duneos_loader/src/loader.c"
@@ -23561,6 +24506,11 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
+   "count": 2,
+   "dst": "move",
+   "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
    "count": 10,
    "dst": "open",
    "src": "kernel/duneos_loader/src/loader.c"
@@ -23633,6 +24583,11 @@
   {
    "count": 8,
    "dst": "unload_locked",
+   "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
+   "count": 3,
+   "dst": "upper",
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
@@ -24191,6 +25146,11 @@
    "src": "main/main.c"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "profiles/cardputer-contest/profile.yaml"
+  },
+  {
    "count": 2,
    "dst": "free",
    "src": "profiles/cardputer-contest/profile.yaml"
@@ -24212,6 +25172,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "profiles/cardputer-default/profile.yaml"
+  },
+  {
+   "count": 1,
    "dst": "free",
    "src": "profiles/cardputer-default/profile.yaml"
   },
@@ -24219,6 +25184,11 @@
    "count": 1,
    "dst": "mkdir",
    "src": "profiles/cardputer-default/profile.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "profiles/cardputer-net/profile.yaml"
   },
   {
    "count": 1,
@@ -24237,12 +25207,42 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "profiles/cardputer-recovery/profile.yaml"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "profiles/esp32c3-devkitc-default/profile.yaml"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "profiles/esp32p4-devkitm-default/profile.yaml"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "profiles/esp32s3-devkitc-default/profile.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "profiles/kincony-a16-default/profile.yaml"
+  },
+  {
+   "count": 1,
    "dst": "free",
    "src": "profiles/kincony-a16-default/profile.yaml"
   },
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "profiles/t-embed-default/profile.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "profiles/t-embed-default/profile.yaml"
   },
   {
@@ -24254,6 +25254,11 @@
    "count": 1,
    "dst": "mkdir",
    "src": "profiles/t-embed-default/profile.yaml"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "profiles/t-embed-gfx/profile.yaml"
   },
   {
    "count": 1,
@@ -24268,6 +25273,11 @@
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "profiles/t-embed-recovery/profile.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "profiles/t-embed-recovery/profile.yaml"
   },
   {
@@ -24601,8 +25611,18 @@
    "src": "sdk/display/gfx.c"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "sdk/display/include/duneos/disp.h"
+  },
+  {
    "count": 1,
    "dst": "close",
+   "src": "sdk/display/include/duneos/disp.h"
+  },
+  {
+   "count": 2,
+   "dst": "defines",
    "src": "sdk/display/include/duneos/disp.h"
   },
   {
@@ -24708,6 +25728,11 @@
   {
    "count": 1,
    "dst": "ROWS",
+   "src": "sdk/display/include/duneos/gfx.h"
+  },
+  {
+   "count": 6,
+   "dst": "board",
    "src": "sdk/display/include/duneos/gfx.h"
   },
   {
@@ -24837,6 +25862,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "sdk/display/include/duneos/st7789.h"
+  },
+  {
+   "count": 1,
    "dst": "cleanup",
    "src": "sdk/display/include/duneos/st7789.h"
   },
@@ -24849,6 +25879,11 @@
    "count": 1,
    "dst": "disp_open",
    "src": "sdk/display/include/duneos/st7789.h"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "sdk/display/libdisp.c"
   },
   {
    "count": 1,
@@ -24963,6 +25998,11 @@
   {
    "count": 2,
    "dst": "ST7789_SWRESET",
+   "src": "sdk/display/libst7789.c"
+  },
+  {
+   "count": 5,
+   "dst": "board",
    "src": "sdk/display/libst7789.c"
   },
   {
@@ -25613,6 +26653,326 @@
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_REL",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_MAP_MAX_AXES",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "api_read",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 6,
+   "dst": "board",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_exit",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_close",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_fd",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_has_keyboard",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_input_open",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_input_read",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "input_ioctl",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "ioctl",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 4,
+   "dst": "read",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "step",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 4,
+   "dst": "topology",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_carousel_intent",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_ABS",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_KEY",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_REL",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 3,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_MAP_MAX_AXES",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_MAP_MAX_KEYS",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_TOPO_KEYBOARD",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_VAL_PRESS",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_VAL_RELEASE",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_VAL_REPEAT",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_BACKSPACE",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_DOWN",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_ENTER",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_ESC",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_LEFT",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_RIGHT",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_UP",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "PREV",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "axis_index",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "clamp_out",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_input_has_keyboard",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 6,
+   "dst": "emit",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "find_key",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 2,
+   "dst": "keyboard_intent",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "move",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 7,
+   "dst": "step",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "topology",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 4,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_TOPOLOGY_VERSION",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_close",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_fd",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_open",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_read",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "fcntl",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ioctl",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 3,
+   "dst": "open",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "sdk/input/libinput_fd.c"
+  },
+  {
+   "count": 1,
+   "dst": "DuneOS",
    "src": "sdk/log/dlog.c"
   },
   {
@@ -25951,6 +27311,11 @@
    "src": "sdk/sensor/include/duneos/battery.h"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "sdk/sensor/include/duneos/battery.h"
+  },
+  {
    "count": 1,
    "dst": "close",
    "src": "sdk/sensor/include/duneos/battery.h"
@@ -26062,6 +27427,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 1,
    "dst": "close",
    "src": "sdk/sensor/libbattery.c"
   },
@@ -26148,6 +27518,11 @@
   {
    "count": 1,
    "dst": "battery_open",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 4,
+   "dst": "board",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
@@ -26336,6 +27711,11 @@
    "src": "sdk/ui/include/duneos/ui.h"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "sdk/ui/include/duneos/ui.h"
+  },
+  {
    "count": 1,
    "dst": "decode",
    "src": "sdk/ui/include/duneos/ui.h"
@@ -26346,7 +27726,7 @@
    "src": "sdk/ui/include/duneos/ui.h"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "feed",
    "src": "sdk/ui/include/duneos/ui.h"
   },
@@ -26366,7 +27746,7 @@
    "src": "sdk/ui/include/duneos/ui.h"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "input_ioctl",
    "src": "sdk/ui/include/duneos/ui.h"
   },
@@ -26411,6 +27791,11 @@
    "src": "sdk/ui/include/duneos/ui.h"
   },
   {
+   "count": 1,
+   "dst": "ui_input_intent",
+   "src": "sdk/ui/include/duneos/ui.h"
+  },
+  {
    "count": 2,
    "dst": "ui_input_key",
    "src": "sdk/ui/include/duneos/ui.h"
@@ -26427,6 +27812,11 @@
   },
   {
    "count": 2,
+   "dst": "ui_list_intent",
+   "src": "sdk/ui/include/duneos/ui.h"
+  },
+  {
+   "count": 3,
    "dst": "ui_list_key",
    "src": "sdk/ui/include/duneos/ui.h"
   },
@@ -26516,8 +27906,18 @@
    "src": "sdk/ui/include/duneos/ui_carousel.h"
   },
   {
+   "count": 1,
+   "dst": "ui_carousel_intent",
+   "src": "sdk/ui/include/duneos/ui_carousel.h"
+  },
+  {
    "count": 2,
    "dst": "ui_carousel_key",
+   "src": "sdk/ui/include/duneos/ui_carousel.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_list_intent",
    "src": "sdk/ui/include/duneos/ui_carousel.h"
   },
   {
@@ -26528,6 +27928,11 @@
   {
    "count": 2,
    "dst": "ui_hexview_init",
+   "src": "sdk/ui/include/duneos/ui_hexview.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_hexview_intent",
    "src": "sdk/ui/include/duneos/ui_hexview.h"
   },
   {
@@ -26542,7 +27947,17 @@
   },
   {
    "count": 1,
+   "dst": "ui_list_intent",
+   "src": "sdk/ui/include/duneos/ui_hexview.h"
+  },
+  {
+   "count": 1,
    "dst": "read",
+   "src": "sdk/ui/include/duneos/ui_pager.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_list_intent",
    "src": "sdk/ui/include/duneos/ui_pager.h"
   },
   {
@@ -26556,6 +27971,11 @@
    "src": "sdk/ui/include/duneos/ui_pager.h"
   },
   {
+   "count": 1,
+   "dst": "ui_pager_intent",
+   "src": "sdk/ui/include/duneos/ui_pager.h"
+  },
+  {
    "count": 2,
    "dst": "ui_pager_key",
    "src": "sdk/ui/include/duneos/ui_pager.h"
@@ -26564,6 +27984,191 @@
    "count": 2,
    "dst": "ui_pager_set",
    "src": "sdk/ui/include/duneos/ui_pager.h"
+  },
+  {
+   "count": 6,
+   "dst": "board",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "draw",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_input_has_keyboard",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 3,
+   "dst": "render",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_text_entry_draw",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_backend",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_draw",
+   "src": "sdk/ui/include/duneos/ui_text_entry.h"
+  },
+  {
+   "count": 1,
+   "dst": "ALT_NEXT",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ALT_PREV",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "BACK",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ERASE",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "NEXT",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "PREV",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "TEXT",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "UI_T_DECLARED",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "UI_VKBD_COLS",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "VALIDATE",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "commit",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "draw",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "erase",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "input_ioctl",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "malloc",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 2,
+   "dst": "move",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "reachable_intents",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_backend",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_cell_glyph",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_cell_label",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 4,
+   "dst": "ui_vkbd_draw",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_init",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_intent",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_rows",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "upper",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
+  },
+  {
+   "count": 1,
+   "dst": "walk",
+   "src": "sdk/ui/include/duneos/ui_vkbd.h"
   },
   {
    "count": 3,
@@ -26581,6 +28186,11 @@
    "src": "sdk/ui/include/duneos/ui_wave.h"
   },
   {
+   "count": 1,
+   "dst": "ui_list_intent",
+   "src": "sdk/ui/include/duneos/ui_wave.h"
+  },
+  {
    "count": 3,
    "dst": "ui_wave_draw",
    "src": "sdk/ui/include/duneos/ui_wave.h"
@@ -26588,6 +28198,11 @@
   {
    "count": 2,
    "dst": "ui_wave_init",
+   "src": "sdk/ui/include/duneos/ui_wave.h"
+  },
+  {
+   "count": 1,
+   "dst": "ui_wave_intent",
    "src": "sdk/ui/include/duneos/ui_wave.h"
   },
   {
@@ -26616,7 +28231,7 @@
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_BACKSPACE",
    "src": "sdk/ui/ui.c"
   },
@@ -26626,33 +28241,48 @@
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_DOWN",
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "KEY_ENTER",
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "KEY_ESC",
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "KEY_LEFT",
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "KEY_RIGHT",
    "src": "sdk/ui/ui.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "KEY_UP",
+   "src": "sdk/ui/ui.c"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
+   "src": "sdk/ui/ui.c"
+  },
+  {
+   "count": 1,
+   "dst": "PREV",
+   "src": "sdk/ui/ui.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "sdk/ui/ui.c"
   },
   {
@@ -26691,6 +28321,11 @@
    "src": "sdk/ui/ui.c"
   },
   {
+   "count": 1,
+   "dst": "insert",
+   "src": "sdk/ui/ui.c"
+  },
+  {
    "count": 2,
    "dst": "list_reveal",
    "src": "sdk/ui/ui.c"
@@ -26703,6 +28338,11 @@
   {
    "count": 3,
    "dst": "list_visible_rows",
+   "src": "sdk/ui/ui.c"
+  },
+  {
+   "count": 2,
+   "dst": "move",
    "src": "sdk/ui/ui.c"
   },
   {
@@ -26732,6 +28372,11 @@
   },
   {
    "count": 1,
+   "dst": "ui_input_intent",
+   "src": "sdk/ui/ui.c"
+  },
+  {
+   "count": 7,
    "dst": "ui_input_key",
    "src": "sdk/ui/ui.c"
   },
@@ -26747,6 +28392,11 @@
   },
   {
    "count": 1,
+   "dst": "ui_list_intent",
+   "src": "sdk/ui/ui.c"
+  },
+  {
+   "count": 6,
    "dst": "ui_list_key",
    "src": "sdk/ui/ui.c"
   },
@@ -26816,22 +28466,22 @@
    "src": "sdk/ui/ui_carousel.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_ENTER",
    "src": "sdk/ui/ui_carousel.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_ESC",
    "src": "sdk/ui/ui_carousel.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_LEFT",
    "src": "sdk/ui/ui_carousel.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_RIGHT",
    "src": "sdk/ui/ui_carousel.c"
   },
@@ -26887,6 +28537,11 @@
   },
   {
    "count": 1,
+   "dst": "move",
+   "src": "sdk/ui/ui_carousel.c"
+  },
+  {
+   "count": 1,
    "dst": "open",
    "src": "sdk/ui/ui_carousel.c"
   },
@@ -26902,16 +28557,21 @@
   },
   {
    "count": 1,
+   "dst": "ui_carousel_intent",
+   "src": "sdk/ui/ui_carousel.c"
+  },
+  {
+   "count": 5,
    "dst": "ui_carousel_key",
    "src": "sdk/ui/ui_carousel.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_DOWN",
    "src": "sdk/ui/ui_hexview.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_UP",
    "src": "sdk/ui/ui_hexview.c"
   },
@@ -26947,6 +28607,11 @@
   },
   {
    "count": 1,
+   "dst": "ui_hexview_intent",
+   "src": "sdk/ui/ui_hexview.c"
+  },
+  {
+   "count": 3,
    "dst": "ui_hexview_key",
    "src": "sdk/ui/ui_hexview.c"
   },
@@ -26956,12 +28621,12 @@
    "src": "sdk/ui/ui_hexview.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_DOWN",
    "src": "sdk/ui/ui_pager.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_UP",
    "src": "sdk/ui/ui_pager.c"
   },
@@ -26992,6 +28657,11 @@
   },
   {
    "count": 1,
+   "dst": "ui_pager_intent",
+   "src": "sdk/ui/ui_pager.c"
+  },
+  {
+   "count": 3,
    "dst": "ui_pager_key",
    "src": "sdk/ui/ui_pager.c"
   },
@@ -27126,6 +28796,186 @@
    "src": "sdk/ui/ui_statusbar.c"
   },
   {
+   "count": 3,
+   "dst": "LINE_H",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 2,
+   "dst": "draw",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 2,
+   "dst": "line_after_draw",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 2,
+   "dst": "line_for_draw",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 7,
+   "dst": "render",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_input_draw",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_input_intent",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_text_entry_draw",
+   "src": "sdk/ui/ui_text_entry.c"
+  },
+  {
+   "count": 4,
+   "dst": "GLYPH_COUNT",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "PREV",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 4,
+   "dst": "UI_VKBD_COLS",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "commit",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "erase",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "insert",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "malloc",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 5,
+   "dst": "move",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "ui_vkbd_cell_glyph",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_cell_label",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_draw",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_init",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_intent",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_rows",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "upper",
+   "src": "sdk/ui/ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "UI_VKBD_COLS",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "draw",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 2,
+   "dst": "free",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "gfx_rect",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_panel",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_backend",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_cell_label",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 3,
+   "dst": "ui_vkbd_draw",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_init",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_intent",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_rows",
+   "src": "sdk/ui/ui_vkbd_draw.c"
+  },
+  {
    "count": 2,
    "dst": "EDGE_COL",
    "src": "sdk/ui/ui_wave.c"
@@ -27136,22 +28986,22 @@
    "src": "sdk/ui/ui_wave.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_DOWN",
    "src": "sdk/ui/ui_wave.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_LEFT",
    "src": "sdk/ui/ui_wave.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_RIGHT",
    "src": "sdk/ui/ui_wave.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KEY_UP",
    "src": "sdk/ui/ui_wave.c"
   },
@@ -27163,6 +29013,11 @@
   {
    "count": 3,
    "dst": "WAVE_COL",
+   "src": "sdk/ui/ui_wave.c"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "sdk/ui/ui_wave.c"
   },
   {
@@ -27197,6 +29052,11 @@
   },
   {
    "count": 1,
+   "dst": "ui_wave_intent",
+   "src": "sdk/ui/ui_wave.c"
+  },
+  {
+   "count": 5,
    "dst": "ui_wave_key",
    "src": "sdk/ui/ui_wave.c"
   },
@@ -27213,6 +29073,11 @@
   {
    "count": 1,
    "dst": "DuneOS",
+   "src": "sdkconfig.defaults"
+  },
+  {
+   "count": 14,
+   "dst": "board",
    "src": "sdkconfig.defaults"
   },
   {
@@ -27259,6 +29124,266 @@
    "count": 1,
    "dst": "vApplicationStackOverflowHook",
    "src": "sdkconfig.defaults"
+  },
+  {
+   "count": 3,
+   "dst": "ALT_NEXT",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "ALT_PREV",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 6,
+   "dst": "BACK",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "Consumers",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "ERASE",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "FB_GET_INFO",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_EV_KEY",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "INPUT_EV_REL",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "INPUT_INJECT_EVENT",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_VAL_PRESS",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_VAL_REPEAT",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_BACKSPACE",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_DELETE",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_DOWN",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_ENTER",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_ESC",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_TAB",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_UP",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 10,
+   "dst": "NEXT",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 10,
+   "dst": "PREV",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "Producers",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 4,
+   "dst": "REL_WHEEL",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "Risks",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "Scope",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "TEXT",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 7,
+   "dst": "VALIDATE",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "_board",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "api_read",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 25,
+   "dst": "board",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "calloc",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "commit",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 4,
+   "dst": "emit",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "erase",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "free",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "input_ioctl",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 8,
+   "dst": "ioctl",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 2,
+   "dst": "malloc",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "move",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "report",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 4,
+   "dst": "step",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 3,
+   "dst": "topology",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "ui_carousel_key",
+   "src": "specs/SPEC-input-portability.md"
+  },
+  {
+   "count": 1,
+   "dst": "verdict",
+   "src": "specs/SPEC-input-portability.md"
   },
   {
    "count": 1,
@@ -27336,6 +29461,11 @@
    "src": "specs/SPEC-leg-04-calloc-overflow.md"
   },
   {
+   "count": 2,
+   "dst": "board",
+   "src": "specs/SPEC-leg-04-calloc-overflow.md"
+  },
+  {
    "count": 17,
    "dst": "calloc",
    "src": "specs/SPEC-leg-04-calloc-overflow.md"
@@ -27396,8 +29526,18 @@
    "src": "specs/SPEC-leg-05-split-loader-load.md"
   },
   {
+   "count": 8,
+   "dst": "board",
+   "src": "specs/SPEC-leg-05-split-loader-load.md"
+  },
+  {
    "count": 1,
    "dst": "check",
+   "src": "specs/SPEC-leg-05-split-loader-load.md"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "specs/SPEC-leg-05-split-loader-load.md"
   },
   {
@@ -27491,6 +29631,11 @@
    "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
   },
   {
+   "count": 2,
+   "dst": "commit",
+   "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
+  },
+  {
    "count": 1,
    "dst": "patterns",
    "src": "specs/SPEC-leg-07-version-dependencies-lock.md"
@@ -27513,6 +29658,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-08-run-python-tests-in-ci.md"
+  },
+  {
+   "count": 2,
+   "dst": "commit",
    "src": "specs/SPEC-leg-08-run-python-tests-in-ci.md"
   },
   {
@@ -27546,8 +29696,18 @@
    "src": "specs/SPEC-leg-09-pin-python-dependencies.md"
   },
   {
+   "count": 2,
+   "dst": "commit",
+   "src": "specs/SPEC-leg-09-pin-python-dependencies.md"
+  },
+  {
    "count": 1,
    "dst": "read",
+   "src": "specs/SPEC-leg-09-pin-python-dependencies.md"
+  },
+  {
+   "count": 1,
+   "dst": "upper",
    "src": "specs/SPEC-leg-09-pin-python-dependencies.md"
   },
   {
@@ -27563,6 +29723,16 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-10-ci-board-profile-matrix.md"
+  },
+  {
+   "count": 8,
+   "dst": "board",
+   "src": "specs/SPEC-leg-10-ci-board-profile-matrix.md"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "specs/SPEC-leg-10-ci-board-profile-matrix.md"
   },
   {
@@ -27596,6 +29766,11 @@
    "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
   },
   {
+   "count": 32,
+   "dst": "board",
+   "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
+  },
+  {
    "count": 3,
    "dst": "check",
    "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
@@ -27603,6 +29778,11 @@
   {
    "count": 1,
    "dst": "cmd_flash_kernel",
+   "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "specs/SPEC-leg-10-ci-matrix-derived.md"
   },
   {
@@ -27682,6 +29862,16 @@
   },
   {
    "count": 1,
+   "dst": "commit",
+   "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
+   "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
+  },
+  {
+   "count": 1,
    "dst": "normalise",
    "src": "specs/SPEC-leg-11-repo-hygiene-batch.md"
   },
@@ -27726,6 +29916,11 @@
    "src": "specs/SPEC-leg-16-pin-idf-components.md"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "specs/SPEC-leg-16-pin-idf-components.md"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "specs/SPEC-leg-16-pin-idf-components.md"
@@ -27733,6 +29928,11 @@
   {
    "count": 1,
    "dst": "open",
+   "src": "specs/SPEC-leg-16-pin-idf-components.md"
+  },
+  {
+   "count": 1,
+   "dst": "upper",
    "src": "specs/SPEC-leg-16-pin-idf-components.md"
   },
   {
@@ -27753,6 +29953,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-17-18-19-21-tests-that-cover.md"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "specs/SPEC-leg-17-18-19-21-tests-that-cover.md"
   },
   {
@@ -27877,6 +30082,11 @@
   },
   {
    "count": 1,
+   "dst": "commit",
+   "src": "specs/SPEC-leg-17-realign-adr-012.md"
+  },
+  {
+   "count": 1,
    "dst": "duplicates",
    "src": "specs/SPEC-leg-17-realign-adr-012.md"
   },
@@ -27898,6 +30108,11 @@
   {
    "count": 2,
    "dst": "missing",
+   "src": "specs/SPEC-leg-17-realign-adr-012.md"
+  },
+  {
+   "count": 1,
+   "dst": "move",
    "src": "specs/SPEC-leg-17-realign-adr-012.md"
   },
   {
@@ -28021,8 +30236,23 @@
    "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
   },
   {
+   "count": 2,
+   "dst": "board",
+   "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
+  },
+  {
    "count": 1,
    "dst": "check",
+   "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
+  },
+  {
+   "count": 3,
+   "dst": "commit",
+   "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
+  },
+  {
+   "count": 2,
+   "dst": "defines",
    "src": "specs/SPEC-leg-20-doc-coherence-batch.md"
   },
   {
@@ -28068,6 +30298,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-25-extract-elf-parser-host.md"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "specs/SPEC-leg-25-extract-elf-parser-host.md"
   },
   {
@@ -28126,6 +30361,11 @@
    "src": "specs/SPEC-leg-26-host-harness-elf-corpus.md"
   },
   {
+   "count": 2,
+   "dst": "commit",
+   "src": "specs/SPEC-leg-26-host-harness-elf-corpus.md"
+  },
+  {
    "count": 1,
    "dst": "flaky",
    "src": "specs/SPEC-leg-26-host-harness-elf-corpus.md"
@@ -28168,6 +30408,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "specs/SPEC-leg-27-smoke-qemu-s3.md"
+  },
+  {
+   "count": 16,
+   "dst": "board",
    "src": "specs/SPEC-leg-27-smoke-qemu-s3.md"
   },
   {
@@ -28286,6 +30531,11 @@
    "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
   },
   {
+   "count": 22,
+   "dst": "board",
+   "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
@@ -28298,6 +30548,11 @@
   {
    "count": 1,
    "dst": "missing",
+   "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
+  },
+  {
+   "count": 1,
+   "dst": "move",
    "src": "specs/SPEC-leg-28-adc-linked-unconditionally.md"
   },
   {
@@ -28328,6 +30583,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-29-qemu-iram-dram-alias.md"
+  },
+  {
+   "count": 11,
+   "dst": "board",
    "src": "specs/SPEC-leg-29-qemu-iram-dram-alias.md"
   },
   {
@@ -28381,6 +30641,11 @@
    "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
   },
   {
+   "count": 25,
+   "dst": "board",
+   "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
+  },
+  {
    "count": 1,
    "dst": "fail",
    "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
@@ -28398,11 +30663,6 @@
   {
    "count": 2,
    "dst": "report",
-   "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
   },
   {
@@ -28438,6 +30698,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 34,
+   "dst": "board",
    "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
   },
   {
@@ -28502,6 +30767,11 @@
   },
   {
    "count": 1,
+   "dst": "move",
+   "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
+  },
+  {
+   "count": 1,
    "dst": "regenerated_root",
    "src": "specs/SPEC-leg-31-32-33-board-config-correctness.md"
   },
@@ -28551,6 +30821,11 @@
    "src": "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md"
   },
   {
+   "count": 32,
+   "dst": "board",
+   "src": "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md"
+  },
+  {
    "count": 2,
    "dst": "board_info_int",
    "src": "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md"
@@ -28558,6 +30833,11 @@
   {
    "count": 1,
    "dst": "capture",
+   "src": "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
    "src": "specs/SPEC-leg-31-i2c-guard-vs-bus-zero.md"
   },
   {
@@ -28641,6 +30921,11 @@
    "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
   },
   {
+   "count": 62,
+   "dst": "board",
+   "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
+  },
+  {
    "count": 3,
    "dst": "board_info_int",
    "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
@@ -28691,6 +30976,11 @@
    "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
   },
   {
+   "count": 1,
+   "dst": "move",
+   "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
+  },
+  {
    "count": 2,
    "dst": "open",
    "src": "specs/SPEC-leg-32-drv-logic-emitted-for-every-board.md"
@@ -28728,6 +31018,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-33-requires-over-declaration.md"
+  },
+  {
+   "count": 16,
+   "dst": "board",
    "src": "specs/SPEC-leg-33-requires-over-declaration.md"
   },
   {
@@ -28808,6 +31103,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-34-bound-section-extents.md"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "specs/SPEC-leg-34-bound-section-extents.md"
   },
   {
@@ -28926,6 +31226,11 @@
    "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
   },
   {
+   "count": 13,
+   "dst": "board",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
@@ -28943,6 +31248,11 @@
   {
    "count": 2,
    "dst": "cmd_system_flash",
+   "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
+  },
+  {
+   "count": 3,
+   "dst": "commit",
    "src": "specs/SPEC-leg-36-40-dbt-verbs.md"
   },
   {
@@ -29036,6 +31346,11 @@
    "src": "specs/SPEC-leg-37-per-board-main-stack.md"
   },
   {
+   "count": 30,
+   "dst": "board",
+   "src": "specs/SPEC-leg-37-per-board-main-stack.md"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "specs/SPEC-leg-37-per-board-main-stack.md"
@@ -29058,6 +31373,11 @@
   {
    "count": 1,
    "dst": "malloc",
+   "src": "specs/SPEC-leg-37-per-board-main-stack.md"
+  },
+  {
+   "count": 1,
+   "dst": "move",
    "src": "specs/SPEC-leg-37-per-board-main-stack.md"
   },
   {
@@ -29098,6 +31418,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
+  },
+  {
+   "count": 4,
+   "dst": "board",
    "src": "specs/SPEC-leg-38-08-gates-that-test-nothing.md"
   },
   {
@@ -29153,6 +31478,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
+  },
+  {
+   "count": 4,
+   "dst": "board",
    "src": "specs/SPEC-leg-38-tests-must-not-read-generated-files.md"
   },
   {
@@ -29236,6 +31566,11 @@
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
   },
   {
+   "count": 18,
+   "dst": "board",
+   "src": "specs/SPEC-leg-40-tui-tests-menu.md"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "specs/SPEC-leg-40-tui-tests-menu.md"
@@ -29293,6 +31628,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "specs/SPEC-leg-41-manifest-json-recursion.md"
   },
   {
@@ -29371,6 +31711,11 @@
    "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
   },
   {
+   "count": 5,
+   "dst": "board",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
    "count": 2,
    "dst": "check",
    "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
@@ -29378,6 +31723,11 @@
   {
    "count": 1,
    "dst": "clone",
+   "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
+  },
+  {
+   "count": 4,
+   "dst": "commit",
    "src": "specs/SPEC-leg-pin-and-share-dependencies.md"
   },
   {
@@ -29448,6 +31798,11 @@
   {
    "count": 1,
    "dst": "Scope",
+   "src": "specs/SPEC-radar-ld2450.md"
+  },
+  {
+   "count": 11,
+   "dst": "board",
    "src": "specs/SPEC-radar-ld2450.md"
   },
   {
@@ -29553,6 +31908,26 @@
   {
    "count": 1,
    "dst": "LLVMFuzzerTestOneInput",
+   "src": "tests/host/Makefile"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "tests/host/Makefile"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "tests/host/Makefile"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "tests/host/Makefile"
+  },
+  {
+   "count": 2,
+   "dst": "input_ioctl",
    "src": "tests/host/Makefile"
   },
   {
@@ -29898,6 +32273,11 @@
   {
    "count": 2,
    "dst": "check",
+   "src": "tests/host/elf_corpus.h"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "tests/host/elf_corpus.h"
   },
   {
@@ -30301,6 +32681,11 @@
    "src": "tests/host/test_elf_validate.c"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "tests/host/test_elf_validate.c"
+  },
+  {
    "count": 5,
    "dst": "check",
    "src": "tests/host/test_elf_validate.c"
@@ -30308,6 +32693,11 @@
   {
    "count": 2,
    "dst": "child_run",
+   "src": "tests/host/test_elf_validate.c"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "tests/host/test_elf_validate.c"
   },
   {
@@ -30373,11 +32763,6 @@
   {
    "count": 2,
    "dst": "test_validate_direct",
-   "src": "tests/host/test_elf_validate.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "tests/host/test_elf_validate.c"
   },
   {
@@ -30489,6 +32874,341 @@
    "count": 1,
    "dst": "write",
    "src": "tests/host/test_i2c_decode.c"
+  },
+  {
+   "count": 1,
+   "dst": "ABS_X",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 7,
+   "dst": "CHECK",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 65,
+   "dst": "CHECK_INT",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_ABS",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_KEY",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_EV_REL",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 38,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 3,
+   "dst": "INPUT_TOPOLOGY_VERSION",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_TOPO_KEYBOARD",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 27,
+   "dst": "INPUT_VAL_PRESS",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 11,
+   "dst": "INPUT_VAL_RELEASE",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 6,
+   "dst": "INPUT_VAL_REPEAT",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_BACKSPACE",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_DELETE",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_DOWN",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 25,
+   "dst": "KEY_ENTER",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 3,
+   "dst": "KEY_ESC",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_FN",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_LEFT",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_RIGHT",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_TAB",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 7,
+   "dst": "KEY_UP",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 14,
+   "dst": "LONG_MS",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 3,
+   "dst": "N_DURATIONS",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "REL_WHEEL",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "alt_axis_map",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 4,
+   "dst": "board",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 11,
+   "dst": "button_map",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 3,
+   "dst": "duneos_input_has_keyboard",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 35,
+   "dst": "feed",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 31,
+   "dst": "fx_init",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 44,
+   "dst": "key_ev",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 9,
+   "dst": "keyboard_map",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "launch",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 21,
+   "dst": "rel_ev",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 12,
+   "dst": "rotary_map",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 3,
+   "dst": "step",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "t_report",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_batch_above_the_clamp_is_clamped",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_board_with_no_alt_source_never_produces_alt",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_button_with_no_long_intent_fires_whatever_the_duration",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_declared_alt_axis_produces_alt_intents",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_declared_button_overrides_the_keyboard_mapping",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_long_press_yields_the_long_intent",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_press_and_its_release_are_one_intent",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_release_without_its_press_yields_nothing",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_repeat_does_not_double_fire_a_long_press_button",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_reversal_does_not_leak_a_stale_partial_count",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_short_press_yields_the_short_intent",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_whole_step_in_one_event_emits_once",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_counts_below_the_step_emit_nothing",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_counts_per_step_zero_behaves_as_one",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_keyboard_maps_the_vocabulary",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_max_out_bounds_the_batch_too",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_null_arguments_are_refused_quietly",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_printable_keys_carry_their_character",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_release_yields_nothing",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 3,
+   "dst": "test_repeat_on_a_plain_button_is_an_auto_repeat",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_repeat_yields_an_intent",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_reserved_abs_events_are_ignored",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_rotary_maps_to_prev_and_next",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_empty_map_translates_nothing",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_threshold_resolves_on_repeat_when_one_arrives",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_topology_clamp_bounds_the_batch",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_unmapped_yields_nothing",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
+   "src": "tests/host/test_input_intent.c"
   },
   {
    "count": 2,
@@ -30851,6 +33571,196 @@
    "src": "tests/host/test_re.c"
   },
   {
+   "count": 2,
+   "dst": "ALT_NEXT",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "ALT_PREV",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "BACK",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 22,
+   "dst": "CHECK",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 37,
+   "dst": "CHECK_INT",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 14,
+   "dst": "CHECK_STR",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 4,
+   "dst": "ERASE",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 7,
+   "dst": "NEXT",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "PREV",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 5,
+   "dst": "TEXT",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "UI_VKBD_COLS",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 7,
+   "dst": "VALIDATE",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "board",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "erase",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 5,
+   "dst": "focus_label",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "t_report",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_one_byte_buffer_holds_only_the_nul",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_password_is_typable_with_four_intents_only",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_text_intent_inserts_directly",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_back_cancels",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_erase_removes_the_last_character",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_every_cell_has_a_label_that_fits",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_next_and_prev_wrap",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_null_arguments_are_refused_quietly",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_buffer_is_never_written_past_cap_minus_one",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_erase_cell_erases_too",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_ok_cell_submits",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_second_axis_moves_by_a_row_and_wraps",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_the_shift_layer_reaches_upper_case",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_validate_on_a_glyph_inserts_it",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 11,
+   "dst": "type_glyph",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "ui_vkbd_cell_glyph",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 3,
+   "dst": "ui_vkbd_cell_label",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 1,
+   "dst": "ui_vkbd_draw",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 15,
+   "dst": "ui_vkbd_init",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 23,
+   "dst": "ui_vkbd_intent",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
+   "count": 2,
+   "dst": "ui_vkbd_rows",
+   "src": "tests/host/test_ui_vkbd.c"
+  },
+  {
    "count": 1,
    "dst": "DuneOS",
    "src": "tools/constraints.txt"
@@ -30886,6 +33796,11 @@
    "src": "tools/dbt.py"
   },
   {
+   "count": 1,
+   "dst": "insert",
+   "src": "tools/dbt.py"
+  },
+  {
    "count": 4,
    "dst": "resolve",
    "src": "tools/dbt.py"
@@ -30912,7 +33827,17 @@
   },
   {
    "count": 1,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "INTENT_TO_KEY",
    "src": "tools/dbt/boardgen.py"
   },
   {
@@ -30966,23 +33891,33 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
+   "count": 34,
+   "dst": "board",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 2,
+   "dst": "button_codes",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
    "count": 1,
    "dst": "consume",
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 2,
+   "count": 5,
+   "dst": "defines",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 1,
    "dst": "emit",
    "src": "tools/dbt/boardgen.py"
   },
   {
    "count": 3,
    "dst": "generate",
-   "src": "tools/dbt/boardgen.py"
-  },
-  {
-   "count": 1,
-   "dst": "input_ioctl",
    "src": "tools/dbt/boardgen.py"
   },
   {
@@ -31007,6 +33942,11 @@
   },
   {
    "count": 1,
+   "dst": "upper",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 1,
    "dst": "write_to",
    "src": "tools/dbt/boardgen.py"
   },
@@ -31023,6 +33963,11 @@
   {
    "count": 3,
    "dst": "active_board",
+   "src": "tools/dbt/bspgen.py"
+  },
+  {
+   "count": 19,
+   "dst": "board",
    "src": "tools/dbt/bspgen.py"
   },
   {
@@ -31113,6 +34058,11 @@
   {
    "count": 1,
    "dst": "analyze",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 5,
+   "dst": "board",
    "src": "tools/dbt/builder.py"
   },
   {
@@ -31207,11 +34157,6 @@
   },
   {
    "count": 2,
-   "dst": "usage",
-   "src": "tools/dbt/builder.py"
-  },
-  {
-   "count": 2,
    "dst": "validate_manifest",
    "src": "tools/dbt/builder.py"
   },
@@ -31237,6 +34182,16 @@
   },
   {
    "count": 1,
+   "dst": "Consumers",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_INPUT_DEV",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
+   "count": 1,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/capabilities.py"
   },
@@ -31258,6 +34213,16 @@
   {
    "count": 1,
    "dst": "battery_open",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
+   "count": 27,
+   "dst": "board",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
+   "count": 3,
+   "dst": "defines",
    "src": "tools/dbt/capabilities.py"
   },
   {
@@ -31288,6 +34253,11 @@
   {
    "count": 1,
    "dst": "monitor",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
    "src": "tools/dbt/capabilities.py"
   },
   {
@@ -31363,6 +34333,11 @@
   {
    "count": 1,
    "dst": "Permissions",
+   "src": "tools/dbt/capability_map.py"
+  },
+  {
+   "count": 5,
+   "dst": "board",
    "src": "tools/dbt/capability_map.py"
   },
   {
@@ -31463,6 +34438,11 @@
   {
    "count": 2,
    "dst": "arch_dir_for_cpu",
+   "src": "tools/dbt/ci_matrix.py"
+  },
+  {
+   "count": 29,
+   "dst": "board",
    "src": "tools/dbt/ci_matrix.py"
   },
   {
@@ -31588,6 +34568,11 @@
   {
    "count": 1,
    "dst": "app_main",
+   "src": "tools/dbt/cli.py"
+  },
+  {
+   "count": 33,
+   "dst": "board",
    "src": "tools/dbt/cli.py"
   },
   {
@@ -31966,6 +34951,11 @@
    "src": "tools/dbt/constants.py"
   },
   {
+   "count": 4,
+   "dst": "board",
+   "src": "tools/dbt/constants.py"
+  },
+  {
    "count": 1,
    "dst": "clock_gettime",
    "src": "tools/dbt/constants.py"
@@ -32136,6 +35126,11 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
+   "count": 21,
+   "dst": "board",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
    "count": 2,
    "dst": "build_single",
    "src": "tools/dbt/flashimg.py"
@@ -32301,6 +35296,11 @@
    "src": "tools/dbt/img.py"
   },
   {
+   "count": 1,
+   "dst": "flatten",
+   "src": "tools/dbt/img.py"
+  },
+  {
    "count": 2,
    "dst": "mkdir",
    "src": "tools/dbt/img.py"
@@ -32321,6 +35321,216 @@
    "src": "tools/dbt/img.py"
   },
   {
+   "count": 3,
+   "dst": "ALT_NEXT",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "ALT_PREV",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 4,
+   "dst": "AXIS_INTENTS",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "BACK",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "BATCH_CLAMP",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 7,
+   "dst": "BUTTON_INTENTS",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 2,
+   "dst": "DEFAULT_LONG_MS",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 4,
+   "dst": "ERASE",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 2,
+   "dst": "INTENTS",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 4,
+   "dst": "INTENT_TO_KEY",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 10,
+   "dst": "InputTopologyError",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_BACKSPACE",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_DOWN",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_ENTER",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_ESC",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_LEFT",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_RIGHT",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "KEY_UP",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 4,
+   "dst": "NEXT",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 4,
+   "dst": "PREV",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "REL_WHEEL",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 5,
+   "dst": "TEXT",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 4,
+   "dst": "VALIDATE",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "VOCABULARY",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "_buttons",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 2,
+   "dst": "_long_intent",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 19,
+   "dst": "board",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "button_codes",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "input_ioctl",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "intent_of",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 5,
+   "dst": "join",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "reachable_intents",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "step",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 3,
+   "dst": "topology",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "unreachable_intents",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 2,
+   "dst": "upper",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "verdict",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "write",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
    "count": 4,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/kernel.py"
@@ -32333,6 +35543,11 @@
   {
    "count": 10,
    "dst": "_msg",
+   "src": "tools/dbt/kernel.py"
+  },
+  {
+   "count": 13,
+   "dst": "board",
    "src": "tools/dbt/kernel.py"
   },
   {
@@ -32751,6 +35966,11 @@
    "src": "tools/dbt/qemu.py"
   },
   {
+   "count": 57,
+   "dst": "board",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
    "count": 3,
    "dst": "build_kernel",
    "src": "tools/dbt/qemu.py"
@@ -33081,6 +36301,11 @@
    "src": "tools/dbt/qemu.py"
   },
   {
+   "count": 1,
+   "dst": "upper",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
    "count": 5,
    "dst": "verdict",
    "src": "tools/dbt/qemu.py"
@@ -33103,6 +36328,11 @@
   {
    "count": 4,
    "dst": "NOT_SET",
+   "src": "tools/dbt/sdkconfig_check.py"
+  },
+  {
+   "count": 18,
+   "dst": "board",
    "src": "tools/dbt/sdkconfig_check.py"
   },
   {
@@ -33198,6 +36428,11 @@
   {
    "count": 6,
    "dst": "_valid",
+   "src": "tools/dbt/setup.py"
+  },
+  {
+   "count": 33,
+   "dst": "board",
    "src": "tools/dbt/setup.py"
   },
   {
@@ -33356,11 +36591,6 @@
    "src": "tools/dbt/stackusage.py"
   },
   {
-   "count": 2,
-   "dst": "usage",
-   "src": "tools/dbt/stackusage.py"
-  },
-  {
    "count": 4,
    "dst": "walk",
    "src": "tools/dbt/stackusage.py"
@@ -33428,6 +36658,11 @@
   {
    "count": 3,
    "dst": "app_elf_size",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 31,
+   "dst": "board",
    "src": "tools/dbt/system.py"
   },
   {
@@ -33572,6 +36807,11 @@
   },
   {
    "count": 1,
+   "dst": "upper",
+   "src": "tools/dbt/system.py"
+  },
+  {
+   "count": 1,
    "dst": "validate",
    "src": "tools/dbt/system.py"
   },
@@ -33711,6 +36951,11 @@
    "src": "tools/dbt/testing.py"
   },
   {
+   "count": 11,
+   "dst": "board",
+   "src": "tools/dbt/testing.py"
+  },
+  {
    "count": 2,
    "dst": "build_gates",
    "src": "tools/dbt/testing.py"
@@ -33723,6 +36968,11 @@
   {
    "count": 1,
    "dst": "cmd_test",
+   "src": "tools/dbt/testing.py"
+  },
+  {
+   "count": 1,
+   "dst": "commit",
    "src": "tools/dbt/testing.py"
   },
   {
@@ -33766,6 +37016,11 @@
    "src": "tools/dbt/testing.py"
   },
   {
+   "count": 1,
+   "dst": "upper",
+   "src": "tools/dbt/testing.py"
+  },
+  {
    "count": 2,
    "dst": "verdict",
    "src": "tools/dbt/testing.py"
@@ -33773,6 +37028,11 @@
   {
    "count": 4,
    "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/conftest.py"
+  },
+  {
+   "count": 2,
+   "dst": "board",
    "src": "tools/dbt/tests/conftest.py"
   },
   {
@@ -33861,6 +37121,11 @@
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
+   "count": 16,
+   "dst": "board",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
    "count": 2,
    "dst": "board_config_defines",
    "src": "tools/dbt/tests/kernel_macros.py"
@@ -33878,6 +37143,11 @@
   {
    "count": 4,
    "dst": "cmake_sources",
+   "src": "tools/dbt/tests/kernel_macros.py"
+  },
+  {
+   "count": 4,
+   "dst": "defines",
    "src": "tools/dbt/tests/kernel_macros.py"
   },
   {
@@ -34006,6 +37276,11 @@
    "src": "tools/dbt/tests/test_board_file.py"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_board_file.py"
+  },
+  {
    "count": 2,
    "dst": "boom",
    "src": "tools/dbt/tests/test_board_file.py"
@@ -34013,6 +37288,11 @@
   {
    "count": 1,
    "dst": "check",
+   "src": "tools/dbt/tests/test_board_file.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_board_file.py"
   },
   {
@@ -34146,6 +37426,11 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
+   "count": 21,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
    "count": 5,
    "dst": "check",
    "src": "tools/dbt/tests/test_board_macros.py"
@@ -34163,6 +37448,11 @@
   {
    "count": 1,
    "dst": "decode",
+   "src": "tools/dbt/tests/test_board_macros.py"
+  },
+  {
+   "count": 5,
+   "dst": "defines",
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
@@ -34336,6 +37626,11 @@
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
   },
   {
+   "count": 16,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
+  },
+  {
    "count": 1,
    "dst": "find_withdrawn",
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
@@ -34446,6 +37741,11 @@
    "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
   },
   {
+   "count": 12,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
+  },
+  {
    "count": 1,
    "dst": "resolve",
    "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
@@ -34518,6 +37818,11 @@
   {
    "count": 3,
    "dst": "_sets_the_symbol_by_hand",
+   "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
+  },
+  {
+   "count": 60,
+   "dst": "board",
    "src": "tools/dbt/tests/test_bspgen_main_task_stack.py"
   },
   {
@@ -34701,6 +38006,11 @@
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
+   "count": 31,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_bspgen_qemu.py"
+  },
+  {
    "count": 1,
    "dst": "emit",
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
@@ -34826,6 +38136,11 @@
    "src": "tools/dbt/tests/test_bspgen_uart.py"
   },
   {
+   "count": 28,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_bspgen_uart.py"
+  },
+  {
    "count": 2,
    "dst": "generate",
    "src": "tools/dbt/tests/test_bspgen_uart.py"
@@ -34938,6 +38253,11 @@
   {
    "count": 2,
    "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
+  },
+  {
+   "count": 23,
+   "dst": "board",
    "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
   },
   {
@@ -35061,6 +38381,11 @@
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
+   "count": 46,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
    "count": 9,
    "dst": "clone",
    "src": "tools/dbt/tests/test_ci_matrix.py"
@@ -35078,6 +38403,11 @@
   {
    "count": 1,
    "dst": "fail",
+   "src": "tools/dbt/tests/test_ci_matrix.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_ci_matrix.py"
   },
   {
@@ -35341,6 +38671,11 @@
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
    "count": 12,
    "dst": "gate",
    "src": "tools/dbt/tests/test_cmake_requires.py"
@@ -35521,6 +38856,11 @@
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
+   "count": 13,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
    "count": 1,
    "dst": "check_app",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
@@ -35553,6 +38893,11 @@
   {
    "count": 1,
    "dst": "find_apps",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
@@ -35751,6 +39096,11 @@
    "src": "tools/dbt/tests/test_gates_cover.py"
   },
   {
+   "count": 5,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_gates_cover.py"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "tools/dbt/tests/test_gates_cover.py"
@@ -35859,6 +39209,386 @@
    "count": 1,
    "dst": "write",
    "src": "tools/dbt/tests/test_gates_cover.py"
+  },
+  {
+   "count": 4,
+   "dst": "ALT_NEXT",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 4,
+   "dst": "ALT_PREV",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 15,
+   "dst": "BACK",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "BASE_BOARD",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "BATCH_CLAMP",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 10,
+   "dst": "BSPGEN",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 3,
+   "dst": "BUTTON_INTENTS",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "DUNEOS_INPUT_HAS_KEYBOARD",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "DUNEOS_INPUT_N_AXES",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "DUNEOS_INPUT_N_KEYS",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 7,
+   "dst": "ERASE",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_INTENT_BATCH_MAX",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 3,
+   "dst": "INPUT_IOCTL_H",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "INTENTS",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "INTENT_TO_KEY",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 7,
+   "dst": "InputTopologyError",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 5,
+   "dst": "KEYBOARD_MATRIX",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 5,
+   "dst": "KEY_ENTER",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "KEY_ESC",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 6,
+   "dst": "NEXT",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 6,
+   "dst": "PREV",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "REL_WHEEL",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 5,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 8,
+   "dst": "TEXT",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 18,
+   "dst": "VALIDATE",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 6,
+   "dst": "VOCABULARY",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "_flatten",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 39,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 7,
+   "dst": "defines",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "emit",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 6,
+   "dst": "flatten",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 11,
+   "dst": "generate",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "inject",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "input_ioctl",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 5,
+   "dst": "missing",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 6,
+   "dst": "reachable_intents",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 2,
+   "dst": "report",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "step",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_board_that_cannot_reach_a_needed_intent_is_reported",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_board_with_no_input_source_reports_an_explicitly_empty_map",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_keyboard_board_declares_the_keyboard_and_no_keys",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_keyboard_board_reaches_the_whole_vocabulary",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_long_press_intent_reaches_the_map",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_malformed_button_is_refused",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_malformed_encoder_is_refused",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_rotary_and_two_buttons_emit_the_expected_map",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_alt_axis_emits_the_second_pair",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_boardgen_also_rejects_the_old_spelling",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_boardgen_derives_the_key_code_from_the_intent",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_tracked_board_generates",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_tracked_board_yields_a_complete_map_or_no_input_verdict",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_exactly_the_two_expected_boards_declare_buttons",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_intent_case_is_normalised",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_board_reaches_an_intent_outside_the_vocabulary",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_press_duration_is_what_widens_a_button_boards_vocabulary",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_reachability_is_computable_for_every_board_declaring_input",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_batch_clamp_matches_the_c_header",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_c_enum_matches_the_python_table_in_name_and_order",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_map_records_whether_every_intent_is_reachable",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_old_code_spelling_is_rejected_by_name",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_t_embed_reaches_everything_but_the_second_axis",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_vkbd_derivation_is_what_makes_text_reachable_without_a_keyboard",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_two_buttons_with_the_same_intent_are_refused",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 8,
+   "dst": "topo_block",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 19,
+   "dst": "topology",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 6,
+   "dst": "tracked_board_yamls",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 7,
+   "dst": "unreachable_intents",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "validate",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "verdict",
+   "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
    "count": 3,
@@ -35976,8 +39706,18 @@
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
   {
+   "count": 1,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_pure_logic.py"
+  },
+  {
    "count": 7,
    "dst": "decode_perms",
+   "src": "tools/dbt/tests/test_pure_logic.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
   {
@@ -36361,6 +40101,11 @@
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
+   "count": 11,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
    "count": 3,
    "dst": "calloc",
    "src": "tools/dbt/tests/test_qemu.py"
@@ -36433,6 +40178,11 @@
   {
    "count": 2,
    "dst": "handler",
+   "src": "tools/dbt/tests/test_qemu.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_qemu.py"
   },
   {
@@ -37066,6 +40816,11 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
+   "count": 6,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
    "count": 10,
    "dst": "candidate",
    "src": "tools/dbt/tests/test_read_guard.py"
@@ -37218,6 +40973,11 @@
   {
    "count": 43,
    "dst": "blob",
+   "src": "tools/dbt/tests/test_repo_dependencies.py"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "tools/dbt/tests/test_repo_dependencies.py"
   },
   {
@@ -37388,6 +41148,11 @@
   {
    "count": 10,
    "dst": "WATCHPOINT",
+   "src": "tools/dbt/tests/test_sdkconfig_check.py"
+  },
+  {
+   "count": 16,
+   "dst": "board",
    "src": "tools/dbt/tests/test_sdkconfig_check.py"
   },
   {
@@ -37781,6 +41546,11 @@
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_testing.py"
+  },
+  {
    "count": 2,
    "dst": "boom",
    "src": "tools/dbt/tests/test_testing.py"
@@ -37793,6 +41563,11 @@
   {
    "count": 15,
    "dst": "gate",
+   "src": "tools/dbt/tests/test_testing.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
@@ -38046,6 +41821,11 @@
    "src": "tools/dbt/tests/test_tui_sdkconfig_guard.py"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_tui_sdkconfig_guard.py"
+  },
+  {
    "count": 1,
    "dst": "call_from_thread",
    "src": "tools/dbt/tests/test_tui_sdkconfig_guard.py"
@@ -38222,6 +42002,11 @@
   },
   {
    "count": 1,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
    "dst": "call_from_thread",
    "src": "tools/dbt/tests/test_tui_tests_menu.py"
   },
@@ -38238,6 +42023,11 @@
   {
    "count": 5,
    "dst": "gate_status",
+   "src": "tools/dbt/tests/test_tui_tests_menu.py"
+  },
+  {
+   "count": 1,
+   "dst": "insert",
    "src": "tools/dbt/tests/test_tui_tests_menu.py"
   },
   {
@@ -38383,6 +42173,11 @@
   {
    "count": 2,
    "dst": "_read_board_yaml",
+   "src": "tools/dbt/toolchain/__init__.py"
+  },
+  {
+   "count": 15,
+   "dst": "board",
    "src": "tools/dbt/toolchain/__init__.py"
   },
   {
@@ -38576,6 +42371,11 @@
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
+   "count": 14,
+   "dst": "board",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
    "count": 4,
    "dst": "build_idf_env",
    "src": "tools/dbt/toolchain/esp_idf.py"
@@ -38753,6 +42553,11 @@
   {
    "count": 2,
    "dst": "unlink",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
+   "count": 1,
+   "dst": "upper",
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
@@ -39286,6 +43091,11 @@
    "src": "tools/dbt/tui.py"
   },
   {
+   "count": 41,
+   "dst": "board",
+   "src": "tools/dbt/tui.py"
+  },
+  {
    "count": 4,
    "dst": "build_idf_env",
    "src": "tools/dbt/tui.py"
@@ -39446,6 +43256,11 @@
    "src": "tools/dbt/tui.py"
   },
   {
+   "count": 1,
+   "dst": "move",
+   "src": "tools/dbt/tui.py"
+  },
+  {
    "count": 2,
    "dst": "on_input_submitted",
    "src": "tools/dbt/tui.py"
@@ -39557,7 +43372,27 @@
   },
   {
    "count": 1,
+   "dst": "ALT_NEXT",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "ALT_PREV",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
    "dst": "Architecture",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "BACK",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 2,
+   "dst": "BATCH_CLAMP",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39568,6 +43403,21 @@
   {
    "count": 1,
    "dst": "DUNEOS_HAS_SD",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_INPUT_HAS_KEYBOARD",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_INPUT_N_AXES",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_INPUT_N_KEYS",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39586,8 +43436,38 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
+   "count": 1,
+   "dst": "ERASE",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 3,
+   "dst": "INPUT_GET_TOPOLOGY",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 5,
+   "dst": "INTENT_MACRO",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 2,
+   "dst": "InputTopologyError",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
    "count": 5,
    "dst": "KNOWN_BOARD_KEYS",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "PREV",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39621,6 +43501,16 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
+   "count": 1,
+   "dst": "TEXT",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "VALIDATE",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
    "count": 5,
    "dst": "VALID_CPUS",
    "src": "tools/duneos-bspgen.py"
@@ -39631,8 +43521,13 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 85,
+   "count": 93,
    "dst": "_define",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 164,
+   "dst": "board",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39646,23 +43541,33 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 1,
+   "count": 3,
+   "dst": "defines",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 2,
    "dst": "emit",
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "fail",
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "free",
    "src": "tools/duneos-bspgen.py"
   },
   {
    "count": 4,
    "dst": "generate",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 2,
+   "dst": "generate_input_topology",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39676,7 +43581,17 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 6,
+   "count": 2,
+   "dst": "insert",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 3,
+   "dst": "ioctl",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 9,
    "dst": "join",
    "src": "tools/duneos-bspgen.py"
   },
@@ -39686,7 +43601,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 1,
+   "count": 4,
    "dst": "missing",
    "src": "tools/duneos-bspgen.py"
   },
@@ -39701,8 +43616,13 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "read",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39711,8 +43631,28 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
+   "count": 4,
+   "dst": "topology",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 2,
+   "dst": "unreachable_intents",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 3,
+   "dst": "upper",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
    "count": 2,
    "dst": "validate",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
+   "dst": "verdict",
    "src": "tools/duneos-bspgen.py"
   },
   {
@@ -39936,6 +43876,7 @@
    "docs/adr/039-qemu-test-bench.md",
    "docs/adr/040-config-layering.md",
    "docs/adr/041-test-harness-keep-tassert.md",
+   "docs/adr/042-input-intents-in-the-sdk.md",
    "docs/adr/README.md",
    "docs/assets/splash_procedural.dr",
    "docs/audit-ram-2026-06.md",
@@ -40066,6 +44007,9 @@
    "sdk/i2c/smbus.c",
    "sdk/image/include/duneos/image.h",
    "sdk/image/libimage.c",
+   "sdk/input/include/duneos/input.h",
+   "sdk/input/libinput.c",
+   "sdk/input/libinput_fd.c",
    "sdk/log/dlog.c",
    "sdk/log/include/duneos/dlog.h",
    "sdk/net/include/duneos/known_yaml.h",
@@ -40083,14 +44027,20 @@
    "sdk/ui/include/duneos/ui_carousel.h",
    "sdk/ui/include/duneos/ui_hexview.h",
    "sdk/ui/include/duneos/ui_pager.h",
+   "sdk/ui/include/duneos/ui_text_entry.h",
+   "sdk/ui/include/duneos/ui_vkbd.h",
    "sdk/ui/include/duneos/ui_wave.h",
    "sdk/ui/ui.c",
    "sdk/ui/ui_carousel.c",
    "sdk/ui/ui_hexview.c",
    "sdk/ui/ui_pager.c",
    "sdk/ui/ui_statusbar.c",
+   "sdk/ui/ui_text_entry.c",
+   "sdk/ui/ui_vkbd.c",
+   "sdk/ui/ui_vkbd_draw.c",
    "sdk/ui/ui_wave.c",
    "sdkconfig.defaults",
+   "specs/SPEC-input-portability.md",
    "specs/SPEC-leg-01-harden-elf-validation.md",
    "specs/SPEC-leg-04-calloc-overflow.md",
    "specs/SPEC-leg-05-split-loader-load.md",
@@ -40136,10 +44086,12 @@
    "tests/host/test_elf_scan.c",
    "tests/host/test_elf_validate.c",
    "tests/host/test_i2c_decode.c",
+   "tests/host/test_input_intent.c",
    "tests/host/test_known_yaml.c",
    "tests/host/test_ld2450.c",
    "tests/host/test_manifest_depth.c",
    "tests/host/test_re.c",
+   "tests/host/test_ui_vkbd.c",
    "tools/constraints.txt",
    "tools/dbt.py",
    "tools/dbt/__init__.py",
@@ -40154,6 +44106,7 @@
    "tools/dbt/deploy.py",
    "tools/dbt/flashimg.py",
    "tools/dbt/img.py",
+   "tools/dbt/input_map.py",
    "tools/dbt/kernel.py",
    "tools/dbt/manifest.py",
    "tools/dbt/qemu.py",
@@ -40177,6 +44130,7 @@
    "tools/dbt/tests/test_cmake_requires.py",
    "tools/dbt/tests/test_flashimg_profile.py",
    "tools/dbt/tests/test_gates_cover.py",
+   "tools/dbt/tests/test_input_topology.py",
    "tools/dbt/tests/test_manifest_depth_bound.py",
    "tools/dbt/tests/test_pure_logic.py",
    "tools/dbt/tests/test_qemu.py",
@@ -40193,6 +44147,9 @@
    "tools/duneos-bspgen.py"
   ],
   "names": [
+   "ABS_PRESSURE",
+   "ABS_X",
+   "ABS_Y",
    "ACTIVE_PROFILE_FILE",
    "ADC_FULL_SCALE_MV",
    "ADC_MAX_RAW",
@@ -40205,6 +44162,8 @@
    "AI_NUMERICSERV",
    "AI_PASSIVE",
    "ALL_FILES",
+   "ALT_NEXT",
+   "ALT_PREV",
    "AMBIENT_BATTERY_PATH",
    "AMBIENT_KBD_PATH",
    "AMBIENT_STACK_PATH",
@@ -40219,13 +44178,16 @@
    "ARCH_CMAKES",
    "ARCH_DIRS_BY_CPU",
    "ASSERTIONS",
+   "AXIS_INTENTS",
    "Alternatives",
    "AppSelectScreen",
    "Architecture",
+   "BACK",
    "BANNER_BEGIN",
    "BANNER_END",
    "BASE",
    "BASE_BOARD",
+   "BATCH_CLAMP",
    "BATTERY_CHARGING",
    "BATTERY_DISCHARGING",
    "BATTERY_FULL",
@@ -40242,6 +44204,7 @@
    "BQ27220_REG_SOC",
    "BQ27220_REG_VOLTAGE",
    "BSPGEN",
+   "BUTTON_INTENTS",
    "BoardPickScreen",
    "BspPickScreen",
    "CALLOC_APP",
@@ -40316,6 +44279,7 @@
    "DBT_DIR",
    "DECLARING_BOARDS",
    "DEFAULT_DURATION_MS",
+   "DEFAULT_LONG_MS",
    "DEFAULT_MODE",
    "DEFAULT_RX_BUF_SIZE",
    "DEFAULT_SCL_PIN",
@@ -40363,6 +44327,10 @@
    "DUNEOS_INIT_PATH_FLASH",
    "DUNEOS_INIT_PATH_FLASH_SAFE",
    "DUNEOS_INIT_PATH_SD",
+   "DUNEOS_INPUT_DEV",
+   "DUNEOS_INPUT_HAS_KEYBOARD",
+   "DUNEOS_INPUT_N_AXES",
+   "DUNEOS_INPUT_N_KEYS",
    "DUNEOS_LOADER_MACHINE_RISCV",
    "DUNEOS_LOADER_MACHINE_XTENSA",
    "DUNEOS_LOADER_MAX_SECTIONS",
@@ -40416,6 +44384,7 @@
    "EMIT",
    "EM_RISCV",
    "EM_XTENSA",
+   "ERASE",
    "ETH_GET_LINK_STATUS",
    "ETH_GET_MAC",
    "ET_REL",
@@ -40469,6 +44438,7 @@
    "GFX_STREAM_MAX_ROW_PX",
    "GFX_WHITE",
    "GFX_YELLOW",
+   "GLYPH_COUNT",
    "GLYPH_H",
    "GLYPH_W",
    "GOOD_LOG",
@@ -40518,14 +44488,25 @@
    "INIT_BUF_MAX",
    "INIT_MAX_PENDING",
    "INJECTIONS",
+   "INPUT_EV_ABS",
    "INPUT_EV_KEY",
    "INPUT_EV_REL",
+   "INPUT_GET_TOPOLOGY",
    "INPUT_INJECT_EVENT",
+   "INPUT_INTENT_BATCH_MAX",
+   "INPUT_IOCTL_H",
+   "INPUT_MAP_MAX_AXES",
+   "INPUT_MAP_MAX_KEYS",
    "INPUT_MAX",
    "INPUT_RING_SIZE",
+   "INPUT_TOPOLOGY_VERSION",
+   "INPUT_TOPO_KEYBOARD",
    "INPUT_VAL_PRESS",
    "INPUT_VAL_RELEASE",
    "INPUT_VAL_REPEAT",
+   "INTENTS",
+   "INTENT_MACRO",
+   "INTENT_TO_KEY",
    "IPPROTO_ICMP",
    "IPPROTO_IP",
    "IPPROTO_RAW",
@@ -40538,9 +44519,11 @@
    "IP_MULTICAST_TTL",
    "IP_TOS",
    "IP_TTL",
+   "InputTopologyError",
    "JSON_MAX",
    "KERNEL_CMAKE",
    "KERNEL_SERVED_BATTERY",
+   "KEYBOARD_MATRIX",
    "KEY_ALT",
    "KEY_BACKSPACE",
    "KEY_CTRL",
@@ -40581,6 +44564,7 @@
    "LDFLAGS",
    "LIBDUNE_DIR",
    "LINEW",
+   "LINE_H",
    "LINE_MAX",
    "LINE_MAX_LEN",
    "LINE_W",
@@ -40591,6 +44575,7 @@
    "LOGIC_GET_INFO",
    "LOGIC_MAX_CHANNELS",
    "LOGIC_SET_CONFIG",
+   "LONG_MS",
    "Licence",
    "MAIN_CMAKE",
    "MANIFESTS",
@@ -40641,12 +44626,14 @@
    "NAME_LEN",
    "NAME_MAX_LEN",
    "NET_STATUS",
+   "NEXT",
    "NFDBITS",
    "NMODS",
    "NON_EMPTY_KEYS",
    "NOT_SET",
    "NUM_EXC_CAUSES",
    "NUM_TESTS",
+   "N_DURATIONS",
    "N_MENU",
    "OPTIONAL_KEYS",
    "OUTPUT_KEYS",
@@ -40670,6 +44657,7 @@
    "POLLNVAL",
    "POLLOUT",
    "PORT",
+   "PREV",
    "PRE_PR_COMMANDS",
    "PROFILES_DIR",
    "PROGRESS_MARKERS",
@@ -40885,20 +44873,25 @@
    "TCP_KEEPINTVL",
    "TCP_NODELAY",
    "TELNET_PORT",
+   "TEXT",
    "TICK_MS",
    "TICK_US",
    "TMPFS_MAX_FDS",
    "TMPFS_MAX_FILES",
    "TMPFS_NAME_MAX",
    "TRACKED",
+   "UI_T_DECLARED",
+   "UI_VKBD_COLS",
    "UNAVAILABLE",
    "UNAVAILABLE_RC",
    "UNCONDITIONAL",
    "UNRESOLVABLE",
    "USAGE",
    "VADDR_EXHAUSTED_LOG",
+   "VALIDATE",
    "VALID_CPUS",
    "VIEW_LINES",
+   "VOCABULARY",
    "WATCHPOINT",
    "WAVE_COL",
    "WEDGE_HALF_DEG",
@@ -40954,6 +44947,7 @@
    "_build_image",
    "_build_profile_dict",
    "_build_sysbin",
+   "_buttons",
    "_called_names",
    "_calloc_matcher",
    "_check_idf_version",
@@ -41032,6 +45026,7 @@
    "_load_bspgen",
    "_log",
    "_log_ansi",
+   "_long_intent",
    "_main_requires",
    "_make_opts",
    "_manifest_sources",
@@ -41151,6 +45146,7 @@
    "all_matched",
    "all_zero",
    "already_listed",
+   "alt_axis_map",
    "analyze",
    "angle_deg",
    "api_close",
@@ -41186,6 +45182,7 @@
    "assert_matrix_is_derived",
    "assign_split",
    "auto_connect",
+   "axis_index",
    "battery_close",
    "battery_handle",
    "battery_init",
@@ -41196,6 +45193,7 @@
    "blip_xy",
    "blit_scaled",
    "blob",
+   "board",
    "board_config_defines",
    "board_info_int",
    "boom",
@@ -41212,6 +45210,8 @@
    "build_rows",
    "build_single",
    "build_valid",
+   "button_codes",
+   "button_map",
    "bytes_per_row",
    "call_calloc",
    "call_from_thread",
@@ -41234,6 +45234,7 @@
    "check_section_table",
    "child_run",
    "chunk_reader",
+   "clamp_out",
    "clampi",
    "class_match",
    "classify",
@@ -41283,6 +45284,7 @@
    "cmp_ap_rssi_desc",
    "code_name",
    "collide",
+   "commit",
    "comp_add",
    "comp_has_dap",
    "comp_scan_bin",
@@ -41317,6 +45319,7 @@
    "decode_perms",
    "dedup",
    "default_sources",
+   "defines",
    "deploy_single",
    "depth_of",
    "devfs_close",
@@ -41461,6 +45464,11 @@
    "duneos_image_load_dr",
    "duneos_init_load",
    "duneos_init_run",
+   "duneos_input_close",
+   "duneos_input_fd",
+   "duneos_input_has_keyboard",
+   "duneos_input_open",
+   "duneos_input_read",
    "duneos_loader_captured_active",
    "duneos_loader_exec_pool_stats",
    "duneos_loader_get_captured_exit_code",
@@ -41559,6 +45567,7 @@
    "ensure_board",
    "ensure_daemon",
    "ensure_port",
+   "erase",
    "esc_byte",
    "esc_pressed",
    "eth_ioctl",
@@ -41590,6 +45599,7 @@
    "find_conflicts",
    "find_idf_activate_script",
    "find_idf_root",
+   "find_key",
    "find_known",
    "find_qemu",
    "find_toolchain_root",
@@ -41597,9 +45607,11 @@
    "flaky",
    "flash_kernel",
    "flash_size_from_opts",
+   "flatten",
    "flush_rect",
    "fmt_ipv4",
    "fmt_value",
+   "focus_label",
    "forget_ap",
    "format_conflicts",
    "format_klog_ring",
@@ -41608,6 +45620,7 @@
    "fstat",
    "full_path",
    "fuzz_read",
+   "fx_init",
    "game_cell",
    "game_cell_at",
    "game_clear",
@@ -41622,6 +45635,7 @@
    "gen_demo",
    "generate",
    "generate_for_board",
+   "generate_input_topology",
    "generate_partitions",
    "generate_sdkconfig_board",
    "get_board_plugin",
@@ -41697,8 +45711,10 @@
    "input_ioctl",
    "input_read",
    "input_readable",
+   "insert",
    "inspect",
    "install_qemu",
+   "intent_of",
    "ioctl",
    "ip_mreq",
    "iram_word_dram_alias",
@@ -41718,6 +45734,9 @@
    "kernel_idle",
    "kernel_image_size",
    "kernel_sources",
+   "key_ev",
+   "keyboard_intent",
+   "keyboard_map",
    "kill",
    "klog_capture_rom_output",
    "klog_d",
@@ -41747,6 +45766,8 @@
    "ld2450_set_multi_target",
    "ldflags",
    "le16",
+   "line_after_draw",
+   "line_for_draw",
    "linker_script",
    "list_boards",
    "list_dir",
@@ -41789,6 +45810,7 @@
    "mkdir_p",
    "mod_step",
    "monitor",
+   "move",
    "mut_bad_class",
    "mut_bad_data",
    "mut_bad_magic",
@@ -41878,7 +45900,7 @@
    "pool_release",
    "progress_report",
    "prompt_board",
-   "prompt_key",
+   "prompt_intent",
    "prompt_port",
    "psram_check_unavailable",
    "psram_mismatch",
@@ -41920,6 +45942,7 @@
    "re_match",
    "re_matchp",
    "re_node",
+   "reachable_intents",
    "read",
    "read_at",
    "read_battery_info",
@@ -41946,6 +45969,7 @@
    "register_exc_handlers",
    "register_instance",
    "register_mount",
+   "rel_ev",
    "remove_known",
    "rename",
    "render",
@@ -41970,6 +45994,7 @@
    "rmdir",
    "roadmap_row",
    "rom_putc",
+   "rotary_map",
    "rotate_big",
    "rssi_level",
    "run_andor",
@@ -42102,13 +46127,18 @@
    "t_report",
    "terminate",
    "terminate_child",
+   "test_a_batch_above_the_clamp_is_clamped",
    "test_a_board_carrying_bus_zero_or_no_bus_passes",
    "test_a_board_declaring_logic_passes_validate",
+   "test_a_board_that_cannot_reach_a_needed_intent_is_reported",
+   "test_a_board_with_no_alt_source_never_produces_alt",
+   "test_a_board_with_no_input_source_reports_an_explicitly_empty_map",
    "test_a_board_without_psram_never_reports_a_mismatch",
    "test_a_board_without_psram_stays_silent_about_the_cross_check",
    "test_a_board_without_the_hardware_raises_capability_missing",
    "test_a_build_dir_predating_the_logic_withdrawal_is_refused",
    "test_a_bus_numbered_one_is_refused",
+   "test_a_button_with_no_long_intent_fires_whatever_the_duration",
    "test_a_calloc_payload_exiting_non_zero_is_seen_as_an_app_failure",
    "test_a_cancelled_run_is_neither_pass_nor_fail",
    "test_a_changed_value_is_a_conflict",
@@ -42117,7 +46147,9 @@
    "test_a_collection_error_is_not_a_pass",
    "test_a_configuration_error_does_not_masquerade_as_an_assertion_failure",
    "test_a_dead_gdb_port_is_a_config_error_not_five_missing_assertions",
+   "test_a_declared_alt_axis_produces_alt_intents",
    "test_a_declared_backend_that_does_not_exist_aborts",
+   "test_a_declared_button_overrides_the_keyboard_mapping",
    "test_a_deleted_board_file_exits_config",
    "test_a_detected_psram_size_clears_the_unavailable_warning",
    "test_a_different_app_does_not_satisfy_the_scan_assertion",
@@ -42135,9 +46167,15 @@
    "test_a_generated_board_artefact_is_denied",
    "test_a_good_calloc_run_matches_every_assertion",
    "test_a_kernel_served_driver_is_a_skip_not_a_failure",
+   "test_a_keyboard_board_declares_the_keyboard_and_no_keys",
+   "test_a_keyboard_board_reaches_the_whole_vocabulary",
    "test_a_known_board_validates",
    "test_a_line_tail_cannot_pose_as_the_start_of_a_console_line",
    "test_a_loader_error_split_across_two_chunks_is_still_matched",
+   "test_a_long_press_intent_reaches_the_map",
+   "test_a_long_press_yields_the_long_intent",
+   "test_a_malformed_button_is_refused",
+   "test_a_malformed_encoder_is_refused",
    "test_a_marker_only_capability_pulls_no_source",
    "test_a_mask_names_every_bit_it_carries",
    "test_a_matching_build_directory_passes",
@@ -42149,27 +46187,37 @@
    "test_a_non_string_cpu_gets_a_named_reason",
    "test_a_non_string_icon_is_rejected",
    "test_a_normal_run_passes",
+   "test_a_one_byte_buffer_holds_only_the_nul",
+   "test_a_password_is_typable_with_four_intents_only",
    "test_a_policy_symbol_turned_off_in_the_build_is_a_conflict",
+   "test_a_press_and_its_release_are_one_intent",
    "test_a_profile_on_an_unlisted_board_fails_the_expected_membership",
    "test_a_psram_size_the_board_never_declared_is_reported",
    "test_a_qemu_config_exit_is_reported_as_unavailable",
    "test_a_real_early_exit_is_still_an_assertion_failure",
    "test_a_real_failure_still_reports_as_a_failure",
+   "test_a_release_without_its_press_yields_nothing",
+   "test_a_repeat_does_not_double_fire_a_long_press_button",
+   "test_a_reversal_does_not_leak_a_stale_partial_count",
    "test_a_reworded_esp_psram_line_is_reported_rather_than_ignored",
    "test_a_rewritten_board_file_exits_config",
+   "test_a_rotary_and_two_buttons_emit_the_expected_map",
    "test_a_run_at_the_floor_passes",
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
    "test_a_scalar_apps_flash_does_not_win_the_election",
+   "test_a_short_press_yields_the_short_intent",
    "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
    "test_a_symbol_absent_from_the_build_is_not_a_conflict",
+   "test_a_text_intent_inserts_directly",
    "test_a_transient_git_failure_does_not_narrow_the_signature",
    "test_a_tui_gate_run_never_touches_the_board_file",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
+   "test_a_whole_step_in_one_event_emits_once",
    "test_absent_slots_are_zeroed",
    "test_absent_submodules_make_the_host_gate_unavailable",
    "test_adding_riscv_arch_cmake_pulls_both_boards_in",
@@ -42180,6 +46228,7 @@
    "test_allow_missing_downgrades_to_zero_but_still_says_so",
    "test_an_absent_or_malformed_report_reads_as_unknown",
    "test_an_agreeing_build_is_not_a_conflict",
+   "test_an_alt_axis_emits_the_second_pair",
    "test_an_empty_collection_is_not_a_pass",
    "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
    "test_an_icon_at_the_bound_is_accepted",
@@ -42198,6 +46247,7 @@
    "test_anchors",
    "test_app_failure_does_not_pre_empt_a_complete_run",
    "test_assertion_split_across_chunks_still_matches",
+   "test_back_cancels",
    "test_bad_header_and_tail_rejected",
    "test_bad_ptr",
    "test_bad_tail_does_not_wedge_the_parser",
@@ -42206,6 +46256,8 @@
    "test_board_without_a_sysbin_partition_is_refused_by_name",
    "test_board_without_arch_cmake_is_excluded",
    "test_board_yaml_without_a_board_mapping_is_named",
+   "test_boardgen_also_rejects_the_old_spelling",
+   "test_boardgen_derives_the_key_code_from_the_intent",
    "test_boolean_is_rejected",
    "test_boot_banners_are_counted_once_each_across_chunks",
    "test_both_globs_carry_configure_depends",
@@ -42227,6 +46279,8 @@
    "test_conflicts_are_reported_in_a_stable_order",
    "test_contest_profile_lists_each_app_once",
    "test_contributing_names_the_commands_that_exist",
+   "test_counts_below_the_step_emit_nothing",
+   "test_counts_per_step_zero_behaves_as_one",
    "test_dead_payload_is_an_assertion_failure_not_a_timeout",
    "test_declared_psram_mb_reads_the_board_yaml",
    "test_declared_psram_size_reaches_the_emulator",
@@ -42247,9 +46301,11 @@
    "test_enforce_is_silent_when_the_build_agrees",
    "test_eof_after_the_settle_window_is_a_pass",
    "test_eof_inside_the_settle_window_is_not_a_pass",
+   "test_erase_removes_the_last_character",
    "test_escapes",
    "test_every_board_with_an_init_yaml_has_a_profile",
    "test_every_build_or_flash_entry_point_calls_the_guard",
+   "test_every_cell_has_a_label_that_fits",
    "test_every_constraint_is_an_exact_pin",
    "test_every_emitted_driver_symbol_is_declared_in_kconfig",
    "test_every_gate_green_exits_zero",
@@ -42265,9 +46321,12 @@
    "test_every_payload_has_a_source_directory_and_a_manifest",
    "test_every_read_mode_is_classified",
    "test_every_requires_entry_names_a_consumer",
+   "test_every_tracked_board_generates",
+   "test_every_tracked_board_yields_a_complete_map_or_no_input_verdict",
    "test_every_unconditional_symbol_defaults_to_y",
    "test_every_xtensa_cpu_accepts_the_flag",
    "test_exactly_one_tracked_board_enables_logic",
+   "test_exactly_the_two_expected_boards_declare_buttons",
    "test_exit_3_is_not_rendered_as_a_failure",
    "test_exit_codes_are_all_distinct",
    "test_explicit_console_uart_suppresses_the_secondary_console",
@@ -42295,8 +46354,10 @@
    "test_incremental_feed_matches_the_same_things_as_one_shot",
    "test_index_is_lf_only",
    "test_init_yaml_safe_is_staged",
+   "test_intent_case_is_normalised",
    "test_junit_counts_are_read_from_a_real_report",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
+   "test_keyboard_maps_the_vocabulary",
    "test_leg_18_records_the_board_that_closed_it",
    "test_legacy_merge",
    "test_legacy_value_trimming",
@@ -42309,14 +46370,17 @@
    "test_main_refuses_an_empty_matrix",
    "test_main_refuses_an_orphan_profile",
    "test_main_writes_the_github_output_lines",
+   "test_max_out_bounds_the_batch_too",
    "test_menu_bindings_and_dispatch_agree",
    "test_metachars",
    "test_missing_app_marker_is_reported",
    "test_missing_file_and_seed_fallback",
    "test_missing_qemu_exits_with_its_own_code",
    "test_n_and_not_set_are_the_same_statement",
+   "test_next_and_prev_wrap",
    "test_no_board_or_profile_name_appears_as_a_matrix_value",
    "test_no_board_or_profile_name_appears_in_a_step_body",
+   "test_no_board_reaches_an_intent_outside_the_vocabulary",
    "test_no_capability_resolves_to_no_source",
    "test_no_component_is_declared_at_any_version",
    "test_no_component_is_declared_both_unconditionally_and_per_arch",
@@ -42337,6 +46401,7 @@
    "test_non_positive_is_rejected",
    "test_non_uart_consoles_emit_no_secondary_symbol",
    "test_notice_covers_every_third_party_directory",
+   "test_null_arguments_are_refused_quietly",
    "test_null_store",
    "test_only_four_driver_symbols_are_emitted_for_every_board",
    "test_only_one_file_parses_the_known_yaml_grammar",
@@ -42358,6 +46423,8 @@
    "test_pick_gdb_port_does_not_hand_out_a_port_twice_in_a_row",
    "test_pick_gdb_port_returns_a_bindable_port",
    "test_present_submodules_leave_the_host_gate_available",
+   "test_press_duration_is_what_widens_a_button_boards_vocabulary",
+   "test_printable_keys_carry_their_character",
    "test_profile_naming_an_unknown_board_is_reported",
    "test_profile_with_no_app_is_checked_but_not_built",
    "test_progress_markers_locate_where_the_boot_stopped",
@@ -42378,6 +46445,7 @@
    "test_qemu_startup_failure_stays_quiet_on_a_normal_log",
    "test_qemu_true_emits_the_symbol",
    "test_quantifiers",
+   "test_reachability_is_computable_for_every_board_declaring_input",
    "test_read_board_file_ignores_trailing_lines",
    "test_read_board_file_returns_none_when_absent",
    "test_read_txn",
@@ -42388,11 +46456,16 @@
    "test_realistic",
    "test_reaping_kills_a_tracked_process_group",
    "test_recovery_profile_stages_exactly_one_app",
+   "test_release_yields_nothing",
+   "test_repeat_on_a_plain_button_is_an_auto_repeat",
+   "test_repeat_yields_an_intent",
    "test_repeated_start",
    "test_repo_has_manifests",
+   "test_reserved_abs_events_are_ignored",
    "test_residual_littlefs_enospc_is_the_same_named_error",
    "test_resync_over_garbage",
    "test_root_gitattributes_defers_to_the_generated_index",
+   "test_rotary_maps_to_prev_and_next",
    "test_run_loop_completes_on_a_good_run",
    "test_run_loop_reports_eof_when_qemu_dies_early",
    "test_run_loop_stops_on_panic",
@@ -42416,9 +46489,12 @@
    "test_terminate_child_reports_nothing_to_stop",
    "test_terminate_child_stops_a_running_gate",
    "test_test_workers_are_thin_shells",
+   "test_the_batch_clamp_matches_the_c_header",
    "test_the_board_fragment_wins_over_the_root_defaults",
    "test_the_board_key_is_also_looked_up_under_board",
    "test_the_boards_that_carry_a_radio_are_the_four_expected_ones",
+   "test_the_buffer_is_never_written_past_cap_minus_one",
+   "test_the_c_enum_matches_the_python_table_in_name_and_order",
    "test_the_calloc_payload_is_part_of_the_bench",
    "test_the_cardputer_value_carries_its_derivation",
    "test_the_cardputer_value_is_the_measured_one",
@@ -42431,6 +46507,8 @@
    "test_the_declared_psram_size_is_not_a_mismatch",
    "test_the_derivation_does_not_claim_the_watchpoint_is_free",
    "test_the_documents_that_describe_testing_link_to_the_list",
+   "test_the_empty_map_translates_nothing",
+   "test_the_erase_cell_erases_too",
    "test_the_flag_changes_nothing_else_in_the_fragment",
    "test_the_floor_is_read_from_the_ci_workflow",
    "test_the_guard_is_installed_during_the_run",
@@ -42447,6 +46525,7 @@
    "test_the_loader_failure_pattern_ignores_the_loader_info_lines",
    "test_the_loader_failure_pattern_matches_a_real_loader_error",
    "test_the_loader_guards_the_write_path_on_the_symbol",
+   "test_the_map_records_whether_every_intent_is_reachable",
    "test_the_marker_label_claims_only_that_app_main_ran",
    "test_the_message_says_interference_not_firmware",
    "test_the_named_exception_is_still_the_one_it_claims_to_be",
@@ -42454,6 +46533,8 @@
    "test_the_nested_gitignore_files_are_in_the_cache_signature",
    "test_the_new_rule_rejects_no_existing_board",
    "test_the_non_zero_codes_are_distinct_and_not_argparse_usage",
+   "test_the_ok_cell_submits",
+   "test_the_old_code_spelling_is_rejected_by_name",
    "test_the_parser_sees_every_shape_a_requires_list_can_take",
    "test_the_pre_pr_gate_list_lives_in_exactly_one_file",
    "test_the_psram_cross_check_reports_when_it_could_not_run",
@@ -42468,27 +46549,36 @@
    "test_the_roadmap_suite_count_matches_the_makefile",
    "test_the_scan_finds_the_known_entry_points",
    "test_the_scan_reaches_the_core_and_the_guarded_drivers",
+   "test_the_second_axis_moves_by_a_row_and_wraps",
+   "test_the_shift_layer_reaches_upper_case",
    "test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one",
    "test_the_stack_watchpoint_is_project_wide",
+   "test_the_t_embed_reaches_everything_but_the_second_axis",
    "test_the_three_apps_link_the_shared_parser",
+   "test_the_threshold_resolves_on_repeat_when_one_arrives",
+   "test_the_topology_clamp_bounds_the_batch",
    "test_the_tracked_yaml_next_to_it_is_allowed",
    "test_the_typed_key_and_a_raw_kconfig_entry_are_refused_together",
    "test_the_unavailable_cross_check_is_a_warning_not_a_verdict",
    "test_the_unavailable_sentinel_is_not_a_process_exit_code",
    "test_the_unresolvable_allowlist_still_names_something_real",
    "test_the_venv_dbt_bootstraps_can_run_the_pytest_gate",
+   "test_the_vkbd_derivation_is_what_makes_text_reachable_without_a_keyboard",
    "test_the_wiring_assertion_bites_on_an_injected_literal",
    "test_the_withdrawal_rule_stays_inside_the_bspgen_namespace",
    "test_the_word_panic_alone_is_not_a_panic",
    "test_the_written_fragment_matches_the_yaml",
    "test_tui_no_longer_imports_the_staging_internals",
    "test_two_back_to_back_frames",
+   "test_two_buttons_with_the_same_intent_are_refused",
    "test_unaligned_is_rejected",
    "test_unchanged_board_file_is_not_reported",
    "test_unknown_cpu_is_not_silently_called_riscv",
+   "test_unmapped_yields_nothing",
    "test_utf8_board_yaml_reads_regardless_of_locale",
    "test_vaddr_exhaustion_is_a_configuration_error_not_a_timeout",
    "test_validate_direct",
+   "test_validate_on_a_glyph_inserts_it",
    "test_verdict_reports_a_panic_even_when_the_status_says_complete",
    "test_verdict_reports_a_reboot_even_when_the_status_says_eof",
    "test_vfs_served_permissions_require_no_driver",
@@ -42523,32 +46613,41 @@
    "tmpfs_unlink",
    "tmpfs_write",
    "to_write_ptr",
+   "topo_block",
+   "topology",
+   "tracked_board_yamls",
    "tracked_files",
    "tracked_names",
    "try_bin_dir",
+   "type_glyph",
    "type_of",
    "uart_dev_init",
    "uart_read_cb",
    "uart_write_cb",
    "ui_carousel_draw",
    "ui_carousel_init",
+   "ui_carousel_intent",
    "ui_carousel_key",
    "ui_clear",
    "ui_create",
    "ui_hexview_draw",
    "ui_hexview_init",
+   "ui_hexview_intent",
    "ui_hexview_key",
    "ui_hexview_set",
    "ui_input_clear",
    "ui_input_draw",
+   "ui_input_intent",
    "ui_input_key",
    "ui_list_draw",
    "ui_list_init",
+   "ui_list_intent",
    "ui_list_key",
    "ui_list_set_items",
    "ui_message",
    "ui_pager_draw",
    "ui_pager_init",
+   "ui_pager_intent",
    "ui_pager_key",
    "ui_pager_set",
    "ui_panel",
@@ -42557,20 +46656,30 @@
    "ui_statusbar",
    "ui_statusbar_top",
    "ui_statusbar_top_poll",
+   "ui_text_entry_draw",
    "ui_textview_clear",
    "ui_textview_draw",
    "ui_textview_push",
    "ui_theme_default",
    "ui_titlebar",
+   "ui_vkbd_backend",
+   "ui_vkbd_cell_glyph",
+   "ui_vkbd_cell_label",
+   "ui_vkbd_draw",
+   "ui_vkbd_init",
+   "ui_vkbd_intent",
+   "ui_vkbd_rows",
    "ui_wave_draw",
    "ui_wave_init",
+   "ui_wave_intent",
    "ui_wave_key",
    "ui_wave_time_x",
    "unlink",
    "unload_locked",
+   "unreachable_intents",
    "unstage_dir",
    "update_known",
-   "usage",
+   "upper",
    "usleep",
    "vApplicationStackOverflowHook",
    "validate",
