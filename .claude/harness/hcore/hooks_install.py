@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -35,24 +36,32 @@ SPECS = (("PreToolUse", EDIT_TOOLS, "pre-edit", 10), ("PreToolUse", SHELL_TOOLS,
 
 UPDATED = "mis-à-jour"
 D5_WORDS = [" ".join(c) for c in interp.CANDIDATES]
+# HK-07: each candidate is one shell word (a path with spaces stays whole); the D5 arguments
+# (`py -3`) are added by name, and the probe enforces the D5 floor like interp.detect.
+_PROGRAMS = [c[0] for c in interp.CANDIDATES]
+_ARGS = "".join('[ "$c" = %s ] && a=%s; ' % (c[0], " ".join(c[1:])) for c in interp.CANDIDATES if len(c) > 1)
+_FLOOR_CHECK = "import sys; sys.exit(sys.version_info < %r)" % (tuple(interp.FLOOR),)
 # HK-07: the command generated up to core 4.0.0, the interpreter fixed in it.
 _LEGACY = re.compile(r'^f="\$CLAUDE_PROJECT_DIR/%s"; \[ -f "\$f" \] \|\| exit 0; (?P<py>[^;]+?) "\$f" (?P<name>[a-z-]+); '
                      r'rc=\$\?; \[ "\$rc" -eq 2 \] && exit 2; exit 0$' % re.escape(HOOK_MARK))
 
 
 def candidates_for(py: str) -> List[str]:
-    """HK-07: the D5 candidates; a non-standard interpreter (a venv path) is tried first."""
+    """HK-07: the D5 programs; a non-standard interpreter (a venv path, quotes stripped) is tried first."""
     py = (py or "").strip()
-    return D5_WORDS if not py or py in D5_WORDS else [py] + D5_WORDS
+    if len(py) > 1 and py[0] == py[-1] and py[0] in "\"'":
+        py = py[1:-1]
+    return list(_PROGRAMS) if not py or py in D5_WORDS or py in _PROGRAMS else [py] + _PROGRAMS
 
 
 def command_for(py: str, name: str) -> str:
-    """HK-03, HK-07: `$CLAUDE_PROJECT_DIR`, the first interpreter that answers, never an accidental exit 2."""
-    words = " ".join('"%s"' % c if " " in c else c for c in candidates_for(py))
+    """HK-03, HK-07: `$CLAUDE_PROJECT_DIR`, the first interpreter >= FLOOR that answers, never an accidental exit 2."""
+    words = " ".join(shlex.quote(c) for c in candidates_for(py))
     return ('f="$CLAUDE_PROJECT_DIR/%s"; [ -f "$f" ] || exit 0; '
-            't=; command -v timeout >/dev/null 2>&1 && t="timeout 3"; p=; for c in %s; do '
-            '$t $c -c "" >/dev/null 2>&1 && { p=$c; break; }; done; [ -n "$p" ] || exit 0; '
-            '$p "$f" %s; rc=$?; [ "$rc" -eq 2 ] && exit 2; exit 0' % (HOOK_MARK, words, name))
+            't=; command -v timeout >/dev/null 2>&1 && t="timeout 3"; p=; for c in %s; do a=; %s'
+            '$t "$c" $a -c "%s" >/dev/null 2>&1 && { p=$c; break; }; done; [ -n "$p" ] || exit 0; '
+            '"$p" $a "$f" %s; rc=$?; [ "$rc" -eq 2 ] && exit 2; exit 0'
+            % (HOOK_MARK, words, _ARGS, _FLOOR_CHECK, name))
 
 
 def _legacy_generated(group: Dict[str, Any], wanted: Dict[str, Any], name: str) -> bool:

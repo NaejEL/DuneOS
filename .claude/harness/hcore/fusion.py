@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import re
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
@@ -206,11 +207,25 @@ def _read_text(path: Path) -> Optional[str]:
                               "invalid byte at position %d), file left untouched" % (path, exc.start))
 
 
+def keep_mode(src: Path, tmp: Path, text: str = "") -> None:
+    """The replaced file keeps its permissions (an executable script stays executable); a new
+    file starting with a shebang is made executable."""
+    try:
+        if os.path.exists(str(src)):
+            os.chmod(str(tmp), stat.S_IMODE(os.stat(str(src)).st_mode))
+        elif text.startswith("#!"):
+            mode = stat.S_IMODE(os.stat(str(tmp)).st_mode)
+            os.chmod(str(tmp), mode | ((mode & 0o444) >> 2))
+    except OSError:
+        pass
+
+
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".hcore-tmp")
     with open(tmp, "w", encoding="utf-8", newline="") as fh:
         fh.write(text)
+    keep_mode(path, tmp, text)
     os.replace(str(tmp), str(path))
 
 

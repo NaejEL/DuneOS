@@ -687,6 +687,7 @@ def _write_file(path: Path, text: str) -> None:
     tmp = path.with_name(path.name + ".upgrade-tmp")
     with open(str(tmp), "w", encoding="utf-8", newline="") as fh:
         fh.write(text)
+    fusion.keep_mode(path, tmp, text)
     os.replace(str(tmp), str(path))
     if ".git" in path.parts and "hooks" in path.parts:
         try:

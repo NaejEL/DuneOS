@@ -83,9 +83,12 @@ class InstallTest(helpers.TempDirCase):
             self.assertEqual(result["entries"]["pre-bash"], fusion.IDENTICAL, py)
         self.assertEqual(self.settings().read_bytes(), before)
         command = hooks_install.command_for("py -3", "pre-bash")
-        self.assertIn('for c in python python3 "py -3"; do', command)
-        self.assertIn('for c in /opt/venv/bin/python python python3 "py -3"; do',
+        self.assertIn('for c in python python3 py; do a=; [ "$c" = py ] && a=-3; ', command)
+        self.assertIn('sys.exit(sys.version_info < (3, 9))', command)
+        self.assertIn('for c in /opt/venv/bin/python python python3 py; do',
                       hooks_install.command_for("/opt/venv/bin/python", "pre-bash"))
+        self.assertIn("for c in '/c/My Venv/python.exe' python python3 py; do",
+                      hooks_install.command_for('"/c/My Venv/python.exe"', "pre-bash"))
 
     def legacy_settings(self, py, timeout=10):
         def entry(matcher, name):
@@ -171,6 +174,54 @@ class CommandTest(helpers.TempDirCase):
             shutil.copytree(str(src), str(dest), ignore=shutil.ignore_patterns("__pycache__"))
         payload = {"tool_name": "Bash", "tool_input": {"command": "git push --force"}, "session_id": "s"}
         res = self.run_command("pre-bash", payload, project, '"%s"' % sys.executable.replace("\\", "/"))
+        self.assertEqual(res.returncode, 2, res.stderr)
+
+    def guarded_project(self):
+        project = self.tmp / "p"
+        (project / ".claude" / "harness").mkdir(parents=True)
+        import shutil
+        for item in ("hooks", "hcore"):
+            shutil.copytree(str(helpers.CORE / item), str(project / ".claude" / "harness" / item),
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        return project
+
+    def link(self, target, link):
+        try:
+            os.symlink(target, str(link))
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks unavailable")
+
+    def test_hk07_an_interpreter_below_the_floor_is_skipped(self):
+        """HK-07, D5: a `python` that answers but fails the 3.9 floor is skipped for the next candidate."""
+        project = self.guarded_project()
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir()
+        old = bin_dir / "python"
+        old.write_text('#!/bin/sh\ncase "$*" in *version_info*) exit 1;; esac\nexit 0\n', encoding="utf-8")
+        old.chmod(0o755)
+        self.link(sys.executable, bin_dir / "python3")
+        payload = {"tool_name": "Bash", "tool_input": {"command": "git push --force"}, "session_id": "s"}
+        command = hooks_install.command_for("python3", "pre-bash")
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project), PATH=str(bin_dir) + os.pathsep + os.environ["PATH"])
+        res = subprocess.run([find_bash(), "-c", command], input=json.dumps(payload), capture_output=True, text=True,
+                             env=env, timeout=60)
+        self.assertEqual(res.returncode, 2, res.stderr)
+
+    def test_hk07_an_interpreter_path_with_spaces_stays_whole(self):
+        """HK-07: a venv path containing a space is probed and run as one word."""
+        project = self.guarded_project()
+        spaced = self.tmp / "my venv"
+        spaced.mkdir()
+        self.link(sys.executable, spaced / "python")
+        payload = {"tool_name": "Bash", "tool_input": {"command": "git push --force"}, "session_id": "s"}
+        command = hooks_install.command_for(str(spaced / "python").replace("\\", "/"), "pre-bash")
+        self.assertIn("'%s'" % str(spaced / "python").replace("\\", "/"), command)
+        empty = self.tmp / "empty-path"
+        empty.mkdir()
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project), PATH=str(empty))  # no fallback interpreter
+        import shutil
+        res = subprocess.run([shutil.which(find_bash()) or find_bash(), "-c", command], input=json.dumps(payload), capture_output=True, text=True,
+                             env=env, timeout=60)
         self.assertEqual(res.returncode, 2, res.stderr)
 
 

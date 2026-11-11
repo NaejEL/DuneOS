@@ -1,5 +1,5 @@
 ---
-# harness: claude-skills 2.1.1 (core 4.0.1)
+# harness: claude-skills 2.1.2 (core 4.0.2)
 # >>> harness.frontmatter >>>
 name: factory-planner
 description: "Analyzes a need and the existing code to draft a specification with testable acceptance criteria and open questions. Read-only."
@@ -75,7 +75,7 @@ DuneOS is a minimalist OS for ESP32-S3 microcontrollers (C17, ESP-IDF v6.0.1, CM
 6. *Risks* covers regressions, memory constraints (no PSRAM, ~50-80 KiB of kernel heap free on the CardPuter), ABI impact, and the traps listed in the "Hard-Won Lessons" section of `CLAUDE.md`.
 
 <!-- rgkb:debut -->
-<!-- rgkb: claude-skills 2.1.1 (rgkb 1.0.1) -->
+<!-- rgkb: claude-skills 2.1.2 (rgkb 1.0.1) -->
 ## Repository knowledge base (rgkb)
 
 You have the `mcp__rgkb__*` tools (equivalent CLI: `python3 .claude/rgkb/rgkb.py`). For `factory-planner`:

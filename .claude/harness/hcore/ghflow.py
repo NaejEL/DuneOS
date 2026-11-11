@@ -8,6 +8,10 @@
 # - SP-15: collects the round diff (round 1: gh pr diff; afterwards:
 #   git diff <HEAD before the previous round's fix>..HEAD, hence the fix
 #   commit, + files already flagged).
+# - SP-20: GitHub refuses a PR diff over its size limit (HTTP 406, too_large):
+#   round 1 then reads `git diff origin/<target>...HEAD` locally, without the
+#   core copy `.claude/harness/` when it matches its MANIFEST (a pristine copy
+#   is the published core, already reviewed upstream).
 # - SP-16: inline comment with the headRefOid re-read at posting time;
 #   on HTTP 422 only, file-level fallback then, if that also fails with
 #   HTTP 422, a PR comment as a last resort. Any other error stops the skill.
@@ -30,10 +34,12 @@ import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from . import findings, registry as registry_mod, shippr
+from . import findings, history, registry as registry_mod, shippr, version
 from .proc import Result
 
 HTTP_422 = re.compile(r"\bHTTP 422\b")   # gh message: "... (HTTP 422)"
+DIFF_TOO_LARGE = re.compile(r"\bHTTP 406\b|too_large|exceeded the maximum number of lines")   # SP-20
+CORE_COPY = ".claude/harness"
 
 Run = Callable[..., Result]
 EXCLUDE_LINE = ".harness/runs/"
@@ -147,13 +153,36 @@ def find_or_create_pr(run: Run, state: Dict[str, Any], title: Optional[str] = No
 def collect_diff(run: Run, state: Dict[str, Any]) -> str:
     """SP-15."""
     if state["round"] == 1 or not state.get("prev_round_sha"):
-        return _must(run(["gh", "pr", "diff", str(state["pr"])]), "gh pr diff").out
+        res = run(["gh", "pr", "diff", str(state["pr"])])
+        if res.ok or not DIFF_TOO_LARGE.search(res.err + res.out):
+            return _must(res, "gh pr diff").out
+        return local_pr_diff(run, state)
     out = _must(run(["git", "diff", "%s..HEAD" % state["prev_round_sha"]]), "git diff").out
     flagged = sorted({c["file"] for c in state["candidates"].values() if c["status"] == "CONFIRMED"})
     if flagged:
         out += _must(run(["git", "diff", "origin/%s...HEAD" % state["target"], "--"] + flagged),
                      "git diff flagged files").out
     return out
+
+
+def pristine_core_copy(root: Optional[Path]) -> bool:
+    """SP-20: the project's core copy exists and every file matches its MANIFEST."""
+    if root is None:
+        return False
+    dest = Path(root) / CORE_COPY
+    if not version.read_manifest(dest):
+        return False
+    states = history.copy_states(dest, dest, [])
+    return bool(states) and all(s == history.PRISTINE for s in states.values())
+
+
+def local_pr_diff(run: Run, state: Dict[str, Any]) -> str:
+    """SP-20: the whole PR diff from git, the pristine core copy left out."""
+    root = state.get("root")
+    args = ["git", "diff", "origin/%s...HEAD" % state["target"]]
+    if pristine_core_copy(Path(root) if root else None):
+        args += ["--", ".", ":(exclude)%s" % CORE_COPY]
+    return _must(run(args), "git diff (PR diff too large for GitHub)").out
 
 
 def comment_body(c: Dict[str, Any]) -> str:

@@ -21,6 +21,30 @@ def ordered(path):
     return json.dumps(json.loads(path.read_text(encoding="utf-8")))
 
 
+@unittest.skipIf(os.name == "nt", "POSIX permission bits")
+class FileModeTest(helpers.TempDirCase):
+    def test_a_rewritten_file_keeps_its_permissions(self):
+        """An executable script rewritten by a merge or an upgrade stays executable; a plain file stays plain."""
+        from hcore import upgrade
+        for write in (fusion._write, upgrade._write_file):
+            script, plain = self.tmp / "run.sh", self.tmp / "notes.md"
+            script.write_text("#!/bin/sh\n", encoding="utf-8")
+            plain.write_text("a\n", encoding="utf-8")
+            os.chmod(str(script), 0o750)
+            os.chmod(str(plain), 0o640)
+            write(script, "#!/bin/sh\necho new\n")
+            write(plain, "b\n")
+            self.assertEqual(os.stat(str(script)).st_mode & 0o777, 0o750, write)
+            self.assertEqual(os.stat(str(plain)).st_mode & 0o777, 0o640, write)
+
+    def test_a_new_file_with_a_shebang_is_executable(self):
+        """A created script is executable for whoever can read it; a created plain file is not."""
+        fusion._write(self.tmp / "ci" / "factory.sh", "#!/usr/bin/env bash\n")
+        fusion._write(self.tmp / "README.md", "text\n")
+        self.assertTrue(os.access(str(self.tmp / "ci" / "factory.sh"), os.X_OK))
+        self.assertFalse(os.stat(str(self.tmp / "README.md")).st_mode & 0o111)
+
+
 class DenyRulesTest(unittest.TestCase):
     def test_sf01_stack_correspondence(self):
         """SF-01."""

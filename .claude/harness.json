@@ -10,12 +10,12 @@
   ],
   "skills": {
     "software-factory": {
-      "repo_commit": "9d5459f374b92c1fa7a13dc28ec8f60a9551e501",
-      "repo_describe": "2.1.1",
+      "repo_commit": "7e9c13466dffaf6cb092f896acca0aa4510ee4aa",
+      "repo_describe": "2.1.2",
       "repo_dirty": false,
-      "core_version": "4.0.1",
+      "core_version": "4.0.2",
       "installed_at": "2026-11-11T17:40:21+01:00",
-      "updated_at": "2026-11-11T18:18:10+01:00",
+      "updated_at": "2026-11-11T20:44:55+01:00",
       "options": {
         "stacks": [
           "cpp"
@@ -93,12 +93,12 @@
       }
     },
     "code-index": {
-      "repo_commit": "9d5459f374b92c1fa7a13dc28ec8f60a9551e501",
-      "repo_describe": "2.1.1",
+      "repo_commit": "7e9c13466dffaf6cb092f896acca0aa4510ee4aa",
+      "repo_describe": "2.1.2",
       "repo_dirty": false,
       "tool_version": "1.0.1",
       "installed_at": "2026-11-11T17:44:25+01:00",
-      "updated_at": "2026-11-11T18:18:26+01:00",
+      "updated_at": "2026-11-11T20:44:56+01:00",
       "options": {
         "no_wire": false,
         "hooks": "commit",
@@ -118,19 +118,19 @@
         ".claude/agents/factory-builder.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "acb5e38966330939902bc1a6ea5585d8201b38add2af0e2a11b5c520f75ce717"
+            "rgkb": "9631d37f3e737e8a9873ca79d73b7e0692a977f25b95f79015bf6bcbd4fb4ea3"
           }
         },
         ".claude/agents/factory-planner.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "f387d5ad9043d7b7c7c773eec7959aa4562f88c34d7e3d4269900b6ca60d422a"
+            "rgkb": "d8a8a5421d01a2eaf71361e710bf0e3998599c384a5d3d2b34a13fd5f66408ff"
           }
         },
         ".claude/agents/factory-verifier.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "43b0ff150fc8542603671d32368aa683084eca8d6a79b934d0fecd889d1d12e6"
+            "rgkb": "9dd5d6a15a10eb44283fbce431fc8e4626e86854f33e709de57fc576c0a8d49a"
           }
         },
         ".claude/rgkb/rgkb.py": {
@@ -142,7 +142,7 @@
         ".claude/skills/factory-run/SKILL.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "d7b7dc18a8cf315f0b61878fff201fe7e76e1e4568b6f263edc323a21d3bc048"
+            "rgkb": "c05d8bcd0a3b4d5848e7b248740c452b8ddb1cb64e7999ed4ded48585db4e8fa"
           }
         },
         ".knowledge/config.json": {

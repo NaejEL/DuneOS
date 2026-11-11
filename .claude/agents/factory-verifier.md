@@ -1,5 +1,5 @@
 ---
-# harness: claude-skills 2.1.1 (core 4.0.1)
+# harness: claude-skills 2.1.2 (core 4.0.2)
 # >>> harness.frontmatter >>>
 name: factory-verifier
 description: "Adversarial verification of an implementation against its spec — runs the tests, tries to break it, returns a strict JSON verdict. Never modifies the code."
@@ -51,7 +51,7 @@ DuneOS: C17 / ESP-IDF v6.0.1 / CMake for the ESP32-S3 firmware, Python 3 for the
 4. DuneOS break angles: zero sizes, non-existent paths, FAT 8.3 uppercase names, full buffers; is the `int`/`-errno` convention respected? Is `DUNEOS_ABI_VERSION` bumped if the ABI changes? Were bspgen files hand-edited? CardPuter memory constraints (no PSRAM)? Warnings suppressed or tests disabled by the Builder?
 
 <!-- rgkb:debut -->
-<!-- rgkb: claude-skills 2.1.1 (rgkb 1.0.1) -->
+<!-- rgkb: claude-skills 2.1.2 (rgkb 1.0.1) -->
 ## Repository knowledge base (rgkb)
 
 You have the `mcp__rgkb__*` tools (equivalent CLI: `python3 .claude/rgkb/rgkb.py`). For `factory-verifier`:

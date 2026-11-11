@@ -10,4 +10,4 @@
 #
 # Single entry point: harness.py (CLI), next to this package.
 
-CORE_VERSION = "4.0.1"
+CORE_VERSION = "4.0.2"

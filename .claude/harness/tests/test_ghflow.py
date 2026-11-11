@@ -138,6 +138,43 @@ class RoundFlowTest(helpers.TempDirCase):
         self.assertEqual(ghflow.collect_diff(run, self.st), "INC\nFLAG\n")
         self.assertIn(["git", "diff", "origin/main...HEAD", "--", "src/x.py"], run.calls)
 
+    TOO_LARGE = ("could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of "
+                 "lines (20000)\nPullRequest.diff too_large")
+
+    def test_sp20_a_diff_too_large_for_github_is_read_locally(self):
+        """SP-20: HTTP 406 too_large on round 1 -> git diff origin/<target>...HEAD; no core copy, nothing left out."""
+        run = (helpers.FakeRunner().on(("gh", "pr", "diff"), code=1, err=self.TOO_LARGE)
+               .on(("git", "diff", "origin/main...HEAD"), out="LOCAL\n"))
+        self.assertEqual(ghflow.collect_diff(run, self.st), "LOCAL\n")
+        self.assertEqual(run.called("git", "diff")[0], ["git", "diff", "origin/main...HEAD"])
+
+    def test_sp20_any_other_gh_error_still_stops(self):
+        """SP-15, SP-20: only the size refusal falls back; another gh failure stays a stop."""
+        run = helpers.FakeRunner().on(("gh", "pr", "diff"), code=1, err="HTTP 502: Bad Gateway")
+        with self.assertRaises(Stop) as ctx:
+            ghflow.collect_diff(run, self.st)
+        self.assertIn("gh pr diff failed", str(ctx.exception))
+        self.assertFalse(run.called("git", "diff"))
+
+    def test_sp20_a_pristine_core_copy_is_left_out_a_customized_one_is_reviewed(self):
+        """SP-20: the core copy matching its MANIFEST is excluded; one edited file brings it back into the diff."""
+        root = self.tmp / "proj"
+        root.mkdir()
+        res = helpers.harness(["sf", "copy-core", "--root", str(root)], root)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.st["root"] = str(root)
+        self.assertTrue(ghflow.pristine_core_copy(root))
+        run = helpers.FakeRunner().on(("gh", "pr", "diff"), code=1, err=self.TOO_LARGE)
+        ghflow.collect_diff(run, self.st)
+        self.assertEqual(run.called("git", "diff")[0],
+                         ["git", "diff", "origin/main...HEAD", "--", ".", ":(exclude).claude/harness"])
+        hcore = root / ".claude" / "harness" / "hcore" / "proc.py"
+        hcore.write_text(hcore.read_text(encoding="utf-8") + "# local edit\n", encoding="utf-8")
+        self.assertFalse(ghflow.pristine_core_copy(root))
+        run = helpers.FakeRunner().on(("gh", "pr", "diff"), code=1, err=self.TOO_LARGE)
+        ghflow.collect_diff(run, self.st)
+        self.assertEqual(run.called("git", "diff")[0], ["git", "diff", "origin/main...HEAD"])
+
     def test_sp15_reference_is_head_before_fix_commit_real_git(self):
         """SP-15: real replay on a throwaway repository; round 2 reviews the fix
         commit of round 1 (reference = HEAD before that commit)."""

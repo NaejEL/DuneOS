@@ -1,5 +1,5 @@
 ---
-# harness: claude-skills 2.1.1 (core 4.0.1)
+# harness: claude-skills 2.1.2 (core 4.0.2)
 # >>> harness.frontmatter >>>
 name: factory-builder
 description: "Strictly implements an approved specification — architecture, code and tests in a single context — then runs build and tests before handing back."
@@ -66,7 +66,7 @@ Build and tests, depending on what the spec touches (on Windows, ESP-IDF and `db
 Additional prohibitions: no `NoWarn`, no skipped test, no suppressed warning, no `#if 0`, no commented-out code; never touch bspgen-generated files other than by re-generating them.
 
 <!-- rgkb:debut -->
-<!-- rgkb: claude-skills 2.1.1 (rgkb 1.0.1) -->
+<!-- rgkb: claude-skills 2.1.2 (rgkb 1.0.1) -->
 ## Repository knowledge base (rgkb)
 
 You have the `mcp__rgkb__*` tools (equivalent CLI: `python3 .claude/rgkb/rgkb.py`). For `factory-builder`:
