@@ -1,4 +1,4 @@
-# harness: claude-skills 2.1.2 (core 4.0.2)
+# harness: claude-skills 2.1.3 (core 4.0.3)
 # >>> harness.ci >>>
 # Runs a headless software-factory cycle on an already approved spec.
 # Usage: pwsh -File ci/factory.ps1 <spec-path> [-Yolo]
@@ -13,6 +13,13 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoDir = Split-Path -Parent $PSScriptRoot
+
+# A relative path is read from the current folder when it exists there, else from the repository root;
+# it is made absolute because claude runs from the root.
+if (-not [System.IO.Path]::IsPathRooted($Spec)) {
+    if (Test-Path -LiteralPath $Spec -PathType Leaf) { $Spec = (Resolve-Path -LiteralPath $Spec).Path }
+    else { $Spec = Join-Path $repoDir $Spec }
+}
 
 if (-not (Test-Path -LiteralPath $Spec -PathType Leaf)) {
     Write-Error "Spec not found: $Spec"
@@ -53,11 +60,18 @@ Write-Host "Log     : $logFile"
 $env:CLAUDE_CODE_DISABLE_BACKGROUND_TASKS = '1'
 $env:CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS = '0'
 $null = Get-Command claude -ErrorAction Stop
+$status = $null
+Push-Location $repoDir
 # 'Continue': under 'Stop', Windows PowerShell 5.1 turns each redirected stderr line into a terminating error.
 $ErrorActionPreference = 'Continue'
-& claude @claudeArgs 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $logFile
-$status = $LASTEXITCODE
-$ErrorActionPreference = 'Stop'
+try {
+    & claude @claudeArgs 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $logFile
+    $status = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = 'Stop'
+    Pop-Location
+}
 if ($null -eq $status) { $status = 1 }
 
 Write-Host "claude exit: exit code $status"

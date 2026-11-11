@@ -1,5 +1,5 @@
 ---
-# harness: claude-skills 2.1.2 (core 4.0.2)
+# harness: claude-skills 2.1.3 (core 4.0.3)
 # >>> harness.frontmatter >>>
 name: factory-run
 description: "Runs one cycle of the software factory (Planner → human gate on the spec → Builder → Verifier with a fix loop) on a need or an approved spec."
@@ -68,7 +68,7 @@ Delivery (gate `factory-run.ship`, unless `--no-ship`): `H factory-run deliver -
 When launching `factory-builder`, remind it of the environment: ESP-IDF/dbt builds through PowerShell on Windows (`idf.py build`, `python tools/dbt.py buildall`), Python tests through `python -m pytest tools/dbt/tests -q`.
 
 <!-- rgkb:debut -->
-<!-- rgkb: claude-skills 2.1.2 (rgkb 1.0.1) -->
+<!-- rgkb: claude-skills 2.1.3 (rgkb 1.0.1) -->
 ## Repository knowledge base (rgkb)
 
 For `factory-run`, two anchor points, without renumbering the steps:

@@ -37,6 +37,13 @@ if [ -z "$spec" ]; then
     exit 2
 fi
 
+# A relative path is read from the current folder when it exists there, else from the repository root;
+# it is made absolute because claude runs from the root.
+case "$spec" in
+    /*) ;;
+    *) if [ -f "$spec" ]; then spec="$PWD/$spec"; else spec="$repo_dir/$spec"; fi ;;
+esac
+
 if [ ! -f "$spec" ]; then
     echo "Spec not found: $spec" >&2
     exit 1
@@ -67,7 +74,7 @@ echo "Mode    : $([ "$yolo" -eq 1 ] && echo 'YOLO (permissions ignored)' || echo
 echo "Log     : $log_file"
 
 set +e
-"${cmd[@]}" | tee "$log_file"
+(cd "$repo_dir" && "${cmd[@]}") 2>&1 | tee "$log_file"
 status="${PIPESTATUS[0]}"
 set -e
 

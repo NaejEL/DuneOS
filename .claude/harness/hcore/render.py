@@ -8,6 +8,9 @@
 #   contributions): same inputs, same bytes (LF). No call to the LLM.
 # - RD-05: the `tools:` list of an agent and the --allowedTools of a script are the
 #   union of the tools of the profile and of the contributions of the stamp.
+# - RD-08: an agent that runs commands (`Bash` in its tools) also gets the tools
+#   named by the `extra_tools` parameter (`PowerShell` for `PowerShell(idf.py *)`):
+#   the commands the project declares must be runnable by the Verifier too.
 # - RD-06: the `rgkb` blocks of code-index are templates parameterized by the
 #   interpreter and the agent name.
 # - EN-01 to EN-04: one English header line, no date (idempotence), none in strict
@@ -74,10 +77,24 @@ def _yaml(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def agent_frontmatter(role: Dict[str, Any], model: str, contributions: Sequence[str]) -> str:
+def _extra_tools(params: Optional[Dict[str, Any]]) -> List[str]:
+    more = (params or {}).get("extra_tools") or []
+    return [t.strip() for t in (more.split(",") if isinstance(more, str) else more) if t.strip()]
+
+
+def shell_tools(role_tools: Sequence[str], params: Optional[Dict[str, Any]]) -> List[str]:
+    """RD-08: tool names of `extra_tools` for an agent that has `Bash`, in declaration order."""
+    if "Bash" not in [t.strip() for t in role_tools]:
+        return []
+    return union([t.split("(", 1)[0].strip() for t in _extra_tools(params)], [])
+
+
+def agent_frontmatter(role: Dict[str, Any], model: str, contributions: Sequence[str],
+                      params: Optional[Dict[str, Any]] = None) -> str:
     lines = ["name: %s" % role["name"], "description: %s" % _yaml(role.get("description") or role["name"])]
     if role.get("tools"):
-        tools = union([t for t in role["tools"].split(",")], contributions)
+        base = [t for t in role["tools"].split(",")]
+        tools = union(union(base, shell_tools(base, params)), contributions)
         lines.append("tools: %s" % ", ".join(tools))
     lines.append("model: %s" % model)
     return "\n".join(lines)
@@ -102,8 +119,7 @@ def allowed_tools(params: Dict[str, Any], contributions: Sequence[str]) -> str:
         words = str(params.get(key) or "").split()
         if words:
             extra.append("Bash(%s *)" % words[0])
-    more = params.get("extra_tools") or []
-    extra += [t.strip() for t in (more.split(",") if isinstance(more, str) else more)]
+    extra += _extra_tools(params)
     return lab.allow_list(union(extra, contributions))
 
 
@@ -156,7 +172,7 @@ def profile_layouts(prof: Dict[str, Any], params: Dict[str, Any], contributions:
             role = dict(role, description=role.get("description") or derived)
         body = substitute(body, params)
         fm = agent_frontmatter(role, models_by_role.get(role["model_role"], role.get("model_default", "inherit")),
-                               contributions)
+                               contributions, params)
         out[role["agent_file"]] = Layout("md", hdr, ((FRONTMATTER, "hash", fm.strip("\n")),
                                                       (BODY, "md", body.strip("\n"))))
     orch = dict(prof["orchestrator"])

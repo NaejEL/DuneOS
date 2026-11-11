@@ -170,8 +170,11 @@ def pristine_core_copy(root: Optional[Path]) -> bool:
     if root is None:
         return False
     dest = Path(root) / CORE_COPY
-    if not version.read_manifest(dest):
+    manifest = version.read_manifest(dest)
+    if not manifest:
         return False
+    if any(not (dest / rel).is_file() for rel in manifest.get("files") or {}):
+        return False                    # a core file deleted from the copy is a change to review
     states = history.copy_states(dest, dest, [])
     return bool(states) and all(s == history.PRISTINE for s in states.values())
 

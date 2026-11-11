@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import unittest
 
 import helpers
 import upgrade_fixtures as uf
-from hcore import blocks, profiles, render, upgrade
+from hcore import blocks, lab, profiles, render, upgrade
 
 
 class PureRenderTest(unittest.TestCase):
@@ -48,6 +49,18 @@ class PureRenderTest(unittest.TestCase):
         ci = layouts["ci/factory.sh"].blocks[0][2]
         self.assertIn("mcp__rgkb__search", ci)
 
+    def test_rd08_an_agent_with_bash_gets_the_declared_shell_tools(self):
+        """RD-08: `PowerShell(idf.py *)` in extra_tools gives the Verifier `PowerShell`; the Planner (no Bash) nothing."""
+        prof = profiles.get("software")
+        params = {"interpreter": "python", "extra_tools": ["PowerShell(git *)", "PowerShell(idf.py *)", "Bash(npm *)"]}
+        layouts = render.profile_layouts(prof, params, ["mcp__rgkb__search"], {}, render.header("v", "3.0.0"))
+        fm = lambda rel: dict((n, c) for n, _s, c in layouts[rel].blocks)[render.FRONTMATTER] + "\n"
+        self.assertIn("tools: Read, Glob, Grep, Bash, PowerShell, mcp__rgkb__search\n", fm(".claude/agents/factory-verifier.md"))
+        self.assertIn("tools: Read, Glob, Grep, mcp__rgkb__search\n", fm(".claude/agents/factory-planner.md"))
+        self.assertIn("PowerShell(idf.py *)", layouts["ci/factory.sh"].blocks[0][2])
+        self.assertEqual(render.shell_tools(["Read", "Bash"], {"extra_tools": "Bash(npm *), PowerShell(x *)"}),
+                         ["Bash", "PowerShell"])
+
     def test_rd06_rgkb_blocks_are_templates(self):
         """RD-06: a rgkb block depends on the interpreter and the agent name only."""
         tpl = (uf.ASSETS / "blocks" / "read-only.md").read_text(encoding="utf-8")
@@ -72,6 +85,50 @@ class PureRenderTest(unittest.TestCase):
 
 
 @unittest.skipUnless(uf.REPO_OK, uf.SKIP_REPO)
+@unittest.skipUnless(shutil.which("bash") and os.name != "nt", "POSIX bash")
+class CiScriptRunTest(helpers.TempDirCase):
+    """The rendered ci/factory.sh and ci/lab.sh with a fake `claude`: root-anchored, stderr logged, exit kept."""
+
+    def project(self, template: str, rel: str, status: str):
+        repo = self.tmp / "repo"
+        (repo / "ci").mkdir(parents=True)
+        (repo / "specs").mkdir()
+        script = (lab.TEMPLATES / template).read_text(encoding="utf-8").replace(render.ALLOWED_MARK, "Read")
+        (repo / "ci" / rel).write_text(script, encoding="utf-8")
+        (repo / "specs" / "SPEC-x.md").write_text("# X\n\n%s\n" % status, encoding="utf-8")
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "claude"
+        fake.write_text('#!/bin/sh\necho "cwd=$(pwd)"\necho "prompt=$2"\necho ERR-LINE >&2\nexit 3\n', encoding="utf-8")
+        os.chmod(str(fake), 0o755)
+        env = dict(os.environ, PATH="%s%s%s" % (bin_dir, os.pathsep, os.environ.get("PATH", "")))
+        return repo, env
+
+    def run_script(self, repo, env, rel, spec, cwd):
+        res = subprocess.run(["bash", str(repo / "ci" / rel), spec], cwd=str(cwd), env=env, capture_output=True,
+                             text=True, timeout=60)
+        logs = sorted((repo / ("lab-logs" if rel == "lab.sh" else "factory-logs")).glob("*.json"))
+        return res, logs[-1].read_text(encoding="utf-8") if logs else ""
+
+    def test_relative_spec_root_anchored_stderr_logged_exit_kept(self):
+        for template, rel, status in (("factory-ci.sh", "factory.sh", "Status: APPROVED"),
+                                      ("lab-ci.sh", "lab.sh", "Status: PRE-REGISTERED")):
+            with self.subTest(rel):
+                for item in ("repo", "bin"):
+                    shutil.rmtree(str(self.tmp / item), ignore_errors=True)
+                repo, env = self.project(template, rel, status)
+                elsewhere = self.tmp / "elsewhere"
+                elsewhere.mkdir(exist_ok=True)
+                res, log = self.run_script(repo, env, rel, "specs/SPEC-x.md", elsewhere)     # from the repository root
+                self.assertEqual(res.returncode, 3, res.stderr)
+                self.assertIn("cwd=%s" % repo.resolve(), log)
+                self.assertIn("ERR-LINE", log)
+                self.assertIn("%s/specs/SPEC-x.md" % repo, log)
+                res, log = self.run_script(repo, env, rel, "repo/specs/SPEC-x.md", self.tmp)  # from the current folder
+                self.assertEqual(res.returncode, 3, res.stderr)
+                self.assertIn("%s/repo/specs/SPEC-x.md" % self.tmp, log)
+
+
 class LayoutTest(helpers.TempDirCase):
     def setUp(self) -> None:
         super().setUp()

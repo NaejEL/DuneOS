@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "autonomy": "auto",
+  "autonomy": "gate",
   "profiles": [
     {
       "name": "software",
@@ -10,12 +10,12 @@
   ],
   "skills": {
     "software-factory": {
-      "repo_commit": "7e9c13466dffaf6cb092f896acca0aa4510ee4aa",
-      "repo_describe": "2.1.2",
+      "repo_commit": "757d07534886e6f3c23c95d7f48d3279f422e8e4",
+      "repo_describe": "2.1.3",
       "repo_dirty": false,
-      "core_version": "4.0.2",
+      "core_version": "4.0.3",
       "installed_at": "2026-11-11T17:40:21+01:00",
-      "updated_at": "2026-11-11T20:44:55+01:00",
+      "updated_at": "2026-11-11T21:52:00+01:00",
       "options": {
         "stacks": [
           "cpp"
@@ -55,7 +55,7 @@
         ".claude/agents/factory-verifier.md": {
           "kind": "generated",
           "blocks": {
-            "harness.frontmatter": "7860fa8debc79e38ce6c28eea97fd622010ecc2e03d0e806c29a446d87cec728",
+            "harness.frontmatter": "13549f9fc85cbc939025cb3460f61b17f0a79d56af82a2ef83d4e357ed35efbe",
             "harness.body": "ed26942c7b15b187266893e4f1c54d93f36fd5e9df93756fe880c64b3b56b854"
           }
         },
@@ -81,24 +81,24 @@
         "ci/factory.ps1": {
           "kind": "generated",
           "blocks": {
-            "harness.ci": "fe3238bcb134fb4d5a9ce78cd0ac4d0a500c358991239680f5606533efa1ad2a"
+            "harness.ci": "294b15ce8f384cecbf4d371738c0d6fa0b71655b3a33680564799273aa765969"
           }
         },
         "ci/factory.sh": {
           "kind": "generated",
           "blocks": {
-            "harness.ci": "890ce2cada408ecda2ee3b707e1919655a533e05f292f53625f8bf21cf8b8bad"
+            "harness.ci": "7c93c9bf39adbab7d15c5db48d9eca2eb3bc97da50ffdf60577a383bcba68d46"
           }
         }
       }
     },
     "code-index": {
-      "repo_commit": "7e9c13466dffaf6cb092f896acca0aa4510ee4aa",
-      "repo_describe": "2.1.2",
+      "repo_commit": "757d07534886e6f3c23c95d7f48d3279f422e8e4",
+      "repo_describe": "2.1.3",
       "repo_dirty": false,
       "tool_version": "1.0.1",
       "installed_at": "2026-11-11T17:44:25+01:00",
-      "updated_at": "2026-11-11T20:44:56+01:00",
+      "updated_at": "2026-11-11T21:52:01+01:00",
       "options": {
         "no_wire": false,
         "hooks": "commit",
@@ -118,19 +118,19 @@
         ".claude/agents/factory-builder.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "9631d37f3e737e8a9873ca79d73b7e0692a977f25b95f79015bf6bcbd4fb4ea3"
+            "rgkb": "4048a608832cf84d75d2ff1937364643bb24613ec70d2e88368399e0ae54e51a"
           }
         },
         ".claude/agents/factory-planner.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "d8a8a5421d01a2eaf71361e710bf0e3998599c384a5d3d2b34a13fd5f66408ff"
+            "rgkb": "8578d8c202f2951e10d7f9982ad523ba1b880de6ff68832e864c8651d42f2171"
           }
         },
         ".claude/agents/factory-verifier.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "9dd5d6a15a10eb44283fbce431fc8e4626e86854f33e709de57fc576c0a8d49a"
+            "rgkb": "d7dd27a489630124aef15f2f8b1f860d6dba501ba9f474957edb40f89a77a69e"
           }
         },
         ".claude/rgkb/rgkb.py": {
@@ -142,7 +142,7 @@
         ".claude/skills/factory-run/SKILL.md": {
           "kind": "generated",
           "blocks": {
-            "rgkb": "c05d8bcd0a3b4d5848e7b248740c452b8ddb1cb64e7999ed4ded48585db4e8fa"
+            "rgkb": "96ff96b95d4f477b124faa243264db785072e9665257a23eb69165269531be6c"
           }
         },
         ".knowledge/config.json": {
@@ -157,5 +157,17 @@
       }
     }
   },
-  "inferred_from": "pre-core"
+  "inferred_from": "pre-core",
+  "migrations": [
+    {
+      "id": "run-registries",
+      "at": "2026-11-11T21:52:00+01:00",
+      "sources": [
+        {
+          "path": ".harness/runs/ship-pr-20261111-204539.registry.jsonl",
+          "sha256": "a7a49955acd21ea22df876362609ec3e9b465df7f4398bb5e79457c828c5569f"
+        }
+      ]
+    }
+  ]
 }

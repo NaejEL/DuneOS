@@ -175,6 +175,16 @@ class RoundFlowTest(helpers.TempDirCase):
         ghflow.collect_diff(run, self.st)
         self.assertEqual(run.called("git", "diff")[0], ["git", "diff", "origin/main...HEAD"])
 
+    def test_sp20_a_core_file_deleted_from_the_copy_is_reviewed(self):
+        """SP-20: a file listed in the MANIFEST but missing from the copy is not pristine."""
+        root = self.tmp / "proj"
+        root.mkdir()
+        res = helpers.harness(["sf", "copy-core", "--root", str(root)], root)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertTrue(ghflow.pristine_core_copy(root))
+        (root / ".claude" / "harness" / "hcore" / "proc.py").unlink()
+        self.assertFalse(ghflow.pristine_core_copy(root))
+
     def test_sp15_reference_is_head_before_fix_commit_real_git(self):
         """SP-15: real replay on a throwaway repository; round 2 reviews the fix
         commit of round 1 (reference = HEAD before that commit)."""

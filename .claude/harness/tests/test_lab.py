@@ -157,7 +157,7 @@ class CiScriptTest(helpers.TempDirCase):
         args = read(log).split("\n")
         self.assertIn("--max-turns", args)
         self.assertEqual(args[args.index("--max-turns") + 1], "150")
-        self.assertIn("/lab-run 'experiments/EXP-1.md'", args)
+        self.assertIn("/lab-run '%s/experiments/EXP-1.md'" % self.tmp, args)    # made absolute: claude runs from the root
         self.assertEqual(args[args.index("--allowedTools") + 1], "Read,Glob,Grep,Write,Edit,Bash(git *),Bash(python *)")
         self.assertTrue(list((self.tmp / "lab-logs").glob("lab-*.json")))
 

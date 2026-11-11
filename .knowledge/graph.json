@@ -10402,6 +10402,11 @@
   },
   {
    "count": 1,
+   "dst": "read",
+   "src": "ci/factory.ps1"
+  },
+  {
+   "count": 1,
    "dst": "stderr",
    "src": "ci/factory.ps1"
   },
@@ -10413,6 +10418,11 @@
   {
    "count": 1,
    "dst": "mkdir",
+   "src": "ci/factory.sh"
+  },
+  {
+   "count": 1,
+   "dst": "read",
    "src": "ci/factory.sh"
   },
   {
