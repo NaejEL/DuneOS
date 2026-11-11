@@ -1,0 +1,15 @@
+{
+  "spec": {
+    "secrets_out_of_scope": "History rewriting",
+    "leak_criteria": [
+      "The baseline and the tested condition are run by the same command, apart from the manipulated variable.",
+      "The results of the table that depend on this eval are marked *to be re-measured* in the audit."
+    ],
+    "no_questions": "None"
+  },
+  "tshirt": {
+    "dev": {"XS": "< 30 min", "S": "< 2 h", "M": "half a day", "L": "1-2 days", "XL": "to be split"},
+    "gpu": {"XS": "a few GPU minutes", "S": "< 1 h", "M": "half a day of runs", "L": "several days",
+            "XL": "beyond the reach of the hardware"}
+  }
+}

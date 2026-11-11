@@ -166,8 +166,8 @@
 {"lang": "other", "lines": 5, "path": "boards/m5stack-cardputer/etc/wifi/known.yaml.example", "sha256": "9586320188a4cbe78903bd8d613a22a62e5e77269e16bf59ac7ea25172a3eec5", "size": 200}
 {"lang": "other", "lines": 8, "path": "boards/m5stack-cardputer/etc/wifi_daemon/config.yaml.example", "sha256": "1571834e8404c64cfa0daadc8d3f2b37ac7ca04b3258af370364be30e7c2da9b", "size": 342}
 {"lang": "yaml", "lines": 11, "path": "boards/m5stack-cardputer/init.yaml", "sha256": "a7298799d34776858b2dfc653e8cd8fc8e0ae22f6fba7a07fa6adb473284580c", "size": 303}
-{"lang": "powershell", "lines": 44, "path": "ci/factory.ps1", "sha256": "75081559f6e7bfaa144aa7dd9792b921391e2ba647806c4c6a31172842adc47b", "size": 1517}
-{"lang": "shell", "lines": 56, "path": "ci/factory.sh", "sha256": "4c51e9eedef72e4cb8f2f3e7e63d6a7646fd9f2074ca1f5f14c6e81df1580fc8", "size": 1585}
+{"lang": "powershell", "lines": 79, "path": "ci/factory.ps1", "sha256": "33bb63d6f938dca19f6f26b0b1072484fbed29c72270478edf8091e0230dab36", "size": 2811}
+{"lang": "shell", "lines": 85, "path": "ci/factory.sh", "sha256": "b42124c8cf285e690ebcf541ce541ebfceba54443087f693c71d06dffe32eb0f", "size": 2785}
 {"lang": "python", "lines": 215, "path": "conftest.py", "sha256": "4afa71520d3162398668b3bc801811840c0d900c721f86e7c7dd5bffc3de0e14", "size": 7746}
 {"lang": "markdown", "lines": 52, "path": "docs/adr/000-process.md", "sha256": "ff77b8f41a05661d24a118c2516147325675f3dfd374feb31ec8a928d33d1357", "size": 2858}
 {"lang": "markdown", "lines": 34, "path": "docs/adr/001-error-model.md", "sha256": "646650ba0283136c280fc6ab0e75e500700973b89cde1690fad63afffe2cc5d3", "size": 3701}

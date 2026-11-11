@@ -11,7 +11,8 @@
       "mcp__rgkb__file_card",
       "mcp__rgkb__notes",
       "mcp__rgkb__status",
-      "Bash(python .claude/rgkb/rgkb.py *)"
+      "Bash(python .claude/rgkb/rgkb.py *)",
+      "Bash(python3 .claude/rgkb/rgkb.py *)"
     ],
     "deny": [
       "Read(./build/**)",
@@ -24,6 +25,30 @@
       "Read(./.git/objects/**)",
       "Read(./.knowledge/index.sqlite)",
       "Read(./.knowledge/graph.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/.claude/harness/hooks/hook.py\"; [ -f \"$f\" ] || exit 0; t=; command -v timeout >/dev/null 2>&1 && t=\"timeout 3\"; p=; for c in python python3 \"py -3\"; do $t $c -c \"\" >/dev/null 2>&1 && { p=$c; break; }; done; [ -n \"$p\" ] || exit 0; $p \"$f\" pre-edit; rc=$?; [ \"$rc\" -eq 2 ] && exit 2; exit 0",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/.claude/harness/hooks/hook.py\"; [ -f \"$f\" ] || exit 0; t=; command -v timeout >/dev/null 2>&1 && t=\"timeout 3\"; p=; for c in python python3 \"py -3\"; do $t $c -c \"\" >/dev/null 2>&1 && { p=$c; break; }; done; [ -n \"$p\" ] || exit 0; $p \"$f\" pre-bash; rc=$?; [ \"$rc\" -eq 2 ] && exit 2; exit 0",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

@@ -1,0 +1,165 @@
+{
+  "common": {
+    "none": "—",
+    "spec_link": "[$path]($path)",
+    "coverage": {"complete": "complet", "sampled": "échantillonné"},
+    "failed": "échec"
+  },
+  "legacy-audit": {
+    "head": [
+      "# Roadmap de remise à niveau — $name",
+      "",
+      "Générée par /legacy-audit le $date. Usine logicielle : $factory.",
+      "L'ordre d'exécution des specs est porté par cette roadmap (jalons puis ordre du tableau)."
+    ],
+    "factory": {"present": "présente", "absent": "absente (lancer /software-factory)"},
+    "git_absent": {
+      "category": "versioning-absent", "severity": "major", "title": "Aucun versioning git sur le dépôt",
+      "location": {"file": null, "line": null},
+      "evidence": "git rev-parse --git-dir a échoué : le dossier n'est pas un dépôt git",
+      "impact": "aucun historique, aucune revue ni retour arrière possible",
+      "remediation": "mettre le projet sous versioning git avant toute autre correction",
+      "size": "XS", "depends_on": []
+    },
+    "not_audited_heading": "## Familles non auditées",
+    "not_audited_line": "- $unit : $reason",
+    "not_audited_reason": "non auditée (aucun bloc JSON exploitable après une relance)",
+    "milestone_heading": "## Jalon $number — $title",
+    "milestone_table": [
+      "| ID | Finding | Sévérité | Taille | Dépend de | Spec | Statut |",
+      "|---|---|---|---|---|---|---|"
+    ],
+    "milestone_row": "| $id | $title | $severity | $size | $depends | $spec | $status |",
+    "not_retained_heading": "## Findings non retenus dans ce cycle",
+    "not_retained_table": [
+      "| ID | Finding | Raison (exclu par l'utilisateur / au-delà du plafond de specs) |",
+      "|---|---|---|"
+    ],
+    "not_retained_row": "| $id | $title | $reason |",
+    "not_retained_reasons": {"excluded": "exclu par l'utilisateur", "cap": "au-delà du plafond de specs"},
+    "rejected_heading": "## Findings rejetés à la validation",
+    "rejected_table": ["| ID | Finding | Raison |", "|---|---|---|"],
+    "rejected_row": "| $id | $title | $reason |"
+  },
+  "ai-lab-audit": {
+    "head": [
+      "# Audit du labo — $name",
+      "",
+      "Généré par /ai-lab-audit le $date. Labo : $lab. Factory : $factory.",
+      "Lentilles : $lenses. Audit $coverage. Journal audité jusqu'à l'entrée du $journal_date."
+    ],
+    "lab": {"present": "présent", "absent": "absent (lancer /ai-lab)"},
+    "factory": {"present": "présente", "absent": "absente"},
+    "not_audited_heading": "## Lentilles non auditées",
+    "not_audited_line": "- $unit : $reason",
+    "not_audited_reason": "non auditée (aucun bloc JSON exploitable après une relance) : couverture incomplète",
+    "corrections_heading": "## Corrections à faire",
+    "corrections_table": [
+      "| ID | Finding | Lentille | Sévérité | Taille | Dépend de | Spec | Statut |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- |"
+    ],
+    "corrections_row": "| $id | $title | $axis | $severity | $size | $depends | $spec | $status |",
+    "questions_heading": "## Questions de recherche retenues (ordre recommandé)",
+    "question": [
+      "### $id — $title",
+      "- **Question** : $question",
+      "- **Motivation** : $motivation",
+      "- **Ce qu'elle trancherait** : $decides",
+      "- **Coût estimé** : $size — **Dépend de** : $depends",
+      "- **Lancer** : `/lab-run \"$question\"`",
+      "- **Statut** : $status"
+    ],
+    "not_retained_heading": "## Questions non retenues dans ce cycle",
+    "not_retained_table": [
+      "| ID | Question | Raison (exclue par l'utilisateur / au-delà du plafond) |",
+      "| --- | --- | --- |"
+    ],
+    "not_retained_row": "| $id | $question | $reason |",
+    "not_retained_reasons": {"excluded": "exclue par l'utilisateur", "cap": "au-delà du plafond"},
+    "rejected_heading": "## Findings rejetés à la validation",
+    "rejected_table": ["| ID | Finding | Raison |", "| --- | --- | --- |"],
+    "rejected_row": "| $id | $title | $reason |"
+  },
+  "vibecode-audit": {
+    "head": [
+      "# Audit vibecode — $name",
+      "",
+      "Généré par /vibecode-audit le $date. Axes : $axes. Audit $coverage."
+    ],
+    "headless_notice": [
+      "",
+      "> **Ordre par défaut.** Aucune interaction n'était possible : l'ordre d'attaque et le sort des motifs mineurs sont les défauts du skill, sans arbitrage de l'utilisateur."
+    ],
+    "dead_notice": [
+      "",
+      "> **Famille non auditée : $unit.** Son auditeur n'a rendu aucun bloc JSON exploitable après une relance : elle figure parmi les surfaces non auditables."
+    ],
+    "limits": [
+      "",
+      "> **Portée et limites de cet audit.** Diagnostic statique en lecture seule, produit par un modèle de",
+      "> langage. Il ne remplace pas une revue de sécurité applicative : aucun accès à l'environnement",
+      "> d'exécution, aux identifiants, à la configuration réelle des services tiers ni au trafic ; aucun",
+      "> test d'intrusion. L'auditeur partage une partie des angles morts du modèle qui a produit le code —",
+      "> l'absence de finding sur une famille ne prouve rien. Les surfaces listées ci-dessous n'ont pas pu",
+      "> être auditées du tout.",
+      ">",
+      "> **Validation.** $validated motifs sur $total ont passé la validation adversariale. Les autres sont",
+      "> marqués `non validé` : ils n'ont pas été réfutés, ils n'ont pas été vérifiés.",
+      ">",
+      "> **Les difficultés sont des ordres de grandeur, pas des estimations.** Elles varient d'un audit à",
+      "> l'autre sur le même code. La gravité, elle, est stable : c'est sur elle que repose l'ordre."
+    ],
+    "surfaces_heading": "## Surfaces non auditables",
+    "surfaces_table": ["| Surface | Pourquoi | Ce qu'il faudrait pour la couvrir |", "|---|---|---|"],
+    "surfaces_row": "| $surface | $why | $needs |",
+    "dead_family": {
+      "surface": "famille $unit",
+      "why": "auditeur sans bloc JSON exploitable après une relance (sévérité major)",
+      "needs": "relancer l'audit de cette famille"
+    },
+    "attack_heading": "## Par où attaquer",
+    "attack_intro": "Ordre retenu : $order. $count motifs, $occurrences occurrences au total.",
+    "default_order": "gravité d'abord, tous axes confondus, puis pondération sécurité > maintenabilité > évolutivité",
+    "attack_table": [
+      "| # | ID | Motif | Axe | Sév. | Occ. | Diff. | Risque rég. | Validé | Dépend de | Statut |",
+      "|---|---|---|---|---|---|---|---|---|---|---|"
+    ],
+    "attack_row": "| $rank | $id | $title | $axis | $severity | $count | $size | $risk | $validated | $depends | $status |",
+    "quick_wins": "Gains rapides (XS/S de sévérité major ou critical) : $ids. Signalés, sans remonter dans l'ordre.",
+    "raised": "Critiques remontés depuis un autre axe que la sécurité : $items. Remontée délibérée — la gravité prime sur l'axe.",
+    "raised_item": "$id ($axis)",
+    "nothing": "aucun",
+    "validated": {"yes": "oui", "no": "non validé"},
+    "axes": {"securite": "sécurité", "maintenabilite": "maintenabilité", "evolutivite": "évolutivité"},
+    "risks": {"faible": "faible", "moyen": "moyen", "eleve": "élevé"},
+    "detail_heading": "## Motifs détaillés",
+    "detail": [
+      "### $id — $title",
+      "- **Axe / sévérité / difficulté** : $axis / $severity / $size — **occurrences** : $count$sample",
+      "- **Risque de régression** : $risk — $risk_rationale *(information, n'entre pas dans l'ordre)*",
+      "- **Impact** : $impact",
+      "- **Occurrences** : $occurrences",
+      "- **Correction du motif** : $remediation",
+      "- **Statut** : $status"
+    ],
+    "sample": " (échantillon ci-dessous)",
+    "occurrence": "`$place`",
+    "more": ", … (+$n)",
+    "short_heading": "## Motifs non détaillés dans ce cycle",
+    "short_table": [
+      "| ID | Motif | Axe | Sévérité | Occ. | Raison (mineur / au-delà du plafond) |",
+      "|---|---|---|---|---|---|"
+    ],
+    "short_row": "| $id | $title | $axis | $severity | $count | $reason |",
+    "short_reasons": {"minor": "mineur", "cap": "au-delà du plafond"},
+    "rejected_heading": "## Motifs rejetés à la validation",
+    "rejected_table": ["| ID | Motif | Raison |", "|---|---|---|"],
+    "rejected_row": "| $id | $title | $reason |",
+    "next": [
+      "## Suite",
+      "Ce rapport diagnostique ; il ne remédie pas. Pour en tirer un plan exécutable :",
+      "`/legacy-audit \"$path\"` — qui produit roadmap et specs, et couvre en complément la dette",
+      "d'accumulation que le présent audit ne cherche pas."
+    ]
+  }
+}

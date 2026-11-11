@@ -1552,11 +1552,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "ROADMAP.md"
-  },
-  {
-   "count": 1,
    "dst": "usleep",
    "src": "ROADMAP.md"
   },
@@ -1956,11 +1951,6 @@
    "src": "apps/system/bin/cp/cp.c"
   },
   {
-   "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/cp/cp.c"
-  },
-  {
    "count": 2,
    "dst": "write",
    "src": "apps/system/bin/cp/cp.c"
@@ -2013,11 +2003,6 @@
   {
    "count": 3,
    "dst": "show",
-   "src": "apps/system/bin/df/df.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/df/df.c"
   },
   {
@@ -2088,11 +2073,6 @@
   {
    "count": 7,
    "dst": "stat",
-   "src": "apps/system/bin/du/du.c"
-  },
-  {
-   "count": 2,
-   "dst": "usage",
    "src": "apps/system/bin/du/du.c"
   },
   {
@@ -2306,11 +2286,6 @@
    "src": "apps/system/bin/gpio/gpio.c"
   },
   {
-   "count": 5,
-   "dst": "usage",
-   "src": "apps/system/bin/gpio/gpio.c"
-  },
-  {
    "count": 1,
    "dst": "write",
    "src": "apps/system/bin/gpio/gpio.c"
@@ -2391,11 +2366,6 @@
    "src": "apps/system/bin/grep/grep.c"
   },
   {
-   "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/grep/grep.c"
-  },
-  {
    "count": 6,
    "dst": "write",
    "src": "apps/system/bin/grep/grep.c"
@@ -2453,11 +2423,6 @@
   {
    "count": 1,
    "dst": "read",
-   "src": "apps/system/bin/head/head.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/head/head.c"
   },
   {
@@ -2821,11 +2786,6 @@
    "src": "apps/system/bin/iw/iw.c"
   },
   {
-   "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/iw/iw.c"
-  },
-  {
    "count": 3,
    "dst": "usleep",
    "src": "apps/system/bin/iw/iw.c"
@@ -3007,11 +2967,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/ls/ls.c"
-  },
-  {
-   "count": 1,
    "dst": "write",
    "src": "apps/system/bin/ls/ls.c"
   },
@@ -3067,11 +3022,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "apps/system/bin/mkdir/mkdir.c"
-  },
-  {
-   "count": 1,
    "dst": "DUNEOS_EXEC_ARGS_BUF_SIZE",
    "src": "apps/system/bin/mv/mv.c"
   },
@@ -3093,11 +3043,6 @@
   {
    "count": 3,
    "dst": "stat",
-   "src": "apps/system/bin/mv/mv.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/mv/mv.c"
   },
   {
@@ -3241,11 +3186,6 @@
    "src": "apps/system/bin/ping/ping.c"
   },
   {
-   "count": 2,
-   "dst": "usage",
-   "src": "apps/system/bin/ping/ping.c"
-  },
-  {
    "count": 1,
    "dst": "write",
    "src": "apps/system/bin/ping/ping.c"
@@ -3293,11 +3233,6 @@
   {
    "count": 3,
    "dst": "outf",
-   "src": "apps/system/bin/restart/restart.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/restart/restart.c"
   },
   {
@@ -3378,11 +3313,6 @@
   {
    "count": 2,
    "dst": "unlink",
-   "src": "apps/system/bin/rm/rm.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/rm/rm.c"
   },
   {
@@ -3478,11 +3408,6 @@
   {
    "count": 2,
    "dst": "subst",
-   "src": "apps/system/bin/sed/sed.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/sed/sed.c"
   },
   {
@@ -3592,11 +3517,6 @@
   },
   {
    "count": 2,
-   "dst": "usage",
-   "src": "apps/system/bin/tail/tail.c"
-  },
-  {
-   "count": 2,
    "dst": "usleep",
    "src": "apps/system/bin/tail/tail.c"
   },
@@ -3638,11 +3558,6 @@
   {
    "count": 2,
    "dst": "open",
-   "src": "apps/system/bin/touch/touch.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/touch/touch.c"
   },
   {
@@ -3703,11 +3618,6 @@
   {
    "count": 1,
    "dst": "read",
-   "src": "apps/system/bin/wc/wc.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/system/bin/wc/wc.c"
   },
   {
@@ -4723,11 +4633,6 @@
   {
    "count": 3,
    "dst": "unlink",
-   "src": "apps/system/shell_core/shell_cmds.c"
-  },
-  {
-   "count": 2,
-   "dst": "usage",
    "src": "apps/system/shell_core/shell_cmds.c"
   },
   {
@@ -6773,11 +6678,6 @@
   {
    "count": 2,
    "dst": "ui_titlebar",
-   "src": "apps/user/i2cscope/scan.c"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "apps/user/i2cscope/scan.c"
   },
   {
@@ -10472,11 +10372,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "boards/m5stack-cardputer/etc/selftest.sh"
-  },
-  {
-   "count": 1,
    "dst": "walk",
    "src": "boards/m5stack-cardputer/etc/selftest.sh"
   },
@@ -10502,43 +10397,18 @@
   },
   {
    "count": 1,
-   "dst": "DuneOS",
-   "src": "ci/factory.ps1"
-  },
-  {
-   "count": 1,
    "dst": "Pattern",
    "src": "ci/factory.ps1"
   },
   {
    "count": 1,
-   "dst": "gate",
+   "dst": "read",
    "src": "ci/factory.ps1"
   },
   {
    "count": 1,
-   "dst": "human",
+   "dst": "stderr",
    "src": "ci/factory.ps1"
-  },
-  {
-   "count": 1,
-   "dst": "missing",
-   "src": "ci/factory.ps1"
-  },
-  {
-   "count": 1,
-   "dst": "DuneOS",
-   "src": "ci/factory.sh"
-  },
-  {
-   "count": 1,
-   "dst": "gate",
-   "src": "ci/factory.sh"
-  },
-  {
-   "count": 1,
-   "dst": "human",
-   "src": "ci/factory.sh"
   },
   {
    "count": 1,
@@ -10551,8 +10421,8 @@
    "src": "ci/factory.sh"
   },
   {
-   "count": 4,
-   "dst": "usage",
+   "count": 1,
+   "dst": "read",
    "src": "ci/factory.sh"
   },
   {
@@ -11413,11 +11283,6 @@
   {
    "count": 2,
    "dst": "scan",
-   "src": "docs/adr/013-network-architecture.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/adr/013-network-architecture.md"
   },
   {
@@ -12627,11 +12492,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "docs/adr/029-app-stack-auto-sizing.md"
-  },
-  {
-   "count": 1,
    "dst": "Alternatives",
    "src": "docs/adr/030-wifi-frugal-memory.md"
   },
@@ -12668,11 +12528,6 @@
   {
    "count": 2,
    "dst": "scan",
-   "src": "docs/adr/030-wifi-frugal-memory.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/adr/030-wifi-frugal-memory.md"
   },
   {
@@ -12928,11 +12783,6 @@
   {
    "count": 1,
    "dst": "step",
-   "src": "docs/adr/033-cli-coreutils-conventions.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/adr/033-cli-coreutils-conventions.md"
   },
   {
@@ -13666,11 +13516,6 @@
    "src": "docs/adr/README.md"
   },
   {
-   "count": 1,
-   "dst": "usage",
-   "src": "docs/adr/README.md"
-  },
-  {
    "count": 2,
    "dst": "write",
    "src": "docs/adr/README.md"
@@ -14138,11 +13983,6 @@
   {
    "count": 1,
    "dst": "step",
-   "src": "docs/cli-audit-2026-06.md"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "docs/cli-audit-2026-06.md"
   },
   {
@@ -15142,11 +14982,6 @@
   },
   {
    "count": 2,
-   "dst": "usage",
-   "src": "kernel/duneos_kernel/include/duneos/bin_args.h"
-  },
-  {
-   "count": 2,
    "dst": "write",
    "src": "kernel/duneos_kernel/include/duneos/bin_args.h"
   },
@@ -15398,11 +15233,6 @@
   {
    "count": 1,
    "dst": "open",
-   "src": "kernel/duneos_kernel/include/duneos/fb_ioctl.h"
-  },
-  {
-   "count": 1,
-   "dst": "usage",
    "src": "kernel/duneos_kernel/include/duneos/fb_ioctl.h"
   },
   {
@@ -28342,11 +28172,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
-  },
-  {
-   "count": 1,
    "dst": "write",
    "src": "specs/SPEC-leg-30-qemu-psram-vaddr-exhaustion.md"
   },
@@ -30317,11 +30142,6 @@
   },
   {
    "count": 1,
-   "dst": "usage",
-   "src": "tests/host/test_elf_validate.c"
-  },
-  {
-   "count": 1,
    "dst": "verdict",
    "src": "tests/host/test_elf_validate.c"
   },
@@ -31143,11 +30963,6 @@
   {
    "count": 2,
    "dst": "unlink",
-   "src": "tools/dbt/builder.py"
-  },
-  {
-   "count": 2,
-   "dst": "usage",
    "src": "tools/dbt/builder.py"
   },
   {
@@ -33293,11 +33108,6 @@
   {
    "count": 2,
    "dst": "report",
-   "src": "tools/dbt/stackusage.py"
-  },
-  {
-   "count": 2,
-   "dst": "usage",
    "src": "tools/dbt/stackusage.py"
   },
   {
@@ -42507,7 +42317,6 @@
    "unload_locked",
    "unstage_dir",
    "update_known",
-   "usage",
    "usleep",
    "vApplicationStackOverflowHook",
    "validate",

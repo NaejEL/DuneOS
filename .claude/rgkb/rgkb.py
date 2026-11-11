@@ -23,7 +23,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "1.0.1"
 SCHEMA = 1
 KB_DIRNAME = ".knowledge"
 MCP_PROTOCOL = "2025-06-18"
@@ -565,7 +565,9 @@ KB_GITIGNORE = """config.local.json
 def cmd_init(args) -> int:
     written = []
     KB.mkdir(parents=True, exist_ok=True)
-    if write_if_changed(KB / "config.json", json.dumps(DEFAULT_CONFIG, indent=2, ensure_ascii=False) + "\n"):
+    # CX-09 (D8): an existing config.json is the team's shared scope; init never rewrites it.
+    if not (KB / "config.json").is_file():
+        write_if_changed(KB / "config.json", json.dumps(DEFAULT_CONFIG, indent=2, ensure_ascii=False) + "\n")
         written.append("%s/config.json" % KB_DIRNAME)
     if not (KB / "notes.jsonl").is_file():
         write_if_changed(KB / "notes.jsonl", "")
@@ -818,13 +820,25 @@ def git_hooks_dir():
 
 
 def strip_hook_block(text: str) -> str:
+    # Same behaviour as hcore/blocks.py remove_block, style "hash" (BK-02, X3);
+    # a malformed block (marker missing) is refused, never truncated.
     start = text.find(HOOK_BEGIN)
-    if start == -1:
+    end = text.find(HOOK_END)
+    if start == -1 and end == -1:
         return text
-    end = text.find(HOOK_END, start)
-    if end == -1:
-        return text[:start]
-    return text[:start] + text[end + len(HOOK_END):].lstrip("\n")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError("bloc rgkb mal forme (marqueur manquant)")
+    before, after = text[:start], text[end + len(HOOK_END):]
+    if after.startswith("\n"):
+        after = after[1:]
+    if before.endswith("\n\n"):
+        before = before[:-1]
+    return before + after
+
+
+def insert_hook_block(text: str, block: str) -> str:
+    # Replaces the rgkb block in place or appends it after a blank line.
+    return strip_hook_block(text).rstrip("\n") + "\n\n" + block
 
 
 def write_hook(path: Path, text: str) -> None:
@@ -844,12 +858,14 @@ def set_config_hooks(mode: str) -> bool:
     path = KB / "config.json"
     data = dict(DEFAULT_CONFIG)
     if path.is_file():
+        # CX-09 (Q-K): an unreadable config.json is never replaced by the defaults.
         try:
             existing = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(existing, dict):
-                data = existing
-        except json.JSONDecodeError:
-            pass
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise ValueError("%s illisible, non reecrit : %s" % (path, exc))
+        if not isinstance(existing, dict):
+            raise ValueError("%s doit contenir un objet JSON, non reecrit" % path)
+        data = existing
     if data.get("hooks") == mode:
         return False
     data["hooks"] = mode
@@ -894,6 +910,20 @@ def op_hooks(action: str = "status", with_commit: bool = False, persist: bool = 
     hooks_dir.mkdir(parents=True, exist_ok=True)
     for name in targets:
         path = hooks_dir / name
+        if path.is_file():
+            try:
+                strip_hook_block(path.read_text(encoding="utf-8", errors="replace"))
+            except ValueError as exc:
+                return {"ok": False, "reason": "%s : %s" % (name, exc)}
+    mode = "off" if action == "remove" else ("commit" if with_commit else "auto")
+    config_changed = False
+    if persist:
+        try:
+            config_changed = set_config_hooks(mode)
+        except ValueError as exc:
+            return {"ok": False, "reason": str(exc)}
+    for name in targets:
+        path = hooks_dir / name
         existing = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
 
         if action == "remove":
@@ -916,7 +946,7 @@ def op_hooks(action: str = "status", with_commit: bool = False, persist: bool = 
             write_hook(path, "#!/bin/sh\n\n" + block)
             report["hooks"][name] = "cree"
         elif HOOK_BEGIN in existing:
-            updated = strip_hook_block(existing).rstrip("\n") + "\n\n" + block
+            updated = insert_hook_block(existing, block)
             if updated == existing:
                 report["hooks"][name] = "identique"
             else:
@@ -928,8 +958,7 @@ def op_hooks(action: str = "status", with_commit: bool = False, persist: bool = 
             report["hooks"][name] = "bloc ajoute au hook existant"
 
     if persist:
-        mode = "off" if action == "remove" else ("commit" if with_commit else "auto")
-        if set_config_hooks(mode):
+        if config_changed:
             report["config"] = ("%s/config.json : hooks = %s (versionne, donc applique "
                                 "automatiquement chez les autres utilisateurs au premier "
                                 "index)" % (KB_DIRNAME, mode))
