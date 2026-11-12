@@ -1061,12 +1061,17 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 1,
+   "dst": "appmeta_read",
+   "src": "ROADMAP.md"
+  },
+  {
    "count": 6,
    "dst": "blob",
    "src": "ROADMAP.md"
   },
   {
-   "count": 130,
+   "count": 131,
    "dst": "board",
    "src": "ROADMAP.md"
   },
@@ -1551,7 +1556,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1576,7 +1581,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 18,
+   "count": 19,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -1616,7 +1621,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 12,
+   "count": 13,
    "dst": "scan",
    "src": "ROADMAP.md"
   },
@@ -7656,6 +7661,11 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
+   "count": 1,
+   "dst": "human",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
    "count": 3,
    "dst": "launch",
    "src": "apps/user/launcher/launcher.c"
@@ -7711,13 +7721,18 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "scan_apps",
    "src": "apps/user/launcher/launcher.c"
   },
   {
    "count": 2,
    "dst": "scan_dir",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 3,
+   "dst": "scan_list",
    "src": "apps/user/launcher/launcher.c"
   },
   {
@@ -10661,7 +10676,7 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -10678,6 +10693,11 @@
   {
    "count": 2,
    "dst": "read",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "report",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
@@ -18981,7 +19001,7 @@
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "klog_e",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
@@ -18993,6 +19013,11 @@
   {
    "count": 1,
    "dst": "missing",
+   "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
+  },
+  {
+   "count": 2,
+   "dst": "read",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
@@ -25311,7 +25336,7 @@
    "src": "profiles/t-embed-default/profile.yaml"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "board",
    "src": "profiles/t-embed-gfx/profile.yaml"
   },
@@ -43616,7 +43641,12 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 164,
+   "count": 3,
+   "dst": "_display_spi_id",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 168,
    "dst": "board",
    "src": "tools/duneos-bspgen.py"
   },
@@ -43646,7 +43676,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "free",
    "src": "tools/duneos-bspgen.py"
   },
@@ -45058,6 +45088,7 @@
    "_deps_satisfied",
    "_dispatch_ids",
    "_display_block",
+   "_display_spi_id",
    "_done",
    "_draw_text_8x8",
    "_duneos_driver_record",
@@ -46114,6 +46145,7 @@
    "scan_dir",
    "scan_event",
    "scan_files",
+   "scan_list",
    "scan_open",
    "scan_read_manifest",
    "scenario_event",

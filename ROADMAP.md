@@ -627,6 +627,25 @@ Owed, each its own cycle:
 - **MAGIC-04** — `MAX_APPS 32` in `apps/user/launcher/launcher.c` caps the app
   list with no justification recorded and no report when it is hit: a launcher
   that hides applications silently. Size XS.
+## 4quater. The manifest cannot say "not launchable" (2026-11-12)
+
+- [ ] **LAUNCH-01 — a boot asset and a launchable app are indistinguishable.**
+  `appmeta_t` carries `name`, `icon` and `has_display`, and the launcher's only
+  membership test is `has_display`. So `splash`, a boot animation, and the
+  launcher itself are both valid carousel entries: staging them in `/bin`
+  put them on the home screen, and selecting "launcher" chains the launcher
+  into a second launcher. Worked around in PR #19 by scanning the SD app dirs
+  first and flash only when they are empty. Two costs of that workaround, both
+  accepted knowingly: a flash-only board still lists both, and the fallback is
+  all-or-nothing, so a single display-capable `.dap` on the card hides every
+  flash-staged app (reachable today on `t-embed-gfx`, whose GUI apps all live
+  in flash). Merging the two sources instead would re-open the defect above,
+  which is why the workaround stands.
+  **The fix is a manifest field** (`launchable: false`, default true), read by
+  `appmeta_read` and honoured by any menu. Four files: `tools/dbt/builder.py`'s
+  manifest emission, `sdk/app/include/duneos/appmeta.h`, `sdk/app/libappmeta.c`,
+  and `apps/user/splash/duneos.yaml`. Then the launcher can scan every dir in
+  the loader's own order, which is what it wanted to do in the first place.
 
 ## 5. Technical debt — the 2026-09 legacy audit
 

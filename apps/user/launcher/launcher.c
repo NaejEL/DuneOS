@@ -11,8 +11,10 @@
  * (see CLAUDE.md), and the launcher has nothing to draw while it blocks on
  * the child anyway.
  *
- * Discovery scans /sd/apps (where user apps land via deploy / USB-MSC drag &
- * drop). Each .dap's embedded manifest is read with libappmeta: only apps that
+ * Discovery scans the SD app dirs (where user apps land via deploy / USB-MSC
+ * drag & drop), falling back to flash /bin only when those are empty — see
+ * k_sd_dirs below for why the order is not the loader's. Each .dap's embedded
+ * manifest is read with libappmeta: only apps that
  * declare the `display` capability are shown — that filters out CLI tools and
  * daemons that happen to sit in the same dir. The grid label is the manifest
  * `name`, not the bare filename. Per-app icons come with the Phase 25 pipeline
@@ -59,11 +61,22 @@ static int         s_meta_ok;     /* of those, manifests read successfully    */
 
 static ui_carousel_t s_car;
 
-/* The same places the loader scans (loader.c s_scan_dirs), in the same
- * order. Scanning only /sd/apps left the launcher empty on any board
- * without a working SD card — the flash image already carries apps in
- * /bin, and the loader has always been willing to run them. */
-static const char *const k_dirs[] = { "/bin", "/sd/bin", "/sd/apps" };
+/* Removable storage first; flash only when it yielded nothing.
+ *
+ * Not the loader's order (loader.c s_scan_dirs, /bin first) and deliberately
+ * so: the loader resolves a name to anything runnable, while the carousel is
+ * a menu of what a human chose to install. Those are different sets. Scanning
+ * /bin unconditionally put the boot splash and the launcher itself on the
+ * home screen, because the only membership test is the display capability
+ * (see below) and both of them declare it.
+ *
+ * Flash is still scanned when the SD dirs come up empty — that is what makes
+ * the launcher usable on a board with no card, which is why /bin was added in
+ * the first place. Telling a boot asset apart from a launchable app needs a
+ * manifest flag the SDK does not have yet; until then this ordering is the
+ * whole mechanism. See ROADMAP. */
+static const char *const k_sd_dirs[]    = { "/sd/apps", "/sd/bin" };
+static const char *const k_flash_dirs[] = { "/bin" };
 
 /* ----- discovery --------------------------------------------------------- */
 
@@ -132,13 +145,21 @@ static void scan_dir(const char *dir)
     closedir(d);
 }
 
+static void scan_list(const char *const *dirs, size_t n)
+{
+    for (size_t i = 0; i < n; i++) scan_dir(dirs[i]);
+}
+
 static void scan_apps(void)
 {
     s_count = 0;
     s_total_dap = 0;
     s_meta_ok = 0;
-    for (size_t i = 0; i < sizeof(k_dirs) / sizeof(k_dirs[0]); i++)
-        scan_dir(k_dirs[i]);
+
+    scan_list(k_sd_dirs, sizeof(k_sd_dirs) / sizeof(k_sd_dirs[0]));
+    if (s_count == 0) {
+        scan_list(k_flash_dirs, sizeof(k_flash_dirs) / sizeof(k_flash_dirs[0]));
+    }
 }
 
 /* ----- rendering --------------------------------------------------------- */
@@ -241,13 +262,15 @@ void app_main(void)
     restore_sel();   /* reopen on the app we last handed off to (ADR 031) */
 
     if (s_count == 0) {
-        /* Diagnostic body: how the scan classified every dir in k_dirs — /bin
-         * first, so naming one of them here would mislead. Lets us tell apart
-         * "dir empty / wrong path" (0 dap), "manifests unreadable" (dap>read),
-         * and "no graphical apps / stale builds without capabilities"
-         * (read>0, gui 0) without a serial console. */
+        /* Diagnostic body: how the scan classified every dir it opened — the
+         * SD app dirs, plus the /bin fallback, which by construction was
+         * always tried if we are here (scan_apps falls back on exactly the
+         * s_count == 0 that got us into this branch). Lets us tell apart
+         * "dirs empty / wrong paths" (0 dap), "manifests unreadable"
+         * (dap>read), and "no graphical apps / stale builds without
+         * capabilities" (read>0, gui 0) without a serial console. */
         char body[64];
-        snprintf(body, sizeof(body), "%d dap, %d read, %d gui",
+        snprintf(body, sizeof(body), "sd+flash: %d dap, %d read, %d gui",
                  s_total_dap, s_meta_ok, s_count);
         ui_message(ui, "No apps found", body);
         ui_statusbar(ui, "Empty");
