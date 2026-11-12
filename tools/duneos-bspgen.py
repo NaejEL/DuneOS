@@ -229,6 +229,25 @@ SPI_HOST_ENUM  = {1: 0, 2: 1, 3: 2}
 ADC_UNIT_MAP   = {"ADC_UNIT_1": 1, "ADC_UNIT_2": 2}  # accept legacy string values from old YAMLs
 
 
+def _display_spi_id(board: dict):
+    """The SPI host id the display sits on, or None when there is no display.
+
+    Two declaration styles are in use — see the display block for why both are
+    kept alive. Both the SD block and the display block need this answer, and
+    they each used to work it out for themselves; only the display one handled
+    the legacy `spi_host` form. So DUNEOS_SD_BUS_SHARED and
+    DUNEOS_DISPLAY_BUS_SHARED could disagree about the very same bus, and on a
+    legacy-style board the SD mount would free the bus out from under a display
+    that had only attached to it. One function, one answer.
+    """
+    disp = board.get("display")
+    if not disp:
+        return None
+    if "spi_id" in disp:
+        return disp["spi_id"]
+    return SPI_HOST_IDS.get(disp.get("spi_host", "SPI3_HOST"), 3)
+
+
 def _define(name: str, value) -> str:
     if isinstance(value, bool):
         return f"#define {name:<40} {1 if value else 0}"
@@ -311,7 +330,7 @@ def generate(board: dict) -> str:
             _sd_spi_id = sd.get("spi_id")
             _tenants = [b for b in board.get("spi", [])
                         if b.get("role") == "raw" and b.get("id") == _sd_spi_id]
-            if board.get("display", {}).get("spi_id") == _sd_spi_id:
+            if _display_spi_id(board) == _sd_spi_id:
                 _tenants.append("display")
             lines += [
                 _define("DUNEOS_SD_BUS_SHARED", 1 if _tenants else 0),
@@ -410,15 +429,15 @@ def generate(board: dict) -> str:
                     f"ERROR: board.yaml display.spi_id={spi_id_ref} "
                     f"does not match any spi: entry"
                 )
-            display_spi_id = spi_id_ref
             disp_mosi = matching["mosi_pin"]
             disp_clk  = matching["clk_pin"]
         else:
-            host_name      = disp.get("spi_host", "SPI3_HOST")
-            display_spi_id = SPI_HOST_IDS.get(host_name, 3)
-            disp_mosi      = disp["mosi_pin"]
-            disp_clk       = disp["clk_pin"]
+            disp_mosi = disp["mosi_pin"]
+            disp_clk  = disp["clk_pin"]
 
+        # Same helper the SD block uses, so the two bus_shared flags cannot
+        # disagree about one bus.
+        display_spi_id = _display_spi_id(board)
         sd_spi_id    = board.get("sd_card", {}).get("spi_id", -1)
         bus_shared   = (display_spi_id == sd_spi_id)
         rotation     = disp.get("rotation", 0)

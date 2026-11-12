@@ -1,7 +1,7 @@
 name: t-embed-gfx
 board: lilygo-t-embed-cc1101
 description: "T-Embed graphical home — the portability probe: same apps as the
-  CardPuter contest profile, on a 240x280 portrait panel driven by a rotary
+  CardPuter contest profile, on a 320x170 landscape panel driven by a rotary
   encoder instead of a 240x135 landscape panel driven by a keyboard."
 
 # No usb_shell: this board declares no `usb:` section, so drv_usb_cdc never
@@ -11,14 +11,20 @@ description: "T-Embed graphical home — the portability probe: same apps as the
 # No kb_iomatrix: input here is the kernel's quadrature encoder plus btn_gpio
 # for the two buttons, both feeding /dev/input/event0.
 #
-# Launchable apps live in /bin, not /sd/apps: there is no card in this board,
-# and the loader scans /bin first.
+# Launchable apps live in /bin: the launcher scans the SD app dirs first and
+# falls back to flash when they are empty, which is this board's normal case.
+#
+# battery_daemon, not battery_pub: battery_pub republishes the kernel's
+# /dev/battery0, which only exists for an ADC-backed battery. This board's
+# gauge is a BQ27220 on I2C, served in userspace, so battery_pub exits 2 at
+# boot, nothing ever writes /tmp/battery, and the status bar shows no battery
+# at all. Shipping the wrong one here is what hid that for a whole session.
 apps_flash:
 - splash
 - btn_gpio
 - launcher
 - logd
-- battery_pub
+- battery_daemon
 # the probe set — written for the CardPuter, unmodified
 - gfx_demo
 - waves
@@ -40,7 +46,7 @@ init_flash:
   restart: always
 - path: /bin/logd.dap
   restart: always
-- path: /bin/battery_pub.dap
+- path: /bin/battery_daemon.dap
   restart: always
 - path: /bin/launcher.dap
   restart: always

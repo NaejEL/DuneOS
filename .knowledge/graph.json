@@ -7412,6 +7412,11 @@
   },
   {
    "count": 1,
+   "dst": "human",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 1,
    "dst": "input_ioctl",
    "src": "apps/user/launcher/launcher.c"
   },
@@ -7478,6 +7483,11 @@
   {
    "count": 2,
    "dst": "scan_dir",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 3,
+   "dst": "scan_list",
    "src": "apps/user/launcher/launcher.c"
   },
   {
@@ -10288,6 +10298,11 @@
   {
    "count": 2,
    "dst": "read",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "report",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
@@ -17971,7 +17986,7 @@
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "klog_e",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
@@ -17983,6 +17998,11 @@
   {
    "count": 1,
    "dst": "missing",
+   "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
+  },
+  {
+   "count": 2,
+   "dst": "read",
    "src": "kernel/duneos_kernel/src/drivers/display/st7789_hw.c"
   },
   {
@@ -39446,6 +39466,11 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
+   "count": 3,
+   "dst": "_display_spi_id",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
    "count": 1,
    "dst": "check",
    "src": "tools/duneos-bspgen.py"
@@ -39466,7 +39491,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "free",
    "src": "tools/duneos-bspgen.py"
   },
@@ -39946,12 +39971,10 @@
    "tests/host/test_elf_scan.c",
    "tests/host/test_elf_validate.c",
    "tests/host/test_i2c_decode.c",
-   "tests/host/test_input_intent",
    "tests/host/test_known_yaml.c",
    "tests/host/test_ld2450.c",
    "tests/host/test_manifest_depth.c",
    "tests/host/test_re.c",
-   "tests/host/test_ui_vkbd",
    "tools/constraints.txt",
    "tools/dbt.py",
    "tools/dbt/__init__.py",
@@ -40785,6 +40808,7 @@
    "_deps_satisfied",
    "_dispatch_ids",
    "_display_block",
+   "_display_spi_id",
    "_done",
    "_draw_text_8x8",
    "_duneos_driver_record",
@@ -41810,6 +41834,7 @@
    "scan_dir",
    "scan_event",
    "scan_files",
+   "scan_list",
    "scan_open",
    "scan_read_manifest",
    "scenario_event",

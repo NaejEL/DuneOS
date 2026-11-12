@@ -106,23 +106,13 @@ esp_err_t st7789_hw_init(void)
     st7789_hw_cmd(ST7789_NORON);  vTaskDelay(pdMS_TO_TICKS(10));
     st7789_hw_cmd(ST7789_DISPON); vTaskDelay(pdMS_TO_TICKS(10));
 
-    /* READBACK PROBE: ask the panel what it actually latched. 0x0B is
-     * RDDMADCTL; the ST7789 returns one dummy byte then the register. If this
-     * does not match what we wrote, the write is not reaching the panel and no
-     * amount of changing the value will matter. */
-    {
-        gpio_set_level(DUNEOS_DISPLAY_DC_PIN, 0);
-        spi_transaction_t c = { .length = 8, .flags = SPI_TRANS_USE_TXDATA,
-                                .tx_data = { 0x0B } };
-        spi_device_transmit(s_spi, &c);
-        gpio_set_level(DUNEOS_DISPLAY_DC_PIN, 1);
-        uint8_t rx[2] = {0, 0};
-        spi_transaction_t r = { .length = 16, .rxlength = 16, .rx_buffer = rx,
-                                .flags = 0, .tx_buffer = NULL };
-        esp_err_t rerr = spi_device_transmit(s_spi, &r);
-        klog_e(TAG, "RDDMADCTL rc=%d raw=%02X %02X (wrote 0x%02X)",
-               (int)rerr, rx[0], rx[1], (unsigned)DUNEOS_DISPLAY_MADCTL);
-    }
+    /* No readback probe here. One was tried during bring-up and removed: this
+     * driver sets .miso_io_num = -1 when it owns the bus, a command and its
+     * reply are two spi_device_transmit() calls so CS drops in between, and
+     * the device clock is the panel's write clock, well above its read limit.
+     * A probe under those three conditions returns zeroes for a healthy panel.
+     * To actually read a register, add a second device handle at ~6 MHz on a
+     * MISO-wired bus and issue command + dummy + data as one transaction. */
 
 #if DUNEOS_DISPLAY_BL_PIN >= 0
     gpio_set_level(DUNEOS_DISPLAY_BL_PIN, 1);
