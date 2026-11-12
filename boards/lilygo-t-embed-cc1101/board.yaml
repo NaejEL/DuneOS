@@ -138,6 +138,11 @@ board:
     a_pin: 4
     b_pin: 5
     axis: primary
+    # This encoder's detent is 2 quadrature counts, not the 4 the HAL assumed:
+    # with 4, two physical notches were needed per event and the knob felt
+    # half-speed. Measured by feel on hardware 2026-11-12; a working firmware
+    # for this board divides raw counts by 2 for the same reason.
+    counts_per_detent: 2
     # UNIT: DETENTS, not raw PCNT counts. The HAL already divides — hal_encoder.c
     # watches ±DETENT_COUNTS (4) and clears the counter in the callback, so one
     # mechanical notch reaches /dev/input/event0 as a single REL_WHEEL of ±1.

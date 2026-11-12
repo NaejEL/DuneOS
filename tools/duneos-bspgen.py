@@ -496,6 +496,12 @@ def generate(board: dict) -> str:
             _define("DUNEOS_HAVE_ENCODER",    1),
             _define("DUNEOS_ENCODER_A_PIN",   enc["a_pin"]),
             _define("DUNEOS_ENCODER_B_PIN",   enc["b_pin"]),
+            "/* Quadrature counts the controller sees per mechanical detent. A",
+            " * hardware fact of the encoder part, so it belongs here and not in",
+            " * arch code: a 2-count detent was inexpressible while the HAL hard",
+            " * coded 4, and the symptom was a knob that felt half-speed. */",
+            _define("DUNEOS_ENCODER_COUNTS_PER_DETENT",
+                    enc.get("counts_per_detent", 4)),
             "",
         ]
 

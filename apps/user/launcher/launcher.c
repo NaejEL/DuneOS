@@ -241,12 +241,13 @@ void app_main(void)
     restore_sel();   /* reopen on the app we last handed off to (ADR 031) */
 
     if (s_count == 0) {
-        /* Diagnostic body: how the scan classified /sd/apps. Lets us tell apart
+        /* Diagnostic body: how the scan classified every dir in k_dirs — /bin
+         * first, so naming one of them here would mislead. Lets us tell apart
          * "dir empty / wrong path" (0 dap), "manifests unreadable" (dap>read),
          * and "no graphical apps / stale builds without capabilities"
          * (read>0, gui 0) without a serial console. */
         char body[64];
-        snprintf(body, sizeof(body), "/sd/apps: %d dap, %d read, %d gui",
+        snprintf(body, sizeof(body), "%d dap, %d read, %d gui",
                  s_total_dap, s_meta_ok, s_count);
         ui_message(ui, "No apps found", body);
         ui_statusbar(ui, "Empty");

@@ -25,7 +25,14 @@
 #include <errno.h>
 #include <stdlib.h>
 
+/* Board-declared (bspgen: DUNEOS_ENCODER_COUNTS_PER_DETENT); 4 is the common
+ * case and the historical value, kept for a board that declares an encoder
+ * without the ratio. */
+#ifdef DUNEOS_ENCODER_COUNTS_PER_DETENT
+#define DETENT_COUNTS DUNEOS_ENCODER_COUNTS_PER_DETENT
+#else
 #define DETENT_COUNTS 4
+#endif
 
 struct duneos_hal_encoder_s {
     pcnt_unit_handle_t    unit;

@@ -395,7 +395,13 @@ Flash/RAM cost (criterion 15), measured against `9df68b5` with `xtensa-esp32s3-e
 
 `.bss` is flat for the two apps that keep their translation state on the stack. wifi's **+168 B** is the file-scope `duneos_input_t s_dev` — `quit()` and the scan-wait loop both need it, and the app declares `heap_size` so it always runs spawned, where BSS sits inside its own slot's bounds. Zero-byte claim: `ui_text_entry.o`'s only undefined symbols are `ui_input_{init,draw,intent}` — no vkbd symbol at all — and launcher's ELF carries 0 vkbd/text-entry symbols against wifi's 8.
 
-- [ ] **Board validation, both boards (LEG-37)**: criteria 18 and 19 of `specs/SPEC-input-portability.md` — rotary direction and one-notch-per-item on the T-Embed, launcher/waves/g_shell unchanged on the CardPuter, and the text entry presenting the vkbd on one board and the line editor on the other. Encoder direction (A/B swap) is a hardware fact no host test can check. `wifi` is in the `t-embed-gfx` profile because it is the only app exercising the vkbd.
+- [~] **Board validation, both boards (LEG-37)**: criteria 18 and 19 of `specs/SPEC-input-portability.md` — rotary direction and one-notch-per-item on the T-Embed, launcher/waves/g_shell unchanged on the CardPuter, and the text entry presenting the vkbd on one board and the line editor on the other. Encoder direction (A/B swap) is a hardware fact no host test can check. `wifi` is in the `t-embed-gfx` profile because it is the only app exercising the vkbd.
+  **Partly closed 2026-11-12 on a t-embed**: the carousel renders and the rotary
+  navigates it, one item per notch after MAGIC-02 set the detent ratio to 2.
+  Still owed: direction sign checked deliberately rather than incidentally, the
+  CardPuter side unchanged, and the text entry on both boards. Long-press has no
+  bench coverage anywhere — no board declares `intent_long:`, so the first one
+  that does performs the integration test.
   - **If the rotary skips or loses steps, suspect contact bounce before `counts_per_step`.** There is **no PCNT glitch filter anywhere in the tree** (`pcnt_unit_set_glitch_filter` is never called); the PO's working reference for this board needs 5000 ns. Unfiltered bounce puts spurious counts across the ±8 limit between watch events — each becomes a phantom detent — and `translate_rel`'s reversal-discard then drops real steps too, which reads exactly like "steps impossible to recover". Out of scope for this cycle; named here so nobody spends a day on `counts_per_step` instead.
   - **`counts_per_step` is in detents, and 1 is correct.** The arch HAL already divides (`hal_encoder.c` watches ±`DETENT_COUNTS`=4 and clears the counter). Raising it makes navigation **slower**, never faster.
 - [ ] **PO call**: the spec's criterion 1 (`KEY_UP`→PREV) and its `ui_wave` pan/zoom assignment together invert waves' arrow roles on the CardPuter, against criterion 18's "waves navigation unchanged". Implemented as the spec says; the bench decides which half moves.
@@ -605,8 +611,14 @@ Owed, each its own cycle:
 - **MAGIC-01** — a gate that fails when a hardware literal appears in `kernel/`
   or `arch/` outside a generated macro. Size M. The hard part is the false-positive
   rate, not the detection: a check noisy enough to be ignored is worse than none.
-- **MAGIC-02** — make `DETENT_COUNTS` board-declared (`board.yaml` → bspgen →
-  arch HAL) so one place owns the whole encoder ratio. Size S.
+- **MAGIC-02** — **DONE 2026-11-12.** `DETENT_COUNTS` is board-declared:
+  `encoder.counts_per_detent` → `DUNEOS_ENCODER_COUNTS_PER_DETENT` → both the
+  PCNT backend (`hal_encoder.c`) and the polling fallback
+  (`hal_encoder_fallback.c`), which had been two independent literals reading 4.
+  The t-embed declares **2**. Found by feel, not by analysis: with 4 the knob
+  needed two physical notches per event and the user reported it "a bit slow";
+  confirmed working at 2 on hardware. Default stays 4 for a board that declares
+  an encoder without the ratio.
 - **MAGIC-03** — no PCNT glitch filter exists anywhere in the tree
   (`pcnt_unit_set_glitch_filter` appears nowhere). A known-good firmware for the
   t-embed needs 5000 ns; unfiltered contact bounce produces phantom detents the

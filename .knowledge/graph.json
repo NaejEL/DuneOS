@@ -1066,7 +1066,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 129,
+   "count": 130,
    "dst": "board",
    "src": "ROADMAP.md"
   },
@@ -10231,13 +10231,18 @@
    "src": "arch/xtensa_esp32s3/hal/hal_adc.c"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "DETENT_COUNTS",
    "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
   },
   {
    "count": 1,
    "dst": "__attribute__",
+   "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
   },
   {
@@ -10656,7 +10661,7 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -20436,8 +20441,18 @@
    "src": "kernel/duneos_kernel/src/drivers/input/enc_quadrature.c"
   },
   {
+   "count": 4,
+   "dst": "DETENT_COUNTS",
+   "src": "kernel/duneos_kernel/src/drivers/input/hal_encoder_fallback.c"
+  },
+  {
    "count": 2,
    "dst": "__attribute__",
+   "src": "kernel/duneos_kernel/src/drivers/input/hal_encoder_fallback.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
    "src": "kernel/duneos_kernel/src/drivers/input/hal_encoder_fallback.c"
   },
   {
@@ -43596,7 +43611,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 92,
+   "count": 93,
    "dst": "_define",
    "src": "tools/duneos-bspgen.py"
   },
