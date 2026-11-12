@@ -548,6 +548,22 @@ what forced DUP-05. Adding the writer to the SDK closes that pair.
 `tui.py`, `capabilities.py`, `kb_iomatrix.c` against `drv_input.c`, and the
 `/tmp/state/wifi_scan` blob format.
 
+## 4quater. The manifest cannot say "not launchable" (2026-11-12)
+
+- [ ] **LAUNCH-01 — a boot asset and a launchable app are indistinguishable.**
+  `appmeta_t` carries `name`, `icon` and `has_display`, and the launcher's only
+  membership test is `has_display`. So `splash`, a boot animation, and the
+  launcher itself are both valid carousel entries: staging them in `/bin`
+  put them on the home screen, and selecting "launcher" chains the launcher
+  into a second launcher. Worked around in PR #19 by scanning the SD app dirs
+  first and flash only when they are empty — which removes the regression on a
+  board with a card but still lists both on a flash-only board.
+  **The fix is a manifest field** (`launchable: false`, default true), read by
+  `appmeta_read` and honoured by any menu. Four files: `builder.py`'s manifest
+  emission, `appmeta.h`, `appmeta.c`, and `splash/duneos.yaml`. Then the
+  launcher can scan every dir in the loader's own order, which is what it
+  wanted to do in the first place.
+
 ## 5. Technical debt — the 2026-09 legacy audit
 
 **This section speaks a different language from the phases above and below it.** A phase is a
