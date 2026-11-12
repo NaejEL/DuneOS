@@ -26,6 +26,9 @@ __pycache__/
 !.claude/agents/
 !.claude/skills/
 !.claude/settings.json
+# harness core copy and stamp — required by factory-run after a clone
+!.claude/harness/
+!.claude/harness.json
 # rgkb code-index server — shared so the .knowledge/ base is usable after a clone
 !.claude/rgkb/
 *.swp
@@ -66,3 +69,5 @@ factory-logs/
 
 # pytest junit report (CI count floor, SPEC-leg-38-08)
 pytest-report.xml
+.harness/runs/
+.harness/tmp/

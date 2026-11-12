@@ -1,0 +1,1 @@
+- **(d) `bio`** (`BIO-`) — facade biological analogies (the name promises a property the implementation lacks); "fallback" mechanisms whose trigger is already observed without a trial, or implemented without a trigger (against "a symptom before a remedy"); biological property predicting an untested measurable behavior; inaccurately cited reference.

@@ -1,0 +1,671 @@
+{
+  "name": "research",
+  "schema_version": 1,
+  "fallback": false,
+  "fragments": {
+    "orchestrator": "orchestrator.md",
+    "install": "install.md",
+    "scout": "scout.md"
+  },
+  "roles": [
+    {
+      "name": "lab-director",
+      "mission": "roles/lab-director.md",
+      "read_only": true,
+      "tools": "Read, Glob, Grep",
+      "model_role": "lab.director.cadrage",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/lab-director.md"
+    },
+    {
+      "name": "lab-neuro",
+      "mission": "roles/lab-neuro.md",
+      "read_only": true,
+      "tools": "Read, Glob, Grep",
+      "model_role": "lab.neuro",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/lab-neuro.md"
+    },
+    {
+      "name": "lab-math",
+      "mission": "roles/lab-math.md",
+      "read_only": true,
+      "tools": "Read, Glob, Grep",
+      "model_role": "lab.math",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/lab-math.md"
+    },
+    {
+      "name": "lab-builder",
+      "mission": "roles/lab-builder.md",
+      "read_only": false,
+      "tools": null,
+      "model_role": "lab.builder",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/lab-builder.md"
+    },
+    {
+      "name": "lab-verifier",
+      "mission": "roles/lab-verifier.md",
+      "read_only": true,
+      "tools": "Read, Glob, Grep, Bash",
+      "model_role": "lab.verifier",
+      "model_default": "inherit",
+      "agent_file": ".claude/agents/lab-verifier.md"
+    }
+  ],
+  "model_roles": [
+    "lab.director.cadrage",
+    "lab.director.interpretation",
+    "lab.neuro",
+    "lab.math",
+    "lab.builder",
+    "lab.verifier",
+    "lab.validator"
+  ],
+  "model_presets": {
+    "lab-inherit": {},
+    "lab-experts": {
+      "lab.neuro": "fable",
+      "lab.math": "fable"
+    },
+    "lab-interpretation": {
+      "lab.math": "fable",
+      "lab.director.interpretation": "fable"
+    },
+    "lab-custom": null
+  },
+  "loop": {
+    "max_iterations": 3,
+    "entry_role": "builder",
+    "phases": [
+      {
+        "kind": "plan",
+        "agent": "lab-director",
+        "mode": "cadrage"
+      },
+      {
+        "kind": "consult",
+        "agents": [
+          "lab-neuro",
+          "lab-math"
+        ]
+      },
+      {
+        "kind": "consolidate",
+        "agent": "lab-director",
+        "mode": "cadrage"
+      },
+      {
+        "kind": "gate",
+        "ids": [
+          "lab-run.pi-questions",
+          "lab-run.preregistration"
+        ]
+      },
+      {
+        "kind": "build",
+        "agent": "lab-builder"
+      },
+      {
+        "kind": "verify",
+        "agent": "lab-verifier"
+      },
+      {
+        "kind": "interpret",
+        "agents": [
+          "lab-neuro",
+          "lab-math"
+        ],
+        "director": "lab-director",
+        "mode": "interpretation"
+      },
+      {
+        "kind": "gate",
+        "ids": [
+          "lab-run.consignation"
+        ]
+      },
+      {
+        "kind": "record"
+      }
+    ]
+  },
+  "artefacts": [
+    {
+      "kind": "protocol",
+      "dir": "experiments",
+      "glob": "EXP-*.md",
+      "status_proposed": "Status: PROPOSED",
+      "status_ready": "Status: PRE-REGISTERED",
+      "status_blocked": "Status: BLOCKED",
+      "status_delivered": "Status: DONE",
+      "status_done": "Status: DONE",
+      "status_legacy": {
+        "proposed": "Statut : PROPOSE",
+        "ready": "Statut : PRE-ENREGISTRE",
+        "blocked": "Statut : BLOQUE",
+        "delivered": "Statut : TERMINE"
+      }
+    },
+    {
+      "kind": "journal",
+      "dir": "docs",
+      "glob": "JOURNAL.md",
+      "status_proposed": null,
+      "status_ready": null,
+      "status_done": null
+    },
+    {
+      "kind": "results-table",
+      "dir": "docs",
+      "glob": "EXTENSIONS.md",
+      "status_proposed": null,
+      "status_ready": null,
+      "status_done": null
+    }
+  ],
+  "verifier": {
+    "required_true": [
+      "tests_passed",
+      "protocol_followed",
+      "rerun_consistent"
+    ],
+    "issue_kinds": [
+      "protocol",
+      "leak",
+      "stats",
+      "code",
+      "convention"
+    ]
+  },
+  "deterministic_checks": [
+    "leaks",
+    "confounders",
+    "seeds"
+  ],
+  "settings": {
+    "deny_by_stack": {},
+    "deny_generic": [
+      "Read(./.venv/**)",
+      "Read(./venv/**)",
+      "Read(./**/__pycache__/**)",
+      "Read(./.pytest_cache/**)",
+      "Read(./**/*.egg-info/**)",
+      "Read(./lab-logs/**)",
+      "Read(./experiments/results/**)",
+      "Read(./.git/objects/**)"
+    ],
+    "deny_if_present": {
+      "dirs": [
+        "data",
+        "checkpoints",
+        "models",
+        "wandb",
+        "runs"
+      ],
+      "suffixes": [
+        ".safetensors",
+        ".pt",
+        ".bin"
+      ],
+      "cache": true
+    }
+  },
+  "gitignore": [
+    "lab-logs/",
+    "experiments/results/",
+    ".harness/runs/",
+    ".harness/tmp/"
+  ],
+  "tasks": {
+    "inputs": [
+      {
+        "id": "labProtocol",
+        "type": "promptString",
+        "description": "Path of the pre-registered protocol (experiments/EXP-*.md)"
+      }
+    ],
+    "tasks": [
+      {
+        "label": "Lab: run headless",
+        "type": "shell",
+        "command": "./ci/lab.sh ${input:labProtocol}",
+        "windows": {
+          "command": "pwsh -File ci/lab.ps1 ${input:labProtocol}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Lab: run headless (YOLO)",
+        "type": "shell",
+        "command": "./ci/lab.sh ${input:labProtocol} --yolo",
+        "windows": {
+          "command": "pwsh -File ci/lab.ps1 ${input:labProtocol} -Yolo"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Lab: nouvelle expérience (session)",
+        "type": "shell",
+        "command": "echo 'Open Claude Code and type: /lab-run \"<your question>\"  or  /lab-run suivant'",
+        "problemMatcher": []
+      }
+    ],
+    "test_task": {
+      "label": "Lab: tests unitaires",
+      "before": "Lab: nouvelle expérience (session)"
+    }
+  },
+  "ci": {
+    "script": "lab",
+    "command": "/lab-run",
+    "max_turns": 150,
+    "status_line": "Status: PRE-REGISTERED",
+    "logs_dir": "lab-logs"
+  },
+  "orchestrator": {
+    "name": "lab-run",
+    "alias_of": "factory-run"
+  },
+  "gate_namespaces": [
+    "ai-lab"
+  ],
+  "gates": [
+    {
+      "id": "audit.research.framing",
+      "source": "audit:research-framing",
+      "kind": "b",
+      "options": "specs / list / ignore minors ; make reliable / cheaper / roadmap / proposed order",
+      "default": "specs / make reliable",
+      "rationale": "specs when a factory is present, otherwise list; make it reliable first",
+      "headless": "stop"
+    },
+    {
+      "id": "audit.research.selection",
+      "source": "audit:research-selection",
+      "kind": "b",
+      "options": "All / Only the best ranked / None",
+      "default": "All",
+      "rationale": "the cap applies afterwards",
+      "headless": "stop",
+      "repeat": 4
+    }
+  ],
+  "journal_names": [
+    "ai-lab",
+    "lab-run"
+  ],
+  "lens_sets": [
+    {
+      "name": "research",
+      "lenses": [
+        "fidelite",
+        "validite",
+        "fuites",
+        "bio",
+        "route"
+      ],
+      "plan": "research",
+      "deliverable_section": "research",
+      "spec_prefix": "lab",
+      "cap_option": "--max-questions",
+      "cap": 12,
+      "cap_default": 6,
+      "statuses": [
+        "A_FAIRE",
+        "EN_COURS",
+        "FAIT",
+        "REPORTE",
+        "TRANCHEE"
+      ],
+      "gates": [
+        "audit.research.framing",
+        "audit.research.selection"
+      ],
+      "fragment": "lenses/_lab-phase.md",
+      "map_fragment": "lenses/_lab-map.md",
+      "validator_fragment": "lenses/_lab-validator.md"
+    }
+  ],
+  "lenses": [
+    {
+      "name": "fidelite",
+      "prefix": "FID",
+      "set": "research",
+      "fragment": "lenses/fidelite.md",
+      "debt": "none",
+      "shape": "occurrence",
+      "ordering": "severity_cost",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": true,
+      "no_protocol": true,
+      "allowed_exec": [
+        "test-cpu"
+      ],
+      "journal_check": false,
+      "nature": [
+        "correction",
+        "question"
+      ],
+      "size_scale": {
+        "correction": "dev",
+        "question": "gpu"
+      },
+      "critical_definition": "lenses/_lab-phase.md",
+      "subagent_type": "lab-math",
+      "model_role": "lab.math",
+      "stack_agnostic": false,
+      "dedup_key": "place-lens",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "journal-citation"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction",
+        "nature_correction"
+      ],
+      "deliverable": {
+        "section": "research",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE",
+          "TRANCHEE"
+        ]
+      }
+    },
+    {
+      "name": "validite",
+      "prefix": "VAL",
+      "set": "research",
+      "fragment": "lenses/validite.md",
+      "debt": "none",
+      "shape": "occurrence",
+      "ordering": "severity_cost",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": true,
+      "no_protocol": true,
+      "allowed_exec": [],
+      "journal_check": true,
+      "nature": [
+        "correction",
+        "question"
+      ],
+      "size_scale": {
+        "correction": "dev",
+        "question": "gpu"
+      },
+      "critical_definition": "lenses/_lab-phase.md",
+      "subagent_type": "lab-math",
+      "model_role": "lab.math",
+      "stack_agnostic": false,
+      "dedup_key": "place-lens",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "journal-citation"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction",
+        "nature_correction"
+      ],
+      "deliverable": {
+        "section": "research",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE",
+          "TRANCHEE"
+        ]
+      }
+    },
+    {
+      "name": "fuites",
+      "prefix": "LEAK",
+      "set": "research",
+      "fragment": "lenses/fuites.md",
+      "debt": "none",
+      "shape": "occurrence",
+      "ordering": "severity_cost",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": true,
+      "no_protocol": true,
+      "allowed_exec": [],
+      "journal_check": false,
+      "nature": [
+        "correction",
+        "question"
+      ],
+      "size_scale": {
+        "correction": "dev",
+        "question": "gpu"
+      },
+      "critical_definition": "lenses/_lab-phase.md",
+      "subagent_type": "lab-math",
+      "model_role": "lab.math",
+      "stack_agnostic": false,
+      "dedup_key": "place-lens",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "journal-citation"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction",
+        "nature_correction"
+      ],
+      "deliverable": {
+        "section": "research",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE",
+          "TRANCHEE"
+        ]
+      }
+    },
+    {
+      "name": "bio",
+      "prefix": "BIO",
+      "set": "research",
+      "fragment": "lenses/bio.md",
+      "debt": "none",
+      "shape": "occurrence",
+      "ordering": "severity_cost",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": true,
+      "no_protocol": true,
+      "allowed_exec": [],
+      "journal_check": true,
+      "nature": [
+        "correction",
+        "question"
+      ],
+      "size_scale": {
+        "correction": "dev",
+        "question": "gpu"
+      },
+      "critical_definition": "lenses/_lab-phase.md",
+      "subagent_type": "lab-neuro",
+      "model_role": "lab.neuro",
+      "stack_agnostic": false,
+      "dedup_key": "place-lens",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "journal-citation"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction",
+        "nature_correction"
+      ],
+      "deliverable": {
+        "section": "research",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE",
+          "TRANCHEE"
+        ]
+      }
+    },
+    {
+      "name": "route",
+      "prefix": "ROAD",
+      "set": "research",
+      "fragment": "lenses/route.md",
+      "debt": "none",
+      "shape": "occurrence",
+      "ordering": "severity_cost",
+      "axis": null,
+      "axis_rank": null,
+      "unauditable": "mark",
+      "no_run": true,
+      "no_protocol": true,
+      "allowed_exec": [],
+      "journal_check": true,
+      "nature": [
+        "correction",
+        "question"
+      ],
+      "size_scale": {
+        "correction": "dev",
+        "question": "gpu"
+      },
+      "critical_definition": "lenses/_lab-phase.md",
+      "subagent_type": "lab-director",
+      "model_role": "lab.director.cadrage",
+      "stack_agnostic": false,
+      "dedup_key": "place-lens",
+      "evidence_kinds": [
+        "file-line-excerpt",
+        "journal-citation"
+      ],
+      "receives": [],
+      "validator_fields": [
+        "size_correction",
+        "nature_correction"
+      ],
+      "deliverable": {
+        "section": "research",
+        "statuses": [
+          "A_FAIRE",
+          "EN_COURS",
+          "FAIT",
+          "REPORTE",
+          "TRANCHEE"
+        ]
+      }
+    }
+  ],
+  "detection": {
+    "accept": 5,
+    "reject": 2,
+    "criteria": [
+      {
+        "id": "ml-dependency",
+        "kind": "dependency",
+        "weight": 2,
+        "names": [
+          "numpy",
+          "torch",
+          "jax",
+          "tensorflow",
+          "transformers",
+          "scipy"
+        ]
+      },
+      {
+        "id": "dated-journal",
+        "kind": "content",
+        "weight": 3,
+        "glob": "docs/*.md",
+        "regex": "^## \\d{4}-\\d{2}-\\d{2}"
+      },
+      {
+        "id": "architecture-doc",
+        "kind": "glob",
+        "weight": 1,
+        "pattern": "docs/ARCHITECTURE.md"
+      },
+      {
+        "id": "claude-md-vocabulary",
+        "kind": "content",
+        "weight": 2,
+        "glob": "CLAUDE.md",
+        "regex": "(Vocabulaire|État du projet)"
+      },
+      {
+        "id": "eval-dir",
+        "kind": "dir",
+        "weight": 1,
+        "path": "eval"
+      },
+      {
+        "id": "experiments-dir",
+        "kind": "dir",
+        "weight": 1,
+        "path": "experiments"
+      },
+      {
+        "id": "scientific-corpus",
+        "kind": "judgement",
+        "weight": 2,
+        "question": "Is the project a scientific corpus (dated journal, architecture, results table)?"
+      },
+      {
+        "id": "gpu-declared",
+        "kind": "judgement",
+        "weight": 1,
+        "question": "Is GPU hardware declared in the documentation?"
+      }
+    ]
+  },
+  "audit_sections": [
+    "research"
+  ],
+  "entry_keywords": [
+    "suivant"
+  ],
+  "params": [
+    {
+      "name": "stacks",
+      "source": "detected",
+      "required": false
+    },
+    {
+      "name": "interpreter",
+      "source": "detected",
+      "required": true
+    },
+    {
+      "name": "test_command",
+      "source": "judgement",
+      "required": false
+    },
+    {
+      "name": "conventions",
+      "source": "judgement",
+      "required": false
+    },
+    {
+      "name": "extra_tools",
+      "source": "judgement",
+      "required": false
+    }
+  ]
+}

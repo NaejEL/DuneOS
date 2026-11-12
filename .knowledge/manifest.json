@@ -1,12 +1,12 @@
 {
   "config_digest": "7c6b5f0b56fa22983e3a27aa096518d375d113a3dba15dce8b9ad15897c6d222",
   "counts": {
-    "edges": 7944,
-    "files": 468,
+    "edges": 7906,
+    "files": 470,
     "notes": 0,
-    "symbols": 3563
+    "symbols": 3562
   },
-  "digest": "a19589466c481d39cad1d1d834f2b2d8adbe6c148fc629377ab999e760dc12a7",
+  "digest": "f9d27cf5850bb2c7dee539fce8360241c07486d23155edfc1c79191f5d944e93",
   "languages": [
     "cpp",
     "markdown",
@@ -17,5 +17,5 @@
     "yaml"
   ],
   "schema": 1,
-  "tool_version": "1.0.0"
+  "tool_version": "1.0.1"
 }

@@ -1,0 +1,3 @@
+Project skill `factory-run`, driver of a full cycle. Exact frontmatter, one key per line: `name: factory-run` ; `description: Runs one cycle of the software factory (Planner → human gate on the spec → Builder → Verifier with a fix loop) on a need or an approved spec.` ; `disable-model-invocation: true` ; `argument-hint: "<need | spec path> [--models \"role=modele;...\"] [--autonomy gate|auto] [--ship <cible> | --no-ship] [--worktree]"`.
+
+The body is not written by hand: it is rendered by the core (`upgrade plan`) from this profile's single source `bodies/orchestrator.md` (interpreter substituted, `harness.profile.software` block). Never rewrite or summarize it; to change the procedure, edit that fragment.
