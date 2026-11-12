@@ -108,6 +108,17 @@ board:
     i2c_id: 0
     gauge_addr: 0x55
     charger_addr: 0x6B
+    # The cell LilyGO ships, from their own spec. The gauge was found running
+    # TI's factory default of 3000 instead, which is not a LilyGO value at all
+    # — it is the reset value of data-memory 0x929F. The consequence was a
+    # percentage computed against a battery 2.3x larger than the real one:
+    # 4111 mV read back as 54%, and a RemainingCapacity of 1607 mAh that this
+    # cell cannot physically hold. Measured on hardware 2026-11-12 with bqinfo.
+    #
+    # The gauge's data memory is RAM, reset to ROM defaults whenever it loses
+    # power (SLUUBD4A 8.1), so this is not a one-shot provisioning value: the
+    # daemon re-checks it at every startup and reprograms when it differs.
+    design_capacity_mah: 1300
 
   rfid:
     type: pn532

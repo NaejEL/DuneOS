@@ -85,8 +85,24 @@ static const cmd_t k_cmds[] = {
     { 0x2E, "StateOfHealth",         "%",    0 },
     { 0x30, "ChargeVoltage",         "mV",   0 },
     { 0x32, "ChargeCurrent",         "mA",   0 },
+    { 0x3A, "OperationStatus",       "bits", 0 },
     { 0x3C, "DesignCapacity",        "mAh",  0 },
 };
+
+/* OperationStatus, SLUUBD4A table 2-7. SEC says whether data memory is even
+ * reachable, and CFGUPDATE whether the gauge is mid-reconfiguration — the two
+ * things you need when a configuration write silently does nothing. */
+static void decode_opstatus(uint16_t s)
+{
+    static const char *const sec[4] = { "?", "FULL_ACCESS", "UNSEALED", "SEALED" };
+    outf("  OperationStatus: SEC=%s", sec[(s >> 1) & 0x3]);
+    if (s & (1u << 10)) out(" CFGUPDATE");
+    if (s & (1u << 5))  out(" INITCOMP");
+    if (s & (1u << 4))  out(" VDQ");
+    if (s & (1u << 3))  out(" EDV2");
+    if (s & (1u << 6))  out(" SMTH");
+    out("\r\n");
+}
 
 static void decode_status(uint16_t f)
 {
@@ -123,8 +139,8 @@ void app_main(void)
         duneos_exit(2);
     }
 
-    uint16_t status = 0;
-    int have_status = 0;
+    uint16_t status = 0, opstat = 0;
+    int have_status = 0, have_opstat = 0;
 
     for (unsigned i = 0; i < sizeof(k_cmds) / sizeof(k_cmds[0]); i++) {
         uint16_t v = 0;
@@ -142,9 +158,11 @@ void app_main(void)
                  k_cmds[i].name, (unsigned)v, k_cmds[i].unit, (unsigned)v);
         }
         if (k_cmds[i].reg == 0x0A) { status = v; have_status = 1; }
+        if (k_cmds[i].reg == 0x3A) { opstat = v; have_opstat = 1; }
     }
 
     if (have_status) decode_status(status);
+    if (have_opstat) decode_opstatus(opstat);
 
     close(bus);
     out("--- bqinfo end ---\r\n");

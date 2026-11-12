@@ -189,6 +189,19 @@ def _battery_block(board: dict, lines: list[str]) -> None:
     lines.append(f'#define DUNEOS_BATTERY_I2C_DEV       "/dev/i2c-{int(bat.get("i2c_id", 0))}"')
     lines.append(f"#define DUNEOS_BATTERY_GAUGE_ADDR    {hex(int(bat.get('gauge_addr', 0x55)))}")
     lines.append('#define DUNEOS_BATTERY_TMPFS_PATH    "/tmp/battery"')
+    # Optional: the pack's nominal capacity. A gauge that computes state of
+    # charge from a design capacity it was never told is confidently wrong, and
+    # the figure is a property of the cell soldered to the board, so it belongs
+    # in board.yaml. Emitted only when declared — a backend guards on the macro
+    # and does nothing without it, which is what keeps every other board's
+    # behaviour unchanged.
+    if bat.get("design_capacity_mah") is not None:
+        cap = int(bat["design_capacity_mah"])
+        if not 1 <= cap <= 32767:
+            raise SystemExit(
+                f"ERROR: battery.design_capacity_mah={cap} out of range; the "
+                "gauge field is a signed 16-bit mAh value (1..32767)")
+        lines.append(f"#define DUNEOS_BATTERY_DESIGN_CAPACITY_MAH  {cap}")
     lines.append("")
 
 
