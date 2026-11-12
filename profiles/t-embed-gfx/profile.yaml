@@ -25,6 +25,7 @@ apps_flash:
 - launcher
 - logd
 - battery_daemon
+- bqinfo
 # the probe set — written for the CardPuter, unmodified
 - gfx_demo
 - waves

@@ -82,6 +82,8 @@
 {"lang": "cpp", "lines": 25, "path": "apps/system/usb_shell/usb_shell.c", "sha256": "24de03ddc906124fe8ae298638dce7a7bc8a0619962ab6dbf3a4e34a6bad32cf", "size": 604}
 {"lang": "yaml", "lines": 9, "path": "apps/system/wifi_daemon/duneos.yaml", "sha256": "5018d12fece61c2099d510a6e18e6b18b8d6b3fa28464989de88787e6800ca7b", "size": 206}
 {"lang": "cpp", "lines": 359, "path": "apps/system/wifi_daemon/wifi_daemon.c", "sha256": "695b28d7d55511d3f96b4f815e86856ad525fce364c312ae2e662dd41b65cd9a", "size": 11107}
+{"lang": "cpp", "lines": 152, "path": "apps/user/bqinfo/bqinfo.c", "sha256": "7d8279eaf53c20f3681dd5b27545afeef6678b7a0694c15ee7ea45f670622be1", "size": 5301}
+{"lang": "yaml", "lines": 7, "path": "apps/user/bqinfo/duneos.yaml", "sha256": "f57dcb2ad014c102be9717dd9b03eda27c80c4cffc3d2598032f0f1e269c52d2", "size": 166}
 {"lang": "cpp", "lines": 138, "path": "apps/user/drview/drview.c", "sha256": "0d294d5a73dd88481dfc1e673fb3541ab9a9081852bc42095e009bf9e4fcb585", "size": 3924}
 {"lang": "yaml", "lines": 14, "path": "apps/user/drview/duneos.yaml", "sha256": "a6dff7e7c06486f7573a68625be70daf3c70b4c33b1c7e8bc56a355561fc3f62", "size": 328}
 {"lang": "yaml", "lines": 14, "path": "apps/user/files/duneos.yaml", "sha256": "11c58842e2058a1f22375c7adb743b46a207c7390010d91e56f3721dd657d30d", "size": 274}
@@ -323,7 +325,7 @@
 {"lang": "yaml", "lines": 13, "path": "profiles/esp32s3-devkitc-default/profile.yaml", "sha256": "7eaf39ec2e8385be0e351aabc0c07afd0f8b7530db87ec90c99356587416d695", "size": 449}
 {"lang": "yaml", "lines": 24, "path": "profiles/kincony-a16-default/profile.yaml", "sha256": "1626d9f0432f823abff9b603c91b179ad0bdaf39248777e4e12677e41c5fd970", "size": 366}
 {"lang": "yaml", "lines": 42, "path": "profiles/t-embed-default/profile.yaml", "sha256": "ed9cb1a6cf71d1047d8688935dfdb7de530192070592d6ed5ff17208006b88c8", "size": 865}
-{"lang": "yaml", "lines": 56, "path": "profiles/t-embed-gfx/profile.yaml", "sha256": "cc01e4baf596aa6f423ca53906034a8ed3ff2153a24dabd2b600fadcb8280c7a", "size": 1692}
+{"lang": "yaml", "lines": 57, "path": "profiles/t-embed-gfx/profile.yaml", "sha256": "3d30ebbb6a7f161fb83810f1c61d8fcba0eac99982780ab8c7a97c95b7baf44c", "size": 1701}
 {"lang": "yaml", "lines": 21, "path": "profiles/t-embed-recovery/profile.yaml", "sha256": "8516375d2d67bf394e58cc9544fe4319366478655fc9435da4660edd4435bed4", "size": 579}
 {"lang": "other", "lines": 6, "path": "pytest.ini", "sha256": "abbfe9857ccbb55b0894399727dda2372d63309ee6054a539996a4d5e3f96c00", "size": 231}
 {"lang": "cpp", "lines": 33, "path": "sdk/app/include/duneos/appmeta.h", "sha256": "ffc9acc77a564bb279f39ab27ff195aca9f55cb8c042d295c1b25eccb1b719bc", "size": 1325}

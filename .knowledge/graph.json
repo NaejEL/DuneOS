@@ -5352,6 +5352,81 @@
   },
   {
    "count": 1,
+   "dst": "I2C_M_RD",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "I2C_RDWR",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "app_main",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "decode_status",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 3,
+   "dst": "duneos_exit",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "fcntl",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "i2c_msg",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "i2c_rdwr_ioctl_data",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "ioctl",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "open",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 6,
+   "dst": "outf",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "read_cmd",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "write",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
    "dst": "INPUT_EV_KEY",
    "src": "apps/user/drview/drview.c"
   },
@@ -39887,6 +39962,8 @@
    "apps/system/usb_shell/usb_shell.c",
    "apps/system/wifi_daemon/duneos.yaml",
    "apps/system/wifi_daemon/wifi_daemon.c",
+   "apps/user/bqinfo/bqinfo.c",
+   "apps/user/bqinfo/duneos.yaml",
    "apps/user/drview/drview.c",
    "apps/user/drview/duneos.yaml",
    "apps/user/files/duneos.yaml",
@@ -41409,6 +41486,7 @@
    "declared_root",
    "decode",
    "decode_perms",
+   "decode_status",
    "dedup",
    "default_sources",
    "deploy_single",
@@ -42019,6 +42097,7 @@
    "read_battery_info",
    "read_blob",
    "read_chunk",
+   "read_cmd",
    "read_config",
    "read_full",
    "read_guard",
