@@ -35,7 +35,15 @@ BASE_BOARD = {
     "uart": [{"id": 0, "tx_pin": 43, "rx_pin": 44, "default_baud": 115200}],
 }
 
-DECLARING_BOARDS = ("m5stack-cardputer",)
+# Boards whose main_task peak has actually been measured on hardware.
+# A name added here without a measurement behind it is what this pin
+# exists to stop (ADR 040: the figure is architecture x that board's
+# boot workload, never a project-wide default).
+#   m5stack-cardputer      4608 - LEG-37
+#   lilygo-t-embed-cc1101  5120 - 2026-11-11, peak 4192 over three
+#                          boots; the 3584 default gave 4096 real and
+#                          the board crash-looped on the stack canary
+DECLARING_BOARDS = ("lilygo-t-embed-cc1101", "m5stack-cardputer")
 
 
 def _board_yaml(name):

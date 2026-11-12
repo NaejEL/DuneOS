@@ -7,6 +7,23 @@ board:
   flash_size_mb: 16
   psram_size_mb: 8
   psram_type: opi
+  # Measured on hardware 2026-11-11 (ADR 040 method: raised to 12288 B so the
+  # measurement could not itself overflow, three boots). Worst peak 4192 B.
+  # ESP-IDF's 3584 B default gives 4096 B real (+512 TASK_EXTRA_STACK_SIZE),
+  # so this board was overflowing by 96 B — 156 B counting the 60 B watchpoint
+  # reserve — and crash-looping on the stack canary. 5120 B gives
+  #   5120 + 512 extra = 5632 real  - 60 watchpoint = 5572 usable
+  #   5572 usable                   - 4192 measured = 1380 B margin (25%)
+  # Deliberately wider than the CardPuter's 784 B: this
+  # measurement ran with no SD card (mount fails early) and with the ST7789
+  # init failing, so the deeper success paths are NOT in the figure. Re-measure
+  # with a card inserted and a working display before trimming it.
+  main_task_stack: 5120
+  # LilyGO BOARD_POWERON: load switch for the peripheral 3V3 rail — SD card,
+  # ST7789 and CC1101 all sit behind it. Left low, they draw leakage only: the
+  # SD answers CMD0 at 400 kHz then times out on the first 20 MHz data read,
+  # and the panel renders noise with correct registers.
+  pwr_enable_pin: 15
   console: usb_jtag
 
   wifi: true
@@ -45,8 +62,21 @@ board:
 
   display:
     driver: st7789
-    width: 240
-    height: 280
+    # 1.9" 320x170 landscape. rotation 3 = MADCTL 0xA0 (MY|MV) turns the
+    # native portrait panel landscape, with a 35 px gap on the short axis.
+    # Verified on hardware 2026-11-12: panel upright, full bleed, carousel
+    # legible. 0xE0 was worse (a third of the panel, glitching). The mirrored
+    # text seen while tuning this was not an orientation fault at all — it was
+    # gfx.c writing a rectangle as one linear run — so do not re-tune MADCTL
+    # for a glyph bug. INVON is unconditional in st7789_hw.c:105 and this
+    # panel needs it.
+    width: 320
+    height: 170
+    # Both keys on purpose: madctl is what reaches the panel, rotation is what
+    # st7789_hw_rotation() and /proc report. Leave rotation out and the board
+    # describes itself as portrait while driving the panel landscape.
+    rotation: 3
+    madctl: 0xA0
     # ST7789 shares SPI2 bus with SD and CC1101
     spi_host: SPI2_HOST
     mosi_pin: 9
@@ -56,8 +86,10 @@ board:
     rst_pin: 40
     bl_pin: 21
     freq_hz: 40000000
-    col_offset: 0   # ST7789 CASET offset — 240×280 panel fills the frame, no offset
-    row_offset: 0   # ST7789 RASET offset
+    # Native-portrait terms, crossed over when MV=1 (st7789_hw.c:164-168):
+    # the visible 170 columns are centred in the controller's 240.
+    col_offset: 35
+    row_offset: 0
 
   lora:
     type: cc1101

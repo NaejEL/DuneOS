@@ -47,6 +47,11 @@
 #define GFX_RGB(r, g, b) \
     ((uint16_t)(((r) & 0xF8u) << 8) | (((g) & 0xFCu) << 3) | (((b) & 0xF8u) >> 3))
 
+/* Widest row any board supports. Size a per-row buffer with THIS, never with
+ * one board's width: gfx_demo carried `uint16_t row[240]` and a "bump if
+ * needed" comment until a 320 px panel overflowed its stack and crashed. */
+#define GFX_MAX_ROW_PX  320
+
 #define GFX_BLACK   GFX_RGB(  0,   0,   0)
 #define GFX_WHITE   GFX_RGB(255, 255, 255)
 #define GFX_RED     GFX_RGB(255,   0,   0)

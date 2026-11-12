@@ -52,7 +52,7 @@ void app_main(void)
      * mode this is H SPI transactions instead of W*H gfx_pixel calls
      * (each of which would be its own SPI transaction). */
     {
-        uint16_t row[240];   /* widest CardPuter row; bump if needed */
+        uint16_t row[GFX_MAX_ROW_PX];   /* every board, not one of them */
         for (int y = 0; y < h; y++) {
             uint8_t g = (uint8_t)(y * 255 / h);
             uint8_t b = 128;

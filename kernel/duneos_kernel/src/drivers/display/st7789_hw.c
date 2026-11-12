@@ -17,6 +17,7 @@ static const char *TAG = "duneos/st7789_hw";
 #define ST7789_SLPOUT   0x11
 #define ST7789_NORON    0x13
 #define ST7789_INVON    0x21
+#define ST7789_RAMCTRL  0xB0
 #define ST7789_DISPON   0x29
 #define ST7789_CASET    0x2A
 #define ST7789_RASET    0x2B
@@ -88,15 +89,30 @@ esp_err_t st7789_hw_init(void)
 
     st7789_hw_cmd(ST7789_SWRESET); vTaskDelay(pdMS_TO_TICKS(120));
     st7789_hw_cmd(ST7789_SLPOUT);  vTaskDelay(pdMS_TO_TICKS(120));
-    st7789_hw_cmd(ST7789_COLMOD);
-    uint8_t colmod = 0x55;
-    st7789_hw_data(&colmod, 1);
+    /* Order and contents follow ESP-IDF's own st7789 panel driver: MADCTL,
+     * then COLMOD, then RAMCTRL. RAMCTRL (0xB0) was missing entirely, leaving
+     * the panel on its power-on data-transfer mode; {0x00,0xF0} is the
+     * big-endian default that driver programs for every ST7789. */
     st7789_hw_cmd(ST7789_MADCTL);
     uint8_t madctl = DUNEOS_DISPLAY_MADCTL;
     st7789_hw_data(&madctl, 1);
+    st7789_hw_cmd(ST7789_COLMOD);
+    uint8_t colmod = 0x55;
+    st7789_hw_data(&colmod, 1);
+    st7789_hw_cmd(ST7789_RAMCTRL);
+    uint8_t ramctrl[2] = { 0x00, 0xF0 };
+    st7789_hw_data(ramctrl, 2);
     st7789_hw_cmd(ST7789_INVON);
     st7789_hw_cmd(ST7789_NORON);  vTaskDelay(pdMS_TO_TICKS(10));
     st7789_hw_cmd(ST7789_DISPON); vTaskDelay(pdMS_TO_TICKS(10));
+
+    /* No readback probe here. One was tried during bring-up and removed: this
+     * driver sets .miso_io_num = -1 when it owns the bus, a command and its
+     * reply are two spi_device_transmit() calls so CS drops in between, and
+     * the device clock is the panel's write clock, well above its read limit.
+     * A probe under those three conditions returns zeroes for a healthy panel.
+     * To actually read a register, add a second device handle at ~6 MHz on a
+     * MISO-wired bus and issue command + dummy + data as one transaction. */
 
 #if DUNEOS_DISPLAY_BL_PIN >= 0
     gpio_set_level(DUNEOS_DISPLAY_BL_PIN, 1);

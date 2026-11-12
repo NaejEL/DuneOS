@@ -508,6 +508,66 @@ was submission logistics — pitch text, video arc, prize targets — with no en
 
 ---
 
+## 4bis. Semantic duplication — HIGH PRIORITY (2026-11-11)
+
+The same hardware, wire format or algorithm implemented **twice by different
+code**, under different names, in different trees. The 2026-09 legacy audit did
+not see this class: its lens was *textual* — it found LEG-18 (a verbatim copy of
+a parser) and LEG-20 (a byte-identical font) — and two implementations of one
+controller with different APIs do not look alike textually.
+
+Found 2026-11-11 while debugging a t-embed's display: the ST7789 is driven by
+two separate code paths depending on board topology, and they had already
+diverged. Full survey the same day.
+
+**Why this sits above the legacy debt.** It is not cosmetic redundancy: each
+pair is a place where a fix reaches only half the repo. The ELF hardening of
+LEG-01/34/41 — two host suites and a fuzzer — protects `elf_parse.c` only;
+`libappmeta.c` reads the same untrusted files from `/sd` with none of those
+bounds and not one test.
+
+| # | Pair | Duplicated | Diverged | Exercised | Size |
+| --- | --- | --- | --- | --- | --- |
+| DUP-01 | `kernel/duneos_loader/src/elf_parse.c` ↔ `sdk/app/libappmeta.c` | ELF32 parse + `.duneos_manifest` | yes — SDK side has no bounds, no tests | one only | M |
+| DUP-02 | `kernel/.../display/st7789_hw.c` ↔ `sdk/display/libst7789.c` | ST7789 init + windowing, RGB565 byte-swap | yes — init order, `RAMCTRL` | one board each | M |
+| DUP-03 | `arch/xtensa_esp32/arch.cmake` ↔ `arch/xtensa_esp32s3/arch.cmake` | guarded HAL list + `REQUIRES` | yes — stated in the file itself | one copy never compiled | S |
+| DUP-04 | `tools/duneos-bspgen.py` ↔ `tools/dbt/boardgen.py` | 13 `DUNEOS_*` macros, MADCTL table | not yet | both | M |
+| DUP-05 | `apps/user/wifi/wifi.c` ↔ `apps/system/bin/iw/iw.c` | *writing* `known.yaml` | yes — overflow handling | both | S |
+| DUP-06 | `ambient.h` ↔ `boardgen.py` ↔ `bin/battery.c` | `/tmp/battery` path and blob format | no | all three | XS |
+| DUP-07 | `shell_cmds.c sh_globmatch` ↔ `bin/find/find.c globmatch` | glob matcher | no — identical | both | XS |
+| DUP-08 | `sdk/sensor/libbq27220.c` ↔ `sdk/i2c/smbus.c` | 16-bit SMBus register read | no | one only | XS |
+| DUP-09 | `abi.h` ↔ `tools/dbt/capability_map.py` | permission bitmask (ABI) | no | no cross-check test | XS |
+
+`sdk/net/known_yaml.c` provides `parse`/`read`/`load` but **no writer**, which is
+what forced DUP-05. Adding the writer to the SDK closes that pair.
+
+**Not checked** by this survey, so not to be read as clean: USB (`drv_usb.c`,
+`drv_usb_cdc.c`), Ethernet (`drv_eth.c` ↔ `hal_eth.c`/`hal_phy.c`),
+`drv_raw80211.c`, `drv_wifi.c` against the userspace wifi ABI, the inside of
+`sdk/ui/*` against `gfx.c`, `libdune/src/*` against the kernel VFS, `qemu.py`,
+`tui.py`, `capabilities.py`, `kb_iomatrix.c` against `drv_input.c`, and the
+`/tmp/state/wifi_scan` blob format.
+
+## 4quater. The manifest cannot say "not launchable" (2026-11-12)
+
+- [ ] **LAUNCH-01 — a boot asset and a launchable app are indistinguishable.**
+  `appmeta_t` carries `name`, `icon` and `has_display`, and the launcher's only
+  membership test is `has_display`. So `splash`, a boot animation, and the
+  launcher itself are both valid carousel entries: staging them in `/bin`
+  put them on the home screen, and selecting "launcher" chains the launcher
+  into a second launcher. Worked around in PR #19 by scanning the SD app dirs
+  first and flash only when they are empty. Two costs of that workaround, both
+  accepted knowingly: a flash-only board still lists both, and the fallback is
+  all-or-nothing, so a single display-capable `.dap` on the card hides every
+  flash-staged app (reachable today on `t-embed-gfx`, whose GUI apps all live
+  in flash). Merging the two sources instead would re-open the defect above,
+  which is why the workaround stands.
+  **The fix is a manifest field** (`launchable: false`, default true), read by
+  `appmeta_read` and honoured by any menu. Four files: `tools/dbt/builder.py`'s
+  manifest emission, `sdk/app/include/duneos/appmeta.h`, `sdk/app/libappmeta.c`,
+  and `apps/user/splash/duneos.yaml`. Then the launcher can scan every dir in
+  the loader's own order, which is what it wanted to do in the first place.
+
 ## 5. Technical debt — the 2026-09 legacy audit
 
 **This section speaks a different language from the phases above and below it.** A phase is a
