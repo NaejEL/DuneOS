@@ -14,3 +14,9 @@ test_elf_scan
 elf_scan_*/
 test_manifest_depth
 test_ld2450
+# Built by feat/input-portability. Listed here too so the binaries cannot be
+# staged by accident from a branch that does not carry their sources yet —
+# untracked files survive a checkout, and `git add -A` does not care which
+# branch built them.
+test_input_intent
+test_ui_vkbd

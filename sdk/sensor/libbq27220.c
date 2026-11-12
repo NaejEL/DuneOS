@@ -22,12 +22,22 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-/* BQ27220 standard register map (16-bit little-endian reads). */
-#define BQ27220_REG_VOLTAGE  0x04
-#define BQ27220_REG_FLAGS    0x06
-#define BQ27220_REG_SOC      0x1C
+/* BQ27220 standard commands, 16-bit little-endian reads.
+ * Authority: TI SLUUBD4A (rev. Nov 2022), table 2-1.
+ *
+ * These three were each off by one row for a long time — 0x04, 0x06 and 0x1C,
+ * which are AtRateTimeToEmpty, Temperature and StandbyTimeToEmpty. The gauge
+ * answered every read, so nothing failed: voltage and charge came back as
+ * minutes, and Temperature at room temperature is about 2982 = 0x0BA6, whose
+ * bit 9 is set — the bit read below as FC. The driver therefore reported a
+ * full battery, always. Wrong rows of the right table produce a plausible
+ * answer, which is why this survived. */
+#define BQ27220_REG_VOLTAGE  0x08   /* Voltage(), mV                 */
+#define BQ27220_REG_FLAGS    0x0A   /* BatteryStatus(), aka Flags()  */
+#define BQ27220_REG_SOC      0x2C   /* RelativeStateOfCharge(), %    */
 
-/* FLAGS bit definitions (Table 9 of BQ27220 TRM). */
+/* BatteryStatus bits, SLUUBD4A table 2-6: DSG is low byte bit 0, FC is high
+ * byte bit 1. These two were right all along. */
 #define BQ27220_FLAG_DSG    (1u << 0)
 #define BQ27220_FLAG_FC     (1u << 9)
 
