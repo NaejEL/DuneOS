@@ -1456,7 +1456,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 7,
+   "count": 8,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -7481,7 +7481,7 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "scan_apps",
    "src": "apps/user/launcher/launcher.c"
   },

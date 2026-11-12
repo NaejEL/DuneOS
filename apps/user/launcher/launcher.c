@@ -58,7 +58,6 @@ static char        s_icon_scratch[ICON_PATH_LEN];    /* reused by the icon callb
 static int         s_count;
 static int         s_total_dap;   /* .dap files seen (before display filter) */
 static int         s_meta_ok;     /* of those, manifests read successfully    */
-static bool        s_scanned_flash; /* SD came up empty, so /bin was tried   */
 
 static ui_carousel_t s_car;
 
@@ -156,11 +155,9 @@ static void scan_apps(void)
     s_count = 0;
     s_total_dap = 0;
     s_meta_ok = 0;
-    s_scanned_flash = false;
 
     scan_list(k_sd_dirs, sizeof(k_sd_dirs) / sizeof(k_sd_dirs[0]));
     if (s_count == 0) {
-        s_scanned_flash = true;
         scan_list(k_flash_dirs, sizeof(k_flash_dirs) / sizeof(k_flash_dirs[0]));
     }
 }
@@ -260,13 +257,15 @@ void app_main(void)
     restore_sel();   /* reopen on the app we last handed off to (ADR 031) */
 
     if (s_count == 0) {
-        /* Diagnostic body: how the scan classified /sd/apps. Lets us tell apart
-         * "dir empty / wrong path" (0 dap), "manifests unreadable" (dap>read),
-         * and "no graphical apps / stale builds without capabilities"
-         * (read>0, gui 0) without a serial console. */
+        /* Diagnostic body: how the scan classified every dir it opened — the
+         * SD app dirs, plus the /bin fallback, which by construction was
+         * always tried if we are here (scan_apps falls back on exactly the
+         * s_count == 0 that got us into this branch). Lets us tell apart
+         * "dirs empty / wrong paths" (0 dap), "manifests unreadable"
+         * (dap>read), and "no graphical apps / stale builds without
+         * capabilities" (read>0, gui 0) without a serial console. */
         char body[64];
-        snprintf(body, sizeof(body), "%s: %d dap, %d read, %d gui",
-                 s_scanned_flash ? "sd+flash" : "sd",
+        snprintf(body, sizeof(body), "sd+flash: %d dap, %d read, %d gui",
                  s_total_dap, s_meta_ok, s_count);
         ui_message(ui, "No apps found", body);
         ui_statusbar(ui, "Empty");
