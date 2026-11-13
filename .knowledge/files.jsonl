@@ -250,7 +250,7 @@
 {"lang": "cpp", "lines": 32, "path": "kernel/duneos_kernel/include/duneos/hal_uart.h", "sha256": "11095890aa8fff77ef23112db18e76203dbc370e6e80a5ccd0077ffa527effeb", "size": 1217}
 {"lang": "cpp", "lines": 63, "path": "kernel/duneos_kernel/include/duneos/i2c_ioctl.h", "sha256": "56580cb22be97f20e0d72634821400224cc92fb9c2d794492b65edb0ccf2d5c8", "size": 2595}
 {"lang": "cpp", "lines": 78, "path": "kernel/duneos_kernel/include/duneos/init.h", "sha256": "eb8971607a42f779a57c6f808f31d91bc9f6a6af1d6c1de2280f0b6f7d00aab1", "size": 2858}
-{"lang": "cpp", "lines": 166, "path": "kernel/duneos_kernel/include/duneos/input_ioctl.h", "sha256": "44f662340dba5626686ed6815bc4c367b5a614df9c12c2398d15a5292496b721", "size": 6911}
+{"lang": "cpp", "lines": 166, "path": "kernel/duneos_kernel/include/duneos/input_ioctl.h", "sha256": "0e3f8a3370238a795f80f018612df8513347f9ed0ad9f91caca22032e77e369f", "size": 6910}
 {"lang": "cpp", "lines": 55, "path": "kernel/duneos_kernel/include/duneos/klog.h", "sha256": "9e33bf5c5188e9fb7e9e18b5a82d28377d844c318b75e26183c361037b92dd45", "size": 2087}
 {"lang": "cpp", "lines": 195, "path": "kernel/duneos_kernel/include/duneos/libdune.h", "sha256": "d9a0264a9f7c74f1c2b421948d6dd3a884293a313d084c9fa185c1ef1382306f", "size": 8425}
 {"lang": "cpp", "lines": 73, "path": "kernel/duneos_kernel/include/duneos/logic_ioctl.h", "sha256": "2405ad27452e7343e5f08d41462a189d99a15c9c0c2b381ba32ccfecc0a62ec2", "size": 2888}
@@ -347,7 +347,7 @@
 {"lang": "cpp", "lines": 85, "path": "sdk/image/include/duneos/image.h", "sha256": "d9e3ff60064612e99f24abd377e547fb5cd975533401d17bdec1f5d51f99eb02", "size": 2902}
 {"lang": "cpp", "lines": 125, "path": "sdk/image/libimage.c", "sha256": "6d1ee087a7698a7bc3a67b6177528293231f76a3a98f8e5804005281a019656d", "size": 3459}
 {"lang": "cpp", "lines": 126, "path": "sdk/input/include/duneos/input.h", "sha256": "9c3f8cddca42cfffd846bea8b61833fc2611481fe46dcd6573c0420d9a729580", "size": 5927}
-{"lang": "cpp", "lines": 220, "path": "sdk/input/libinput.c", "sha256": "df1296a75ec83ff94759b58286773b25beb339affc121d676cd3d428f513cc40", "size": 8311}
+{"lang": "cpp", "lines": 220, "path": "sdk/input/libinput.c", "sha256": "f042480274cb5a6829a27fa71d1f42410fb248d7fdd2492bb677a5cf99985613", "size": 8310}
 {"lang": "cpp", "lines": 57, "path": "sdk/input/libinput_fd.c", "sha256": "56f8372fca6fc5729ca1e0fec52f6825d0966ae708feefdb510d23b831fe8bcb", "size": 1639}
 {"lang": "cpp", "lines": 85, "path": "sdk/log/dlog.c", "sha256": "17edcbe14b28b72c3f5f6d413902faf1b0be3e6838fcb3cfb8b29335a2c3f4fd", "size": 2534}
 {"lang": "cpp", "lines": 46, "path": "sdk/log/include/duneos/dlog.h", "sha256": "fafb1fc5c154c1fcd90b188199fe5f42d80c5dd6f170225e7c956f5990d300df", "size": 1817}
@@ -371,7 +371,7 @@
 {"lang": "cpp", "lines": 41, "path": "sdk/ui/include/duneos/ui_pager.h", "sha256": "eeb52c9dd75e5281311790671fdcf6cb71f0d8a782575eeccea41564272c4d81", "size": 1482}
 {"lang": "cpp", "lines": 57, "path": "sdk/ui/include/duneos/ui_text_entry.h", "sha256": "3f43fc6c6d8b70b4d59dda0cd165ffd4a1e043d87f980d451ecac7824772f403", "size": 2067}
 {"lang": "cpp", "lines": 88, "path": "sdk/ui/include/duneos/ui_vkbd.h", "sha256": "51f5236c1fd2b4b7294b9a7648179e65ad948b4512690e9eb11ad9c38d7447d3", "size": 3468}
-{"lang": "cpp", "lines": 50, "path": "sdk/ui/include/duneos/ui_wave.h", "sha256": "75fab3a427b6c5ca9e4c3ebd092fa774e1abf5ab121731b026f4dc44348297eb", "size": 2093}
+{"lang": "cpp", "lines": 50, "path": "sdk/ui/include/duneos/ui_wave.h", "sha256": "3e0ba3ef651cf4b344f54a01f3ad48680b40dca763fd15cd9464983273f1981c", "size": 2093}
 {"lang": "cpp", "lines": 486, "path": "sdk/ui/ui.c", "sha256": "4aee8412358dd9d5a9f4e43f68eec7e2a42b05a72f0e94a63afeeaf0e56d7f6d", "size": 15224}
 {"lang": "cpp", "lines": 167, "path": "sdk/ui/ui_carousel.c", "sha256": "c4a7c7e5e9a1c433d73d725d4d60a3daa5e1510ac1a3ac3daad4c33e3333b81c", "size": 5588}
 {"lang": "cpp", "lines": 79, "path": "sdk/ui/ui_hexview.c", "sha256": "167f749dbfc4f1d8fee801e7c571d36b75bbc49daa98e82f774b37c546447117", "size": 2476}
@@ -382,7 +382,7 @@
 {"lang": "cpp", "lines": 51, "path": "sdk/ui/ui_vkbd_draw.c", "sha256": "258aa31493df659e02d8a2409867da264f23ec199bca717fce0911ae2e8e5911", "size": 1581}
 {"lang": "cpp", "lines": 137, "path": "sdk/ui/ui_wave.c", "sha256": "c1589e0e8da7c0458d2971f8ad0f86bbc8398cb9b39d769ae7f035ac06f3be0e", "size": 5214}
 {"lang": "other", "lines": 117, "path": "sdkconfig.defaults", "sha256": "1cb8cc0882691bcf4a4f8bdae6fa4bd99137fbe45bbf2545efe232427b13aff5", "size": 6174}
-{"lang": "markdown", "lines": 249, "path": "specs/SPEC-input-portability.md", "sha256": "980cc980ab61b53c61514956972f0f1f4848123d5a9cde4259710a5aa8aee651", "size": 14834}
+{"lang": "markdown", "lines": 249, "path": "specs/SPEC-input-portability.md", "sha256": "bca3e83dacfb63fece9e3bfe844bb743f513c67147aaa71f3093127f64200b25", "size": 14834}
 {"lang": "markdown", "lines": 89, "path": "specs/SPEC-leg-01-harden-elf-validation.md", "sha256": "f8f6b20efbf23ee9d7aa10749b7568adb38cc658cb96f66bb3968203dc275079", "size": 4839}
 {"lang": "markdown", "lines": 155, "path": "specs/SPEC-leg-04-calloc-overflow.md", "sha256": "34db139a347ced58848977de6488e5046290f12dff9ed05daf7a1b6ea8275ea4", "size": 9265}
 {"lang": "markdown", "lines": 116, "path": "specs/SPEC-leg-05-split-loader-load.md", "sha256": "511537e7bc45e30adbd19b9bf2d6729cc087cfb286fa54405932b0aeeb83dbfe", "size": 7170}

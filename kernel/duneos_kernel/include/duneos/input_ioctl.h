@@ -99,7 +99,7 @@ enum {
     INPUT_INTENT_NONE = 0,
     INPUT_INTENT_PREV,
     INPUT_INTENT_NEXT,
-    INPUT_INTENT_ALT_PREV,   /* second axis — ui_wave zoom */
+    INPUT_INTENT_ALT_PREV,   /* second axis — ui_wave pan */
     INPUT_INTENT_ALT_NEXT,
     INPUT_INTENT_VALIDATE,
     INPUT_INTENT_BACK,

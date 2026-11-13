@@ -76,7 +76,7 @@ already reserves a commented-out `input` capability pointing at
 | `ui_list` | PREV, NEXT, VALIDATE, BACK |
 | `ui_carousel` | PREV, NEXT, VALIDATE, BACK |
 | `ui_pager`, `ui_hexview` | PREV, NEXT |
-| `ui_wave` | PREV/NEXT (pan) **and** ALT_PREV/ALT_NEXT (zoom) |
+| `ui_wave` | PREV/NEXT (zoom) **and** ALT_PREV/ALT_NEXT (pan) |
 | `ui_input` | TEXT(char), PREV/NEXT, ERASE, VALIDATE, BACK |
 
 → `NONE, PREV, NEXT, ALT_PREV, ALT_NEXT, VALIDATE, BACK, TEXT, ERASE`. Nothing

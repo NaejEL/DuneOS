@@ -12,7 +12,7 @@
  * here, in the one place that consumes it.
  *
  * The primary axis (PREV/NEXT) is the pair a single rotary drives; the second
- * (ALT_*) is what a widget with two axes zooms with. Widgets having only one
+ * (ALT_*) is what a widget with two axes pans with. Widgets having only one
  * axis accept both pairs, so every arrow navigates them.
  */
 static uint8_t keyboard_intent(uint16_t code)
