@@ -727,6 +727,11 @@
   },
   {
    "count": 1,
+   "dst": "DLOGW",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
    "dst": "DUNEOS_ABI_VERSION",
    "src": "ROADMAP.md"
   },
@@ -1086,7 +1091,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 144,
+   "count": 145,
    "dst": "board",
    "src": "ROADMAP.md"
   },
@@ -1571,7 +1576,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 10,
+   "count": 11,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1611,7 +1616,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 4,
+   "count": 3,
    "dst": "report",
    "src": "ROADMAP.md"
   },
@@ -1641,7 +1646,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 13,
+   "count": 15,
    "dst": "scan",
    "src": "ROADMAP.md"
   },

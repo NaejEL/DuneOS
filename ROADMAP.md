@@ -552,7 +552,11 @@ required** (they matter only when an OPI flash and an OPI PSRAM contend for the
 one MSPI). bspgen set them blindly. Turning them off cut the same load to
 **~1.16 s — 3.5x faster**, board booting and drawing normally.
 
-- [ ] **PSRAM-01 — make kernel execution location a `board.yaml` option.** Not a
+- [x] **PSRAM-01 — DONE.** `psram_kernel_exec: flash | psram` (OPI only, default
+  psram so no board changes silently); bspgen emits the two `CONFIG_SPIRAM_*`
+  from it, the key is validated and tested (17 cases), the T-Embed opts into
+  flash. esp32s3-devkitc untouched. Runtime already proven on hardware (1.16s).
+  Original plan:
   blanket OPI default (that is the bug). A board declares it (e.g.
   `psram: { kernel_exec: flash | psram }`); bspgen emits the two `CONFIG_SPIRAM_*`
   only for `psram`, and the key joins `KNOWN_BOARD_KEYS`. The default must not
@@ -649,17 +653,27 @@ Owed, each its own cycle:
   ran at 4 the whole time. PR #21 added the include to both (caught by a ship-pr
   regressions reviewer). Now genuinely wired; the one-notch-per-item feel at 2
   has **not yet** been confirmed on hardware — that run is what remains.
-- **MAGIC-03** — no PCNT glitch filter exists anywhere in the tree
-  (`pcnt_unit_set_glitch_filter` appears nowhere). A known-good firmware for the
-  t-embed needs 5000 ns; unfiltered contact bounce produces phantom detents the
-  accumulator turns into phantom intents, and is invisible to every host test.
-  Board-declared, size S.
-- **MAGIC-04** — `MAX_APPS 32` in `apps/user/launcher/launcher.c` caps the app
-  list with no justification recorded and no report when it is hit: a launcher
-  that hides applications silently. Size XS.
+- **MAGIC-03** — **DONE (hardware re-test open).** `encoder.glitch_filter_ns`
+  (optional) → `DUNEOS_ENCODER_GLITCH_FILTER_NS`, fed to
+  `pcnt_unit_set_glitch_filter` in the PCNT HAL (best-effort, `#ifdef`-guarded;
+  a board that says nothing keeps today's behaviour). Validated to the PCNT
+  window (1..12000 ns) and tested. The T-Embed declares 5000 ns, its known-good
+  firmware's value. PCNT-only; the GPIO fallback has no hardware filter. The
+  bounce-rejection effect itself is invisible to host tests, so the on-device
+  confirmation is what remains.
+- **MAGIC-04** — **DONE.** `MAX_APPS 32` capped the carousel silently. The scan
+  now keeps counting past the cap, sets a flag, logs a `DLOGW` once, and shows a
+  trailing `+` on the status-bar count when the list is truncated. The cap value
+  is unchanged — it is now visible, not silent.
 ## 4quinquies. The manifest cannot say "not launchable" (2026-11-12)
 
-- [ ] **LAUNCH-01 — a boot asset and a launchable app are indistinguishable.**
+- [x] **LAUNCH-01 — DONE (core); all-dir scan is the follow-on.** The manifest
+  carries a `launchable` field (default true; false = boot asset / the
+  launcher). builder embeds it, libappmeta reads it, the launcher drops
+  `launchable: false`, and splash + launcher declare it — so scanning `/bin` no
+  longer puts them on the home screen. What remains (unlocked by the flag, left
+  for a hardware pass) is dropping the SD-first/flash-fallback ordering so the
+  launcher scans every dir in the loader's own order. Original analysis:
   `appmeta_t` carries `name`, `icon` and `has_display`, and the launcher's only
   membership test is `has_display`. So `splash`, a boot animation, and the
   launcher itself are both valid carousel entries: staging them in `/bin`
