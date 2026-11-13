@@ -252,7 +252,11 @@ def validate(board: dict, yaml_path: Path) -> None:
                 f"where it turns off the code+rodata copy that 'psram', the OPI "
                 f"default, keeps).")
         if ke == "flash":
-            if board.get("psram_size_mb", 0) <= 0:
+            psram_mb = board.get("psram_size_mb", 0)
+            if isinstance(psram_mb, bool) or not isinstance(psram_mb, int):
+                die(f"'{yaml_path}' psram_size_mb must be an integer, "
+                    f"got {psram_mb!r}.")
+            if psram_mb <= 0:
                 die(f"'{yaml_path}' sets psram_kernel_exec: flash but the board has "
                     f"no PSRAM — the FETCH_INSTRUCTIONS/RODATA copy only exists on OPI "
                     f"PSRAM, so the key has nothing to turn off here. Remove it.")

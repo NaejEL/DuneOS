@@ -492,4 +492,4 @@
 {"lang": "python", "lines": 118, "path": "tools/dbt/toolchain/__init__.py", "sha256": "22954102736d4534b30ee8c4a62394526fdfe97333f18f2d1ef217d534dac989", "size": 4105}
 {"lang": "python", "lines": 658, "path": "tools/dbt/toolchain/esp_idf.py", "sha256": "6893846aa8181b5d6d63e9ca9ef2013f0718d1c16ab02273330726a13961f9ba", "size": 25037}
 {"lang": "python", "lines": 1903, "path": "tools/dbt/tui.py", "sha256": "07246732099b597234c327b9038571210ed95d38d807f7ace2066fb77a391945", "size": 70869}
-{"lang": "python", "lines": 1198, "path": "tools/duneos-bspgen.py", "sha256": "9199b812f58780db2ac918a5334d245e4b5cf4593b0ad05abce128000f914dbd", "size": 54197}
+{"lang": "python", "lines": 1202, "path": "tools/duneos-bspgen.py", "sha256": "1016d3b985111daf90e54f160a6cf58bf232be7732beb0900c839cc734817829", "size": 54419}
