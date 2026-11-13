@@ -107,7 +107,7 @@
 {"lang": "cpp", "lines": 253, "path": "apps/user/i2cscope/sniff.c", "sha256": "0a30b07c7018db9302a43f5498794c86ffebe140dc12dd911ac8bcefc50b87ba", "size": 8953}
 {"lang": "cpp", "lines": 164, "path": "apps/user/i2cscope/xfer.c", "sha256": "0fe44e17e600e073338dbf8f11800370227eb9945282e59e4448de00ec726e0e", "size": 5503}
 {"lang": "yaml", "lines": 23, "path": "apps/user/launcher/duneos.yaml", "sha256": "c7ffce7a2db0dbbab1874ba6ca735c31ec62941387d6f1c32b71f55885ab798a", "size": 700}
-{"lang": "cpp", "lines": 324, "path": "apps/user/launcher/launcher.c", "sha256": "ed2acf6390158f807e9d19e6e60a76430cb51e7455673fe93b3ce8e69839720b", "size": 12458}
+{"lang": "cpp", "lines": 335, "path": "apps/user/launcher/launcher.c", "sha256": "b67f751fce390165dc0063d2422ebf6a938f59e97f73c960ca8f52545e078e87", "size": 13067}
 {"lang": "yaml", "lines": 13, "path": "apps/user/qemu_calloc/duneos.yaml", "sha256": "ef4fbd744d77158bedef1995de51d4454c07b955734a4428b65c4b94d819b491", "size": 608}
 {"lang": "cpp", "lines": 288, "path": "apps/user/qemu_calloc/qemu_calloc.c", "sha256": "c2ffcc2e16f78ee4d04093a12726f75330ef70f6a835947adca00d48bc14dc81", "size": 11949}
 {"lang": "yaml", "lines": 7, "path": "apps/user/qemu_smoke/duneos.yaml", "sha256": "cf3992654732f4bf3da903c1e2d363837947f7505c019f453f536807f34bf803", "size": 243}

@@ -7791,6 +7791,11 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
+   "count": 1,
+   "dst": "DLOGW",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
    "count": 5,
    "dst": "DuneOS",
    "src": "apps/user/launcher/launcher.c"
@@ -7821,7 +7826,12 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 6,
+   "count": 3,
+   "dst": "MAGIC",
+   "src": "apps/user/launcher/launcher.c"
+  },
+  {
+   "count": 9,
    "dst": "MAX_APPS",
    "src": "apps/user/launcher/launcher.c"
   },
