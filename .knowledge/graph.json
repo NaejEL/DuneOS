@@ -821,7 +821,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "KNOWN_BOARD_KEYS",
    "src": "ROADMAP.md"
   },
@@ -1086,7 +1086,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 139,
+   "count": 144,
    "dst": "board",
    "src": "ROADMAP.md"
   },
@@ -1551,7 +1551,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "missing",
    "src": "ROADMAP.md"
   },
@@ -1571,7 +1571,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 9,
+   "count": 10,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1596,7 +1596,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 20,
+   "count": 21,
    "dst": "read",
    "src": "ROADMAP.md"
   },

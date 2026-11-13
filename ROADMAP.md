@@ -397,7 +397,9 @@ Flash/RAM cost (criterion 15), measured against `9df68b5` with `xtensa-esp32s3-e
 
 - [~] **Board validation, both boards (LEG-37)**: criteria 18 and 19 of `specs/SPEC-input-portability.md` — rotary direction and one-notch-per-item on the T-Embed, launcher/waves/g_shell unchanged on the CardPuter, and the text entry presenting the vkbd on one board and the line editor on the other. Encoder direction (A/B swap) is a hardware fact no host test can check. `wifi` is in the `t-embed-gfx` profile because it is the only app exercising the vkbd.
   **Partly closed 2026-11-12 on a t-embed**: the carousel renders and the rotary
-  navigates it, one item per notch after MAGIC-02 set the detent ratio to 2.
+  navigates it — but at the **inert 4-count ratio** (MAGIC-02's include was
+  missing, so the board.yaml `2` never reached the HAL; corrected in PR #21).
+  One-item-per-notch at 2 is now wired and awaits a hardware re-test.
   Still owed: direction sign checked deliberately rather than incidentally, the
   CardPuter side unchanged, and the text entry on both boards. Long-press has no
   bench coverage anywhere — no board declares `intent_long:`, so the first one
@@ -536,7 +538,32 @@ was submission logistics — pitch text, video arc, prize targets — with no en
 
 ---
 
-## 4bis. Semantic duplication — HIGH PRIORITY (2026-11-11)
+## 4bis. Kernel runs from flash, not PSRAM — HIGH PRIORITY, measured (2026-11-13)
+
+Measured on the LilyGO T-Embed CC1101: an app load took **~4.0 s** from the
+splash leaving to the launcher's first frame. The cause is not the SD read (a
+separate, deeper issue, in `docs/backlog.md`) but **where the kernel executes**.
+
+`tools/duneos-bspgen.py` emits, for every `psram_type: opi` board,
+`CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y`, copying the
+kernel's code and rodata into OPI PSRAM (80 MHz) at boot — markedly slower than
+the flash instruction cache. The T-Embed's flash is DIO, so these are **not
+required** (they matter only when an OPI flash and an OPI PSRAM contend for the
+one MSPI). bspgen set them blindly. Turning them off cut the same load to
+**~1.16 s — 3.5x faster**, board booting and drawing normally.
+
+- [ ] **PSRAM-01 — make kernel execution location a `board.yaml` option.** Not a
+  blanket OPI default (that is the bug). A board declares it (e.g.
+  `psram: { kernel_exec: flash | psram }`); bspgen emits the two `CONFIG_SPIRAM_*`
+  only for `psram`, and the key joins `KNOWN_BOARD_KEYS`. The default must not
+  silently change **esp32s3-devkitc** (also OPI PSRAM, untested here): either
+  keep today's behaviour as default and set the T-Embed to `flash`, or confirm
+  devkitc's flash is DIO/QIO first and default `flash` for all. Gotcha: an
+  sdkconfig change needs the root `sdkconfig` cleared before the rebuild. Size S,
+  already proven on hardware — only the generator wiring and the board
+  declaration remain.
+
+## 4ter. Semantic duplication — HIGH PRIORITY (2026-11-11)
 
 The same hardware, wire format or algorithm implemented **twice by different
 code**, under different names, in different trees. The 2026-09 legacy audit did
@@ -576,7 +603,7 @@ what forced DUP-05. Adding the writer to the SDK closes that pair.
 `tui.py`, `capabilities.py`, `kb_iomatrix.c` against `drv_input.c`, and the
 `/tmp/state/wifi_scan` blob format.
 
-## 4ter. No magic value in kernel or arch code — HIGH PRIORITY (2026-11-11)
+## 4quater. No magic value in kernel or arch code — HIGH PRIORITY (2026-11-11)
 
 *Opened at the Product Owner's explicit request during the input-portability
 cycle, not by that cycle's spec. MAGIC-02 and MAGIC-03 come from it; MAGIC-01
@@ -611,14 +638,17 @@ Owed, each its own cycle:
 - **MAGIC-01** — a gate that fails when a hardware literal appears in `kernel/`
   or `arch/` outside a generated macro. Size M. The hard part is the false-positive
   rate, not the detection: a check noisy enough to be ignored is worse than none.
-- **MAGIC-02** — **DONE 2026-11-12.** `DETENT_COUNTS` is board-declared:
-  `encoder.counts_per_detent` → `DUNEOS_ENCODER_COUNTS_PER_DETENT` → both the
-  PCNT backend (`hal_encoder.c`) and the polling fallback
-  (`hal_encoder_fallback.c`), which had been two independent literals reading 4.
-  The t-embed declares **2**. Found by feel, not by analysis: with 4 the knob
-  needed two physical notches per event and the user reported it "a bit slow";
-  confirmed working at 2 on hardware. Default stays 4 for a board that declares
-  an encoder without the ratio.
+- **MAGIC-02** — **wired 2026-11-13 (PR #21); hardware re-test open.**
+  `DETENT_COUNTS` is board-declared: `encoder.counts_per_detent` →
+  `DUNEOS_ENCODER_COUNTS_PER_DETENT` → both the PCNT backend (`hal_encoder.c`)
+  and the polling fallback (`hal_encoder_fallback.c`), which had been two
+  independent literals reading 4. The t-embed declares **2**, default stays 4.
+  **Correction:** the 2026-11-12 "DONE, confirmed working at 2 on hardware"
+  claim was wrong — neither TU `#include`d `board_config.h`, so the macro was
+  undefined and both silently fell back to 4. The feature was inert; the knob
+  ran at 4 the whole time. PR #21 added the include to both (caught by a ship-pr
+  regressions reviewer). Now genuinely wired; the one-notch-per-item feel at 2
+  has **not yet** been confirmed on hardware — that run is what remains.
 - **MAGIC-03** — no PCNT glitch filter exists anywhere in the tree
   (`pcnt_unit_set_glitch_filter` appears nowhere). A known-good firmware for the
   t-embed needs 5000 ns; unfiltered contact bounce produces phantom detents the
@@ -627,7 +657,7 @@ Owed, each its own cycle:
 - **MAGIC-04** — `MAX_APPS 32` in `apps/user/launcher/launcher.c` caps the app
   list with no justification recorded and no report when it is hit: a launcher
   that hides applications silently. Size XS.
-## 4quater. The manifest cannot say "not launchable" (2026-11-12)
+## 4quinquies. The manifest cannot say "not launchable" (2026-11-12)
 
 - [ ] **LAUNCH-01 — a boot asset and a launchable app are indistinguishable.**
   `appmeta_t` carries `name`, `icon` and `has_display`, and the launcher's only
