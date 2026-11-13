@@ -72,9 +72,12 @@ static ui_carousel_t s_car;
  *
  * Flash is still scanned when the SD dirs come up empty — that is what makes
  * the launcher usable on a board with no card, which is why /bin was added in
- * the first place. Telling a boot asset apart from a launchable app needs a
- * manifest flag the SDK does not have yet; until then this ordering is the
- * whole mechanism. See ROADMAP. */
+ * the first place. Boot assets are now told apart from launchable apps by the
+ * manifest `launchable` flag (LAUNCH-01): splash and the launcher itself
+ * declare `launchable: false` and the scan filter drops them, so scanning /bin
+ * no longer puts them on the home screen. The SD-first ordering is kept for
+ * now; scanning every dir in the loader's own order is the follow-on the flag
+ * unlocks, pending a hardware pass. See ROADMAP 4quinquies. */
 static const char *const k_sd_dirs[]    = { "/sd/apps", "/sd/bin" };
 static const char *const k_flash_dirs[] = { "/bin" };
 
@@ -124,6 +127,7 @@ static void scan_dir(const char *dir)
         if (appmeta_read(path, &meta) != 0) continue;   /* unreadable / not a dap */
         s_meta_ok++;
         if (!meta.has_display) continue;                /* CLI / daemon — hide    */
+        if (!meta.launchable) continue;                 /* boot asset / launcher  */
 
         /* Display name: manifest name, falling back to the filename base. */
         char name[NAME_LEN];

@@ -8001,7 +8001,7 @@
    "src": "apps/user/launcher/launcher.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "scan",
    "src": "apps/user/launcher/launcher.c"
   },
@@ -25782,6 +25782,11 @@
   },
   {
    "count": 2,
+   "dst": "json_bool",
+   "src": "sdk/app/libappmeta.c"
+  },
+  {
+   "count": 2,
    "dst": "json_caps_display",
    "src": "sdk/app/libappmeta.c"
   },
@@ -41666,7 +41671,7 @@
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
   {
-   "count": 7,
+   "count": 10,
    "dst": "minimal",
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
@@ -41683,6 +41688,11 @@
   {
    "count": 1,
    "dst": "test_a_board_without_the_hardware_raises_capability_missing",
+   "src": "tools/dbt/tests/test_pure_logic.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_boolean_launchable_is_accepted",
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
   {
@@ -41718,6 +41728,11 @@
   {
    "count": 1,
    "dst": "test_a_missing_required_field_aborts_the_build",
+   "src": "tools/dbt/tests/test_pure_logic.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_non_boolean_launchable_is_rejected",
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
   {
@@ -41767,6 +41782,11 @@
   },
   {
    "count": 1,
+   "dst": "test_launchable_is_a_known_field_so_it_does_not_warn",
+   "src": "tools/dbt/tests/test_pure_logic.py"
+  },
+  {
+   "count": 1,
    "dst": "test_no_capability_resolves_to_no_source",
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
@@ -41791,7 +41811,7 @@
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
   {
-   "count": 10,
+   "count": 13,
    "dst": "validate_manifest",
    "src": "tools/dbt/tests/test_pure_logic.py"
   },
@@ -47799,6 +47819,7 @@
    "isin",
    "isqrt32",
    "join",
+   "json_bool",
    "json_caps_display",
    "json_str",
    "json_u32",
@@ -48218,6 +48239,7 @@
    "test_a_board_without_psram_never_reports_a_mismatch",
    "test_a_board_without_psram_stays_silent_about_the_cross_check",
    "test_a_board_without_the_hardware_raises_capability_missing",
+   "test_a_boolean_launchable_is_accepted",
    "test_a_build_dir_predating_the_logic_withdrawal_is_refused",
    "test_a_bus_numbered_one_is_refused",
    "test_a_button_with_no_long_intent_fires_whatever_the_duration",
@@ -48277,6 +48299,7 @@
    "test_a_missing_source_file_is_skipped",
    "test_a_missing_workflow_leaves_the_floor_unset",
    "test_a_new_board_fails_the_expected_membership",
+   "test_a_non_boolean_launchable_is_rejected",
    "test_a_non_string_cpu_gets_a_named_reason",
    "test_a_non_string_icon_is_rejected",
    "test_a_normal_run_passes",
@@ -48478,6 +48501,7 @@
    "test_junit_counts_are_read_from_a_real_report",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
    "test_keyboard_maps_the_vocabulary",
+   "test_launchable_is_a_known_field_so_it_does_not_warn",
    "test_leg_18_records_the_board_that_closed_it",
    "test_legacy_merge",
    "test_legacy_value_trimming",

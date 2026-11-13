@@ -82,6 +82,24 @@ static void json_str(const char *json, const char *key, char *out, unsigned outs
     out[i] = '\0';
 }
 
+/* Read a boolean "key":true/false. Returns `dflt` when the key is absent or
+ * malformed — so a manifest built before the field existed keeps the default. */
+static bool json_bool(const char *json, const char *key, bool dflt)
+{
+    char pat[24];
+    int  pn = 0;
+    pat[pn++] = '"';
+    for (const char *k = key; *k && pn < (int)sizeof(pat) - 3; k++) pat[pn++] = *k;
+    pat[pn++] = '"'; pat[pn++] = ':'; pat[pn] = '\0';
+
+    const char *m = strstr(json, pat);
+    if (!m) return dflt;
+    m += pn;
+    if (strncmp(m, "true", 4) == 0)  return true;
+    if (strncmp(m, "false", 5) == 0) return false;
+    return dflt;
+}
+
 /* True if capabilities[] contains "display" — scoped to that array so a path
  * like "$SDK/display/gfx.c" in sources[] can't false-match. */
 static bool json_caps_display(const char *json)
@@ -185,6 +203,7 @@ int appmeta_read(const char *dap_path, appmeta_t *out)
     json_str(json, "name", out->name, sizeof(out->name));
     json_str(json, "icon", out->icon, sizeof(out->icon));
     out->has_display = json_caps_display(json);
+    out->launchable  = json_bool(json, "launchable", true);
     free(json);
     return 0;
 }

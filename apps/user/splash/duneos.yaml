@@ -13,3 +13,6 @@ capabilities:
 sources:
   - $SDK/display/gfx.c
   - $SDK/image/libimage.c
+
+# LAUNCH-01: a boot animation, not a menu entry.
+launchable: false

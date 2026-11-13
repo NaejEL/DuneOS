@@ -68,6 +68,10 @@ _KNOWN_FIELDS = {
     # ADR 026 — file-type associations: list of extensions this app opens
     # (e.g. [".vcd"]). A resolver matches a file to its handler app.
     "opens",
+    # LAUNCH-01 — false marks a boot asset (splash) or the launcher itself as
+    # not a menu entry. Default true; absent means launchable. Embedded in the
+    # manifest and honoured by any launcher (libappmeta reads it).
+    "launchable",
 }
 
 _ICON_MAX_LEN = 64
@@ -88,6 +92,10 @@ def validate_manifest(m: dict) -> None:
                 f"ERROR: manifest 'icon' too long "
                 f"({len(icon)} > {_ICON_MAX_LEN} chars)"
             )
+
+    launchable = m.get("launchable")
+    if launchable is not None and not isinstance(launchable, bool):
+        sys.exit("ERROR: manifest 'launchable' must be a boolean (true/false)")
 
     unknown = sorted(set(m.keys()) - _KNOWN_FIELDS)
     if unknown:
