@@ -903,6 +903,75 @@ over, table included, and every invariant holds unchanged. `dbt system flash` to
 
 ---
 
+## 6bis. The pocket multitool — Flipper-class firmware on the T-Embed 🟣 MILESTONE
+
+**A goal spanning several phases, not one of them.** The T-Embed CC1101 carries far more
+hardware than `board.yaml` declares, and the full inventory — taken from LilyGO's own
+`docs/pinmap_cn.md`, which cross-checks the schematic against `examples/factory_test/
+utilities.h` — is the backlog:
+
+| Hardware | Real pins | Declared today |
+| --- | --- | --- |
+| CC1101 sub-GHz | SPI shared, CS 12, GDO0 3, GDO2 38, SW1 47 | `lora:` declared, no driver |
+| PN532 NFC | I2C shared, IRQ 17, RST 45 | `rfid:` declared, no driver |
+| IR | TX/EN GPIO2, RX GPIO1 | nothing |
+| Digital mic (PDM) | DATA 42, CLK 39 | nothing |
+| Speaker (MAX98357A, I2S) | BCLK 46, LRCLK 40, DIN 7 | nothing |
+| nRF24 (2nd 2.4 GHz radio, header) | SPI shared, CE 43, CS 44 | nothing |
+| WS2812 ×8 | DATA 14 | `leds:` declared — verify the pin |
+| BLE 5.0 | ESP32-S3 radio | only `wifi: true` |
+
+**One conflict the audio work must resolve before it ships**: the speaker's I2S LRCLK is
+GPIO40, which `board.yaml` currently assigns to the display RST. It is a documented board
+quirk, not our mistake — and LilyGO's own answer is instructive: their TFT setup
+(`Setup214_LilyGo_T_Embed_PN532.h`) declares `TFT_RST -1`, i.e. no software display reset at
+all; the panel resets off the power rail / EN button, leaving GPIO40 free for the audio
+LRCLK. Our display works today with `rst_pin: 40` only because nothing else drives the pin
+yet. When audio lands (6bis.3), the display RST moves to `-1` and GPIO40 becomes the LRCLK —
+to be verified on hardware, since a panel that currently resets on a GPIO pulse must be shown
+to still come up on the power-rail reset alone.
+
+The ambition is the developer experience of a Flipper Zero or a Bruce build: a handheld
+that reads and replays sub-GHz, reads and emulates NFC, speaks IR, records and plays audio,
+and scans WiFi — each an ordinary `.dap` a user installs, not a kernel feature. The battery
+work (PR #20) was the warm-up: two chips nobody had configured, brought under `board.yaml` +
+a userspace driver, and it is the pattern every item below repeats. **Most of this is not
+T-Embed-specific** — the CardPuter has an I2S mic and speaker too, so the audio stack serves
+both, and `optional_capabilities` (shipped in PR #20) is exactly what lets an audio app
+build on a board that has only one of the two.
+
+The order is deliberate: each step reuses a bus the one before it proved.
+
+- [ ] **6bis.1 — CC1101 sub-GHz, the centrepiece.** The SPI bus is already there
+  (`/dev/spi-1`), so this is a userspace `sdk/radio/libcc1101.c` + a `radio` capability,
+  same shape as the battery backend. Receive → store a capture → replay. The `gdo0`/`gdo2`
+  interrupt pins are declared but unused; async RX needs a GPIO-interrupt path to userspace
+  (overlaps Phase 31's input-ISR work). **The single most valuable app for the Flipper
+  comparison, so it goes first.**
+- [ ] **6bis.2 — PN532 NFC over I2C.** The I2C bus and the `rfid` declaration exist;
+  `irq_pin`/`reset_pin` are declared. `sdk/nfc/libpn532.c` + an `nfc` capability: read a
+  tag's UID and blocks, then emulate. Reuses the I2C groundwork the gauge and charger laid.
+- [ ] **6bis.3 — Audio: mic + speaker over I2S.** A kernel I2S driver (`drv_i2s` → `/dev/pcm`,
+  `/dev/pcm_in`) plus an `audio:` board section, then userspace codecs. **Shared with the
+  CardPuter** — the point where "declared hardware, shared driver" pays off across boards.
+  Resolve the GPIO40 LRCLK/RST conflict here. Overlaps Phase 30.
+- [ ] **6bis.4 — Infrared.** The hardest, because no pin is declared and the ESP32 RMT
+  peripheral has no DuneOS driver. Needs a kernel `drv_ir` (RMT TX/RX → `/dev/ir0`) before
+  any userspace codec. Learn a remote's carrier + timing, replay it. Where the "declared but
+  not modelled" list in `KNOWN_BOARD_KEYS` finally grows a model.
+- [ ] **6bis.5 — nRF24 and BLE.** Lower priority. The nRF24 is a header accessory, not
+  on-board; BLE is the ESP32-S3 radio DuneOS does not yet bring up. Both after the four above.
+- [ ] **6bis.6 — The app layer that makes it a multitool.** A launcher category, per-tool
+  capture storage on SD, and the UI to browse and replay captures. Depends on LAUNCH-01
+  (the manifest `launchable` flag) landing first.
+
+**Not started. No pin, no line of driver code for any of them** — the only existing assets
+are the WiFi stack (`drv_wifi.c`, `drv_raw80211.c`, the `wifi` app), the bus declarations,
+and now the battery/charger backends. Each sub-item is sized when it is picked up, against
+the board.
+
+---
+
 ### Phase 26 — OSAL and scheduler portability
 
 **Swapped with the former Phase 26 (native VFS).** Reason: the OSAL is a smaller API surface, unblocks `dbt sim` sooner, validates the abstraction on 2 Espressif arches (Phase 28) before the riskier VFS rewrite, and provides the primitives (mutex, sem) the native VFS will use in Phase 27.

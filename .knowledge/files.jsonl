@@ -5,7 +5,7 @@
 {"lang": "other", "lines": 674, "path": "LICENSE.GPL-3.0", "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986", "size": 35149}
 {"lang": "other", "lines": 46, "path": "NOTICE", "sha256": "bdfd3d56352bfb039156cf6b1407d397d14ddf69139447fc51f942d7ae5c5362", "size": 2061}
 {"lang": "markdown", "lines": 351, "path": "README.md", "sha256": "db7469e05685934da14aee35949542b39b3868c8b00f62c407a4b3e364656cb9", "size": 20293}
-{"lang": "markdown", "lines": 1140, "path": "ROADMAP.md", "sha256": "3ac18429fdd2304bdfa42c5f6eab7f9acbea3d868fde395fb79a9d46bdc1e6ed", "size": 131376}
+{"lang": "markdown", "lines": 1209, "path": "ROADMAP.md", "sha256": "6ba135b6e3d9bdba6d74899f92aaddcc451a1d5c1da4ce79f50485d65e03162a", "size": 136013}
 {"lang": "cpp", "lines": 101, "path": "apps/system/battery_daemon/battery_daemon.c", "sha256": "3c26506a52bccba553a2a062b49863c196e25362c24a8ac3d8359fc9e66603f5", "size": 4217}
 {"lang": "yaml", "lines": 16, "path": "apps/system/battery_daemon/duneos.yaml", "sha256": "a7f8addbace8ca9cea3626241ab43cb1a05c75b1b953de26895b6f3d1f8152f1", "size": 553}
 {"lang": "cpp", "lines": 53, "path": "apps/system/battery_pub/battery_pub.c", "sha256": "cea50af889c06b41498aa92b97ad93a2219ce400bb7cd08203c8ddcc9bf40707", "size": 1981}
