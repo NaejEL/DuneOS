@@ -11,6 +11,16 @@
  */
 
 #include "duneos/hal_encoder.h"
+
+#include "board_config.h"   /* DUNEOS_ENCODER_COUNTS_PER_DETENT; undefined here = silently 4 */
+
+/* Same board-declared ratio the PCNT backend uses — the two were independent
+ * literals both reading 4, which is how a 2-count detent stayed invisible. */
+#ifdef DUNEOS_ENCODER_COUNTS_PER_DETENT
+#define DETENT_COUNTS DUNEOS_ENCODER_COUNTS_PER_DETENT
+#else
+#define DETENT_COUNTS 4
+#endif
 #include "duneos/hal_gpio.h"
 
 #include "freertos/FreeRTOS.h"
@@ -53,7 +63,7 @@ static void enc_poll_task(void *arg)
         if (cur_ab != prev_ab) {
             accum += s_trans[(prev_ab << 2) | cur_ab];
             prev_ab = cur_ab;
-            if (accum >= 4 || accum <= -4) {
+            if (accum >= DETENT_COUNTS || accum <= -DETENT_COUNTS) {
                 enc->cb((accum > 0) ? 1 : -1, enc->ctx);
                 accum = 0;
             }

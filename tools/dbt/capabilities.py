@@ -135,17 +135,15 @@ CAPABILITY_MAP: dict[str, CapabilitySpec] = {
         ],
         "description": "Battery charger — userspace backend for I2C chargers",
     },
-    # Future capabilities (planned, not yet wired):
-    #
-    #   "input": {
-    #       "board_key": ["input", "kind"],
-    #       "sources": [
-    #           "{sdk}/input/libinput.c",
-    #           "{sdk}/input/lib{driver}.c",
-    #       ],
-    #       "description": "User input device (keyboard, buttons, encoder)",
-    #   },
 }
+
+# sdk/input/libinput.c is deliberately NOT resolved by a capability. "input"
+# above is already taken, with producer-side meaning (the kb/btn pin defines the
+# scanning daemons need), and a consumer capability reusing the name would hand
+# those defines to every app that wants to read intents. More importantly, the
+# vkbd must cost nothing in an app that does not want it (64 KiB shared exec
+# pool), and that is only verifiable when each app lists what it links. Consumers
+# therefore name $SDK/input/libinput.c and libinput_fd.c in their own `sources:`.
 
 
 def _nested_get(d: dict, keys: list[str]):

@@ -36,3 +36,6 @@ void ui_pager_draw(ui_t *ui, const ui_pager_t *p);
 /* Up/Down (or Left/Right page is not handled) scroll. Returns 1 if the view
  * moved (redraw), 0 otherwise. */
 int ui_pager_key(ui_pager_t *p, uint16_t key);
+
+/* Portable entry point — see ui_list_intent. */
+int ui_pager_intent(ui_pager_t *p, const duneos_intent_t *it);

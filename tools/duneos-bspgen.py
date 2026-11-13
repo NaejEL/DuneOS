@@ -103,6 +103,19 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
+# The intent vocabulary is shared with tools/dbt/boardgen.py: bspgen emits the
+# kernel's map, boardgen derives the key code each button injects, and both must
+# read the same table. This script lives in tools/, so tools/ is already on
+# sys.path when it is run directly; the insert covers being loaded by path
+# (tools/dbt/tests load it with spec_from_file_location).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dbt.input_map import (  # noqa: E402
+    BATCH_CLAMP,
+    InputTopologyError,
+    topology as input_topology,
+    unreachable_intents,
+)
+
 try:
     import yaml
 except ImportError:
@@ -502,8 +515,17 @@ def generate(board: dict) -> str:
             _define("DUNEOS_HAVE_ENCODER",    1),
             _define("DUNEOS_ENCODER_A_PIN",   enc["a_pin"]),
             _define("DUNEOS_ENCODER_B_PIN",   enc["b_pin"]),
+            "/* Quadrature counts the controller sees per mechanical detent. A",
+            " * hardware fact of the encoder part, so it belongs here and not in",
+            " * arch code: a 2-count detent was inexpressible while the HAL hard",
+            " * coded 4, and the symptom was a knob that felt half-speed. */",
+            _define("DUNEOS_ENCODER_COUNTS_PER_DETENT",
+                    enc.get("counts_per_detent", 4)),
             "",
         ]
+
+    # ----- Input topology (served by ioctl(INPUT_GET_TOPOLOGY)) -----
+    lines += generate_input_topology(board)
 
     # ----- Recovery pin (Phase 24.7 safe-boot) -----
     # If declared, the kernel checks this pin at boot and uses
@@ -666,6 +688,71 @@ _OVERHEAD_END   = 0x10000   # nvs + phy_init end; factory starts here
 _KERNEL_SIZE    = 0x180000  # 1.5 MB factory (kernel)
 _SYSBIN_SIZE    = 0x100000  # 1 MB LittleFS (/flash)
 _MIN_FLASH_MB_FOR_SYSBIN = 4
+
+
+INTENT_MACRO = {name: f"INPUT_INTENT_{name}" for name in (
+    "NONE", "PREV", "NEXT", "ALT_PREV", "ALT_NEXT",
+    "VALIDATE", "BACK", "TEXT", "ERASE")}
+
+
+def generate_input_topology(board: dict) -> list[str]:
+    """Emit the kernel's static input map, or an explicit no-input verdict.
+
+    drv_input.c serves this through ioctl(INPUT_GET_TOPOLOGY) from `static
+    const` storage — the kernel heap is ~50-80 KiB free on the CardPuter and a
+    map it allocates is a map it can fail to allocate.
+    """
+    try:
+        topo = input_topology(board)
+    except InputTopologyError as exc:
+        die(f"board '{board.get('name', '?')}' input topology: {exc}")
+
+    header = "/* ---------- Input topology (ioctl INPUT_GET_TOPOLOGY) ---------- */"
+
+    if topo is None:
+        # Explicit, not absent: a reader of this header must be able to tell
+        # "no input source declared" from "bspgen forgot to emit the block".
+        return [
+            header,
+            "/* This board declares no keyboard, button or encoder. The map is",
+            " * empty by declaration, and CONFIG_DUNEOS_DRV_INPUT is not set, so",
+            " * /dev/input/event0 does not exist here. */",
+            _define("DUNEOS_INPUT_TOPOLOGY", 0),
+            "",
+        ]
+
+    out = [header, _define("DUNEOS_INPUT_TOPOLOGY", 1),
+           _define("DUNEOS_INPUT_HAS_KEYBOARD", 1 if topo["has_keyboard"] else 0),
+           _define("DUNEOS_INPUT_N_KEYS", len(topo["keys"])),
+           _define("DUNEOS_INPUT_N_AXES", len(topo["axes"]))]
+
+    if topo["keys"]:
+        entries = ", ".join(
+            "{{ {}, {}, {}, {} }}".format(
+                k["code"], INTENT_MACRO[k["intent"]],
+                INTENT_MACRO[k["intent_long"]], k["long_ms"])
+            for k in topo["keys"])
+        out.append(_define("DUNEOS_INPUT_KEYS_INIT", "{ " + entries + " }"))
+    if topo["axes"]:
+        entries = ", ".join(
+            "{{ {}, {}, {}, {} }}".format(
+                a["code"], INTENT_MACRO[a["intent_neg"]],
+                INTENT_MACRO[a["intent_pos"]], a["counts_per_step"])
+            for a in topo["axes"])
+        out.append(_define("DUNEOS_INPUT_AXES_INIT", "{ " + entries + " }"))
+
+    # Reachability is a property of the declaration, so it is recorded where the
+    # declaration is read. A gap is not an error — the T-Embed cannot reach the
+    # second axis and still navigates everything else — but it must not be
+    # silent, or an app that needs the intent fails on the board with no trace.
+    missing = unreachable_intents(topo)
+    if missing:
+        out.append("/* Intents NOT reachable on this board: "
+                   + ", ".join(missing) + " */")
+    else:
+        out.append("/* Every intent in the vocabulary is reachable. */")
+    out.append("")
+    return out
 
 
 def generate_partitions(board: dict) -> str:

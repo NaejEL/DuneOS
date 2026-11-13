@@ -20,7 +20,8 @@
 
 #include "duneos/gfx.h"
 #include "duneos/ui.h"
-#include "duneos/input_ioctl.h"
+#include "duneos/input.h"
+#include "duneos/ui_text_entry.h"
 #include "duneos/ambient.h"
 #include "duneos/known_yaml.h"
 #include "duneos/libdune.h"
@@ -55,7 +56,10 @@ typedef struct {
 
 static gfx_ctx_t *g;
 static ui_t      *ui;
-static int        s_input;
+/* File scope because quit() and the scan-wait loop both need it. Safe here:
+ * the manifest declares heap_size, so this app always runs spawned — its BSS
+ * is inside its own slot's bounds, unlike a captured app's. */
+static duneos_input_t s_dev;
 static uint16_t   s_sw, s_sh;
 static int        s_bar_h;
 
@@ -71,16 +75,16 @@ static int    s_mode;
 static known_net_t s_known[MAX_KNOWN];
 static int         s_kn;
 
-static ui_input_t s_in;
-static char       s_mask[PSK_CAP];    /* what ui_input draws: '*' repeated  */
-static char       s_psk[PSK_CAP];     /* the real passphrase, same indexing */
+static ui_text_entry_t s_te;
+static char       s_mask[PSK_CAP];    /* the '*' the widget draws           */
+static char       s_psk[PSK_CAP];     /* the real passphrase                */
 static char       s_join_ssid[33];
 
 static void quit(void) __attribute__((noreturn));
 static void quit(void)
 {
     if (ui) ui_destroy(ui);
-    if (s_input >= 0) close(s_input);
+    duneos_input_close(&s_dev);
     if (g) gfx_close(g);
     duneos_exit(0);
 }
@@ -272,10 +276,11 @@ static void draw_prompt(void)
 {
     char t[48];
     snprintf(t, sizeof(t), "Join %s", s_join_ssid);
-    ui_label(ui, 2, s_in.y - 10, s_sw - 4, t, UI_ALIGN_LEFT,
+    ui_label(ui, 2, s_te.line.y - 10, s_sw - 4, t, UI_ALIGN_LEFT,
              ui_theme(ui)->accent, ui_theme(ui)->bg);
-    ui_input_draw(ui, &s_in);
-    ui_statusbar(ui, "Enter=ok  Esc=cancel");
+    ui_text_entry_draw(ui, &s_te);
+    ui_statusbar(ui, s_te.use_vkbd ? "Turn=move  Press=pick  Side=cancel"
+                                   : "Enter=ok  Esc=cancel");
     ui_flush(ui);
 }
 
@@ -330,17 +335,18 @@ static void rescan(void)
         /* One paced wait, then drain every pending input event without
          * sleeping again — key repeat must not starve the scan poll. */
         int wait_us = TICK_US;
+        int ifd = duneos_input_fd(&s_dev);
         for (;;) {
             fd_set rf;
             FD_ZERO(&rf);
-            FD_SET(s_input, &rf);
+            FD_SET(ifd, &rf);
             struct timeval tv = { 0, wait_us };
-            if (select(s_input + 1, &rf, NULL, NULL, &tv) <= 0) break;
-            input_event_t ev;
-            if (read(s_input, &ev, sizeof(ev)) != (int)sizeof(ev)) break;
-            if (ev.type == INPUT_EV_KEY && ev.value != INPUT_VAL_RELEASE &&
-                ev.code == KEY_ESC)
-                quit();
+            if (select(ifd + 1, &rf, NULL, NULL, &tv) <= 0) break;
+            duneos_intent_t it[INPUT_INTENT_BATCH_MAX];
+            int n = duneos_input_read(&s_dev, it, INPUT_INTENT_BATCH_MAX);
+            if (n < 0) break;
+            for (int i = 0; i < n; i++)
+                if (it[i].kind == INPUT_INTENT_BACK) quit();
             wait_us = 0;
         }
 
@@ -371,45 +377,36 @@ static void start_scan(void)
     rescan();
 }
 
+/* The text entry picks the line editor or the on-screen keyboard from the
+ * board's own answer about its hardware. On a keyboard board this is the same
+ * single line as before; on the T-Embed the grid fills the area below it. */
 static void open_prompt(const char *ssid)
 {
     snprintf(s_join_ssid, sizeof(s_join_ssid), "%s", ssid);
-    s_psk[0] = '\0';
-    ui_input_init(&s_in, 2, s_sh - s_bar_h - 12, s_sw - 4,
-                  s_mask, sizeof(s_mask), "psk ");
+    int top = s_bar_h + 14;
+    ui_text_entry_init(&s_te, 2, top, s_sw - 4, s_sh - top - s_bar_h,
+                       s_psk, s_mask, PSK_CAP, "psk ", true,
+                       duneos_input_has_keyboard(&s_dev.topo),
+                       ui_vkbd_backend());
     s_mode = MODE_PROMPT;
     draw_prompt();
 }
 
-/* ui_input edits s_mask (that's what it draws). Mirror each edit into s_psk
- * at the same index, then flatten the mask back to '*' — the widget itself
- * only ever tells us CHANGED, so the edit is reconstructed from the key and
- * the pos/len delta. */
-static void prompt_key(uint16_t k)
+/* The widget edits s_psk directly and masks only at draw time, so there is no
+ * edit to reconstruct from the key that caused it. */
+static void prompt_intent(const duneos_intent_t *it)
 {
-    int oldlen = s_in.len, oldpos = s_in.pos;
-    switch (ui_input_key(&s_in, k)) {
-    case UI_INPUT_CHANGED:
-        if (s_in.len > oldlen) {
-            memmove(s_psk + oldpos + 1, s_psk + oldpos,
-                    (size_t)(oldlen - oldpos + 1));
-            s_psk[oldpos] = (char)k;
-        } else if (s_in.len < oldlen) {
-            int at = (k == KEY_BACKSPACE) ? oldpos - 1 : oldpos;
-            memmove(s_psk + at, s_psk + at + 1, (size_t)(oldlen - at));
-        }
-        memset(s_mask, '*', (size_t)s_in.len);
-        s_mask[s_in.len] = '\0';
-        ui_input_draw(ui, &s_in);
-        ui_flush(ui);
+    switch (ui_text_entry_intent(&s_te, it)) {
+    case UI_TEXT_ENTRY_CHANGED:
+        draw_prompt();
         break;
-    case UI_INPUT_SUBMIT:
+    case UI_TEXT_ENTRY_SUBMIT:
         set_known(s_join_ssid, s_psk);
         join(s_join_ssid);
         s_mode = MODE_LIST;
         draw_main();
         break;
-    case UI_INPUT_CANCEL:
+    case UI_TEXT_ENTRY_CANCEL:
         s_mode = MODE_LIST;
         draw_main();
         break;
@@ -465,13 +462,11 @@ static void forget_ap(void)
 
 void app_main(void)
 {
-    s_input = -1;
     g = gfx_open_mode(GFX_MODE_STREAM);
     if (!g) duneos_exit(10);
-    s_input = open("/dev/input/event0", O_RDONLY);
-    if (s_input < 0) { gfx_close(g); duneos_exit(11); }
+    if (duneos_input_open(&s_dev) != 0) { gfx_close(g); duneos_exit(11); }
     ui = ui_create(g);
-    if (!ui) { close(s_input); gfx_close(g); duneos_exit(10); }
+    if (!ui) { duneos_input_close(&s_dev); gfx_close(g); duneos_exit(10); }
 
     ui_size(ui, &s_sw, &s_sh);
     s_bar_h = 8 + 2 * ui_theme(ui)->pad;
@@ -482,51 +477,57 @@ void app_main(void)
     start_scan();
 
     for (;;) {
+        int ifd = duneos_input_fd(&s_dev);
         fd_set rf;
         FD_ZERO(&rf);
-        FD_SET(s_input, &rf);
+        FD_SET(ifd, &rf);
         struct timeval tv = { 0, TICK_US };
-        if (select(s_input + 1, &rf, NULL, NULL, &tv) <= 0) {
+        if (select(ifd + 1, &rf, NULL, NULL, &tv) <= 0) {
             poll_link();
             ui_statusbar_top_poll(ui, "WiFi");
             continue;
         }
 
-        input_event_t ev;
-        if (read(s_input, &ev, sizeof(ev)) != (int)sizeof(ev)) continue;
-        if (ev.type != INPUT_EV_KEY || ev.value == INPUT_VAL_RELEASE) {
-            /* Sticky modifiers arm/latch on RELEASE — repaint the bar now
-             * instead of waiting for the next idle tick. */
+        duneos_intent_t it[INPUT_INTENT_BATCH_MAX];
+        int n = duneos_input_read(&s_dev, it, INPUT_INTENT_BATCH_MAX);
+        if (n <= 0) {
+            /* Sticky modifiers arm/latch on RELEASE, which translates to no
+             * intent — repaint the bar now instead of waiting for the next
+             * idle tick. */
             ui_statusbar_top_poll(ui, "WiFi");
             continue;
         }
-        uint16_t k = ev.code;
 
-        if (s_mode == MODE_PROMPT) {
-            prompt_key(k);
-            continue;
-        }
-
-        if (s_nap > 0) {
-            switch (ui_list_key(&s_list, k)) {
-            case UI_LIST_MOVED:
-                ui_list_draw(ui, &s_list);
-                ui_flush(ui);
+        for (int i = 0; i < n; i++) {
+            if (s_mode == MODE_PROMPT) {
+                prompt_intent(&it[i]);
                 continue;
-            case UI_LIST_SELECT:
-                select_ap();
-                continue;
-            case UI_LIST_CANCEL:
-                quit();
-            case UI_LIST_NONE:
-                break;
             }
-        } else if (k == KEY_ESC) {
-            quit();
-        }
 
-        if (k == 'r')      start_scan();
-        else if (k == 'd') send_cmd("DISCONNECT");
-        else if (k == 'f') forget_ap();
+            if (s_nap > 0) {
+                switch (ui_list_intent(&s_list, &it[i])) {
+                case UI_LIST_MOVED:
+                    ui_list_draw(ui, &s_list);
+                    ui_flush(ui);
+                    continue;
+                case UI_LIST_SELECT:
+                    select_ap();
+                    continue;
+                case UI_LIST_CANCEL:
+                    quit();
+                case UI_LIST_NONE:
+                    break;
+                }
+            } else if (it[i].kind == INPUT_INTENT_BACK) {
+                quit();
+            }
+
+            /* Letter shortcuts stay keyboard-only: a rotary board reaches the
+             * list and the prompt, not these. */
+            if (it[i].kind != INPUT_INTENT_TEXT) continue;
+            if (it[i].ch == 'r')      start_scan();
+            else if (it[i].ch == 'd') send_cmd("DISCONNECT");
+            else if (it[i].ch == 'f') forget_ap();
+        }
     }
 }

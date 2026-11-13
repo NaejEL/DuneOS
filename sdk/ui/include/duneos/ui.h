@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "duneos/gfx.h"
+#include "duneos/input_ioctl.h"
 
 /* ----- theme ------------------------------------------------------------- */
 
@@ -153,6 +154,11 @@ typedef enum {
  * Updates sel/top and reports what happened. UP/DOWN wrap around the ends. */
 ui_list_event_t ui_list_key(ui_list_t *l, uint16_t key);
 
+/* Portable entry point: feed an intent from sdk/input instead of a key code, so
+ * one .dap navigates a keyboard board and a rotary board alike. Behaviour is
+ * ui_list_key's — this only names the gesture rather than the hardware. */
+ui_list_event_t ui_list_intent(ui_list_t *l, const duneos_intent_t *it);
+
 /* ----- text view widget (scrolling line buffer) -------------------------- */
 
 /*
@@ -207,6 +213,9 @@ typedef enum {
 /* Printable ASCII appends; KEY_BACKSPACE deletes; KEY_ENTER submits;
  * KEY_ESC cancels. */
 ui_input_event_t ui_input_key(ui_input_t *in, uint16_t key);
+
+/* Portable entry point — see ui_list_intent. INPUT_INTENT_TEXT inserts it->ch. */
+ui_input_event_t ui_input_intent(ui_input_t *in, const duneos_intent_t *it);
 
 /* ----- colored spans ----------------------------------------------------- */
 

@@ -8,6 +8,9 @@ heap_size: 8192
 capabilities:
   - display
 sources:
+  # Listed explicitly, not pulled by a capability — see tools/dbt/capabilities.py.
+  - $SDK/input/libinput.c
+  - $SDK/input/libinput_fd.c
   - $SDK/ui/ui.c
   - $SDK/ui/ui_statusbar.c
   - $SDK/ui/ui_carousel.c

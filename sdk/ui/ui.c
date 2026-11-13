@@ -266,6 +266,22 @@ ui_list_event_t ui_list_key(ui_list_t *l, uint16_t key)
     return (l->sel != prev || l->count == 1) ? UI_LIST_MOVED : UI_LIST_NONE;
 }
 
+/* Intent entry point. Delegates to ui_list_key so the two cannot diverge: a
+ * list has one axis, so it moves on either pair. */
+ui_list_event_t ui_list_intent(ui_list_t *l, const duneos_intent_t *it)
+{
+    if (!it) return UI_LIST_NONE;
+    switch (it->kind) {
+    case INPUT_INTENT_PREV:
+    case INPUT_INTENT_ALT_PREV: return ui_list_key(l, KEY_UP);
+    case INPUT_INTENT_NEXT:
+    case INPUT_INTENT_ALT_NEXT: return ui_list_key(l, KEY_DOWN);
+    case INPUT_INTENT_VALIDATE: return ui_list_key(l, KEY_ENTER);
+    case INPUT_INTENT_BACK:     return ui_list_key(l, KEY_ESC);
+    default:                    return UI_LIST_NONE;
+    }
+}
+
 /* ----- text view widget -------------------------------------------------- */
 
 void ui_textview_init(ui_textview_t *tv, int x, int y, int w, int h,
@@ -380,6 +396,25 @@ ui_input_event_t ui_input_key(ui_input_t *in, uint16_t key)
             return UI_INPUT_CHANGED;
         }
         return UI_INPUT_NONE;
+    }
+}
+
+/* An editable line has no second axis: PREV/NEXT move the cursor, which is
+ * what KEY_LEFT/KEY_RIGHT already do. ALT_* moves it too, so every arrow works
+ * on a keyboard board. */
+ui_input_event_t ui_input_intent(ui_input_t *in, const duneos_intent_t *it)
+{
+    if (!it) return UI_INPUT_NONE;
+    switch (it->kind) {
+    case INPUT_INTENT_PREV:
+    case INPUT_INTENT_ALT_PREV: return ui_input_key(in, KEY_LEFT);
+    case INPUT_INTENT_NEXT:
+    case INPUT_INTENT_ALT_NEXT: return ui_input_key(in, KEY_RIGHT);
+    case INPUT_INTENT_VALIDATE: return ui_input_key(in, KEY_ENTER);
+    case INPUT_INTENT_BACK:     return ui_input_key(in, KEY_ESC);
+    case INPUT_INTENT_ERASE:    return ui_input_key(in, KEY_BACKSPACE);
+    case INPUT_INTENT_TEXT:     return ui_input_key(in, (uint16_t)(unsigned char)it->ch);
+    default:                    return UI_INPUT_NONE;
     }
 }
 

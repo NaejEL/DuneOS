@@ -9,7 +9,14 @@ heap_size: 8192
 capabilities:
   - display
 sources:
+  - $SDK/input/libinput.c
+  - $SDK/input/libinput_fd.c
   - $SDK/display/gfx.c
   - $SDK/ui/ui.c
   - $SDK/ui/ui_statusbar.c
+  - $SDK/ui/ui_text_entry.c
+  # The on-screen keyboard: this app asks for it by name because it is the one
+  # that has to take a passphrase on a board with no physical keys.
+  - $SDK/ui/ui_vkbd.c
+  - $SDK/ui/ui_vkbd_draw.c
   - $SDK/net/known_yaml.c

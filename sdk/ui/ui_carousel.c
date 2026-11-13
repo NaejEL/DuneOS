@@ -121,6 +121,21 @@ ui_carousel_event_t ui_carousel_key(ui_carousel_t *c, uint16_t key)
     return UI_CAROUSEL_NONE;
 }
 
+/* One axis: both pairs move the carousel, as both arrow pairs already do. */
+ui_carousel_event_t ui_carousel_intent(ui_carousel_t *c, const duneos_intent_t *it)
+{
+    if (!it) return UI_CAROUSEL_NONE;
+    switch (it->kind) {
+    case INPUT_INTENT_PREV:
+    case INPUT_INTENT_ALT_PREV: return ui_carousel_key(c, KEY_LEFT);
+    case INPUT_INTENT_NEXT:
+    case INPUT_INTENT_ALT_NEXT: return ui_carousel_key(c, KEY_RIGHT);
+    case INPUT_INTENT_VALIDATE: return ui_carousel_key(c, KEY_ENTER);
+    case INPUT_INTENT_BACK:     return ui_carousel_key(c, KEY_ESC);
+    default:                    return UI_CAROUSEL_NONE;
+    }
+}
+
 /* ----- icon resolution (ADR 023 search path) ----------------------------- */
 
 static bool file_exists(const char *p)

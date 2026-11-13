@@ -8,6 +8,8 @@ heap_size: 8192
 capabilities:
   - display
 sources:
+  - $SDK/input/libinput.c
+  - $SDK/input/libinput_fd.c
   - $SDK/display/gfx.c
   - $SDK/ui/ui.c
   - $SDK/ui/ui_wave.c

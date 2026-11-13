@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .input_map import button_codes
+
 
 def _flatten(board_cfg: dict) -> dict:
     """Return the board YAML's payload — either the top dict, or its `board:`
@@ -134,9 +136,10 @@ def _input_block(board: dict, lines: list[str]) -> None:
         lines.append("/* buttons → apps/system/btn_gpio daemon */")
         lines.append(f"#define DUNEOS_BTN_GPIO_COUNT    {len(btns)}")
         pins_init  = "{ " + ", ".join(str(int(b["pin"])) for b in btns) + " }"
-        # `code` values come from <duneos/input_ioctl.h> (KEY_*) — emit as
-        # bare identifiers so the C preprocessor substitutes them.
-        codes_init = "{ " + ", ".join(str(b["code"]) for b in btns) + " }"
+        # The daemon injects key codes, but the board declares intents: the code
+        # is derived (INTENT_TO_KEY) so a button is described once. Emitted as
+        # bare KEY_* identifiers for the preprocessor to substitute.
+        codes_init = "{ " + ", ".join(button_codes(board)) + " }"
         lines.append(f"#define DUNEOS_BTN_GPIO_PINS     {pins_init}")
         lines.append(f"#define DUNEOS_BTN_GPIO_CODES    {codes_init}")
 

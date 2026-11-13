@@ -197,7 +197,7 @@ def test_every_mapped_capability_block_is_actually_reachable(monkeypatch):
     """
     board = _board(GAUGE, CHARGER)
     board["display"] = {"driver": "st7789", "width": 320, "height": 170}
-    board["buttons"] = [{"pin": 0, "code": "KEY_ENTER"}]
+    board["buttons"] = [{"pin": 0, "intent": "VALIDATE"}]
 
     # What generate() emits for no capability at all: the always-on blocks.
     baseline = set(_defines(boardgen.generate(board, "testboard", ["__none__"])))
