@@ -160,7 +160,7 @@
 {"lang": "yaml", "lines": 40, "path": "boards/esp32s3-qemu/board.yaml", "sha256": "ada3bf67c1dd4c35d07355814cd77d6c515e13af8c1ae85b7702bb2f4b21a7db", "size": 1435}
 {"lang": "yaml", "lines": 53, "path": "boards/kincony-A16/board.yaml", "sha256": "c07ce7f883ebcd49632e91b84019c57c37254f52e1fdd305ac13db8b828620d4", "size": 1025}
 {"lang": "yaml", "lines": 5, "path": "boards/kincony-A16/init.yaml", "sha256": "68296d7fee15f1ed9ecf16e36751b1b95e549d9b2dfdf754c146669e829553ab", "size": 155}
-{"lang": "yaml", "lines": 220, "path": "boards/lilygo-t-embed-cc1101/board.yaml", "sha256": "06b65909d40f06fe2fe4abc60c998cd8351a081ba87811dd3736f3e0ecd7d317", "size": 9165}
+{"lang": "yaml", "lines": 226, "path": "boards/lilygo-t-embed-cc1101/board.yaml", "sha256": "2c975e7b598cd99d28267c5a47e841012bc95b2c3865e3e2a17a4e2fff193f0a", "size": 9586}
 {"lang": "yaml", "lines": 9, "path": "boards/lilygo-t-embed-cc1101/init.yaml", "sha256": "e4a2a2905c49ab033cb9ca135f3b133963ab90e8808107abbca0d9da81530e5b", "size": 263}
 {"lang": "yaml", "lines": 173, "path": "boards/m5stack-cardputer/board.yaml", "sha256": "8f3e828f454599f2a5618094e95f7e3345e6fd6a72a977766f65f8358554f3a7", "size": 7064}
 {"lang": "yaml", "lines": 14, "path": "boards/m5stack-cardputer/etc/kb_iomatrix/config.yaml", "sha256": "b835ae96d22dc76f27623128a12245dbb6998e63e96732a6549a549127c56b32", "size": 735}
@@ -467,6 +467,7 @@
 {"lang": "python", "lines": 143, "path": "tools/dbt/tests/test_bspgen_driver_symbols.py", "sha256": "15b04849b97bbf86ba2dcf8174f8bb0867cf25dae9bd7897ba86b12acf6798ca", "size": 5266}
 {"lang": "python", "lines": 71, "path": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py", "sha256": "a5a1c4cf9020597b212a87901a4b81ca1c37b1449b7e58415fbd34a0c8ef50d0", "size": 2116}
 {"lang": "python", "lines": 263, "path": "tools/dbt/tests/test_bspgen_main_task_stack.py", "sha256": "3427f8517eb2ed5eb9f357b57cfc28d68600e447a05f79ca7c285c086b4303de", "size": 10312}
+{"lang": "python", "lines": 157, "path": "tools/dbt/tests/test_bspgen_psram_kernel_exec.py", "sha256": "ff14748d9ca5dbe9c7afd44034c8febb8f1a9d9e98e747d8848955c3d0ffa3e1", "size": 5271}
 {"lang": "python", "lines": 156, "path": "tools/dbt/tests/test_bspgen_qemu.py", "sha256": "548f2729ad69426497dc90a1ebdc3c0de638295e676f23af6c573318de8ec9bb", "size": 5580}
 {"lang": "python", "lines": 139, "path": "tools/dbt/tests/test_bspgen_shared_spi_bus.py", "sha256": "9daf18f2519c3a78190b37a5118a5c747fd54e90f27393061aa9ff623a8efefb", "size": 5311}
 {"lang": "python", "lines": 145, "path": "tools/dbt/tests/test_bspgen_uart.py", "sha256": "5db151b7cf8f07f68acc1e5ef853e2092b529454dd753180148fa324ad2d2eb8", "size": 5637}
@@ -490,4 +491,4 @@
 {"lang": "python", "lines": 118, "path": "tools/dbt/toolchain/__init__.py", "sha256": "22954102736d4534b30ee8c4a62394526fdfe97333f18f2d1ef217d534dac989", "size": 4105}
 {"lang": "python", "lines": 658, "path": "tools/dbt/toolchain/esp_idf.py", "sha256": "6893846aa8181b5d6d63e9ca9ef2013f0718d1c16ab02273330726a13961f9ba", "size": 25037}
 {"lang": "python", "lines": 1903, "path": "tools/dbt/tui.py", "sha256": "07246732099b597234c327b9038571210ed95d38d807f7ace2066fb77a391945", "size": 70869}
-{"lang": "python", "lines": 1150, "path": "tools/duneos-bspgen.py", "sha256": "c290781fe9e84666ae4b830d368b9f2eef1d9c8e1355fd36242aefab5956d293", "size": 51018}
+{"lang": "python", "lines": 1174, "path": "tools/duneos-bspgen.py", "sha256": "87f5f11e54e8d673d6aaa92c4b15136ab82e23b4a20f81ff129ef4f78d58800c", "size": 52715}

@@ -21,6 +21,9 @@ Any top-level key not in KNOWN_BOARD_KEYS is a hard error — see that set.
   flash_size_mb int
   psram_size_mb int      0 if no PSRAM
   psram_type    string   opi | qspi   (ignored if psram_size_mb == 0)
+  psram_kernel_exec string  flash | psram  (OPI only; default psram). 'flash'
+                         runs the kernel from the flash cache instead of copying
+                         code+rodata into PSRAM — faster, valid on DIO/QIO flash.
   main_task_stack int    Bytes for main_task on this board (multiple of 4).
                          Omit to keep the SDK default. Per-board measurement,
                          never a project-wide default — ADR 040.
@@ -155,7 +158,8 @@ KNOWN_BOARD_KEYS = {
     # identity / toolchain selection
     "name", "cpu", "arch", "sdk", "qemu",
     # memory and flash
-    "flash_size_mb", "psram_size_mb", "psram_type", "main_task_stack",
+    "flash_size_mb", "psram_size_mb", "psram_type", "psram_kernel_exec",
+    "main_task_stack",
     # console and boot
     "console", "recovery_pin", "pwr_enable_pin",
     # buses and peripherals
@@ -228,6 +232,18 @@ def validate(board: dict, yaml_path: Path) -> None:
             spi_ids = [s.get("id") for s in board.get("spi", [])]
             if spi_id not in spi_ids:
                 die(f"sd_card.spi_id={spi_id} references a SPI bus not defined in spi[]")
+
+    if "psram_kernel_exec" in board:
+        ke = str(board["psram_kernel_exec"]).lower()
+        if ke not in ("psram", "flash"):
+            die(f"'{yaml_path}' psram_kernel_exec must be 'flash' or 'psram', "
+                f"got '{board['psram_kernel_exec']}'. 'flash' runs the kernel "
+                f"from the flash cache (faster; only valid when flash is not OPI); "
+                f"'psram' copies code+rodata into PSRAM (the OPI default).")
+        if ke == "flash" and board.get("psram_type", "opi").lower() != "opi":
+            die(f"'{yaml_path}' sets psram_kernel_exec: flash but psram_type is not "
+                f"'opi' — the FETCH_INSTRUCTIONS/RODATA copy only exists on OPI PSRAM, "
+                f"so the key has nothing to turn off here. Remove it.")
 
 
 # ---------------------------------------------------------------------------
@@ -829,14 +845,22 @@ def generate_sdkconfig_board(board: dict) -> str:
     # ---- PSRAM ----
     psram_mb   = board.get("psram_size_mb", 0)
     psram_type = board.get("psram_type", "opi").lower()
+    # Where the kernel executes from, on an OPI PSRAM board. The default copies
+    # code+rodata into PSRAM (FETCH_INSTRUCTIONS/RODATA) — required only when an
+    # OPI flash and an OPI PSRAM share the one MSPI. A DIO/QIO-flash board runs
+    # markedly faster from the flash instruction cache: `psram_kernel_exec: flash`
+    # turns the copy off. Measured 4.0s -> 1.16s app load on the T-Embed
+    # (ROADMAP 4bis / PSRAM-01). Default stays 'psram' so no board changes silently.
+    kernel_in_psram = str(board.get("psram_kernel_exec", "psram")).lower() != "flash"
     if psram_mb > 0:
         lines += ["# PSRAM", "CONFIG_SPIRAM=y"]
         if psram_type == "opi":
+            exec_flag = "y" if kernel_in_psram else "n"
             lines += [
                 "CONFIG_SPIRAM_MODE_OCT=y",
                 "CONFIG_SPIRAM_SPEED_80M=y",
-                "CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y",
-                "CONFIG_SPIRAM_RODATA=y",
+                f"CONFIG_SPIRAM_FETCH_INSTRUCTIONS={exec_flag}",
+                f"CONFIG_SPIRAM_RODATA={exec_flag}",
             ]
         else:  # qspi
             lines += ["CONFIG_SPIRAM_MODE_QUAD=y"]
