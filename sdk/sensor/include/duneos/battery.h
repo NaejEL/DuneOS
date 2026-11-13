@@ -47,6 +47,27 @@ typedef struct {
  * libbattery.c forwards every public call through this table. */
 extern const battery_backend_ops_t duneos_battery_ops;
 
+/*
+ * Bring the gauge's own configuration in line with what the board declares,
+ * and say whether anything had to change:
+ *    0  nothing to do — already right, or this backend has nothing to configure
+ *    1  the gauge was reprogrammed
+ *  <0   -errno
+ *
+ * Call it from the battery daemon at startup, or from a tool whose declared
+ * purpose is to reconfigure the chip (apps/user/bqprov). Never from something
+ * that only reads: a diagnostic must not reconfigure hardware as a side effect
+ * of being run, which is also why it is not part of the ops vtable — that
+ * table is what every app holding the `battery` capability reaches through.
+ *
+ * Why it is a startup check and not one-shot provisioning: on the BQ27220 the
+ * configuration lives in RAM and reverts to ROM defaults whenever the gauge
+ * loses power, so the correct value has to be re-established after every
+ * battery disconnect. Backends with nothing to configure return 0 and touch
+ * nothing.
+ */
+int               duneos_battery_provision(battery_handle_t *h);
+
 /* Convenience wrappers — identical pattern to libdisp.h. */
 battery_handle_t *battery_open(void);
 int               battery_read(battery_handle_t *h, battery_info_t *info);

@@ -28,3 +28,20 @@ void battery_close(battery_handle_t *h)
 {
     duneos_battery_ops.close(h);
 }
+
+/*
+ * Default: nothing to configure. A chip backend that does have configuration
+ * to keep in step with board.yaml defines this strongly and overrides us.
+ *
+ * Weak rather than a vtable entry, and weak rather than an obligation: most
+ * gauges have nothing to provision, and a new backend should not have to write
+ * a no-op to link. It is also deliberately outside battery_backend_ops_t —
+ * that table is what every app holding the `battery` capability calls through,
+ * and this function may write the chip's configuration.
+ */
+__attribute__((weak))
+int duneos_battery_provision(battery_handle_t *h)
+{
+    (void)h;
+    return 0;
+}

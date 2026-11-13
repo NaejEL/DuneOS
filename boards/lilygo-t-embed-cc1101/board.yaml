@@ -102,12 +102,56 @@ board:
     pwr_enable_pin: 15
 
   battery:
-    # BQ27220 gas gauge on I2C0 — reports voltage/SoC/charge status directly.
-    # BQ25896 charger (0x6B) also present but status is read from BQ27220 FLAGS.
+    # BQ27220 gas gauge on I2C0 — voltage, state of charge, charge status.
+    # The charger is a separate chip with its own section below; reading
+    # charge status from the gauge's FLAGS was how this board spent a day
+    # reporting 96% on a battery the charger had finished with.
     type: bq27220
     i2c_id: 0
     gauge_addr: 0x55
-    charger_addr: 0x6B
+    # The cell LilyGO ships, from their own spec. The gauge was found running
+    # TI's factory default of 3000 instead, which is not a LilyGO value at all
+    # — it is the reset value of data-memory 0x929F. The consequence was a
+    # percentage computed against a battery 2.3x larger than the real one:
+    # 4111 mV read back as 54%, and a RemainingCapacity of 1607 mAh that this
+    # cell cannot physically hold. Measured on hardware 2026-11-12 with bqinfo.
+    #
+    # The gauge's data memory is RAM, reset to ROM defaults whenever it loses
+    # power (SLUUBD4A 8.1), so this is not a one-shot provisioning value: the
+    # daemon re-checks it at every startup and reprograms when it differs.
+    design_capacity_mah: 1300
+    # The current below which the gauge declares the charge finished. It must
+    # sit ABOVE the charger's termination_current_ma, because the gauge only
+    # detects termination by watching the current fall past this threshold
+    # while charge is still flowing (SLUUBD4A 4.4.1). The chip's own default
+    # is 100 mA, which is below the charger's cutoff — so the current jumped
+    # from the cutoff to zero, the crossing never happened, FC never set, and
+    # RemainingCapacity was never synced to FullChargeCapacity. That is the
+    # whole reason this board reported 96% and never 100%.
+    # boardgen refuses a board where these two numbers disagree.
+    taper_current_ma: 200
+
+  # BQ25896 single-cell charger on I2C0. It does the constant-current then
+  # constant-voltage taper itself — nothing in software ramps the current down.
+  # What the host chooses is how much current, to what voltage, and when to
+  # call it finished. All three were silicon defaults until now, sized for a
+  # cell this board does not have.
+  charger:
+    type: bq25896
+    i2c_id: 0
+    addr: 0x6B
+    # 4.2 V cell. 4208 mV is the nearest step the chip can express and is its
+    # own default, kept explicit so a future reader does not have to wonder.
+    charge_voltage_mv: 4208
+    # 0.64C for a 1300 mAh pack. LilyGO limits the charge current to 600 mA at
+    # the connector, so this ceiling is not the binding constraint; left where
+    # the hardware had it rather than changed without a cell datasheet.
+    charge_current_ma: 832
+    # C/10, the textbook taper cutoff, down from the 256 mA (C/5) default that
+    # ended the constant-voltage phase about 100 mV short of the target. Must
+    # stay below battery.taper_current_ma above — that is what lets the gauge
+    # witness the taper and report a full battery as full.
+    termination_current_ma: 128
 
   rfid:
     type: pn532

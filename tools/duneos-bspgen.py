@@ -161,7 +161,7 @@ KNOWN_BOARD_KEYS = {
     # buses and peripherals
     "uart", "i2c", "spi", "usb", "gpio_expanders", "logic",
     "sd_card", "has_sd", "display", "leds", "buttons", "encoder",
-    "keyboard", "keyboard_matrix", "battery", "network", "wifi",
+    "keyboard", "keyboard_matrix", "battery", "charger", "network", "wifi",
     # declared hardware not modelled by any generator yet
     "lora", "rfid",
     # untyped escape hatch (ADR 040)

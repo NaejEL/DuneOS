@@ -761,7 +761,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 22,
+   "count": 24,
    "dst": "DuneOS",
    "src": "ROADMAP.md"
   },
@@ -827,7 +827,17 @@
   },
   {
    "count": 1,
+   "dst": "KNOWN_BOARD_KEYS",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
    "dst": "LOADER_MAX_SECTION_BYTES",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 9,
+   "dst": "MAGIC",
    "src": "ROADMAP.md"
   },
   {
@@ -1071,7 +1081,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 131,
+   "count": 139,
    "dst": "board",
    "src": "ROADMAP.md"
   },
@@ -1106,7 +1116,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "capture",
    "src": "ROADMAP.md"
   },
@@ -1381,7 +1391,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 13,
+   "count": 14,
    "dst": "free",
    "src": "ROADMAP.md"
   },
@@ -1581,7 +1591,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 19,
+   "count": 20,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -1611,7 +1621,12 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
+   "dst": "reset",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 2,
    "dst": "resolve",
    "src": "ROADMAP.md"
   },
@@ -1651,7 +1666,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 7,
+   "count": 8,
    "dst": "step",
    "src": "ROADMAP.md"
   },
@@ -1711,6 +1726,26 @@
    "src": "ROADMAP.md"
   },
   {
+   "count": 1,
+   "dst": "BATTERY_CHARGING",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "BATTERY_FULL",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 2,
+   "dst": "DLOGI",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 3,
+   "dst": "DLOGW",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
    "count": 2,
    "dst": "SAMPLE_PERIOD_MS",
    "src": "apps/system/battery_daemon/battery_daemon.c"
@@ -1736,13 +1771,48 @@
    "src": "apps/system/battery_daemon/battery_daemon.c"
   },
   {
-   "count": 5,
+   "count": 11,
    "dst": "board",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_open",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_read",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "dlog",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "dlog_open",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_battery_provision",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_charger_configure",
    "src": "apps/system/battery_daemon/battery_daemon.c"
   },
   {
    "count": 3,
    "dst": "duneos_exit",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
    "src": "apps/system/battery_daemon/battery_daemon.c"
   },
   {
@@ -1753,6 +1823,11 @@
   {
    "count": 1,
    "dst": "lseek",
+   "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
    "src": "apps/system/battery_daemon/battery_daemon.c"
   },
   {
@@ -1779,6 +1854,26 @@
    "count": 1,
    "dst": "write",
    "src": "apps/system/battery_daemon/battery_daemon.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "apps/system/battery_daemon/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "dlog",
+   "src": "apps/system/battery_daemon/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "apps/system/battery_daemon/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "apps/system/battery_daemon/duneos.yaml"
   },
   {
    "count": 4,
@@ -5557,6 +5652,191 @@
   },
   {
    "count": 1,
+   "dst": "I2C_M_RD",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "I2C_RDWR",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "app_main",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 3,
+   "dst": "board",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "charger_close",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_open",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_read",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_state_name",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "decode",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "decode_opstatus",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "decode_status",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "dump_charger",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 3,
+   "dst": "duneos_exit",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "fcntl",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "i2c_msg",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "i2c_rdwr_ioctl_data",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "ioctl",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "open",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 17,
+   "dst": "outf",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "read_cmd",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 2,
+   "dst": "write",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "apps/user/bqinfo/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "apps/user/bqinfo/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "apps/user/bqinfo/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "app_main",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 1,
+   "dst": "battery_close",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 1,
+   "dst": "battery_open",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 2,
+   "dst": "battery_read",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 4,
+   "dst": "board",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_battery_provision",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 3,
+   "dst": "duneos_exit",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 4,
+   "dst": "outf",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 1,
+   "dst": "write",
+   "src": "apps/user/bqprov/bqprov.c"
+  },
+  {
+   "count": 1,
    "dst": "INPUT_EV_KEY",
    "src": "apps/user/drview/drview.c"
   },
@@ -7124,11 +7404,6 @@
    "count": 2,
    "dst": "ui_titlebar",
    "src": "apps/user/i2cscope/scenario.c"
-  },
-  {
-   "count": 1,
-   "dst": "DuneOS",
-   "src": "apps/user/i2cscope/scenarios/bq27220.scn"
   },
   {
    "count": 1,
@@ -10671,12 +10946,17 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
+   "count": 2,
+   "dst": "SPI2",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
    "count": 1,
    "dst": "VALIDATE",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 4,
+   "count": 8,
    "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -10696,8 +10976,18 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "report",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 2,
+   "dst": "reset",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "step",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
@@ -27396,13 +27686,23 @@
    "src": "sdk/sensor/include/duneos/battery.h"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "board",
    "src": "sdk/sensor/include/duneos/battery.h"
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "sdk/sensor/include/duneos/battery.h"
+  },
+  {
+   "count": 1,
    "dst": "close",
+   "src": "sdk/sensor/include/duneos/battery.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_battery_provision",
    "src": "sdk/sensor/include/duneos/battery.h"
   },
   {
@@ -27414,6 +27714,66 @@
    "count": 1,
    "dst": "read",
    "src": "sdk/sensor/include/duneos/battery.h"
+  },
+  {
+   "count": 1,
+   "dst": "DuneOS",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 5,
+   "dst": "board",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "charger_close",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "charger_handle",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "charger_open",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "charger_read",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "charger_state_name",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_battery_provision",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_charger_configure",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "sdk/sensor/include/duneos/charger.h"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "sdk/sensor/include/duneos/charger.h"
   },
   {
    "count": 1,
@@ -27497,6 +27857,11 @@
   },
   {
    "count": 1,
+   "dst": "__attribute__",
+   "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 1,
    "dst": "battery_close",
    "src": "sdk/sensor/libbattery.c"
   },
@@ -27511,7 +27876,7 @@
    "src": "sdk/sensor/libbattery.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "board",
    "src": "sdk/sensor/libbattery.c"
   },
@@ -27522,7 +27887,17 @@
   },
   {
    "count": 1,
+   "dst": "defines",
+   "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 1,
    "dst": "dispatch",
+   "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_battery_provision",
    "src": "sdk/sensor/libbattery.c"
   },
   {
@@ -27534,6 +27909,226 @@
    "count": 1,
    "dst": "read",
    "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 1,
+   "dst": "step",
+   "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 2,
+   "dst": "write",
+   "src": "sdk/sensor/libbattery.c"
+  },
+  {
+   "count": 2,
+   "dst": "CHG_CONFIG_BIT",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "EN_TERM_BIT",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "I2C_M_RD",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "I2C_RDWR",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 4,
+   "dst": "ICHG_MAX_FIELD",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "ICHG_STEP_MA",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 4,
+   "dst": "ITERM_MAX_FIELD",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "ITERM_OFFSET_MA",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "ITERM_STEP_MA",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "OTG_CONFIG_BIT",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "PG_STAT_BIT",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "REG_CHG_CFG",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "REG_ICHG",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "REG_PRECHG",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "REG_STATUS",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "REG_TERM_CFG",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "REG_VREG",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "VREG_MAX_FIELD",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "VREG_OFFSET_MV",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "VREG_STEP_MV",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 6,
+   "dst": "board",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "bq25896_op_close",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "bq25896_op_open",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "bq25896_op_read",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_handle",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 4,
+   "dst": "close",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_charger_configure",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "fcntl",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "i2c_msg",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "i2c_rdwr_ioctl_data",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "ioctl",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "malloc",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "open",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 8,
+   "dst": "reg_read",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 5,
+   "dst": "reg_update",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 2,
+   "dst": "reg_write",
+   "src": "sdk/sensor/libbq25896.c"
+  },
+  {
+   "count": 8,
+   "dst": "step",
+   "src": "sdk/sensor/libbq25896.c"
   },
   {
    "count": 1,
@@ -27561,6 +28156,11 @@
    "src": "sdk/sensor/libbq27220.c"
   },
   {
+   "count": 3,
+   "dst": "BQ27220_REG_DESIGN_CAPACITY",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
    "count": 2,
    "dst": "BQ27220_REG_FLAGS",
    "src": "sdk/sensor/libbq27220.c"
@@ -27576,12 +28176,102 @@
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 1,
-   "dst": "I2C_M_RD",
+   "count": 2,
+   "dst": "BQ_CMD_ENTER_CFG",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_CMD_EXIT_CFG_INIT",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_CMD_FULL_ACCESS",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
    "count": 1,
+   "dst": "BQ_DM_DESIGN_CAPACITY",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "BQ_DM_FULL_CHARGE_CAPACITY",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "BQ_DM_TAPER_CURRENT",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_KEY_GAP_US",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_OPSTATUS_CFGUPDATE",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "BQ_OPSTATUS_SEC_MASK",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "BQ_OPSTATUS_SEC_SHIFT",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 6,
+   "dst": "BQ_REG_CONTROL",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_REG_MAC",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_REG_MACDATA",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "BQ_REG_MACDATALEN",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_REG_MACDATASUM",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "BQ_REG_OPSTATUS",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 1,
+   "dst": "BQ_SEC_FULL_ACCESS",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "BQ_SEC_SEALED",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "I2C_M_RD",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 4,
    "dst": "I2C_RDWR",
    "src": "sdk/sensor/libbq27220.c"
   },
@@ -27606,8 +28296,13 @@
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 4,
+   "count": 9,
    "dst": "board",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "bq27220_ensure_design_capacity",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
@@ -27626,8 +28321,28 @@
    "src": "sdk/sensor/libbq27220.c"
   },
   {
+   "count": 1,
+   "dst": "check",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
    "count": 3,
    "dst": "close",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 4,
+   "dst": "commit",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_battery_provision",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 6,
+   "dst": "exit_cfg",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
@@ -27641,17 +28356,17 @@
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 1,
+   "count": 4,
    "dst": "i2c_msg",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 1,
+   "count": 4,
    "dst": "i2c_rdwr_ioctl_data",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 2,
+   "count": 5,
    "dst": "ioctl",
    "src": "sdk/sensor/libbq27220.c"
   },
@@ -27666,19 +28381,139 @@
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 2,
+   "count": 10,
    "dst": "read",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 4,
+   "count": 3,
+   "dst": "read_byte",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "read_bytes",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 8,
    "dst": "read_reg16",
    "src": "sdk/sensor/libbq27220.c"
   },
   {
-   "count": 1,
+   "count": 2,
+   "dst": "reset",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 2,
+   "dst": "select_block",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "step",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 10,
+   "dst": "usleep",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 5,
    "dst": "write",
    "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 6,
+   "dst": "write_bytes",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 3,
+   "dst": "write_dm_field",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 6,
+   "dst": "write_word",
+   "src": "sdk/sensor/libbq27220.c"
+  },
+  {
+   "count": 1,
+   "dst": "Pattern",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "__attribute__",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_close",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_open",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_read",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "charger_state_name",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "defines",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "dispatch",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_battery_provision",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_charger_configure",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 1,
+   "dst": "read",
+   "src": "sdk/sensor/libcharger.c"
+  },
+  {
+   "count": 2,
+   "dst": "write",
+   "src": "sdk/sensor/libcharger.c"
   },
   {
    "count": 2,
@@ -33896,7 +34731,7 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 3,
+   "count": 5,
    "dst": "CAPABILITY_TO_BLOCKS",
    "src": "tools/dbt/boardgen.py"
   },
@@ -33922,11 +34757,16 @@
   },
   {
    "count": 1,
+   "dst": "GAUGE",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 1,
    "dst": "INTENT_TO_KEY",
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "KERNEL_SERVED_BATTERY",
    "src": "tools/dbt/boardgen.py"
   },
@@ -33936,7 +34776,7 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "_battery_block",
    "src": "tools/dbt/boardgen.py"
   },
@@ -33946,7 +34786,17 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
+   "count": 2,
+   "dst": "_charger_block",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
    "count": 3,
+   "dst": "_check_taper_agrees_with_charger",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 2,
    "dst": "_display_block",
    "src": "tools/dbt/boardgen.py"
   },
@@ -33961,7 +34811,7 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "_input_block",
    "src": "tools/dbt/boardgen.py"
   },
@@ -33976,7 +34826,7 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 34,
+   "count": 47,
    "dst": "board",
    "src": "tools/dbt/boardgen.py"
   },
@@ -33991,7 +34841,7 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "defines",
    "src": "tools/dbt/boardgen.py"
   },
@@ -34217,6 +35067,11 @@
   },
   {
    "count": 1,
+   "dst": "read_bytes",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 1,
    "dst": "recommend",
    "src": "tools/dbt/builder.py"
   },
@@ -34281,12 +35136,17 @@
    "src": "tools/dbt/capabilities.py"
   },
   {
+   "count": 1,
+   "dst": "Resolution",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
    "count": 2,
    "dst": "_board_key_get",
    "src": "tools/dbt/capabilities.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "_close",
    "src": "tools/dbt/capabilities.py"
   },
@@ -34301,8 +35161,13 @@
    "src": "tools/dbt/capabilities.py"
   },
   {
-   "count": 27,
+   "count": 29,
    "dst": "board",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
+   "count": 1,
+   "dst": "charger_open",
    "src": "tools/dbt/capabilities.py"
   },
   {
@@ -34326,12 +35191,12 @@
    "src": "tools/dbt/capabilities.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "join",
    "src": "tools/dbt/capabilities.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "missing",
    "src": "tools/dbt/capabilities.py"
   },
@@ -35121,7 +35986,7 @@
    "src": "tools/dbt/deploy.py"
   },
   {
-   "count": 8,
+   "count": 10,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/flashimg.py"
   },
@@ -35142,6 +36007,16 @@
   },
   {
    "count": 2,
+   "dst": "_app_offset",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 3,
+   "dst": "_app_version_from_bytes",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
    "dst": "_board_display_size",
    "src": "tools/dbt/flashimg.py"
   },
@@ -35153,6 +36028,11 @@
   {
    "count": 2,
    "dst": "_create_image",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
+   "dst": "_device_kernel_version",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -35191,6 +36071,11 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
+   "count": 2,
+   "dst": "_local_kernel_version",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
    "count": 3,
    "dst": "_no_fit_message",
    "src": "tools/dbt/flashimg.py"
@@ -35211,7 +36096,12 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 21,
+   "count": 5,
+   "dst": "blob",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 22,
    "dst": "board",
    "src": "tools/dbt/flashimg.py"
   },
@@ -35237,6 +36127,11 @@
   },
   {
    "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 1,
    "dst": "deploy_single",
    "src": "tools/dbt/flashimg.py"
   },
@@ -35248,6 +36143,11 @@
   {
    "count": 1,
    "dst": "find_compiler",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -35286,7 +36186,7 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "parse_csv_int",
    "src": "tools/dbt/flashimg.py"
   },
@@ -35296,8 +36196,13 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "read",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 3,
+   "dst": "read_bytes",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -35326,8 +36231,18 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
+   "count": 2,
+   "dst": "warn_if_kernel_is_stale",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
    "count": 3,
    "dst": "write",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 1,
+   "dst": "write_bytes",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -35403,6 +36318,11 @@
   {
    "count": 2,
    "dst": "stat",
+   "src": "tools/dbt/img.py"
+  },
+  {
+   "count": 3,
+   "dst": "write_bytes",
    "src": "tools/dbt/img.py"
   },
   {
@@ -35736,6 +36656,11 @@
    "src": "tools/dbt/manifest.py"
   },
   {
+   "count": 3,
+   "dst": "board",
+   "src": "tools/dbt/manifest.py"
+  },
+  {
    "count": 1,
    "dst": "fail",
    "src": "tools/dbt/manifest.py"
@@ -35768,6 +36693,11 @@
   {
    "count": 2,
    "dst": "open",
+   "src": "tools/dbt/manifest.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
    "src": "tools/dbt/manifest.py"
   },
   {
@@ -36331,6 +37261,11 @@
    "src": "tools/dbt/qemu.py"
   },
   {
+   "count": 2,
+   "dst": "read_bytes",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
    "count": 7,
    "dst": "read_chunk",
    "src": "tools/dbt/qemu.py"
@@ -36403,6 +37338,11 @@
   {
    "count": 1,
    "dst": "write",
+   "src": "tools/dbt/qemu.py"
+  },
+  {
+   "count": 1,
+   "dst": "write_bytes",
    "src": "tools/dbt/qemu.py"
   },
   {
@@ -37666,6 +38606,301 @@
    "src": "tools/dbt/tests/test_board_macros.py"
   },
   {
+   "count": 2,
+   "dst": "BASE",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "CAPABILITY_MAP",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 2,
+   "dst": "CAPABILITY_TO_BLOCKS",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 12,
+   "dst": "CHARGER",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 10,
+   "dst": "GAUGE",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 4,
+   "dst": "GAUGE_NO_TAPER",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 4,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "VALIDATE",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 14,
+   "dst": "_board",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "_check_taper_agrees_with_charger",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 8,
+   "dst": "_defines",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "_flatten",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 13,
+   "dst": "_header",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 23,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 2,
+   "dst": "defines",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 8,
+   "dst": "generate",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 2,
+   "dst": "insert",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 2,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_board_without_a_charger_emits_nothing_about_one",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_declared_cutoff_without_a_declared_taper_is_refused",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_kernel_served_adc_battery_with_a_charger_is_accepted",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_taper_above_the_cutoff_is_accepted",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_taper_at_or_below_the_cutoff_is_refused",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_value_the_chip_cannot_express_is_refused",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_undeclared_profile_field_is_simply_absent",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_board_declaring_both_is_consistent",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_mapped_capability_block_is_actually_reachable",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_charger_block_is_emitted_for_a_declared_charger",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_charger_capability_resolves_to_its_sources",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_check_is_silent_only_where_silence_is_harmless",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_reachability_test_fails_when_a_block_stops_emitting",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_real_t_embed_board_is_consistent",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 6,
+   "dst": "BACKEND",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "BQ27220_FLAG_DSG",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "BQ27220_FLAG_FC",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 3,
+   "dst": "BQ27220_REG_FLAGS",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 3,
+   "dst": "BQ27220_REG_SOC",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 3,
+   "dst": "BQ27220_REG_VOLTAGE",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "DuneOS",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 2,
+   "dst": "EXPECTED_COMMAND",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 3,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 7,
+   "dst": "SCENARIO",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 9,
+   "dst": "TRM_TABLE_2_1",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 5,
+   "dst": "_c_defines",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 4,
+   "dst": "_scenario_regs",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "bq27220_op_read",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 14,
+   "dst": "defines",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "human",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "poll",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 5,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_each_register_is_the_command_the_code_calls_it",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_scenario_address_is_a_real_command",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_flags_bits_match_table_2_6",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_i2cscope_scenario_agrees_with_the_backend",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_three_previously_wrong_addresses_are_the_ones_the_table_says",
+   "src": "tools/dbt/tests/test_bq27220_registers.py"
+  },
+  {
    "count": 5,
    "dst": "BASE",
    "src": "tools/dbt/tests/test_bspgen_driver_symbols.py"
@@ -38206,6 +39441,131 @@
    "src": "tools/dbt/tests/test_bspgen_qemu.py"
   },
   {
+   "count": 2,
+   "dst": "BASE",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 6,
+   "dst": "BSPGEN",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 5,
+   "dst": "DISP_LEGACY",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 3,
+   "dst": "DISP_MODERN",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 3,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 2,
+   "dst": "SD_ON_2",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 2,
+   "dst": "SPI2",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 9,
+   "dst": "_board",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 4,
+   "dst": "_display_spi_id",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 6,
+   "dst": "_flags",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 2,
+   "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 12,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 2,
+   "dst": "free",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 2,
+   "dst": "generate",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_display_on_another_host_does_not_share",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_display_without_an_explicit_host_defaults_to_three",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_legacy_display_alone_on_the_sd_host_shares_the_bus",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_raw_tenant_still_shares_without_a_display",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_both_declaration_styles_resolve_to_the_same_host",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_display_resolves_to_none",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_real_board_has_the_two_flags_disagreeing",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_modern_form_behaves_identically",
+   "src": "tools/dbt/tests/test_bspgen_shared_spi_bus.py"
+  },
+  {
    "count": 9,
    "dst": "BASE_BOARD",
    "src": "tools/dbt/tests/test_bspgen_uart.py"
@@ -38308,6 +39668,11 @@
   {
    "count": 1,
    "dst": "write",
+   "src": "tools/dbt/tests/test_bspgen_uart.py"
+  },
+  {
+   "count": 1,
+   "dst": "write_bytes",
    "src": "tools/dbt/tests/test_bspgen_uart.py"
   },
   {
@@ -38816,6 +40181,176 @@
    "src": "tools/dbt/tests/test_cmake_requires.py"
   },
   {
+   "count": 4,
+   "dst": "DUNEOS_ROOT",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "MAGIC",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 4,
+   "dst": "PARTITIONS",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 5,
+   "dst": "_app_offset",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 6,
+   "dst": "_app_version_from_bytes",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 7,
+   "dst": "_descriptor",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "_device_kernel_version",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "_local_kernel_version",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 4,
+   "dst": "_run_guard",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 4,
+   "dst": "_tree",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 12,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "draw",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "insert",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "mkdir",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_dirty_describe_survives_intact",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_full_width_version_is_not_truncated",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_match_says_nothing",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_mismatch_warns_and_names_both_versions",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_short_read_is_refused",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_table_with_no_app_row_yields_none",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_version_string_is_read_back",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_wrong_magic_is_refused",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_empty_version_is_none_not_empty_string",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_ota_subtype_is_accepted_not_just_factory",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_unknown_board_yields_none_not_an_exception",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_unknown_version_is_silent_rather_than_wrong",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_app_partition_offset_is_found",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "warn_if_kernel_is_stale",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
    "count": 13,
    "dst": "BOARD",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
@@ -39158,6 +40693,11 @@
   {
    "count": 1,
    "dst": "write",
+   "src": "tools/dbt/tests/test_flashimg_profile.py"
+  },
+  {
+   "count": 2,
+   "dst": "write_bytes",
    "src": "tools/dbt/tests/test_flashimg_profile.py"
   },
   {
@@ -40976,6 +42516,11 @@
    "src": "tools/dbt/tests/test_read_guard.py"
   },
   {
+   "count": 1,
+   "dst": "read_bytes",
+   "src": "tools/dbt/tests/test_read_guard.py"
+  },
+  {
    "count": 36,
    "dst": "read_guard",
    "src": "tools/dbt/tests/test_read_guard.py"
@@ -41703,6 +43248,11 @@
   {
    "count": 2,
    "dst": "read",
+   "src": "tools/dbt/tests/test_testing.py"
+  },
+  {
+   "count": 2,
+   "dst": "read_bytes",
    "src": "tools/dbt/tests/test_testing.py"
   },
   {
@@ -42643,6 +44193,11 @@
   {
    "count": 2,
    "dst": "qemu_psram_args",
+   "src": "tools/dbt/toolchain/esp_idf.py"
+  },
+  {
+   "count": 1,
+   "dst": "read_bytes",
    "src": "tools/dbt/toolchain/esp_idf.py"
   },
   {
@@ -43601,6 +45156,11 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
+   "count": 3,
+   "dst": "SPI2",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
    "count": 4,
    "dst": "SPI_HOST_ENUM",
    "src": "tools/duneos-bspgen.py"
@@ -43867,6 +45427,10 @@
    "apps/system/usb_shell/usb_shell.c",
    "apps/system/wifi_daemon/duneos.yaml",
    "apps/system/wifi_daemon/wifi_daemon.c",
+   "apps/user/bqinfo/bqinfo.c",
+   "apps/user/bqinfo/duneos.yaml",
+   "apps/user/bqprov/bqprov.c",
+   "apps/user/bqprov/duneos.yaml",
    "apps/user/drview/drview.c",
    "apps/user/drview/duneos.yaml",
    "apps/user/files/duneos.yaml",
@@ -44139,9 +45703,12 @@
    "sdk/re/include/duneos/re.h",
    "sdk/re/re.c",
    "sdk/sensor/include/duneos/battery.h",
+   "sdk/sensor/include/duneos/charger.h",
    "sdk/sensor/include/duneos/ld2450.h",
    "sdk/sensor/libbattery.c",
+   "sdk/sensor/libbq25896.c",
    "sdk/sensor/libbq27220.c",
+   "sdk/sensor/libcharger.c",
    "sdk/sensor/libld2450.c",
    "sdk/ui/include/duneos/ui.h",
    "sdk/ui/include/duneos/ui_carousel.h",
@@ -44240,14 +45807,18 @@
    "tools/dbt/tests/kernel_macros.py",
    "tools/dbt/tests/test_board_file.py",
    "tools/dbt/tests/test_board_macros.py",
+   "tools/dbt/tests/test_boardgen_charger.py",
+   "tools/dbt/tests/test_bq27220_registers.py",
    "tools/dbt/tests/test_bspgen_driver_symbols.py",
    "tools/dbt/tests/test_bspgen_i2c_bus_zero.py",
    "tools/dbt/tests/test_bspgen_main_task_stack.py",
    "tools/dbt/tests/test_bspgen_qemu.py",
+   "tools/dbt/tests/test_bspgen_shared_spi_bus.py",
    "tools/dbt/tests/test_bspgen_uart.py",
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
    "tools/dbt/tests/test_ci_matrix.py",
    "tools/dbt/tests/test_cmake_requires.py",
+   "tools/dbt/tests/test_flashimg_kernel_staleness.py",
    "tools/dbt/tests/test_flashimg_profile.py",
    "tools/dbt/tests/test_gates_cover.py",
    "tools/dbt/tests/test_input_topology.py",
@@ -44303,6 +45874,7 @@
    "AppSelectScreen",
    "Architecture",
    "BACK",
+   "BACKEND",
    "BANNER_BEGIN",
    "BANNER_END",
    "BASE",
@@ -44320,9 +45892,28 @@
    "BOOT_BANNER",
    "BQ27220_FLAG_DSG",
    "BQ27220_FLAG_FC",
+   "BQ27220_REG_DESIGN_CAPACITY",
    "BQ27220_REG_FLAGS",
    "BQ27220_REG_SOC",
    "BQ27220_REG_VOLTAGE",
+   "BQ_CMD_ENTER_CFG",
+   "BQ_CMD_EXIT_CFG_INIT",
+   "BQ_CMD_FULL_ACCESS",
+   "BQ_DM_DESIGN_CAPACITY",
+   "BQ_DM_FULL_CHARGE_CAPACITY",
+   "BQ_DM_TAPER_CURRENT",
+   "BQ_KEY_GAP_US",
+   "BQ_OPSTATUS_CFGUPDATE",
+   "BQ_OPSTATUS_SEC_MASK",
+   "BQ_OPSTATUS_SEC_SHIFT",
+   "BQ_REG_CONTROL",
+   "BQ_REG_MAC",
+   "BQ_REG_MACDATA",
+   "BQ_REG_MACDATALEN",
+   "BQ_REG_MACDATASUM",
+   "BQ_REG_OPSTATUS",
+   "BQ_SEC_FULL_ACCESS",
+   "BQ_SEC_SEALED",
    "BSPGEN",
    "BUTTON_INTENTS",
    "BoardPickScreen",
@@ -44345,11 +45936,13 @@
    "CFLAGS_COMMON",
    "CFLAGS_RISCV",
    "CFLAGS_XTENSA",
+   "CHARGER",
    "CHECK",
    "CHECK_BIG",
    "CHECK_INT",
    "CHECK_SMALL",
    "CHECK_STR",
+   "CHG_CONFIG_BIT",
    "CH_SCL",
    "CH_SDA",
    "CI_WORKFLOW",
@@ -44412,6 +46005,8 @@
    "DEVFS_MAX_FDS",
    "DEVFS_MAX_SELECTS",
    "DISP_GET_INFO",
+   "DISP_LEGACY",
+   "DISP_MODERN",
    "DISP_SET_WINDOW",
    "DLOGD",
    "DLOGE",
@@ -44505,6 +46100,7 @@
    "EMIT",
    "EM_RISCV",
    "EM_XTENSA",
+   "EN_TERM_BIT",
    "ERASE",
    "ETH_GET_LINK_STATUS",
    "ETH_GET_MAC",
@@ -44523,6 +46119,7 @@
    "EXIT_TIMEOUT",
    "EXIT_UNAVAILABLE",
    "EXPECTED",
+   "EXPECTED_COMMAND",
    "ErrorModal",
    "FAKE_YAML",
    "FB_DMA_CHUNK",
@@ -44547,6 +46144,8 @@
    "FUZZ_MAX_SECTIONS",
    "FakeApp",
    "FakeClock",
+   "GAUGE",
+   "GAUGE_NO_TAPER",
    "GENERATED",
    "GENERATED_TREE",
    "GFX_BLACK",
@@ -44596,6 +46195,8 @@
    "I2C_RDWR",
    "I2C_RESET",
    "I2C_SLAVE",
+   "ICHG_MAX_FIELD",
+   "ICHG_STEP_MA",
    "ICMP_ECHO_REPLY",
    "ICMP_ECHO_REQUEST",
    "ICON_PATH_LEN",
@@ -44640,6 +46241,9 @@
    "IP_MULTICAST_TTL",
    "IP_TOS",
    "IP_TTL",
+   "ITERM_MAX_FIELD",
+   "ITERM_OFFSET_MA",
+   "ITERM_STEP_MA",
    "InputTopologyError",
    "JSON_MAX",
    "KERNEL_CMAKE",
@@ -44698,6 +46302,7 @@
    "LOGIC_SET_CONFIG",
    "LONG_MS",
    "Licence",
+   "MAGIC",
    "MAIN_CMAKE",
    "MANIFESTS",
    "MANIFEST_JSON_FILE",
@@ -44757,6 +46362,7 @@
    "N_DURATIONS",
    "N_MENU",
    "OPTIONAL_KEYS",
+   "OTG_CONFIG_BIT",
    "OUTPUT_KEYS",
    "PANIC_PATTERNS",
    "PARSER_SOURCE",
@@ -44767,6 +46373,7 @@
    "PCF8574_SLOT_MAX",
    "PERM_NAMES",
    "PERM_TO_CONFIG",
+   "PG_STAT_BIT",
    "PING_DATA_LEN",
    "PING_ID",
    "PING_TIMEOUT_S",
@@ -44810,6 +46417,12 @@
    "RAW80211_GET_IFACE",
    "RAW80211_SET_IFACE",
    "RECV_TIMEOUT_S",
+   "REG_CHG_CFG",
+   "REG_ICHG",
+   "REG_PRECHG",
+   "REG_STATUS",
+   "REG_TERM_CFG",
+   "REG_VREG",
    "REL_WHEEL",
    "REPO_ROOT",
    "REQUEST",
@@ -44884,6 +46497,7 @@
    "SCAN_PATH",
    "SCAN_PERIOD_MS",
    "SCAN_WAIT_MS",
+   "SCENARIO",
    "SCROLLBACK",
    "SC_DIR",
    "SC_MAX_FILES",
@@ -44895,6 +46509,7 @@
    "SD_FILE_CAP",
    "SD_MAX_FILES",
    "SD_MOUNT_POINT",
+   "SD_ON_2",
    "SECONDARY_CONSOLE_CPUS",
    "SEL_FILE",
    "SHAPES",
@@ -44944,6 +46559,7 @@
    "SO_SNDBUF",
    "SO_SNDTIMEO",
    "SO_TYPE",
+   "SPI2",
    "SPI_HOST_ENUM",
    "SPI_HOST_IDS",
    "SPI_HOST_NAMES",
@@ -45001,6 +46617,7 @@
    "TMPFS_MAX_FILES",
    "TMPFS_NAME_MAX",
    "TRACKED",
+   "TRM_TABLE_2_1",
    "UI_T_DECLARED",
    "UI_VKBD_COLS",
    "UNAVAILABLE",
@@ -45013,6 +46630,9 @@
    "VALID_CPUS",
    "VIEW_LINES",
    "VOCABULARY",
+   "VREG_MAX_FIELD",
+   "VREG_OFFSET_MV",
+   "VREG_STEP_MV",
    "WATCHPOINT",
    "WAVE_COL",
    "WEDGE_HALF_DEG",
@@ -45049,6 +46669,8 @@
    "_app_from_path",
    "_app_list",
    "_app_map",
+   "_app_offset",
+   "_app_version_from_bytes",
    "_as_config_error",
    "_bar",
    "_bat_arg",
@@ -45069,11 +46691,14 @@
    "_build_profile_dict",
    "_build_sysbin",
    "_buttons",
+   "_c_defines",
    "_called_names",
    "_calloc_matcher",
+   "_charger_block",
    "_check_idf_version",
    "_check_ignore",
    "_check_sdkconfig",
+   "_check_taper_agrees_with_charger",
    "_ci_floor",
    "_close",
    "_cmake_gate",
@@ -45084,8 +46709,11 @@
    "_dbt_argv",
    "_declared_limit",
    "_define",
+   "_defines",
    "_deploy_data",
    "_deps_satisfied",
+   "_descriptor",
+   "_device_kernel_version",
    "_dispatch_ids",
    "_display_block",
    "_display_spi_id",
@@ -45104,6 +46732,7 @@
    "_find_gdb",
    "_find_picolibc_include",
    "_find_port",
+   "_flags",
    "_flash_bar",
    "_flatten",
    "_fmt_kb",
@@ -45115,6 +46744,7 @@
    "_got_path",
    "_guard",
    "_guarded_open",
+   "_header",
    "_hi_flash",
    "_hi_sd",
    "_hook_process_cleanup",
@@ -45146,6 +46776,7 @@
    "_load",
    "_load_apps",
    "_load_bspgen",
+   "_local_kernel_version",
    "_log",
    "_log_ansi",
    "_long_intent",
@@ -45205,6 +46836,7 @@
    "_run_flash_sd",
    "_run_flash_sysbin",
    "_run_gates",
+   "_run_guard",
    "_run_idf",
    "_run_monitor",
    "_run_payload",
@@ -45217,6 +46849,7 @@
    "_run_tests",
    "_run_tests_full",
    "_save",
+   "_scenario_regs",
    "_sd_bar",
    "_sd_path",
    "_sdkconfig_args",
@@ -45237,6 +46870,7 @@
    "_to_rgb565",
    "_track",
    "_tracked_boards",
+   "_tree",
    "_valid",
    "_venv_python",
    "_with_i2c",
@@ -45319,6 +46953,10 @@
    "board_config_defines",
    "board_info_int",
    "boom",
+   "bq25896_op_close",
+   "bq25896_op_open",
+   "bq25896_op_read",
+   "bq27220_ensure_design_capacity",
    "bq27220_op_close",
    "bq27220_op_open",
    "bq27220_op_read",
@@ -45349,6 +46987,11 @@
    "cell_set",
    "cfg_int",
    "cflags",
+   "charger_close",
+   "charger_handle",
+   "charger_open",
+   "charger_read",
+   "charger_state_name",
    "check",
    "check_app",
    "check_build_sdkconfig",
@@ -45438,7 +47081,9 @@
    "declared_psram_mb",
    "declared_root",
    "decode",
+   "decode_opstatus",
    "decode_perms",
+   "decode_status",
    "dedup",
    "default_sources",
    "defines",
@@ -45518,12 +47163,15 @@
    "drv_usb_preinit",
    "drv_usb_register",
    "du_tree",
+   "dump_charger",
    "dump_corpus",
    "duneos_accept",
    "duneos_api_get",
    "duneos_app",
+   "duneos_battery_provision",
    "duneos_bin_badopt",
    "duneos_bin_err",
+   "duneos_charger_configure",
    "duneos_close",
    "duneos_config_path",
    "duneos_dev_register",
@@ -45693,6 +47341,7 @@
    "esc_byte",
    "esc_pressed",
    "eth_ioctl",
+   "exit_cfg",
    "expand_dollar",
    "expand_tokenize",
    "expand_value",
@@ -46069,7 +47718,10 @@
    "read_at",
    "read_battery_info",
    "read_blob",
+   "read_byte",
+   "read_bytes",
    "read_chunk",
+   "read_cmd",
    "read_config",
    "read_full",
    "read_guard",
@@ -46086,6 +47738,9 @@
    "recovery_pin_held",
    "redraw_all",
    "refresh_line",
+   "reg_read",
+   "reg_update",
+   "reg_write",
    "regenerated_root",
    "regenerated_sources",
    "register_exc_handlers",
@@ -46155,6 +47810,7 @@
    "scn_run",
    "sd_mounted",
    "select_ap",
+   "select_block",
    "selftest",
    "sem_destroy",
    "sem_init",
@@ -46256,6 +47912,7 @@
    "test_a_board_that_cannot_reach_a_needed_intent_is_reported",
    "test_a_board_with_no_alt_source_never_produces_alt",
    "test_a_board_with_no_input_source_reports_an_explicitly_empty_map",
+   "test_a_board_without_a_charger_emits_nothing_about_one",
    "test_a_board_without_psram_never_reports_a_mismatch",
    "test_a_board_without_psram_stays_silent_about_the_cross_check",
    "test_a_board_without_the_hardware_raises_capability_missing",
@@ -46273,9 +47930,13 @@
    "test_a_declared_alt_axis_produces_alt_intents",
    "test_a_declared_backend_that_does_not_exist_aborts",
    "test_a_declared_button_overrides_the_keyboard_mapping",
+   "test_a_declared_cutoff_without_a_declared_taper_is_refused",
    "test_a_deleted_board_file_exits_config",
    "test_a_detected_psram_size_clears_the_unavailable_warning",
    "test_a_different_app_does_not_satisfy_the_scan_assertion",
+   "test_a_dirty_describe_survives_intact",
+   "test_a_display_on_another_host_does_not_share",
+   "test_a_display_without_an_explicit_host_defaults_to_three",
    "test_a_driver_backed_permission_names_its_config",
    "test_a_driver_off_in_the_build_is_not_a_withdrawal",
    "test_a_driver_the_sources_dropped_is_a_conflict",
@@ -46286,13 +47947,16 @@
    "test_a_failure_outranks_an_unavailability",
    "test_a_few_skips_above_the_floor_still_pass",
    "test_a_first_build_with_no_cached_sdkconfig_proceeds",
+   "test_a_full_width_version_is_not_truncated",
    "test_a_gate_that_probes_unavailable_is_never_run",
    "test_a_generated_board_artefact_is_denied",
    "test_a_good_calloc_run_matches_every_assertion",
+   "test_a_kernel_served_adc_battery_with_a_charger_is_accepted",
    "test_a_kernel_served_driver_is_a_skip_not_a_failure",
    "test_a_keyboard_board_declares_the_keyboard_and_no_keys",
    "test_a_keyboard_board_reaches_the_whole_vocabulary",
    "test_a_known_board_validates",
+   "test_a_legacy_display_alone_on_the_sd_host_shares_the_bus",
    "test_a_line_tail_cannot_pose_as_the_start_of_a_console_line",
    "test_a_loader_error_split_across_two_chunks_is_still_matched",
    "test_a_long_press_intent_reaches_the_map",
@@ -46301,8 +47965,10 @@
    "test_a_malformed_encoder_is_refused",
    "test_a_marker_only_capability_pulls_no_source",
    "test_a_mask_names_every_bit_it_carries",
+   "test_a_match_says_nothing",
    "test_a_matching_build_directory_passes",
    "test_a_minimal_manifest_is_accepted",
+   "test_a_mismatch_warns_and_names_both_versions",
    "test_a_missing_required_field_aborts_the_build",
    "test_a_missing_source_file_is_skipped",
    "test_a_missing_workflow_leaves_the_floor_unset",
@@ -46318,6 +47984,7 @@
    "test_a_profile_on_an_unlisted_board_fails_the_expected_membership",
    "test_a_psram_size_the_board_never_declared_is_reported",
    "test_a_qemu_config_exit_is_reported_as_unavailable",
+   "test_a_raw_tenant_still_shares_without_a_display",
    "test_a_real_early_exit_is_still_an_assertion_failure",
    "test_a_real_failure_still_reports_as_a_failure",
    "test_a_release_without_its_press_yields_nothing",
@@ -46331,17 +47998,24 @@
    "test_a_run_where_every_test_skipped_is_not_a_pass",
    "test_a_scalar_apps_flash_does_not_win_the_election",
    "test_a_short_press_yields_the_short_intent",
+   "test_a_short_read_is_refused",
    "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
    "test_a_symbol_absent_from_the_build_is_not_a_conflict",
+   "test_a_table_with_no_app_row_yields_none",
+   "test_a_taper_above_the_cutoff_is_accepted",
+   "test_a_taper_at_or_below_the_cutoff_is_refused",
    "test_a_text_intent_inserts_directly",
    "test_a_transient_git_failure_does_not_narrow_the_signature",
    "test_a_tui_gate_run_never_touches_the_board_file",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
+   "test_a_value_the_chip_cannot_express_is_refused",
+   "test_a_version_string_is_read_back",
    "test_a_whole_step_in_one_event_emits_once",
+   "test_a_wrong_magic_is_refused",
    "test_absent_slots_are_zeroed",
    "test_absent_submodules_make_the_host_gate_unavailable",
    "test_adding_riscv_arch_cmake_pulls_both_boards_in",
@@ -46355,16 +48029,21 @@
    "test_an_alt_axis_emits_the_second_pair",
    "test_an_empty_collection_is_not_a_pass",
    "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
+   "test_an_empty_version_is_none_not_empty_string",
    "test_an_icon_at_the_bound_is_accepted",
    "test_an_idf_config_symbol_leaves_its_branch_live",
    "test_an_or_guarded_source_is_scanned_when_only_one_symbol_is_enabled",
+   "test_an_ota_subtype_is_accepted_not_just_factory",
    "test_an_over_long_icon_is_rejected",
    "test_an_unavailable_gate_is_not_a_pass",
    "test_an_unconfigured_build_directory_passes",
+   "test_an_undeclared_profile_field_is_simply_absent",
    "test_an_undefined_bit_is_not_invented",
+   "test_an_unknown_board_yields_none_not_an_exception",
    "test_an_unknown_capability_aborts_the_build",
    "test_an_unknown_field_warns_but_does_not_abort",
    "test_an_unknown_key_is_refused",
+   "test_an_unknown_version_is_silent_rather_than_wrong",
    "test_an_unreadable_report_is_not_a_pass",
    "test_an_unrelated_raw_kconfig_entry_is_not_refused",
    "test_an_unset_board_file_is_unavailable_not_a_crash",
@@ -46384,6 +48063,7 @@
    "test_boardgen_derives_the_key_code_from_the_intent",
    "test_boolean_is_rejected",
    "test_boot_banners_are_counted_once_each_across_chunks",
+   "test_both_declaration_styles_resolve_to_the_same_host",
    "test_both_globs_carry_configure_depends",
    "test_both_layers_are_checked_for_the_active_board",
    "test_bound_leaves_headroom_over_the_deepest_real_manifest",
@@ -46419,6 +48099,7 @@
    "test_dot",
    "test_duplicate_app_is_counted_once",
    "test_each_payload_asserts_on_its_own_app_not_another",
+   "test_each_register_is_the_command_the_code_calls_it",
    "test_embedded_manifest_nests_within_the_bound",
    "test_empty_output_matches_nothing",
    "test_enforce_exits_and_names_symbol_stale_value_and_remedy",
@@ -46427,6 +48108,7 @@
    "test_eof_inside_the_settle_window_is_not_a_pass",
    "test_erase_removes_the_last_character",
    "test_escapes",
+   "test_every_board_declaring_both_is_consistent",
    "test_every_board_with_an_init_yaml_has_a_profile",
    "test_every_build_or_flash_entry_point_calls_the_guard",
    "test_every_cell_has_a_label_that_fits",
@@ -46437,6 +48119,7 @@
    "test_every_installed_package_is_pinned",
    "test_every_key_used_by_every_board_in_the_tree_is_known",
    "test_every_macro_the_enabled_drivers_reference_is_defined",
+   "test_every_mapped_capability_block_is_actually_reachable",
    "test_every_matrix_is_a_fromjson_of_a_discover_output",
    "test_every_missing_field_is_named_at_once",
    "test_every_named_consumer_resolves",
@@ -46445,6 +48128,7 @@
    "test_every_payload_has_a_source_directory_and_a_manifest",
    "test_every_read_mode_is_classified",
    "test_every_requires_entry_names_a_consumer",
+   "test_every_scenario_address_is_a_real_command",
    "test_every_tracked_board_generates",
    "test_every_tracked_board_yields_a_complete_map_or_no_input_verdict",
    "test_every_unconditional_symbol_defaults_to_y",
@@ -46508,11 +48192,13 @@
    "test_no_component_is_declared_at_any_version",
    "test_no_component_is_declared_both_unconditionally_and_per_arch",
    "test_no_copy_of_the_parser_survives_under_apps_or_tests",
+   "test_no_display_resolves_to_none",
    "test_no_hardware_board_generates_the_symbol",
    "test_no_key_emits_nothing",
    "test_no_other_board_generates_the_symbol",
    "test_no_permission_decodes_to_nothing",
    "test_no_qemu_key_emits_no_symbol",
+   "test_no_real_board_has_the_two_flags_disagreeing",
    "test_no_requires_entry_sits_under_a_config_guard",
    "test_no_secondary_symbol_on_a_chip_without_usb_serial_jtag",
    "test_no_sysbin_size_literal_left_in_flashimg",
@@ -46613,6 +48299,7 @@
    "test_terminate_child_reports_nothing_to_stop",
    "test_terminate_child_stops_a_running_gate",
    "test_test_workers_are_thin_shells",
+   "test_the_app_partition_offset_is_found",
    "test_the_batch_clamp_matches_the_c_header",
    "test_the_board_fragment_wins_over_the_root_defaults",
    "test_the_board_key_is_also_looked_up_under_board",
@@ -46622,9 +48309,12 @@
    "test_the_calloc_payload_is_part_of_the_bench",
    "test_the_cardputer_value_carries_its_derivation",
    "test_the_cardputer_value_is_the_measured_one",
+   "test_the_charger_block_is_emitted_for_a_declared_charger",
+   "test_the_charger_capability_resolves_to_its_sources",
    "test_the_cheap_gates_come_first",
    "test_the_check_fails_on_a_board_missing_its_ethernet_pins",
    "test_the_check_fails_on_a_bus_numbered_one",
+   "test_the_check_is_silent_only_where_silence_is_harmless",
    "test_the_closed_rows_are_marked_done",
    "test_the_cmake_parse_drops_no_source",
    "test_the_console_patterns_anchor_per_line_not_per_capture",
@@ -46634,10 +48324,12 @@
    "test_the_empty_map_translates_nothing",
    "test_the_erase_cell_erases_too",
    "test_the_flag_changes_nothing_else_in_the_fragment",
+   "test_the_flags_bits_match_table_2_6",
    "test_the_floor_is_read_from_the_ci_workflow",
    "test_the_guard_is_installed_during_the_run",
    "test_the_guard_runs_before_the_build_in_each_entry_point",
    "test_the_host_suite_compiles_the_shipped_parser",
+   "test_the_i2cscope_scenario_agrees_with_the_backend",
    "test_the_kconfig_declares_the_symbol",
    "test_the_kconfig_dependency_is_the_one_bspgen_gates_on",
    "test_the_key_changes_nothing_else_in_the_fragment",
@@ -46652,6 +48344,7 @@
    "test_the_map_records_whether_every_intent_is_reachable",
    "test_the_marker_label_claims_only_that_app_main_ran",
    "test_the_message_says_interference_not_firmware",
+   "test_the_modern_form_behaves_identically",
    "test_the_named_exception_is_still_the_one_it_claims_to_be",
    "test_the_names_and_the_config_map_cover_the_same_bits",
    "test_the_nested_gitignore_files_are_in_the_cache_signature",
@@ -46666,7 +48359,9 @@
    "test_the_qemu_gate_maps_exit_six_to_unavailable",
    "test_the_qemu_gate_passes_other_exits_through",
    "test_the_qemu_psram_board_declares_eight_megabytes",
+   "test_the_reachability_test_fails_when_a_block_stops_emitting",
    "test_the_real_panic_wording_is_still_detected",
+   "test_the_real_t_embed_board_is_consistent",
    "test_the_refusal_does_not_raise_into_the_ui_thread",
    "test_the_rejection_names_the_board_and_the_value",
    "test_the_rejection_names_the_file_and_lists_the_valid_keys",
@@ -46680,6 +48375,7 @@
    "test_the_stack_watchpoint_is_project_wide",
    "test_the_t_embed_reaches_everything_but_the_second_axis",
    "test_the_three_apps_link_the_shared_parser",
+   "test_the_three_previously_wrong_addresses_are_the_ones_the_table_says",
    "test_the_threshold_resolves_on_repeat_when_one_arrives",
    "test_the_topology_clamp_bounds_the_batch",
    "test_the_tracked_yaml_next_to_it_is_allowed",
@@ -46815,6 +48511,7 @@
    "verdict",
    "wait",
    "walk",
+   "warn_if_kernel_is_stale",
    "wdt_timer_cb",
    "workflow_from",
    "write",
@@ -46823,6 +48520,8 @@
    "write_board",
    "write_board_file",
    "write_board_info",
+   "write_bytes",
+   "write_dm_field",
    "write_exec_args",
    "write_file",
    "write_flash_init_yaml",
@@ -46831,6 +48530,7 @@
    "write_raw_board",
    "write_state",
    "write_to",
+   "write_word",
    "xfer_event",
    "xfer_open",
    "xrdwr",

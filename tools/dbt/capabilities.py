@@ -122,6 +122,19 @@ CAPABILITY_MAP: dict[str, CapabilitySpec] = {
         "kernel_served": {"adc_simple"},
         "description": "Battery monitor — userspace backend for I2C/SPI gas gauges",
     },
+    "charger": {
+        "board_key": ["charger", "type"],
+        # libcharger.c forwards charger_open/_read/_close through
+        # `duneos_charger_ops`, defined by the chip backend (libbq25896.c, …).
+        # Same shape as `battery` above, and deliberately a separate
+        # capability: the gauge measures the cell, the charger decides when to
+        # stop filling it, and an app that wants one rarely wants both.
+        "sources": [
+            "{sdk}/sensor/libcharger.c",
+            "{sdk}/sensor/lib{driver}.c",
+        ],
+        "description": "Battery charger — userspace backend for I2C chargers",
+    },
 }
 
 # sdk/input/libinput.c is deliberately NOT resolved by a capability. "input"
@@ -145,22 +158,47 @@ def _nested_get(d: dict, keys: list[str]):
 
 def resolve(capabilities: list[str],
             board_cfg: dict,
-            sdk_dir: Path) -> list[Path]:
+            sdk_dir: Path,
+            optional: list[str] | tuple[str, ...] = ()) -> list[Path]:
     """
     Translate an app's declared capabilities into concrete source file paths.
 
     On unknown capability or missing board.yaml field: prints a clear error
     and exits non-zero (per ADR 014 — build-time, not runtime, failure).
 
+    Resolution is otherwise all-or-nothing: one absent capability raises, and
+    builder.py turns that into a skip of the WHOLE app. That is right for an
+    app that cannot work without the hardware, and wrong for one written to
+    work with or without it — `battery_daemon` guards its charger code with
+    `#ifdef DUNEOS_CHARGER_DRIVER` and a comment saying a missing charger must
+    not cost the samples, yet declaring `charger` made the entire daemon
+    disappear from the image on a gauge-only board. Silently: a SKIP line, no
+    /tmp/battery, no indicator, no error.
+
+    Hence `optional`: a capability listed there contributes its sources when
+    the board has the hardware and is passed over when it does not, instead of
+    taking the app down with it. It is per-app and not a property of the
+    capability, because the same capability is genuinely mandatory for some
+    apps — an app that only talks to the charger must still be skipped.
+
     Args:
         capabilities: list of capability names from app's duneos.yaml.
         board_cfg:    the parsed board.yaml dict (NB: nested under "board").
         sdk_dir:      absolute path to the repo's sdk/ directory.
+        optional:     capability names that may be absent without failing.
 
     Returns: list of resolved source file paths (Path objects, absolute).
     """
     if not capabilities:
         return []
+    optional = set(optional)
+    unknown_optional = optional - set(c.strip() for c in capabilities)
+    if unknown_optional:
+        sys.exit(
+            "ERROR: optional_capabilities names something the app does not "
+            f"declare: {', '.join(sorted(unknown_optional))}\n"
+            "  Every optional capability must also appear in capabilities:."
+        )
 
     # The toolchain plugin stores the board YAML under a "board" key plus
     # top-level peripheral sections (display, spi, ...). We look in both.
@@ -193,6 +231,8 @@ def resolve(capabilities: list[str],
 
         driver = _board_key_get(spec["board_key"])
         if not driver:
+            if name in optional:
+                continue        # the app is built without it, by its own request
             board_path = ".".join(spec["board_key"])
             raise CapabilityMissing(
                 f"capability '{cap}' not available on this board "
@@ -200,6 +240,8 @@ def resolve(capabilities: list[str],
             )
 
         if driver in spec.get("kernel_served", set()):
+            if name in optional:
+                continue
             raise CapabilityNotApplicable(
                 f"capability '{cap}' is kernel-served on this board "
                 f"(driver={driver}); no userspace backend to link"

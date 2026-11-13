@@ -25,6 +25,8 @@ apps_flash:
 - launcher
 - logd
 - battery_daemon
+- bqinfo
+- bqprov
 # the probe set. waves is migrated to intents and navigates with the rotary;
 # gfx_demo still reads raw key codes and is keyboard-only here.
 # snake and tetris are gone on purpose: both need 2-D continuous control, which
