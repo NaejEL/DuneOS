@@ -282,10 +282,14 @@ def _check_taper_agrees_with_charger(board: dict) -> None:
     # produced the 96% ceiling. boardgen cannot know every gauge's default, so
     # it refuses the asymmetry rather than guess: once a charger states when it
     # stops, the gauge must state when it believes the charge is over.
-    # Only when there is a gauge to disagree with. A board with a charger and
-    # no battery section has nothing to keep consistent, and refusing it would
-    # be the check over-reaching — caught by its own test.
-    if bat and term is not None and taper is None:
+    # Only when there is a USERSPACE GAUGE to disagree with. A board with no
+    # battery section has nothing to keep consistent, and so does one whose
+    # battery is kernel-served ADC (type: adc_simple) — that path emits no
+    # taper register at all, so demanding one would force a number boardgen
+    # then silently drops. Both over-reaches are caught by this guard's tests.
+    gauge_type = bat.get("type")
+    has_userspace_gauge = gauge_type and gauge_type not in KERNEL_SERVED_BATTERY
+    if has_userspace_gauge and term is not None and taper is None:
         raise SystemExit(
             f"ERROR: charger.termination_current_ma={term} is declared but "
             "battery.taper_current_ma is not.\n"

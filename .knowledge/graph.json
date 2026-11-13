@@ -31531,7 +31531,12 @@
    "src": "tools/dbt/boardgen.py"
   },
   {
-   "count": 2,
+   "count": 1,
+   "dst": "GAUGE",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 3,
    "dst": "KERNEL_SERVED_BATTERY",
    "src": "tools/dbt/boardgen.py"
   },
@@ -31588,11 +31593,6 @@
   {
    "count": 2,
    "dst": "_storage_block",
-   "src": "tools/dbt/boardgen.py"
-  },
-  {
-   "count": 1,
-   "dst": "check",
    "src": "tools/dbt/boardgen.py"
   },
   {
@@ -33158,6 +33158,11 @@
   {
    "count": 2,
    "dst": "open",
+   "src": "tools/dbt/manifest.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
    "src": "tools/dbt/manifest.py"
   },
   {
@@ -35001,7 +35006,7 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 11,
+   "count": 12,
    "dst": "CHARGER",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35026,7 +35031,7 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 13,
+   "count": 14,
    "dst": "_board",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35046,7 +35051,7 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 12,
+   "count": 13,
    "dst": "_header",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35071,7 +35076,7 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "resolve",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35083,6 +35088,11 @@
   {
    "count": 1,
    "dst": "test_a_declared_cutoff_without_a_declared_taper_is_refused",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_kernel_served_adc_battery_with_a_charger_is_accepted",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
@@ -43523,6 +43533,7 @@
    "test_a_gate_that_probes_unavailable_is_never_run",
    "test_a_generated_board_artefact_is_denied",
    "test_a_good_calloc_run_matches_every_assertion",
+   "test_a_kernel_served_adc_battery_with_a_charger_is_accepted",
    "test_a_kernel_served_driver_is_a_skip_not_a_failure",
    "test_a_known_board_validates",
    "test_a_legacy_display_alone_on_the_sd_host_shares_the_bus",

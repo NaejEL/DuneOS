@@ -92,6 +92,17 @@ def test_the_check_is_silent_only_where_silence_is_harmless():
     _header(_board(None, CHARGER))                 # no gauge at all
 
 
+def test_a_kernel_served_adc_battery_with_a_charger_is_accepted():
+    """The over-reach the guard's first version committed.
+
+    An adc_simple battery is served by the kernel and has no taper register at
+    all, so a charger beside it has nothing to be consistent with. Demanding a
+    taper here would force a number the generator then drops. `charger` alone,
+    because `battery` would be kernel-served and skipped by resolve()."""
+    adc = {"type": "adc_simple"}
+    _header(_board(adc, CHARGER), caps=["charger"])
+
+
 def test_a_declared_cutoff_without_a_declared_taper_is_refused():
     """The asymmetry that silently reproduces the ceiling.
 

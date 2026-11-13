@@ -218,6 +218,9 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
     manifest["stack_size"] = final_stack
 
     # Embed the (now stack-resolved) manifest as a JSON string in its ELF section.
+    # optional_capabilities is a dbt build-time hint, already consumed above;
+    # the kernel has no use for it, so it does not travel in the binary.
+    manifest.pop("optional_capabilities", None)
     manifest["arch"] = arch   # so the kernel can reject cross-arch binaries
     manifest_json = json.dumps(manifest, separators=(",", ":"))
     manifest_c = build_dir / "_manifest.c"

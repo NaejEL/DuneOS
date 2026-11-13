@@ -76,11 +76,11 @@ const char       *charger_state_name(charger_state_t s);
  *    1  the charger was reconfigured
  *  <0   -errno
  *
- * Call it from the battery daemon at startup, or from a tool whose declared
- * purpose is to reconfigure the chip (apps/user/bqprov). Never from something
- * that only reads — the same reasoning as duneos_battery_provision(), and the
- * same reason it is not in the ops vtable above: that table is what every app
- * holding the `charger` capability reaches through, and a diagnostic must not
+ * Call it from the battery daemon at startup — today its only caller — or from
+ * a tool whose declared purpose is to reconfigure the chip. Never from
+ * something that only reads: the same reasoning as duneos_battery_provision(),
+ * and the same reason it is not in the ops vtable above, which is what every
+ * app holding the `charger` capability reaches through. A diagnostic must not
  * reprogram hardware as a side effect of being run.
  *
  * Why it exists: a charger left on its power-on defaults fills whatever cell
