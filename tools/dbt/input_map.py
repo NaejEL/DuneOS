@@ -40,7 +40,7 @@ INTENT_TO_KEY = {
 
 BUTTON_INTENTS = frozenset(INTENT_TO_KEY)
 
-# A rotary axis drives one pair. `alt` is the second axis ui_wave zooms with.
+# A rotary axis drives one pair. `alt` is the second axis ui_wave pans with.
 #
 # counts_per_step is in the unit the axis EMITS, which for a rotary is detents:
 # the arch HAL watches +/-DETENT_COUNTS and clears, so one notch arrives as a

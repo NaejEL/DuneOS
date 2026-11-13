@@ -314,9 +314,9 @@ def test_a_keyboard_board_reaches_the_whole_vocabulary():
 def test_the_t_embed_reaches_everything_but_the_second_axis():
     """The gap is reported, not silent — which is what criterion 9 asks for.
 
-    A rotary on the primary axis plus VALIDATE and BACK cannot zoom. ui_wave is
-    the only widget with a second axis, so on this board it pans and does not
-    zoom. If somebody declares an `intent_long:` or a second axis on the
+    A rotary on the primary axis plus VALIDATE and BACK can zoom but not pan.
+    ui_wave is the only widget with a second axis, so on this board it zooms and
+    does not pan. If somebody declares an `intent_long:` or a second axis on the
     T-Embed, this test is the record of what that changed.
     """
     path = next(p for p in tracked_board_yamls() if "lilygo-t-embed" in p)
