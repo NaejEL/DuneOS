@@ -195,8 +195,6 @@ def _battery_block(board: dict, lines: list[str]) -> None:
     # in board.yaml. Emitted only when declared — a backend guards on the macro
     # and does nothing without it, which is what keeps every other board's
     # behaviour unchanged.
-    # The charger is a second chip on the same bus, and the questions people
-    # actually ask ("why does it stop at 96%") are answered by reading both it
     if bat.get("design_capacity_mah") is not None:
         cap = int(bat["design_capacity_mah"])
         if not 1 <= cap <= 32767:
@@ -241,7 +239,7 @@ def _charger_block(board: dict, lines: list[str]) -> None:
 
     for key, macro, lo, hi, unit in (
         ("charge_voltage_mv",      "DUNEOS_CHARGER_VOLTAGE_MV",      3840, 4608, "mV"),
-        ("charge_current_ma",      "DUNEOS_CHARGER_CURRENT_MA",         0, 8128, "mA"),
+        ("charge_current_ma",      "DUNEOS_CHARGER_CURRENT_MA",        64, 8128, "mA"),
         ("termination_current_ma", "DUNEOS_CHARGER_TERM_CURRENT_MA",   64, 1024, "mA"),
     ):
         if chg.get(key) is None:
@@ -276,6 +274,27 @@ def _check_taper_agrees_with_charger(board: dict) -> None:
     chg = board.get("charger") or {}
     taper = bat.get("taper_current_ma")
     term  = chg.get("termination_current_ma")
+
+    # The two absences are not symmetric. A board that declares neither is not
+    # making a claim. A board that declares a charger cutoff and no gauge taper
+    # leaves the gauge on its ROM default — 100 mA for the bq27220 — which is
+    # below most useful cutoffs, and that is precisely the configuration that
+    # produced the 96% ceiling. boardgen cannot know every gauge's default, so
+    # it refuses the asymmetry rather than guess: once a charger states when it
+    # stops, the gauge must state when it believes the charge is over.
+    # Only when there is a gauge to disagree with. A board with a charger and
+    # no battery section has nothing to keep consistent, and refusing it would
+    # be the check over-reaching — caught by its own test.
+    if bat and term is not None and taper is None:
+        raise SystemExit(
+            f"ERROR: charger.termination_current_ma={term} is declared but "
+            "battery.taper_current_ma is not.\n"
+            "  The gauge would keep its ROM default taper, and if that sits "
+            "below the charger's cutoff\n"
+            "  the current never crosses it while charging: the gauge never "
+            "detects termination and\n"
+            "  the reported charge stops short of 100%. Declare both, with "
+            "the taper above the cutoff.")
     if taper is None or term is None:
         return
     if int(taper) <= int(term):

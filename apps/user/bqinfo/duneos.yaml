@@ -6,3 +6,9 @@ permissions: 40
 capabilities:
   - battery
   - charger
+# The charger half is guarded by #ifdef DUNEOS_CHARGER_DRIVER, so a board with
+# a gauge and no charger chip must lose the charger code, not the whole app.
+# Without this, resolve() raises for the missing section and builder.py skips
+# the app entirely — a battery daemon that silently is not in the image.
+optional_capabilities:
+  - charger

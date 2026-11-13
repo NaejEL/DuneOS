@@ -48,8 +48,8 @@ init_flash:
   restart: always
 - path: /bin/logd.dap
   restart: always
-- path: /bin/battery_daemon.dap
-  restart: always
+- path: /bin/bqinfo.dap
+  restart: no
 - path: /bin/launcher.dap
   restart: always
   after: splash

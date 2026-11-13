@@ -1731,6 +1731,16 @@
    "src": "apps/system/battery_daemon/duneos.yaml"
   },
   {
+   "count": 1,
+   "dst": "missing",
+   "src": "apps/system/battery_daemon/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "apps/system/battery_daemon/duneos.yaml"
+  },
+  {
    "count": 4,
    "dst": "AMBIENT_BATTERY_PATH",
    "src": "apps/system/battery_pub/battery_pub.c"
@@ -5524,6 +5534,16 @@
    "count": 2,
    "dst": "write",
    "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "apps/user/bqinfo/duneos.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "apps/user/bqinfo/duneos.yaml"
   },
   {
    "count": 1,
@@ -26031,7 +26051,7 @@
    "src": "sdk/sensor/include/duneos/battery.h"
   },
   {
-   "count": 3,
+   "count": 2,
    "dst": "battery_open",
    "src": "sdk/sensor/include/duneos/battery.h"
   },
@@ -26081,7 +26101,7 @@
    "src": "sdk/sensor/include/duneos/charger.h"
   },
   {
-   "count": 2,
+   "count": 1,
    "dst": "charger_open",
    "src": "sdk/sensor/include/duneos/charger.h"
   },
@@ -31572,6 +31592,11 @@
   },
   {
    "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/boardgen.py"
+  },
+  {
+   "count": 1,
    "dst": "consume",
    "src": "tools/dbt/boardgen.py"
   },
@@ -31846,6 +31871,11 @@
    "src": "tools/dbt/capabilities.py"
   },
   {
+   "count": 1,
+   "dst": "Resolution",
+   "src": "tools/dbt/capabilities.py"
+  },
+  {
    "count": 2,
    "dst": "_board_key_get",
    "src": "tools/dbt/capabilities.py"
@@ -31886,12 +31916,12 @@
    "src": "tools/dbt/capabilities.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "join",
    "src": "tools/dbt/capabilities.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "missing",
    "src": "tools/dbt/capabilities.py"
   },
@@ -32677,7 +32707,7 @@
   },
   {
    "count": 2,
-   "dst": "_app_row",
+   "dst": "_app_offset",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -34966,18 +34996,23 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "CAPABILITY_TO_BLOCKS",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 10,
+   "count": 11,
    "dst": "CHARGER",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 11,
+   "count": 10,
    "dst": "GAUGE",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 4,
+   "dst": "GAUGE_NO_TAPER",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
@@ -34991,7 +35026,7 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 12,
+   "count": 13,
    "dst": "_board",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35001,7 +35036,7 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 4,
+   "count": 8,
    "dst": "_defines",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35016,7 +35051,17 @@
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
-   "count": 3,
+   "count": 1,
+   "dst": "fail",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 8,
    "dst": "generate",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
@@ -35033,6 +35078,11 @@
   {
    "count": 1,
    "dst": "test_a_board_without_a_charger_emits_nothing_about_one",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_declared_cutoff_without_a_declared_taper_is_refused",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
@@ -35077,7 +35127,12 @@
   },
   {
    "count": 1,
-   "dst": "test_the_check_is_silent_when_either_number_is_absent",
+   "dst": "test_the_check_is_silent_only_where_silence_is_harmless",
+   "src": "tools/dbt/tests/test_boardgen_charger.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_reachability_test_fails_when_a_block_stops_emitting",
    "src": "tools/dbt/tests/test_boardgen_charger.py"
   },
   {
@@ -36452,7 +36507,7 @@
   },
   {
    "count": 5,
-   "dst": "_app_row",
+   "dst": "_app_offset",
    "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
   },
   {
@@ -41725,6 +41780,7 @@
    "FakeApp",
    "FakeClock",
    "GAUGE",
+   "GAUGE_NO_TAPER",
    "GENERATED",
    "GENERATED_TREE",
    "GFX_BLACK",
@@ -42224,7 +42280,7 @@
    "_app_from_path",
    "_app_list",
    "_app_map",
-   "_app_row",
+   "_app_offset",
    "_app_version_from_bytes",
    "_as_config_error",
    "_bar",
@@ -43446,6 +43502,7 @@
    "test_a_configuration_error_does_not_masquerade_as_an_assertion_failure",
    "test_a_dead_gdb_port_is_a_config_error_not_five_missing_assertions",
    "test_a_declared_backend_that_does_not_exist_aborts",
+   "test_a_declared_cutoff_without_a_declared_taper_is_refused",
    "test_a_deleted_board_file_exits_config",
    "test_a_detected_psram_size_clears_the_unavailable_warning",
    "test_a_different_app_does_not_satisfy_the_scan_assertion",
@@ -43783,7 +43840,7 @@
    "test_the_cheap_gates_come_first",
    "test_the_check_fails_on_a_board_missing_its_ethernet_pins",
    "test_the_check_fails_on_a_bus_numbered_one",
-   "test_the_check_is_silent_when_either_number_is_absent",
+   "test_the_check_is_silent_only_where_silence_is_harmless",
    "test_the_closed_rows_are_marked_done",
    "test_the_cmake_parse_drops_no_source",
    "test_the_console_patterns_anchor_per_line_not_per_capture",
@@ -43823,6 +43880,7 @@
    "test_the_qemu_gate_maps_exit_six_to_unavailable",
    "test_the_qemu_gate_passes_other_exits_through",
    "test_the_qemu_psram_board_declares_eight_megabytes",
+   "test_the_reachability_test_fails_when_a_block_stops_emitting",
    "test_the_real_panic_wording_is_still_detected",
    "test_the_real_t_embed_board_is_consistent",
    "test_the_refusal_does_not_raise_into_the_ui_thread",

@@ -224,12 +224,6 @@ static int select_block(int bus, uint16_t dm, uint8_t *sum, uint8_t *len)
     return 0;
 }
 
-/*
- * Make the gauge's Design Capacity match `want_mah`. Returns:
- *    0  already correct, nothing written
- *    1  reprogrammed
- *  <0   -errno, gauge left out of CONFIG UPDATE mode
- */
 /* Write one 16-bit data-memory field, assuming CONFIG UPDATE is already
  * entered. `n` is 2 for a single field, 4 for two adjacent ones.
  *
@@ -265,6 +259,12 @@ static int write_dm_field(int bus, uint16_t dm, const uint8_t *val, size_t n)
 }
 
 
+/*
+ * Make the gauge's Design Capacity match `want_mah`. Returns:
+ *    0  already correct, nothing written
+ *    1  reprogrammed
+ *  <0   -errno, gauge left out of CONFIG UPDATE mode
+ */
 static int bq27220_ensure_design_capacity(int bus, uint16_t want_mah)
 {
     uint16_t have = 0;

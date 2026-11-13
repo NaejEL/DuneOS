@@ -32,7 +32,9 @@ BASE = {"name": "testboard", "cpu": "esp32s3", "flash_size_mb": 8,
         "i2c": [{"id": 0, "sda_pin": 8, "scl_pin": 18}]}
 
 GAUGE = {"type": "bq27220", "i2c_id": 0, "gauge_addr": 0x55,
-         "design_capacity_mah": 1300}
+         "design_capacity_mah": 1300, "taper_current_ma": 200}
+# The same gauge with no taper declared — only valid on a board with no charger.
+GAUGE_NO_TAPER = {k: v for k, v in GAUGE.items() if k != "taper_current_ma"}
 CHARGER = {"type": "bq25896", "i2c_id": 0, "addr": 0x6B,
            "charge_voltage_mv": 4208, "charge_current_ma": 832,
            "termination_current_ma": 128}
@@ -63,8 +65,7 @@ def _defines(text):
 # ----- the relationship --------------------------------------------------
 
 def test_a_taper_above_the_cutoff_is_accepted():
-    bat = dict(GAUGE, taper_current_ma=200)
-    d = _defines(_header(_board(bat, CHARGER)))
+    d = _defines(_header(_board(GAUGE, CHARGER)))
     assert d["DUNEOS_BATTERY_TAPER_CURRENT_MA"] == "200"
     assert d["DUNEOS_CHARGER_TERM_CURRENT_MA"] == "128"
 
@@ -84,13 +85,25 @@ def test_a_taper_at_or_below_the_cutoff_is_refused(taper, term):
     assert "100%" in msg          # says what the consequence is, not just that it is wrong
 
 
-def test_the_check_is_silent_when_either_number_is_absent():
-    """A board that declares neither is not making a mistake. Only a board
-    that states both can be inconsistent."""
-    _header(_board(GAUGE, dict(CHARGER, termination_current_ma=None)))
-    _header(_board(dict(GAUGE), CHARGER))          # no taper declared
-    _header(_board(GAUGE, None))                   # no charger at all
+def test_the_check_is_silent_only_where_silence_is_harmless():
+    """A board making no claim about termination is not making a mistake."""
+    _header(_board(GAUGE_NO_TAPER, dict(CHARGER, termination_current_ma=None)))
+    _header(_board(GAUGE_NO_TAPER, None))          # no charger at all
     _header(_board(None, CHARGER))                 # no gauge at all
+
+
+def test_a_declared_cutoff_without_a_declared_taper_is_refused():
+    """The asymmetry that silently reproduces the ceiling.
+
+    The first version of this file asserted the opposite — it pinned the
+    silence as intended — which would have let a board ship with a charger
+    cutting off above the gauge's 100 mA ROM default, the exact configuration
+    the whole change exists to prevent. boardgen cannot know every gauge's
+    default, so it refuses rather than guesses."""
+    with pytest.raises(SystemExit) as e:
+        _header(_board(GAUGE_NO_TAPER, CHARGER))
+    msg = str(e.value)
+    assert "taper_current_ma" in msg and "100%" in msg
 
 
 def test_the_real_t_embed_board_is_consistent():
@@ -158,18 +171,46 @@ def test_a_value_the_chip_cannot_express_is_refused(key, value):
 
 # ----- the capability wiring, which was already one entry behind ---------
 
-def test_every_mapped_capability_block_is_actually_reachable():
+def test_every_mapped_capability_block_is_actually_reachable(monkeypatch):
     """The emission loop used to be a hand-written tuple naming three of the
     four mapped blocks, so registering a capability emitted nothing — silently.
-    Driving the loop from the map removed that; this keeps it removed."""
-    board = _board(dict(GAUGE, taper_current_ma=200), CHARGER)
+    Driving the loop from the map removed that; this keeps it removed.
+
+    The assertion is on each capability's OWN contribution, measured against a
+    baseline. The first version of this test asserted that the header held at
+    least one `#define` other than BOARD_NAME, which the always-on
+    storage/i2c blocks satisfy on their own: replacing a capability's block
+    with a no-op left five defines and the test green. It could not fail, and
+    the one case it could not detect was exactly the regression it claimed to
+    pin. Measuring the difference is what makes it a gate.
+    """
+    board = _board(GAUGE, CHARGER)
     board["display"] = {"driver": "st7789", "width": 320, "height": 170}
     board["buttons"] = [{"pin": 0, "code": "KEY_ENTER"}]
+
+    # What generate() emits for no capability at all: the always-on blocks.
+    baseline = set(_defines(boardgen.generate(board, "testboard", ["__none__"])))
+
     for cap in boardgen.CAPABILITY_TO_BLOCKS:
-        text = boardgen.generate(board, "testboard", [cap])
-        body = [l for l in text.splitlines()
-                if l.startswith("#define") and "BOARD_NAME" not in l]
-        assert body, f"capability {cap!r} is mapped but emits nothing"
+        added = set(_defines(boardgen.generate(board, "testboard", [cap]))) - baseline
+        assert added, (
+            f"capability {cap!r} is mapped but adds nothing beyond the "
+            f"always-on blocks — is it emitted by the loop in generate()?")
+
+
+def test_the_reachability_test_fails_when_a_block_stops_emitting(monkeypatch):
+    """The mutation that the previous version of that test survived.
+
+    Without this, nothing proves the assertion above is load-bearing — and
+    "the test passes" was the exact evidence that was wrong before.
+    """
+    board = _board(GAUGE, CHARGER)
+    monkeypatch.setitem(boardgen.CAPABILITY_TO_BLOCKS, "charger",
+                        (lambda b, lines: None,))
+    baseline = set(_defines(boardgen.generate(board, "testboard", ["__none__"])))
+    added = set(_defines(boardgen.generate(board, "testboard", ["charger"]))) - baseline
+    assert not added, ("a no-op block still added defines; the baseline is "
+                       "not isolating the capability's own output")
 
 
 def test_the_charger_capability_resolves_to_its_sources():

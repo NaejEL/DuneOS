@@ -88,11 +88,16 @@ def _get_sysbin_size(board_name: str | None) -> int:
     return _sysbin_row(board_name)[1]
 
 
-def _app_row(board_name: str | None) -> tuple[int, int] | None:
-    """(offset, size) of the board's app partition, or None if it has none.
+def _app_offset(board_name: str | None) -> int | None:
+    """Flash offset of the board's app partition, or None if it has none.
 
-    The app descriptor lives inside it, which is how the kernel on the device
-    can be identified without asking the device anything it might lie about.
+    The app descriptor lives at a fixed offset inside it, which is how the
+    kernel on the device can be identified without asking the device anything
+    it might lie about.
+
+    Offset only. This used to return `(offset, 0x100)` with a docstring calling
+    the second element the partition size — it was neither the size nor derived
+    from the CSV, nothing consumed it, and a test had pinned the wrong number.
     """
     if not board_name:
         return None
@@ -104,9 +109,7 @@ def _app_row(board_name: str | None) -> tuple[int, int] | None:
         parts = [x.strip() for x in line.strip().split(",")]
         # type=app, any subtype: factory, ota_0, …
         if len(parts) >= 5 and parts[1] == "app":
-            off = parse_csv_int(parts[3])
-            if off is not None:
-                return off, 0x100
+            return parse_csv_int(parts[3])
     return None
 
 
@@ -137,14 +140,14 @@ def _local_kernel_version() -> str | None:
 def _device_kernel_version(esptool: str, port: str, baud: int,
                            board_name: str | None) -> str | None:
     """The version of the kernel currently on the device, read from flash."""
-    row = _app_row(board_name)
-    if not row:
+    off = _app_offset(board_name)
+    if off is None:
         return None
     import tempfile
     with tempfile.TemporaryDirectory() as td:
         dump = Path(td) / "appdesc.bin"
         cmd = [esptool, "--port", port, "--baud", str(baud),
-               "read_flash", hex(row[0] + _APP_DESC_OFFSET), "0x40", str(dump)]
+               "read_flash", hex(off + _APP_DESC_OFFSET), "0x40", str(dump)]
         try:
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         except (OSError, subprocess.TimeoutExpired):

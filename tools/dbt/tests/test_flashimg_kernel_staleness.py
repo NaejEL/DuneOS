@@ -126,7 +126,7 @@ def _tree(tmp_path, board="testboard", csv_text=PARTITIONS):
 def test_the_app_partition_offset_is_found(monkeypatch, tmp_path):
     board = _tree(tmp_path)
     monkeypatch.setattr(FLASHIMG, "DUNEOS_ROOT", tmp_path)
-    assert FLASHIMG._app_row(board) == (0x10000, 0x100)
+    assert FLASHIMG._app_offset(board) == 0x10000
 
 
 def test_an_ota_subtype_is_accepted_not_just_factory(monkeypatch, tmp_path):
@@ -135,7 +135,7 @@ def test_an_ota_subtype_is_accepted_not_just_factory(monkeypatch, tmp_path):
                              "ota_0,    app,  ota_0,   0x20000")
     board = _tree(tmp_path, csv_text=csv)
     monkeypatch.setattr(FLASHIMG, "DUNEOS_ROOT", tmp_path)
-    assert FLASHIMG._app_row(board) == (0x20000, 0x100)
+    assert FLASHIMG._app_offset(board) == 0x20000
 
 
 def test_a_table_with_no_app_row_yields_none(monkeypatch, tmp_path):
@@ -144,10 +144,10 @@ def test_a_table_with_no_app_row_yields_none(monkeypatch, tmp_path):
         if len(l.split(",")) < 2 or l.split(",")[1].strip() != "app")
     board = _tree(tmp_path, csv_text=csv)
     monkeypatch.setattr(FLASHIMG, "DUNEOS_ROOT", tmp_path)
-    assert FLASHIMG._app_row(board) is None
+    assert FLASHIMG._app_offset(board) is None
 
 
 def test_an_unknown_board_yields_none_not_an_exception(monkeypatch, tmp_path):
     monkeypatch.setattr(FLASHIMG, "DUNEOS_ROOT", tmp_path)
-    assert FLASHIMG._app_row("no-such-board") is None
-    assert FLASHIMG._app_row(None) is None
+    assert FLASHIMG._app_offset("no-such-board") is None
+    assert FLASHIMG._app_offset(None) is None

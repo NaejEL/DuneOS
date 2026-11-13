@@ -54,11 +54,11 @@ extern const battery_backend_ops_t duneos_battery_ops;
  *    1  the gauge was reprogrammed
  *  <0   -errno
  *
- * Call once after battery_open(), from the battery daemon only. Not part of
- * the ops vtable on purpose: it may WRITE the chip's configuration, and the
- * vtable is what every app with the `battery` capability reaches through. A
- * diagnostic tool that opens the gauge must not reconfigure it as a side
- * effect of being run.
+ * Call it from the battery daemon at startup, or from a tool whose declared
+ * purpose is to reconfigure the chip (apps/user/bqprov). Never from something
+ * that only reads: a diagnostic must not reconfigure hardware as a side effect
+ * of being run, which is also why it is not part of the ops vtable — that
+ * table is what every app holding the `battery` capability reaches through.
  *
  * Why it is a startup check and not one-shot provisioning: on the BQ27220 the
  * configuration lives in RAM and reverts to ROM defaults whenever the gauge
