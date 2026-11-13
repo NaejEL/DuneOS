@@ -5381,12 +5381,12 @@
    "src": "apps/system/wifi_daemon/wifi_daemon.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "I2C_M_RD",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "I2C_RDWR",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
@@ -5411,6 +5411,11 @@
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
+   "count": 2,
+   "dst": "dump_charger",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
    "count": 3,
    "dst": "duneos_exit",
    "src": "apps/user/bqinfo/bqinfo.c"
@@ -5421,17 +5426,17 @@
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "i2c_msg",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "i2c_rdwr_ioctl_data",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "ioctl",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
@@ -5441,12 +5446,12 @@
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 7,
+   "count": 18,
    "dst": "outf",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 2,
+   "count": 5,
    "dst": "read",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
@@ -5456,7 +5461,12 @@
    "src": "apps/user/bqinfo/bqinfo.c"
   },
   {
-   "count": 2,
+   "count": 3,
+   "dst": "step",
+   "src": "apps/user/bqinfo/bqinfo.c"
+  },
+  {
+   "count": 3,
    "dst": "write",
    "src": "apps/user/bqinfo/bqinfo.c"
   },
@@ -32236,7 +32246,7 @@
    "src": "tools/dbt/deploy.py"
   },
   {
-   "count": 8,
+   "count": 10,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/flashimg.py"
   },
@@ -32257,6 +32267,16 @@
   },
   {
    "count": 2,
+   "dst": "_app_row",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 3,
+   "dst": "_app_version_from_bytes",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
    "dst": "_board_display_size",
    "src": "tools/dbt/flashimg.py"
   },
@@ -32268,6 +32288,11 @@
   {
    "count": 2,
    "dst": "_create_image",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
+   "dst": "_device_kernel_version",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -32306,6 +32331,11 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
+   "count": 2,
+   "dst": "_local_kernel_version",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
    "count": 3,
    "dst": "_no_fit_message",
    "src": "tools/dbt/flashimg.py"
@@ -32323,6 +32353,11 @@
   {
    "count": 3,
    "dst": "_sysbin_row",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 5,
+   "dst": "blob",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -32347,6 +32382,11 @@
   },
   {
    "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 1,
    "dst": "deploy_single",
    "src": "tools/dbt/flashimg.py"
   },
@@ -32358,6 +32398,11 @@
   {
    "count": 1,
    "dst": "find_compiler",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -32396,7 +32441,7 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "parse_csv_int",
    "src": "tools/dbt/flashimg.py"
   },
@@ -32406,12 +32451,12 @@
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "read",
    "src": "tools/dbt/flashimg.py"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "read_bytes",
    "src": "tools/dbt/flashimg.py"
   },
@@ -32438,6 +32483,11 @@
   {
    "count": 1,
    "dst": "walk",
+   "src": "tools/dbt/flashimg.py"
+  },
+  {
+   "count": 2,
+   "dst": "warn_if_kernel_is_stale",
    "src": "tools/dbt/flashimg.py"
   },
   {
@@ -35839,6 +35889,166 @@
    "count": 1,
    "dst": "test_the_parser_sees_every_shape_a_requires_list_can_take",
    "src": "tools/dbt/tests/test_cmake_requires.py"
+  },
+  {
+   "count": 4,
+   "dst": "DUNEOS_ROOT",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "MAGIC",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 4,
+   "dst": "PARTITIONS",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 5,
+   "dst": "_app_row",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 6,
+   "dst": "_app_version_from_bytes",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 7,
+   "dst": "_descriptor",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "_device_kernel_version",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "_local_kernel_version",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 4,
+   "dst": "_run_guard",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 4,
+   "dst": "_tree",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 2,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "draw",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "mkdir",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_dirty_describe_survives_intact",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_full_width_version_is_not_truncated",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_match_says_nothing",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_mismatch_warns_and_names_both_versions",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_short_read_is_refused",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_table_with_no_app_row_yields_none",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_version_string_is_read_back",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_wrong_magic_is_refused",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_empty_version_is_none_not_empty_string",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_ota_subtype_is_accepted_not_just_factory",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_unknown_board_yields_none_not_an_exception",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_an_unknown_version_is_silent_rather_than_wrong",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_app_partition_offset_is_found",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
+  },
+  {
+   "count": 1,
+   "dst": "warn_if_kernel_is_stale",
+   "src": "tools/dbt/tests/test_flashimg_kernel_staleness.py"
   },
   {
    "count": 13,
@@ -40661,6 +40871,7 @@
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
    "tools/dbt/tests/test_ci_matrix.py",
    "tools/dbt/tests/test_cmake_requires.py",
+   "tools/dbt/tests/test_flashimg_kernel_staleness.py",
    "tools/dbt/tests/test_flashimg_profile.py",
    "tools/dbt/tests/test_gates_cover.py",
    "tools/dbt/tests/test_manifest_depth_bound.py",
@@ -41100,6 +41311,7 @@
    "LOGIC_MAX_CHANNELS",
    "LOGIC_SET_CONFIG",
    "Licence",
+   "MAGIC",
    "MAIN_CMAKE",
    "MANIFESTS",
    "MANIFEST_JSON_FILE",
@@ -41447,6 +41659,8 @@
    "_app_from_path",
    "_app_list",
    "_app_map",
+   "_app_row",
+   "_app_version_from_bytes",
    "_as_config_error",
    "_bar",
    "_bat_arg",
@@ -41484,6 +41698,8 @@
    "_define",
    "_deploy_data",
    "_deps_satisfied",
+   "_descriptor",
+   "_device_kernel_version",
    "_dispatch_ids",
    "_display_block",
    "_display_spi_id",
@@ -41545,6 +41761,7 @@
    "_load",
    "_load_apps",
    "_load_bspgen",
+   "_local_kernel_version",
    "_log",
    "_log_ansi",
    "_main_requires",
@@ -41603,6 +41820,7 @@
    "_run_flash_sd",
    "_run_flash_sysbin",
    "_run_gates",
+   "_run_guard",
    "_run_idf",
    "_run_monitor",
    "_run_payload",
@@ -41636,6 +41854,7 @@
    "_to_rgb565",
    "_track",
    "_tracked_boards",
+   "_tree",
    "_valid",
    "_venv_python",
    "_with_i2c",
@@ -41912,6 +42131,7 @@
    "drv_usb_preinit",
    "drv_usb_register",
    "du_tree",
+   "dump_charger",
    "dump_corpus",
    "duneos_accept",
    "duneos_api_get",
@@ -42647,6 +42867,7 @@
    "test_a_deleted_board_file_exits_config",
    "test_a_detected_psram_size_clears_the_unavailable_warning",
    "test_a_different_app_does_not_satisfy_the_scan_assertion",
+   "test_a_dirty_describe_survives_intact",
    "test_a_display_on_another_host_does_not_share",
    "test_a_display_without_an_explicit_host_defaults_to_three",
    "test_a_driver_backed_permission_names_its_config",
@@ -42659,6 +42880,7 @@
    "test_a_failure_outranks_an_unavailability",
    "test_a_few_skips_above_the_floor_still_pass",
    "test_a_first_build_with_no_cached_sdkconfig_proceeds",
+   "test_a_full_width_version_is_not_truncated",
    "test_a_gate_that_probes_unavailable_is_never_run",
    "test_a_generated_board_artefact_is_denied",
    "test_a_good_calloc_run_matches_every_assertion",
@@ -42669,8 +42891,10 @@
    "test_a_loader_error_split_across_two_chunks_is_still_matched",
    "test_a_marker_only_capability_pulls_no_source",
    "test_a_mask_names_every_bit_it_carries",
+   "test_a_match_says_nothing",
    "test_a_matching_build_directory_passes",
    "test_a_minimal_manifest_is_accepted",
+   "test_a_mismatch_warns_and_names_both_versions",
    "test_a_missing_required_field_aborts_the_build",
    "test_a_missing_source_file_is_skipped",
    "test_a_missing_workflow_leaves_the_floor_unset",
@@ -42691,15 +42915,19 @@
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
    "test_a_scalar_apps_flash_does_not_win_the_election",
+   "test_a_short_read_is_refused",
    "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
    "test_a_symbol_absent_from_the_build_is_not_a_conflict",
+   "test_a_table_with_no_app_row_yields_none",
    "test_a_transient_git_failure_does_not_narrow_the_signature",
    "test_a_tui_gate_run_never_touches_the_board_file",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
+   "test_a_version_string_is_read_back",
+   "test_a_wrong_magic_is_refused",
    "test_absent_slots_are_zeroed",
    "test_absent_submodules_make_the_host_gate_unavailable",
    "test_adding_riscv_arch_cmake_pulls_both_boards_in",
@@ -42712,16 +42940,20 @@
    "test_an_agreeing_build_is_not_a_conflict",
    "test_an_empty_collection_is_not_a_pass",
    "test_an_empty_submodule_path_cannot_exempt_the_whole_repo",
+   "test_an_empty_version_is_none_not_empty_string",
    "test_an_icon_at_the_bound_is_accepted",
    "test_an_idf_config_symbol_leaves_its_branch_live",
    "test_an_or_guarded_source_is_scanned_when_only_one_symbol_is_enabled",
+   "test_an_ota_subtype_is_accepted_not_just_factory",
    "test_an_over_long_icon_is_rejected",
    "test_an_unavailable_gate_is_not_a_pass",
    "test_an_unconfigured_build_directory_passes",
    "test_an_undefined_bit_is_not_invented",
+   "test_an_unknown_board_yields_none_not_an_exception",
    "test_an_unknown_capability_aborts_the_build",
    "test_an_unknown_field_warns_but_does_not_abort",
    "test_an_unknown_key_is_refused",
+   "test_an_unknown_version_is_silent_rather_than_wrong",
    "test_an_unreadable_report_is_not_a_pass",
    "test_an_unrelated_raw_kconfig_entry_is_not_refused",
    "test_an_unset_board_file_is_unavailable_not_a_crash",
@@ -42951,6 +43183,7 @@
    "test_terminate_child_reports_nothing_to_stop",
    "test_terminate_child_stops_a_running_gate",
    "test_test_workers_are_thin_shells",
+   "test_the_app_partition_offset_is_found",
    "test_the_board_fragment_wins_over_the_root_defaults",
    "test_the_board_key_is_also_looked_up_under_board",
    "test_the_boards_that_carry_a_radio_are_the_four_expected_ones",
@@ -43119,6 +43352,7 @@
    "verdict",
    "wait",
    "walk",
+   "warn_if_kernel_is_stale",
    "wdt_timer_cb",
    "workflow_from",
    "write",

@@ -82,7 +82,7 @@
 {"lang": "cpp", "lines": 25, "path": "apps/system/usb_shell/usb_shell.c", "sha256": "24de03ddc906124fe8ae298638dce7a7bc8a0619962ab6dbf3a4e34a6bad32cf", "size": 604}
 {"lang": "yaml", "lines": 9, "path": "apps/system/wifi_daemon/duneos.yaml", "sha256": "5018d12fece61c2099d510a6e18e6b18b8d6b3fa28464989de88787e6800ca7b", "size": 206}
 {"lang": "cpp", "lines": 359, "path": "apps/system/wifi_daemon/wifi_daemon.c", "sha256": "695b28d7d55511d3f96b4f815e86856ad525fce364c312ae2e662dd41b65cd9a", "size": 11107}
-{"lang": "cpp", "lines": 170, "path": "apps/user/bqinfo/bqinfo.c", "sha256": "484642b83f9e144a36c7fb4dc5144c7b41132b64740b411e4095bae46c547634", "size": 6128}
+{"lang": "cpp", "lines": 275, "path": "apps/user/bqinfo/bqinfo.c", "sha256": "871d446d5cd7b8161385a86d6b61cd7bfd54778d0bc376ff3cc7ec58145d53ff", "size": 10306}
 {"lang": "yaml", "lines": 7, "path": "apps/user/bqinfo/duneos.yaml", "sha256": "f57dcb2ad014c102be9717dd9b03eda27c80c4cffc3d2598032f0f1e269c52d2", "size": 166}
 {"lang": "cpp", "lines": 70, "path": "apps/user/bqprov/bqprov.c", "sha256": "35a90316fed17c3fb40dc890d7e1f6746d3c910564f75fad9ec15d279306f40f", "size": 2374}
 {"lang": "yaml", "lines": 7, "path": "apps/user/bqprov/duneos.yaml", "sha256": "8ea0f755d301432caf026de0def20528fceed1e997ad726d0dfeefe881054b71", "size": 126}
@@ -422,7 +422,7 @@
 {"lang": "other", "lines": 14, "path": "tools/constraints.txt", "sha256": "4776f19879481eccba95acd04e71e150daf728d7c346b212167e73f4ef03e722", "size": 550}
 {"lang": "python", "lines": 91, "path": "tools/dbt.py", "sha256": "96087de0d726d31ad7679918dcb3e3054bf7af849b0bceb4abeed896ee121416", "size": 2730}
 {"lang": "python", "lines": 0, "path": "tools/dbt/__init__.py", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "size": 0}
-{"lang": "python", "lines": 275, "path": "tools/dbt/boardgen.py", "sha256": "f38435582c11f8ba7f8ad995a723e8f5cc3259abd6c0a5cd6ca30bac46c7588f", "size": 12146}
+{"lang": "python", "lines": 281, "path": "tools/dbt/boardgen.py", "sha256": "adfe4eea4d5e40dd88204e5cea093a1527ce57eaf29826be1896b46d140b39fc", "size": 12533}
 {"lang": "python", "lines": 114, "path": "tools/dbt/bspgen.py", "sha256": "cf0785b904288a59b104a349a28b38afd59217fa4fc216b086758c4ce708f6e8", "size": 3600}
 {"lang": "python", "lines": 261, "path": "tools/dbt/builder.py", "sha256": "234f694c93760f0b9f81fe7f89bb6f8ec4340abc47348c37589835f2a458aeb2", "size": 10061}
 {"lang": "python", "lines": 221, "path": "tools/dbt/capabilities.py", "sha256": "69de8118185740c9ad92a2e0bb39bd590b05f2bcff1ef7966051d7f84aca8b93", "size": 8968}
@@ -431,7 +431,7 @@
 {"lang": "python", "lines": 759, "path": "tools/dbt/cli.py", "sha256": "97f46d487d083862e6ab23c9ff1c38c5f4f124a79bb55ac91d53a4acaff58ae8", "size": 29725}
 {"lang": "python", "lines": 80, "path": "tools/dbt/constants.py", "sha256": "0e20d2f5d4bd2a6e3206c769dfb3100c5cd9eea370559ed525ae553a2cc64ab1", "size": 3290}
 {"lang": "python", "lines": 78, "path": "tools/dbt/deploy.py", "sha256": "6c4948a45e7f45b033bd592ebc9721bf9226aa90a212950af7a15ef64bd3aa08", "size": 2756}
-{"lang": "python", "lines": 463, "path": "tools/dbt/flashimg.py", "sha256": "f78993191b1171b75893d58b5f4f63ca0739737075240a5d5e7b667a9ef7897a", "size": 18164}
+{"lang": "python", "lines": 560, "path": "tools/dbt/flashimg.py", "sha256": "1baac21e458f08fadbf64e741de1153230a9e7a089ef6cb93745c192ba5e32f2", "size": 22184}
 {"lang": "python", "lines": 250, "path": "tools/dbt/img.py", "sha256": "5419d62190f441415be9cc2cfd0aedcf14cee583cb108c8c37412ab2693fee34", "size": 8388}
 {"lang": "python", "lines": 89, "path": "tools/dbt/kernel.py", "sha256": "4d26be09bd286900ee5e5a4b64b5aed121dd250b4c45cfc9e0f66e33a42581dc", "size": 3516}
 {"lang": "python", "lines": 124, "path": "tools/dbt/manifest.py", "sha256": "4bcdd6fe95a467b9ffb9e0c40c9f37abb69a99e5614e6bc190a865403649c9d1", "size": 4075}
@@ -456,6 +456,7 @@
 {"lang": "python", "lines": 89, "path": "tools/dbt/tests/test_bspgen_unknown_keys.py", "sha256": "90e2a2ad31e2eeaacfca161ef5d17633470ff9b97e23477a3b43d5a983bf4e4f", "size": 3019}
 {"lang": "python", "lines": 433, "path": "tools/dbt/tests/test_ci_matrix.py", "sha256": "757b30aea3f0d01476cb3efb75a9f719866098b8d1a4e23214d23a6f9f0bf620", "size": 17569}
 {"lang": "python", "lines": 184, "path": "tools/dbt/tests/test_cmake_requires.py", "sha256": "78a07e61d2f32cf60de1357d2c209b888743ad5584dc62a52a18955359674a02", "size": 7055}
+{"lang": "python", "lines": 153, "path": "tools/dbt/tests/test_flashimg_kernel_staleness.py", "sha256": "f8fc949f17ab1589c575218d6a353eb41c47f84341a0aa247b149565555f13bb", "size": 6057}
 {"lang": "python", "lines": 347, "path": "tools/dbt/tests/test_flashimg_profile.py", "sha256": "8afae134760879c71f4eb2ab38caf78c3cacc0cd4d1aee9485f2ca610ca96610", "size": 13875}
 {"lang": "python", "lines": 159, "path": "tools/dbt/tests/test_gates_cover.py", "sha256": "30fbc1aae19fee84a5d2b46a1191bc06d24a40ed440eb255cb56022a6dc2dd96", "size": 5886}
 {"lang": "python", "lines": 88, "path": "tools/dbt/tests/test_manifest_depth_bound.py", "sha256": "1accf71015ce9f61926ef17de6731ca6a79599567d3a729195455ae741784c03", "size": 3355}

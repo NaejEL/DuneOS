@@ -88,6 +88,101 @@ def _get_sysbin_size(board_name: str | None) -> int:
     return _sysbin_row(board_name)[1]
 
 
+def _app_row(board_name: str | None) -> tuple[int, int] | None:
+    """(offset, size) of the board's app partition, or None if it has none.
+
+    The app descriptor lives inside it, which is how the kernel on the device
+    can be identified without asking the device anything it might lie about.
+    """
+    if not board_name:
+        return None
+    csv_path = DUNEOS_ROOT / "boards" / board_name / "partitions.csv"
+    if not csv_path.exists():
+        return None
+    from .system import parse_csv_int
+    for line in csv_path.read_text().splitlines():
+        parts = [x.strip() for x in line.strip().split(",")]
+        # type=app, any subtype: factory, ota_0, …
+        if len(parts) >= 5 and parts[1] == "app":
+            off = parse_csv_int(parts[3])
+            if off is not None:
+                return off, 0x100
+    return None
+
+
+# esp_app_desc_t: magic word, then secure_version, reserv1[2], version[32],
+# project_name[32]. It sits at offset 0x20 of an app image, right after the
+# 24-byte image header plus the 8-byte segment header.
+_APP_DESC_OFFSET = 0x20
+_APP_DESC_MAGIC  = b"\x32\x54\xcd\xab"
+
+
+def _app_version_from_bytes(blob: bytes) -> str | None:
+    """Pull the version string out of an esp_app_desc_t at the start of blob."""
+    if len(blob) < 0x30 or blob[:4] != _APP_DESC_MAGIC:
+        return None
+    raw = blob[0x10:0x30]
+    return raw.split(b"\x00", 1)[0].decode("utf-8", "replace") or None
+
+
+def _local_kernel_version() -> str | None:
+    """The version of the kernel image sitting in build/, if there is one."""
+    img = DUNEOS_ROOT / "build" / "duneos.bin"
+    if not img.exists():
+        return None
+    data = img.read_bytes()
+    return _app_version_from_bytes(data[_APP_DESC_OFFSET:_APP_DESC_OFFSET + 0x40])
+
+
+def _device_kernel_version(esptool: str, port: str, baud: int,
+                           board_name: str | None) -> str | None:
+    """The version of the kernel currently on the device, read from flash."""
+    row = _app_row(board_name)
+    if not row:
+        return None
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        dump = Path(td) / "appdesc.bin"
+        cmd = [esptool, "--port", port, "--baud", str(baud),
+               "read_flash", hex(row[0] + _APP_DESC_OFFSET), "0x40", str(dump)]
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if r.returncode != 0 or not dump.exists():
+            return None
+        return _app_version_from_bytes(dump.read_bytes())
+
+
+def warn_if_kernel_is_stale(esptool: str, port: str, baud: int,
+                            board_name: str | None) -> None:
+    """Say so when the kernel on the device is not the one in build/.
+
+    `system flash` writes the sysbin image and nothing else, which is correct —
+    but it means a tree whose kernel has moved on can be flashed over and over
+    with no sign that half the fix is not on the device. That cost a full
+    debugging session: a launcher drawing into a freed SPI bus, where the
+    kernel-side guard for it had been merged but never flashed, and the only
+    hint was one stale log line nobody was looking for.
+
+    A warning, not a refusal: flashing only the image is a legitimate thing to
+    do, and a gate that blocks it would be worked around within a day.
+    """
+    local = _local_kernel_version()
+    if not local:
+        return                      # nothing built locally to compare against
+    device = _device_kernel_version(esptool, port, baud, board_name)
+    if not device or device == local:
+        return
+    print()
+    print("  ! The kernel on the device is not the one in build/:")
+    print(f"      device: {device}")
+    print(f"      build/: {local}")
+    print("    Only the sysbin image is being flashed. If this image expects")
+    print("    kernel changes, run `python tools/dbt.py flash kernel` too.")
+    print()
+
+
 def _get_board_name() -> str | None:
     board_file = DUNEOS_ROOT / ".duneos_board"
     if board_file.exists():
@@ -446,6 +541,8 @@ def cmd_flashimg(args) -> None:
 
     offset = _get_sysbin_offset(board_name)
     baud   = getattr(args, "baud", 460800)
+
+    warn_if_kernel_is_stale(esptool, port, baud, board_name)
 
     cmd = [
         esptool,

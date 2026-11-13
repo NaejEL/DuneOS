@@ -195,6 +195,12 @@ def _battery_block(board: dict, lines: list[str]) -> None:
     # in board.yaml. Emitted only when declared — a backend guards on the macro
     # and does nothing without it, which is what keeps every other board's
     # behaviour unchanged.
+    # The charger is a second chip on the same bus, and the questions people
+    # actually ask ("why does it stop at 96%") are answered by reading both it
+    # and the gauge together. Emitted only when the board names it.
+    if bat.get("charger_addr") is not None:
+        lines.append(f"#define DUNEOS_BATTERY_CHARGER_ADDR  "
+                     f"{hex(int(bat['charger_addr']))}")
     if bat.get("design_capacity_mah") is not None:
         cap = int(bat["design_capacity_mah"])
         if not 1 <= cap <= 32767:
