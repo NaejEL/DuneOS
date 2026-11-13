@@ -31,6 +31,22 @@ static uint8_t keyboard_intent(uint16_t code)
     }
 }
 
+/* Two VALIDATE presses closer than this toggle the rotary ALT latch. Generous:
+ * a knob press is deliberate, and the cost of a miss is one stray VALIDATE,
+ * which waves ignores. Short enough that two unrelated taps do not couple. */
+#define INPUT_DOUBLECLICK_MS 400
+
+/* The ALT counterpart of a primary intent, for the rotary latch. Anything that
+ * is not PREV/NEXT passes through — the latch only has meaning for the axis. */
+static uint8_t alt_of(uint8_t intent)
+{
+    switch (intent) {
+    case INPUT_INTENT_PREV: return INPUT_INTENT_ALT_PREV;
+    case INPUT_INTENT_NEXT: return INPUT_INTENT_ALT_NEXT;
+    default:                return intent;
+    }
+}
+
 static const input_key_map_t *find_key(const input_topology_t *topo, uint16_t code)
 {
     int n = topo->n_keys;
@@ -125,6 +141,21 @@ static int translate_key(const input_topology_t *topo,
                              : INPUT_INTENT_NONE);
     if (kind == INPUT_INTENT_NONE || max_out <= 0) return 0;
 
+    /* Double-click of VALIDATE toggles the rotary ALT latch — but only on a
+     * board that has an axis for it to act on. On a keyboard board n_axes is 0,
+     * so VALIDATE there is only ever VALIDATE, and the CardPuter is untouched.
+     * The first click still emits VALIDATE (harmless in waves); the second is
+     * swallowed so the gesture does not also validate twice. */
+    if (kind == INPUT_INTENT_VALIDATE && topo->n_axes > 0) {
+        uint32_t gap = ev->time_ms - st->validate_last_ms;
+        if (st->validate_last_ms != 0 && gap <= INPUT_DOUBLECLICK_MS) {
+            st->alt_latched = !st->alt_latched;
+            st->validate_last_ms = 0;   /* a triple-click is one toggle, not two */
+            return 0;
+        }
+        st->validate_last_ms = ev->time_ms ? ev->time_ms : 1;  /* 0 means "none" */
+    }
+
     char ch = (kind == INPUT_INTENT_TEXT) ? (char)ev->code : 0;
     return emit(out, 0, kind, ch, 0);
 }
@@ -140,6 +171,11 @@ static int translate_rel(const input_topology_t *topo,
     const input_axis_map_t *am = &topo->axes[ai];
     int32_t step = am->counts_per_step ? (int32_t)am->counts_per_step : 1;
 
+    /* While the ALT latch is armed, the axis emits the ALT pair — the wheel
+     * drives waves' second axis (pan) instead of its primary (zoom). */
+    uint8_t pos = st->alt_latched ? alt_of(am->intent_pos) : am->intent_pos;
+    uint8_t neg = st->alt_latched ? alt_of(am->intent_neg) : am->intent_neg;
+
     /* A reversal discards the partial count rather than carrying it across: a
      * leftover +N would turn the first count back the other way into an
      * immediate step, so one notch back would move two items. */
@@ -151,11 +187,11 @@ static int translate_rel(const input_topology_t *topo,
     int n = 0;
     while (st->accum[ai] >= step && n < max_out) {
         st->accum[ai] -= step;
-        n = emit(out, n, am->intent_pos, 0, ev->value);
+        n = emit(out, n, pos, 0, ev->value);
     }
     while (st->accum[ai] <= -step && n < max_out) {
         st->accum[ai] += step;
-        n = emit(out, n, am->intent_neg, 0, ev->value);
+        n = emit(out, n, neg, 0, ev->value);
     }
     /* Clamped: drop what did not fit instead of letting it arrive later as a
      * phantom step the user did not ask for. */

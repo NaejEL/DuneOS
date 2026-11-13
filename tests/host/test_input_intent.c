@@ -46,6 +46,19 @@ static input_topology_t alt_axis_map(void)
     return t;
 }
 
+/* A rotary board with a VALIDATE button — the T-Embed shape. The double-click
+ * ALT latch needs both an axis to act on and a VALIDATE key to count. */
+static input_topology_t rotary_with_validate(void)
+{
+    input_topology_t t = rotary_map(1);
+    t.n_keys            = 1;
+    t.keys[0].code      = KEY_ENTER;
+    t.keys[0].intent    = INPUT_INTENT_VALIDATE;
+    t.keys[0].intent_long = INPUT_INTENT_NONE;
+    t.keys[0].long_ms   = 0;
+    return t;
+}
+
 /* One button, with or without a long-press intent. */
 static input_topology_t button_map(uint8_t shrt, uint8_t lng, uint16_t long_ms)
 {
@@ -477,6 +490,75 @@ static void test_null_arguments_are_refused_quietly(void)
     CHECK(!duneos_input_has_keyboard(0));
 }
 
+/* ----- rotary ALT latch (double-click of VALIDATE) ----------------------- */
+
+static void test_a_double_click_latches_alt_on_the_wheel(void)
+{
+    fixture_t f;
+    fx_init(&f, rotary_with_validate());
+
+    /* At rest the wheel is the primary pair. */
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_NEXT);
+
+    /* First click emits VALIDATE; second within the window is swallowed. */
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 100)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(feed(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 300),
+                   INPUT_INTENT_BATCH_MAX), 0);
+
+    /* Now the wheel drives the ALT pair. */
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_ALT_NEXT);
+    CHECK_INT(one(&f, rel_ev(-1)), INPUT_INTENT_ALT_PREV);
+}
+
+static void test_a_second_double_click_releases_the_latch(void)
+{
+    fixture_t f;
+    fx_init(&f, rotary_with_validate());
+
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 100)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(feed(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 300),
+                   INPUT_INTENT_BATCH_MAX), 0);
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_ALT_NEXT);   /* latched */
+
+    /* A second double-click, its gap measured from a fresh first press — the
+     * toggle reset validate_last_ms, so t=300's press was NOT a usable anchor. */
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 1000)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(feed(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 1200),
+                   INPUT_INTENT_BATCH_MAX), 0);
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_NEXT);       /* back to primary */
+}
+
+static void test_a_single_click_does_not_latch(void)
+{
+    fixture_t f;
+    fx_init(&f, rotary_with_validate());
+
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 100)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_NEXT);       /* still primary */
+}
+
+static void test_two_clicks_too_far_apart_do_not_latch(void)
+{
+    fixture_t f;
+    fx_init(&f, rotary_with_validate());
+
+    /* 500 ms apart, over the 400 ms window: two real VALIDATEs, no toggle. */
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 100)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 600)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_NEXT);
+}
+
+static void test_a_keyboard_board_never_latches_on_double_click(void)
+{
+    fixture_t f;
+    fx_init(&f, keyboard_map());   /* n_axes == 0 */
+
+    /* Both presses are plain VALIDATEs; the second is not swallowed, because a
+     * keyboard board reaches ALT through its arrows and has no axis to latch. */
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 100)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS, 200)), INPUT_INTENT_VALIDATE);
+}
+
 int main(void)
 {
     test_keyboard_maps_the_vocabulary();
@@ -509,6 +591,12 @@ int main(void)
     test_a_release_without_its_press_yields_nothing();
     test_a_declared_button_overrides_the_keyboard_mapping();
     test_null_arguments_are_refused_quietly();
+
+    test_a_double_click_latches_alt_on_the_wheel();
+    test_a_second_double_click_releases_the_latch();
+    test_a_single_click_does_not_latch();
+    test_two_clicks_too_far_apart_do_not_latch();
+    test_a_keyboard_board_never_latches_on_double_click();
 
     return t_report("test_input_intent");
 }

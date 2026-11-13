@@ -78,13 +78,28 @@ out-of-scope line says eight and its context section says ten; both counted the
 two producer-side opens. Six is the consumer count.) An app becomes portable by reading intents; no kernel
 change will do it for them.
 
-**A conflict the bench must settle.** Criterion 1 of the spec fixes
-`KEY_UP`→PREV and `KEY_DOWN`→NEXT, and the widget table assigns `ui_wave`'s pan
-to PREV/NEXT. Together these invert waves' arrow roles on the CardPuter, where
-`KEY_LEFT`/`KEY_RIGHT` pan today — against criterion 18's "waves navigation
-unchanged". The spec's two gradeable statements were implemented as written and
-the inversion is real; whether the keyboard pair or the wave mapping moves is a
-Product Owner call to make on the board.
+**A conflict, settled: the widget mapping moves, not the topology.** The first
+implementation inverted waves on the CardPuter — `ui_wave_intent` sent the
+primary pair (PREV/NEXT) to pan, so with `KEY_UP`→PREV the up arrow panned
+where it used to zoom, against the CardPuter's long-standing LEFT/RIGHT = pan,
+UP/DOWN = zoom. The Product Owner's ruling was to keep the CardPuter exactly, so
+`ui_wave_intent` now sends **PREV/NEXT to zoom and ALT_PREV/ALT_NEXT to pan**:
+the topology binds UP/DOWN to the primary pair and LEFT/RIGHT to ALT, so this
+restores the keyboard behaviour without touching the shared map. Waves is the
+one widget whose primary axis is not its selection — it is the zoom, by the
+keyboard it was designed on.
+
+**The rotary consequence, and the modifier that answers it.** On a board whose
+only navigation is one wheel, the primary pair is all it reaches, so waves could
+zoom but never pan. A double-click of VALIDATE toggles an ALT latch in
+`libinput`'s translation core (`duneos_input_state_t.alt_latched`), and while it
+is set the axis emits the ALT pair — the wheel pans. It is the rotary analogue
+of the CardPuter's Fn/Shift latch: a modifier reached by a gesture the hardware
+has. Armed only on a board that declares an axis (`topo->n_axes > 0`), so a
+keyboard board, which already reaches ALT through its arrows, never latches and
+its VALIDATE is only ever VALIDATE. The T-Embed's wheel therefore zooms at rest
+and pans while latched; the Product Owner chose that default over its inverse to
+keep the mechanism board-agnostic (no per-topology default-latch state).
 
 `DUNEOS_ABI_VERSION` is unchanged: the new surface is an ioctl, and no kernel
 export-table entry was added.

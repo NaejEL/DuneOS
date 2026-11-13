@@ -110,17 +110,28 @@ int ui_wave_key(ui_wave_t *w, uint16_t key)
     return 0;
 }
 
-/* The only two-axis widget: the primary pair pans, the second zooms. On a
- * rotary board the knob pans and zoom is unreachable unless the board declares
- * a second axis — the generated board_config.h names that gap. */
+/* The only two-axis widget. The mapping is fixed by the CardPuter, whose
+ * waves has always been LEFT/RIGHT = pan, UP/DOWN = zoom, and must stay so.
+ *
+ * The topology binds KEY_UP/DOWN to PREV/NEXT and KEY_LEFT/RIGHT to ALT (see
+ * input_map.py), so keeping the CardPuter means the PRIMARY pair zooms and the
+ * ALT pair pans — the reverse of a list widget, where the primary pair moves
+ * the selection. That is not an inconsistency: waves' primary axis is the
+ * zoom, by the keyboard it was designed on.
+ *
+ * On a rotary board the knob is the primary pair, so it zooms at rest; pan is
+ * reached by latching ALT (a double-click of VALIDATE, handled in libinput's
+ * translation core, which rewrites PREV/NEXT to ALT while armed). A board with
+ * neither a second axis nor that modifier can zoom but not pan — the generated
+ * board_config.h names that gap. */
 int ui_wave_intent(ui_wave_t *w, const duneos_intent_t *it)
 {
     if (!it) return 0;
     switch (it->kind) {
-    case INPUT_INTENT_PREV:     return ui_wave_key(w, KEY_LEFT);
-    case INPUT_INTENT_NEXT:     return ui_wave_key(w, KEY_RIGHT);
-    case INPUT_INTENT_ALT_PREV: return ui_wave_key(w, KEY_UP);
-    case INPUT_INTENT_ALT_NEXT: return ui_wave_key(w, KEY_DOWN);
+    case INPUT_INTENT_PREV:     return ui_wave_key(w, KEY_UP);     /* zoom in  */
+    case INPUT_INTENT_NEXT:     return ui_wave_key(w, KEY_DOWN);   /* zoom out */
+    case INPUT_INTENT_ALT_PREV: return ui_wave_key(w, KEY_LEFT);   /* pan left */
+    case INPUT_INTENT_ALT_NEXT: return ui_wave_key(w, KEY_RIGHT);  /* pan right*/
     default:                    return 0;
     }
 }

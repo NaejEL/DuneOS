@@ -65,6 +65,17 @@ typedef struct {
     uint32_t held_since_ms;
     bool     held_active;
     bool     held_long_sent;             /* long intent already emitted */
+
+    /* Rotary ALT mode. A board whose only navigation is a single wheel reaches
+     * the primary pair (PREV/NEXT) and nothing else; the second axis a widget
+     * like ui_wave wants (ALT_PREV/ALT_NEXT) is physically unreachable. A
+     * double-click of VALIDATE toggles this latch, and while it is set the axis
+     * emits the ALT pair instead — the same role the CardPuter's Fn/Shift latch
+     * plays for its keyboard, reached by a gesture a rotary board does have.
+     * Only armed on a board that declares an axis (topo->n_axes > 0), so a
+     * keyboard board that already reaches ALT through its arrows is untouched. */
+    uint32_t validate_last_ms;           /* previous VALIDATE press, for the gap */
+    bool     alt_latched;                /* PREV/NEXT rewritten to ALT while set */
 } duneos_input_state_t;
 
 /*

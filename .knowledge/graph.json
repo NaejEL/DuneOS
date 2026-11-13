@@ -822,11 +822,6 @@
   },
   {
    "count": 1,
-   "dst": "KEY_UP",
-   "src": "ROADMAP.md"
-  },
-  {
-   "count": 1,
    "dst": "KNOWN_BOARD_KEYS",
    "src": "ROADMAP.md"
   },
@@ -858,6 +853,11 @@
   {
    "count": 2,
    "dst": "MAX_SECTIONS",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "NEXT",
    "src": "ROADMAP.md"
   },
   {
@@ -953,6 +953,11 @@
   {
    "count": 1,
    "dst": "SplashScreen",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "VALIDATE",
    "src": "ROADMAP.md"
   },
   {
@@ -1641,7 +1646,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "settled",
    "src": "ROADMAP.md"
   },
@@ -1676,7 +1681,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "topology",
    "src": "ROADMAP.md"
   },
@@ -1688,6 +1693,11 @@
   {
    "count": 1,
    "dst": "ui_statusbar",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "ui_wave_intent",
    "src": "ROADMAP.md"
   },
   {
@@ -14261,12 +14271,12 @@
    "src": "docs/adr/041-test-harness-keep-tassert.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "ALT_NEXT",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "ALT_PREV",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
@@ -14327,22 +14337,7 @@
   },
   {
    "count": 1,
-   "dst": "KEY_DOWN",
-   "src": "docs/adr/042-input-intents-in-the-sdk.md"
-  },
-  {
-   "count": 1,
    "dst": "KEY_ENTER",
-   "src": "docs/adr/042-input-intents-in-the-sdk.md"
-  },
-  {
-   "count": 1,
-   "dst": "KEY_LEFT",
-   "src": "docs/adr/042-input-intents-in-the-sdk.md"
-  },
-  {
-   "count": 1,
-   "dst": "KEY_RIGHT",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
@@ -14356,7 +14351,7 @@
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "PREV",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
@@ -14371,7 +14366,7 @@
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
-   "count": 2,
+   "count": 5,
    "dst": "VALIDATE",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
@@ -14381,7 +14376,7 @@
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
-   "count": 13,
+   "count": 16,
    "dst": "board",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
@@ -14421,8 +14416,18 @@
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
-   "count": 2,
+   "count": 1,
+   "dst": "settled",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 5,
    "dst": "topology",
+   "src": "docs/adr/042-input-intents-in-the-sdk.md"
+  },
+  {
+   "count": 2,
+   "dst": "ui_wave_intent",
    "src": "docs/adr/042-input-intents-in-the-sdk.md"
   },
   {
@@ -27022,6 +27027,16 @@
   },
   {
    "count": 1,
+   "dst": "ALT_NEXT",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
+   "dst": "ALT_PREV",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 1,
    "dst": "DuneOS",
    "src": "sdk/input/include/duneos/input.h"
   },
@@ -27046,12 +27061,27 @@
    "src": "sdk/input/include/duneos/input.h"
   },
   {
+   "count": 2,
+   "dst": "NEXT",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 2,
+   "dst": "PREV",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 2,
+   "dst": "VALIDATE",
+   "src": "sdk/input/include/duneos/input.h"
+  },
+  {
    "count": 1,
    "dst": "api_read",
    "src": "sdk/input/include/duneos/input.h"
   },
   {
-   "count": 6,
+   "count": 10,
    "dst": "board",
    "src": "sdk/input/include/duneos/input.h"
   },
@@ -27129,6 +27159,11 @@
    "count": 1,
    "dst": "ui_carousel_intent",
    "src": "sdk/input/include/duneos/input.h"
+  },
+  {
+   "count": 2,
+   "dst": "INPUT_DOUBLECLICK_MS",
+   "src": "sdk/input/libinput.c"
   },
   {
    "count": 1,
@@ -27216,13 +27251,23 @@
    "src": "sdk/input/libinput.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "NEXT",
    "src": "sdk/input/libinput.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "PREV",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 6,
+   "dst": "VALIDATE",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 3,
+   "dst": "alt_of",
    "src": "sdk/input/libinput.c"
   },
   {
@@ -27231,7 +27276,7 @@
    "src": "sdk/input/libinput.c"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "board",
    "src": "sdk/input/libinput.c"
   },
@@ -27273,6 +27318,11 @@
   {
    "count": 1,
    "dst": "topology",
+   "src": "sdk/input/libinput.c"
+  },
+  {
+   "count": 1,
+   "dst": "validate",
    "src": "sdk/input/libinput.c"
   },
   {
@@ -29906,7 +29956,7 @@
    "src": "sdk/ui/ui_wave.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "KEY_LEFT",
    "src": "sdk/ui/ui_wave.c"
   },
@@ -29916,13 +29966,28 @@
    "src": "sdk/ui/ui_wave.c"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "KEY_UP",
    "src": "sdk/ui/ui_wave.c"
   },
   {
    "count": 4,
    "dst": "LABEL_W",
+   "src": "sdk/ui/ui_wave.c"
+  },
+  {
+   "count": 2,
+   "dst": "NEXT",
+   "src": "sdk/ui/ui_wave.c"
+  },
+  {
+   "count": 2,
+   "dst": "PREV",
+   "src": "sdk/ui/ui_wave.c"
+  },
+  {
+   "count": 1,
+   "dst": "VALIDATE",
    "src": "sdk/ui/ui_wave.c"
   },
   {
@@ -29953,6 +30018,11 @@
   {
    "count": 6,
    "dst": "step",
+   "src": "sdk/ui/ui_wave.c"
+  },
+  {
+   "count": 1,
+   "dst": "topology",
    "src": "sdk/ui/ui_wave.c"
   },
   {
@@ -33806,7 +33876,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 65,
+   "count": 83,
    "dst": "CHECK_INT",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33826,7 +33896,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 38,
+   "count": 41,
    "dst": "INPUT_INTENT_BATCH_MAX",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33841,7 +33911,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 27,
+   "count": 38,
    "dst": "INPUT_VAL_PRESS",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33871,7 +33941,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 25,
+   "count": 37,
    "dst": "KEY_ENTER",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33921,12 +33991,17 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
+   "count": 4,
+   "dst": "VALIDATE",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
    "count": 2,
    "dst": "alt_axis_map",
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 4,
+   "count": 6,
    "dst": "board",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33941,7 +34016,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 35,
+   "count": 38,
    "dst": "feed",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33951,17 +34026,17 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 31,
+   "count": 36,
    "dst": "fx_init",
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 44,
+   "count": 55,
    "dst": "key_ev",
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 9,
+   "count": 10,
    "dst": "keyboard_map",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33971,13 +34046,23 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 21,
+   "count": 28,
    "dst": "rel_ev",
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 12,
+   "count": 1,
+   "dst": "reset",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 13,
    "dst": "rotary_map",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 5,
+   "dst": "rotary_with_validate",
    "src": "tests/host/test_input_intent.c"
   },
   {
@@ -34017,6 +34102,16 @@
   },
   {
    "count": 2,
+   "dst": "test_a_double_click_latches_alt_on_the_wheel",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_keyboard_board_never_latches_on_double_click",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
    "dst": "test_a_long_press_yields_the_long_intent",
    "src": "tests/host/test_input_intent.c"
   },
@@ -34042,7 +34137,17 @@
   },
   {
    "count": 2,
+   "dst": "test_a_second_double_click_releases_the_latch",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
    "dst": "test_a_short_press_yields_the_short_intent",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_single_click_does_not_latch",
    "src": "tests/host/test_input_intent.c"
   },
   {
@@ -34118,6 +34223,11 @@
   {
    "count": 2,
    "dst": "test_the_topology_clamp_bounds_the_batch",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_two_clicks_too_far_apart_do_not_latch",
    "src": "tests/host/test_input_intent.c"
   },
   {
@@ -46210,6 +46320,7 @@
    "INIT_BUF_MAX",
    "INIT_MAX_PENDING",
    "INJECTIONS",
+   "INPUT_DOUBLECLICK_MS",
    "INPUT_EV_ABS",
    "INPUT_EV_KEY",
    "INPUT_EV_REL",
@@ -46903,6 +47014,7 @@
    "all_zero",
    "already_listed",
    "alt_axis_map",
+   "alt_of",
    "analyze",
    "angle_deg",
    "api_close",
@@ -47772,6 +47884,7 @@
    "roadmap_row",
    "rom_putc",
    "rotary_map",
+   "rotary_with_validate",
    "rotate_big",
    "rssi_level",
    "run_andor",
@@ -47937,6 +48050,7 @@
    "test_a_dirty_describe_survives_intact",
    "test_a_display_on_another_host_does_not_share",
    "test_a_display_without_an_explicit_host_defaults_to_three",
+   "test_a_double_click_latches_alt_on_the_wheel",
    "test_a_driver_backed_permission_names_its_config",
    "test_a_driver_off_in_the_build_is_not_a_withdrawal",
    "test_a_driver_the_sources_dropped_is_a_conflict",
@@ -47954,6 +48068,7 @@
    "test_a_kernel_served_adc_battery_with_a_charger_is_accepted",
    "test_a_kernel_served_driver_is_a_skip_not_a_failure",
    "test_a_keyboard_board_declares_the_keyboard_and_no_keys",
+   "test_a_keyboard_board_never_latches_on_double_click",
    "test_a_keyboard_board_reaches_the_whole_vocabulary",
    "test_a_known_board_validates",
    "test_a_legacy_display_alone_on_the_sd_host_shares_the_bus",
@@ -47997,11 +48112,13 @@
    "test_a_run_below_the_floor_is_not_a_pass",
    "test_a_run_where_every_test_skipped_is_not_a_pass",
    "test_a_scalar_apps_flash_does_not_win_the_election",
+   "test_a_second_double_click_releases_the_latch",
    "test_a_short_press_yields_the_short_intent",
    "test_a_short_read_is_refused",
    "test_a_shorthand_offset_is_read_not_crashed_on",
    "test_a_signal_killed_gate_is_a_failure_not_unavailability",
    "test_a_single_bit_names_its_permission",
+   "test_a_single_click_does_not_latch",
    "test_a_stale_build_directory_is_refused",
    "test_a_stale_build_directory_is_refused_with_the_actionable_message",
    "test_a_symbol_absent_from_the_build_is_not_a_conflict",
@@ -48392,6 +48509,7 @@
    "test_tui_no_longer_imports_the_staging_internals",
    "test_two_back_to_back_frames",
    "test_two_buttons_with_the_same_intent_are_refused",
+   "test_two_clicks_too_far_apart_do_not_latch",
    "test_unaligned_is_rejected",
    "test_unchanged_board_file_is_not_reported",
    "test_unknown_cpu_is_not_silently_called_riscv",
