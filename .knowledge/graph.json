@@ -10547,6 +10547,11 @@
   },
   {
    "count": 1,
+   "dst": "MAGIC",
+   "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
+  },
+  {
+   "count": 1,
    "dst": "__attribute__",
    "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
   },
@@ -10573,6 +10578,11 @@
   {
    "count": 2,
    "dst": "free",
+   "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
+  },
+  {
+   "count": 1,
+   "dst": "kill",
    "src": "arch/xtensa_esp32s3/hal/hal_encoder.c"
   },
   {
@@ -10962,6 +10972,11 @@
   },
   {
    "count": 1,
+   "dst": "MAGIC",
+   "src": "boards/lilygo-t-embed-cc1101/board.yaml"
+  },
+  {
+   "count": 1,
    "dst": "REL_WHEEL",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -10981,7 +10996,7 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 10,
+   "count": 11,
    "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -39193,6 +39208,106 @@
   {
    "count": 3,
    "dst": "BASE",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 7,
+   "dst": "BSPGEN",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 5,
+   "dst": "MACRO",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 2,
+   "dst": "MAGIC",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 3,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 2,
+   "dst": "_board_yaml",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 2,
+   "dst": "_load_bspgen",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 6,
+   "dst": "_with_encoder",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 7,
+   "dst": "board",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 3,
+   "dst": "generate",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_board_without_an_encoder_emits_no_macro",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_declared_value_is_emitted",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_in_range_values_are_accepted",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_key_emits_no_macro",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_out_of_range_or_non_integer_is_rejected",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_rejection_names_the_value",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_t_embed_declares_the_known_good_window",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 3,
+   "dst": "validate",
+   "src": "tools/dbt/tests/test_bspgen_encoder_glitch.py"
+  },
+  {
+   "count": 3,
+   "dst": "BASE",
    "src": "tools/dbt/tests/test_bspgen_i2c_bus_zero.py"
   },
   {
@@ -45452,6 +45567,11 @@
   },
   {
    "count": 1,
+   "dst": "MAGIC",
+   "src": "tools/duneos-bspgen.py"
+  },
+  {
+   "count": 1,
    "dst": "NEXT",
    "src": "tools/duneos-bspgen.py"
   },
@@ -45521,7 +45641,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 93,
+   "count": 94,
    "dst": "_define",
    "src": "tools/duneos-bspgen.py"
   },
@@ -45531,7 +45651,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 176,
+   "count": 177,
    "dst": "board",
    "src": "tools/duneos-bspgen.py"
   },
@@ -46135,6 +46255,7 @@
    "tools/dbt/tests/test_boardgen_charger.py",
    "tools/dbt/tests/test_bq27220_registers.py",
    "tools/dbt/tests/test_bspgen_driver_symbols.py",
+   "tools/dbt/tests/test_bspgen_encoder_glitch.py",
    "tools/dbt/tests/test_bspgen_i2c_bus_zero.py",
    "tools/dbt/tests/test_bspgen_main_task_stack.py",
    "tools/dbt/tests/test_bspgen_psram_kernel_exec.py",
@@ -46630,6 +46751,7 @@
    "LOGIC_SET_CONFIG",
    "LONG_MS",
    "Licence",
+   "MACRO",
    "MAGIC",
    "MAIN_CMAKE",
    "MANIFESTS",
@@ -47203,6 +47325,7 @@
    "_tree",
    "_valid",
    "_venv_python",
+   "_with_encoder",
    "_with_i2c",
    "_worker_bspgen",
    "_worker_bspgen_all",
@@ -48246,6 +48369,7 @@
    "test_a_board_with_no_alt_source_never_produces_alt",
    "test_a_board_with_no_input_source_reports_an_explicitly_empty_map",
    "test_a_board_without_a_charger_emits_nothing_about_one",
+   "test_a_board_without_an_encoder_emits_no_macro",
    "test_a_board_without_psram_never_reports_a_mismatch",
    "test_a_board_without_psram_stays_silent_about_the_cross_check",
    "test_a_board_without_the_hardware_raises_capability_missing",
@@ -48429,6 +48553,7 @@
    "test_dead_payload_is_an_assertion_failure_not_a_timeout",
    "test_declared_psram_mb_reads_the_board_yaml",
    "test_declared_psram_size_reaches_the_emulator",
+   "test_declared_value_is_emitted",
    "test_declared_value_is_emitted_verbatim",
    "test_default_console_leaves_the_secondary_console_alone",
    "test_deleted_verb_refused_by_name",
@@ -48503,6 +48628,7 @@
    "test_heap",
    "test_idle_and_noise",
    "test_image_size_comes_from_partitions_csv",
+   "test_in_range_values_are_accepted",
    "test_incremental_feed_matches_the_same_things_as_one_shot",
    "test_index_is_lf_only",
    "test_init_yaml_safe_is_staged",
@@ -48541,6 +48667,7 @@
    "test_no_copy_of_the_parser_survives_under_apps_or_tests",
    "test_no_display_resolves_to_none",
    "test_no_hardware_board_generates_the_symbol",
+   "test_no_key_emits_no_macro",
    "test_no_key_emits_nothing",
    "test_no_other_board_generates_the_symbol",
    "test_no_permission_decodes_to_nothing",
@@ -48568,6 +48695,7 @@
    "test_opening_a_denied_path_fails_the_test_that_did_it",
    "test_opi_default_copies_into_psram",
    "test_other_bit_positions",
+   "test_out_of_range_or_non_integer_is_rejected",
    "test_overflow_is_a_named_error_not_a_traceback",
    "test_panic_during_the_settle_window_beats_a_full_match",
    "test_panic_patterns_are_detected",
@@ -48728,6 +48856,7 @@
    "test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one",
    "test_the_stack_watchpoint_is_project_wide",
    "test_the_t_embed_declares_flash",
+   "test_the_t_embed_declares_the_known_good_window",
    "test_the_t_embed_fragment_runs_from_flash",
    "test_the_t_embed_reaches_everything_but_the_second_axis",
    "test_the_three_apps_link_the_shared_parser",

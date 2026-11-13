@@ -205,6 +205,12 @@ board:
     # half-speed. Measured by feel on hardware 2026-11-12; a working firmware
     # for this board divides raw counts by 2 for the same reason.
     counts_per_detent: 2
+    # Contact-bounce rejection for the PCNT backend (MAGIC-03). This knob
+    # chatters on each transition; without a filter the bounce crosses the ±8
+    # watch window and forges phantom detents the intent layer then emits. A
+    # known-good firmware for this board uses 5000 ns; matched here. PCNT-only
+    # (the GPIO polling fallback has no hardware filter).
+    glitch_filter_ns: 5000
     # UNIT: DETENTS, not raw PCNT counts. The HAL already divides — hal_encoder.c
     # watches ±DETENT_COUNTS (4) and clears the counter in the callback, so one
     # mechanical notch reaches /dev/input/event0 as a single REL_WHEEL of ±1.

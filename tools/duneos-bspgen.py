@@ -233,6 +233,16 @@ def validate(board: dict, yaml_path: Path) -> None:
             if spi_id not in spi_ids:
                 die(f"sd_card.spi_id={spi_id} references a SPI bus not defined in spi[]")
 
+    enc = board.get("encoder")
+    if isinstance(enc, dict) and "glitch_filter_ns" in enc:
+        g = enc["glitch_filter_ns"]
+        # PCNT's glitch filter counts APB cycles in a 10-bit field; at 80 MHz
+        # that caps the window near 1023/80e6 = ~12787 ns. Keep a safe ceiling
+        # so a too-large value is refused here, not at bring-up on the device.
+        if isinstance(g, bool) or not isinstance(g, int) or not (0 < g <= 12000):
+            die(f"'{yaml_path}' encoder.glitch_filter_ns must be an integer in "
+                f"1..12000 ns (PCNT hardware window at 80 MHz APB), got {g!r}.")
+
     if "psram_kernel_exec" in board:
         ke = str(board["psram_kernel_exec"]).lower()
         if ke not in ("psram", "flash"):
@@ -537,8 +547,16 @@ def generate(board: dict) -> str:
             " * coded 4, and the symptom was a knob that felt half-speed. */",
             _define("DUNEOS_ENCODER_COUNTS_PER_DETENT",
                     enc.get("counts_per_detent", 4)),
-            "",
         ]
+        if "glitch_filter_ns" in enc:
+            lines += [
+                "/* Contact-bounce rejection window (ns), PCNT backend only. A",
+                " * mechanical rotary chatters on each transition; a pulse shorter",
+                " * than this is dropped before it reaches the counter, so bounce",
+                " * cannot forge phantom detents (MAGIC-03). Omit for no filter. */",
+                _define("DUNEOS_ENCODER_GLITCH_FILTER_NS", enc["glitch_filter_ns"]),
+            ]
+        lines += [""]
 
     # ----- Input topology (served by ioctl(INPUT_GET_TOPOLOGY)) -----
     lines += generate_input_topology(board)
