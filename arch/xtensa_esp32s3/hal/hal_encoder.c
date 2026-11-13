@@ -71,6 +71,16 @@ duneos_hal_encoder_t *duneos_hal_encoder_open(const duneos_hal_encoder_config_t 
     };
     if (pcnt_new_unit(&unit_cfg, &enc->unit) != ESP_OK) goto fail_unit;
 
+#ifdef DUNEOS_ENCODER_GLITCH_FILTER_NS
+    /* Board-declared contact-bounce rejection (MAGIC-03). Best-effort: a rotary
+     * works unfiltered, so a filter the hardware refuses must not kill input —
+     * log nothing here (no klog in the HAL), just skip it. */
+    const pcnt_glitch_filter_config_t filter = {
+        .max_glitch_ns = DUNEOS_ENCODER_GLITCH_FILTER_NS,
+    };
+    pcnt_unit_set_glitch_filter(enc->unit, &filter);
+#endif
+
     /* Channel A: A is the edge pin, B is the level (direction) pin */
     const pcnt_chan_config_t chan_a_cfg = {
         .edge_gpio_num  = cfg->pin_a,

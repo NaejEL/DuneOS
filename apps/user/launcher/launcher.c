@@ -58,6 +58,7 @@ static char        s_icon_scratch[ICON_PATH_LEN];    /* reused by the icon callb
 static int         s_count;
 static int         s_total_dap;   /* .dap files seen (before display filter) */
 static int         s_meta_ok;     /* of those, manifests read successfully    */
+static bool        s_capped;      /* MAX_APPS reached — list truncated (MAGIC-04) */
 
 static ui_carousel_t s_car;
 
@@ -72,9 +73,12 @@ static ui_carousel_t s_car;
  *
  * Flash is still scanned when the SD dirs come up empty — that is what makes
  * the launcher usable on a board with no card, which is why /bin was added in
- * the first place. Telling a boot asset apart from a launchable app needs a
- * manifest flag the SDK does not have yet; until then this ordering is the
- * whole mechanism. See ROADMAP. */
+ * the first place. Boot assets are now told apart from launchable apps by the
+ * manifest `launchable` flag (LAUNCH-01): splash and the launcher itself
+ * declare `launchable: false` and the scan filter drops them, so scanning /bin
+ * no longer puts them on the home screen. The SD-first ordering is kept for
+ * now; scanning every dir in the loader's own order is the follow-on the flag
+ * unlocks, pending a hardware pass. See ROADMAP 4quinquies. */
 static const char *const k_sd_dirs[]    = { "/sd/apps", "/sd/bin" };
 static const char *const k_flash_dirs[] = { "/bin" };
 
@@ -112,7 +116,7 @@ static void scan_dir(const char *dir)
     DIR *d = opendir(dir);
     if (!d) return;
     struct dirent *e;
-    while (s_count < MAX_APPS && (e = readdir(d)) != NULL) {
+    while ((e = readdir(d)) != NULL) {
         int base_len;
         if (!has_dap_ext(e->d_name, &base_len)) continue;
         s_total_dap++;
@@ -124,6 +128,7 @@ static void scan_dir(const char *dir)
         if (appmeta_read(path, &meta) != 0) continue;   /* unreadable / not a dap */
         s_meta_ok++;
         if (!meta.has_display) continue;                /* CLI / daemon — hide    */
+        if (!meta.launchable) continue;                 /* boot asset / launcher  */
 
         /* Display name: manifest name, falling back to the filename base. */
         char name[NAME_LEN];
@@ -135,6 +140,10 @@ static void scan_dir(const char *dir)
             name[base_len] = '\0';
         }
         if (already_listed(name)) continue;
+
+        /* The list is full, but keep scanning so s_total_dap stays honest and
+         * the cap is reported rather than hiding apps in silence (MAGIC-04). */
+        if (s_count >= MAX_APPS) { s_capped = true; continue; }
 
         copy_name(s_names[s_count], name);
         memcpy(s_paths[s_count], path, sizeof(s_paths[s_count]));
@@ -155,6 +164,7 @@ static void scan_apps(void)
     s_count = 0;
     s_total_dap = 0;
     s_meta_ok = 0;
+    s_capped = false;
 
     scan_list(k_sd_dirs, sizeof(k_sd_dirs) / sizeof(k_sd_dirs[0]));
     if (s_count == 0) {
@@ -182,7 +192,10 @@ static void render_home(ui_t *ui)
     ui_statusbar_top(ui, "DuneOS");
     ui_carousel_draw(ui, &s_car);
     char st[32];
-    snprintf(st, sizeof(st), "%d/%d   < >  Enter", s_car.sel + 1, s_car.n);
+    /* A trailing '+' on the total means the list hit MAX_APPS and more apps
+     * exist than are shown (MAGIC-04) — the cap is visible, not silent. */
+    snprintf(st, sizeof(st), "%d/%d%s   < >  Enter",
+             s_car.sel + 1, s_car.n, s_capped ? "+" : "");
     ui_statusbar(ui, st);
     ui_flush(ui);
 }
@@ -253,6 +266,8 @@ void app_main(void)
     if (!ui) { DLOGE("ui_create failed"); duneos_input_close(&in); gfx_close(gfx); duneos_exit(10); }
 
     scan_apps();
+    if (s_capped)
+        DLOGW("app list truncated at %d — more apps installed than shown", MAX_APPS);
 
     /* Carousel fills the area between the title and status bars; sizes derive
      * from the screen (ADR 024 — responsive). */

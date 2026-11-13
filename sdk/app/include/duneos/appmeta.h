@@ -21,6 +21,8 @@ typedef struct {
     char name[32];      /* manifest "name", or "" if absent                 */
     char icon[64];      /* manifest "icon" string, or "" if absent          */
     bool has_display;   /* manifest capabilities[] contains "display"       */
+    bool launchable;    /* manifest "launchable" (default true if absent):  */
+                        /* false marks a boot asset / the launcher itself   */
 } appmeta_t;
 
 /*

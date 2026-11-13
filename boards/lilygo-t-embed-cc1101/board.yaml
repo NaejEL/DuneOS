@@ -7,6 +7,12 @@ board:
   flash_size_mb: 16
   psram_size_mb: 8
   psram_type: opi
+  # Run the kernel from the flash instruction cache, not copied into PSRAM.
+  # bspgen's OPI default sets SPIRAM_FETCH_INSTRUCTIONS/RODATA=y, which this
+  # board does not need (its flash is DIO, not OPI — those options only matter
+  # when flash and PSRAM contend for the one MSPI) and which cost 4.0s vs 1.16s
+  # per app load, measured on hardware 2026-11-13. See ROADMAP 4bis / PSRAM-01.
+  psram_kernel_exec: flash
   # Measured on hardware 2026-11-11 (ADR 040 method: raised to 12288 B so the
   # measurement could not itself overflow, three boots). Worst peak 4192 B.
   # ESP-IDF's 3584 B default gives 4096 B real (+512 TASK_EXTRA_STACK_SIZE),
@@ -199,6 +205,12 @@ board:
     # half-speed. Measured by feel on hardware 2026-11-12; a working firmware
     # for this board divides raw counts by 2 for the same reason.
     counts_per_detent: 2
+    # Contact-bounce rejection for the PCNT backend (MAGIC-03). This knob
+    # chatters on each transition; without a filter the bounce crosses the ±8
+    # watch window and forges phantom detents the intent layer then emits. A
+    # known-good firmware for this board uses 5000 ns; matched here. PCNT-only
+    # (the GPIO polling fallback has no hardware filter).
+    glitch_filter_ns: 5000
     # UNIT: DETENTS, not raw PCNT counts. The HAL already divides — hal_encoder.c
     # watches ±DETENT_COUNTS (4) and clears the counter in the callback, so one
     # mechanical notch reaches /dev/input/event0 as a single REL_WHEEL of ±1.

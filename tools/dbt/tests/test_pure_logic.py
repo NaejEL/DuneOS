@@ -71,6 +71,27 @@ def test_an_unknown_field_warns_but_does_not_abort(capsys):
     assert "stak_size" in capsys.readouterr().err
 
 
+# --- launchable (LAUNCH-01) ----------------------------------------------
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_a_boolean_launchable_is_accepted(value):
+    validate_manifest(minimal() | {"launchable": value})
+
+
+@pytest.mark.parametrize("value", [0, 1, "false", "no", [False]])
+def test_a_non_boolean_launchable_is_rejected(value):
+    m = minimal() | {"launchable": value}
+    with pytest.raises(SystemExit) as exc:
+        validate_manifest(m)
+    assert "launchable" in str(exc.value)
+
+
+def test_launchable_is_a_known_field_so_it_does_not_warn(capsys):
+    validate_manifest(minimal() | {"launchable": False})
+    assert "launchable" not in capsys.readouterr().err
+
+
 # --- decode_perms --------------------------------------------------------
 
 
