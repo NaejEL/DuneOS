@@ -288,8 +288,8 @@ void app_main(void)
 
         for (int i = 0; i < n; i++) {
             /* The wave view is the one widget with two axes: the primary pair
-             * pans and ALT_* zooms. A board that reaches no second axis pans
-             * only — its generated board_config.h names that gap. */
+             * zooms and ALT_* pans. A board that reaches no second axis can
+             * zoom but not pan — its generated board_config.h names that gap. */
             if (s_mode == MODE_WAVE) {
                 if (it[i].kind == INPUT_INTENT_BACK) { s_mode = MODE_BROWSE; draw_browse(); }
                 else if (ui_wave_intent(&s_wave, &it[i])) draw_wave();

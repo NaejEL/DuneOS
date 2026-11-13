@@ -548,6 +548,19 @@ static void test_two_clicks_too_far_apart_do_not_latch(void)
     CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_NEXT);
 }
 
+static void test_a_validate_auto_repeat_does_not_latch(void)
+{
+    fixture_t f;
+    fx_init(&f, rotary_with_validate());
+
+    /* A held VALIDATE: the PRESS, then a REPEAT inside the double-click window.
+     * The REPEAT must auto-repeat the intent, not read as a second click —
+     * only a PRESS toggles the latch (R1-F2). */
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_PRESS,  100)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(one(&f, key_ev(KEY_ENTER, INPUT_VAL_REPEAT, 300)), INPUT_INTENT_VALIDATE);
+    CHECK_INT(one(&f, rel_ev(+1)), INPUT_INTENT_NEXT);   /* still primary, not latched */
+}
+
 static void test_a_keyboard_board_never_latches_on_double_click(void)
 {
     fixture_t f;
@@ -596,6 +609,7 @@ int main(void)
     test_a_second_double_click_releases_the_latch();
     test_a_single_click_does_not_latch();
     test_two_clicks_too_far_apart_do_not_latch();
+    test_a_validate_auto_repeat_does_not_latch();
     test_a_keyboard_board_never_latches_on_double_click();
 
     return t_report("test_input_intent");

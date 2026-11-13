@@ -27221,7 +27221,7 @@
    "src": "sdk/input/libinput.c"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "INPUT_VAL_PRESS",
    "src": "sdk/input/libinput.c"
   },
@@ -27281,7 +27281,7 @@
    "src": "sdk/input/libinput.c"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "VALIDATE",
    "src": "sdk/input/libinput.c"
   },
@@ -33896,7 +33896,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 83,
+   "count": 86,
    "dst": "CHECK_INT",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33931,7 +33931,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 38,
+   "count": 39,
    "dst": "INPUT_VAL_PRESS",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33941,7 +33941,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "INPUT_VAL_REPEAT",
    "src": "tests/host/test_input_intent.c"
   },
@@ -33961,7 +33961,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 37,
+   "count": 39,
    "dst": "KEY_ENTER",
    "src": "tests/host/test_input_intent.c"
   },
@@ -34011,7 +34011,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 4,
+   "count": 5,
    "dst": "VALIDATE",
    "src": "tests/host/test_input_intent.c"
   },
@@ -34046,12 +34046,12 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 36,
+   "count": 37,
    "dst": "fx_init",
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 55,
+   "count": 57,
    "dst": "key_ev",
    "src": "tests/host/test_input_intent.c"
   },
@@ -34066,7 +34066,12 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 28,
+   "count": 1,
+   "dst": "read",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 29,
    "dst": "rel_ev",
    "src": "tests/host/test_input_intent.c"
   },
@@ -34081,7 +34086,7 @@
    "src": "tests/host/test_input_intent.c"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "rotary_with_validate",
    "src": "tests/host/test_input_intent.c"
   },
@@ -34168,6 +34173,11 @@
   {
    "count": 2,
    "dst": "test_a_single_click_does_not_latch",
+   "src": "tests/host/test_input_intent.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_a_validate_auto_repeat_does_not_latch",
    "src": "tests/host/test_input_intent.c"
   },
   {
@@ -48164,6 +48174,7 @@
    "test_a_transient_git_failure_does_not_narrow_the_signature",
    "test_a_tui_gate_run_never_touches_the_board_file",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
+   "test_a_validate_auto_repeat_does_not_latch",
    "test_a_value_the_chip_cannot_express_is_refused",
    "test_a_version_string_is_read_back",
    "test_a_whole_step_in_one_event_emits_once",

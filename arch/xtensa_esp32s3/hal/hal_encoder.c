@@ -19,6 +19,8 @@
 
 #include "duneos/hal_encoder.h"
 
+#include "board_config.h"   /* DUNEOS_ENCODER_COUNTS_PER_DETENT; undefined here = silently 4 */
+
 #include "driver/pulse_cnt.h"
 #include "esp_attr.h"
 

@@ -145,8 +145,11 @@ static int translate_key(const input_topology_t *topo,
      * board that has an axis for it to act on. On a keyboard board n_axes is 0,
      * so VALIDATE there is only ever VALIDATE, and the CardPuter is untouched.
      * The first click still emits VALIDATE (harmless in waves); the second is
-     * swallowed so the gesture does not also validate twice. */
-    if (kind == INPUT_INTENT_VALIDATE && topo->n_axes > 0) {
+     * swallowed so the gesture does not also validate twice. Only a PRESS can
+     * toggle: a held VALIDATE auto-repeats the intent, it does not flip the
+     * latch. */
+    if (kind == INPUT_INTENT_VALIDATE && topo->n_axes > 0
+            && ev->value == INPUT_VAL_PRESS) {
         uint32_t gap = ev->time_ms - st->validate_last_ms;
         if (st->validate_last_ms != 0 && gap <= INPUT_DOUBLECLICK_MS) {
             st->alt_latched = !st->alt_latched;

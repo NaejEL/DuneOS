@@ -12,6 +12,8 @@
 
 #include "duneos/hal_encoder.h"
 
+#include "board_config.h"   /* DUNEOS_ENCODER_COUNTS_PER_DETENT; undefined here = silently 4 */
+
 /* Same board-declared ratio the PCNT backend uses — the two were independent
  * literals both reading 4, which is how a 2-count detent stayed invisible. */
 #ifdef DUNEOS_ENCODER_COUNTS_PER_DETENT
