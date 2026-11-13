@@ -35,6 +35,11 @@ __pycache__/
 !.claude/harness.json
 # rgkb code-index server — shared so the .knowledge/ base is usable after a clone
 !.claude/rgkb/
+# local ship-pr stopgap (SKILL.md copy + _core symlink -> ../harness): a per-
+# machine convenience until the software-factory installer deploys ship-pr
+# properly. Tracked fix: github.com/NaejEL/claude-skills#9. Kept out of the repo.
+.claude/skills/_core
+.claude/skills/ship-pr/
 *.swp
 *.swo
 *.o
