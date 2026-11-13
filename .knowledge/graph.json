@@ -10966,7 +10966,7 @@
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
   {
-   "count": 8,
+   "count": 9,
    "dst": "board",
    "src": "boards/lilygo-t-embed-cc1101/board.yaml"
   },
@@ -14831,12 +14831,22 @@
    "src": "docs/backlog.md"
   },
   {
+   "count": 1,
+   "dst": "SPI2",
+   "src": "docs/backlog.md"
+  },
+  {
    "count": 2,
    "dst": "app_main",
    "src": "docs/backlog.md"
   },
   {
-   "count": 27,
+   "count": 1,
+   "dst": "appmeta_read",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 29,
    "dst": "board",
    "src": "docs/backlog.md"
   },
@@ -14961,7 +14971,7 @@
    "src": "docs/backlog.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "open",
    "src": "docs/backlog.md"
   },
@@ -14976,7 +14986,7 @@
    "src": "docs/backlog.md"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "read",
    "src": "docs/backlog.md"
   },
@@ -14988,6 +14998,11 @@
   {
    "count": 1,
    "dst": "report",
+   "src": "docs/backlog.md"
+  },
+  {
+   "count": 2,
+   "dst": "scan",
    "src": "docs/backlog.md"
   },
   {
@@ -25643,6 +25658,11 @@
   {
    "count": 1,
    "dst": "open",
+   "src": "profiles/t-embed-gfx/profile.yaml"
+  },
+  {
+   "count": 1,
+   "dst": "wait",
    "src": "profiles/t-embed-gfx/profile.yaml"
   },
   {
@@ -36576,7 +36596,7 @@
    "src": "tools/dbt/input_map.py"
   },
   {
-   "count": 20,
+   "count": 22,
    "dst": "board",
    "src": "tools/dbt/input_map.py"
   },
@@ -36588,6 +36608,11 @@
   {
    "count": 1,
    "dst": "dispatch",
+   "src": "tools/dbt/input_map.py"
+  },
+  {
+   "count": 1,
+   "dst": "feed",
    "src": "tools/dbt/input_map.py"
   },
   {
@@ -40976,7 +41001,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 10,
+   "count": 12,
    "dst": "BSPGEN",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -41061,7 +41086,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "REL_WHEEL",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -41101,7 +41126,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 42,
+   "count": 45,
    "dst": "board",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -41116,7 +41141,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 7,
+   "count": 9,
    "dst": "defines",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -41151,7 +41176,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 11,
+   "count": 13,
    "dst": "generate",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -41287,6 +41312,16 @@
   },
   {
    "count": 1,
+   "dst": "test_reversed_defaults_off",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_reversed_swaps_the_axis_direction",
+   "src": "tools/dbt/tests/test_input_topology.py"
+  },
+  {
+   "count": 1,
    "dst": "test_the_batch_clamp_matches_the_c_header",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -41326,7 +41361,7 @@
    "src": "tools/dbt/tests/test_input_topology.py"
   },
   {
-   "count": 8,
+   "count": 10,
    "dst": "topo_block",
    "src": "tools/dbt/tests/test_input_topology.py"
   },
@@ -48391,6 +48426,8 @@
    "test_reserved_abs_events_are_ignored",
    "test_residual_littlefs_enospc_is_the_same_named_error",
    "test_resync_over_garbage",
+   "test_reversed_defaults_off",
+   "test_reversed_swaps_the_axis_direction",
    "test_root_gitattributes_defers_to_the_generated_index",
    "test_rotary_maps_to_prev_and_next",
    "test_run_loop_completes_on_a_good_run",

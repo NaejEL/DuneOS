@@ -189,6 +189,11 @@ board:
     a_pin: 4
     b_pin: 5
     axis: primary
+    # reversed: true   # swap the knob direction. Off keeps the CardPuter zoom
+    #   exact and the carousel forward = next item; on makes the wheel zoom feel
+    #   natural in waves at the cost of inverting the carousel scroll — the two
+    #   share one physical axis, so pick the polarity this board prefers. Flip
+    #   this line and re-run bspgen; no SDK or app source changes.
     # This encoder's detent is 2 quadrature counts, not the 4 the HAL assumed:
     # with 4, two physical notches were needed per event and the knob felt
     # half-speed. Measured by feel on hardware 2026-11-12; a working firmware

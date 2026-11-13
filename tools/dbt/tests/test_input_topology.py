@@ -113,6 +113,23 @@ def test_an_alt_axis_emits_the_second_pair():
         "{ { REL_WHEEL, INPUT_INTENT_ALT_PREV, INPUT_INTENT_ALT_NEXT, 1 } }")
 
 
+def test_reversed_swaps_the_axis_direction():
+    """`reversed` flips which way the knob drives the pair — a board fact (the
+    encoder's A/B wiring and the panel orientation), declared, not coded."""
+    b = board(encoder={"a_pin": 4, "b_pin": 5, "axis": "primary", "reversed": True})
+    d = defines(topo_block(BSPGEN.generate(b)))
+    # pos and neg are swapped versus the default primary axis.
+    assert d["DUNEOS_INPUT_AXES_INIT"] == (
+        "{ { REL_WHEEL, INPUT_INTENT_NEXT, INPUT_INTENT_PREV, 1 } }")
+
+
+def test_reversed_defaults_off():
+    b = board(encoder={"a_pin": 4, "b_pin": 5, "axis": "primary"})
+    d = defines(topo_block(BSPGEN.generate(b)))
+    assert d["DUNEOS_INPUT_AXES_INIT"] == (
+        "{ { REL_WHEEL, INPUT_INTENT_PREV, INPUT_INTENT_NEXT, 1 } }")
+
+
 def test_a_long_press_intent_reaches_the_map():
     b = board(buttons=[{"pin": 0, "intent": "VALIDATE",
                         "intent_long": "BACK", "long_ms": 750}])

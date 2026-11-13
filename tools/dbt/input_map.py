@@ -167,6 +167,15 @@ def topology(board: dict) -> dict | None:
                 f"encoder declares counts_per_step={cps}; one step cannot take "
                 f"fewer than one count")
         neg, pos = AXIS_INTENTS[axis]
+        # `reversed` swaps which way the knob drives the pair. It is a board
+        # fact — the encoder's A/B wiring and the panel's orientation decide
+        # whether a clockwise notch reads as +1 or -1, and no app can know. The
+        # knob and a keyboard's arrows feed the same intents, so one polarity
+        # cannot make both the wheel zoom and the arrow keys feel natural at
+        # once (the two are opposite on a shared axis); this lets a board pick
+        # the polarity it prefers without touching any SDK or app source.
+        if enc.get("reversed"):
+            neg, pos = pos, neg
         axes.append({
             "code": "REL_WHEEL",
             "intent_neg": neg,
