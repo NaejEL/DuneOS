@@ -50,6 +50,12 @@ _KNOWN_FIELDS = {
     "permissions", "stack_size", "heap_size", "wdt_timeout_ms",
     # Build
     "sources", "capabilities",
+    # Capabilities the app works without: resolve() skips them on a board that
+    # lacks the hardware, instead of skipping the whole app. dbt-only — builder
+    # consumes it and drops it before the manifest is embedded, so the kernel
+    # never sees it. A battery daemon that drives a charger when the board has
+    # one must still build on a board that only has a gauge.
+    "optional_capabilities",
     # Phase 25.4 — UI metadata, consumed by the future app launcher.
     # Free-form short string: builtin name (e.g. "app", "term", "gear")
     # or a path to an RGB565 asset (e.g. "/flash/icons/clock.rgb").

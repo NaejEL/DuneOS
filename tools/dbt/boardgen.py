@@ -189,7 +189,126 @@ def _battery_block(board: dict, lines: list[str]) -> None:
     lines.append(f'#define DUNEOS_BATTERY_I2C_DEV       "/dev/i2c-{int(bat.get("i2c_id", 0))}"')
     lines.append(f"#define DUNEOS_BATTERY_GAUGE_ADDR    {hex(int(bat.get('gauge_addr', 0x55)))}")
     lines.append('#define DUNEOS_BATTERY_TMPFS_PATH    "/tmp/battery"')
+    # Optional: the pack's nominal capacity. A gauge that computes state of
+    # charge from a design capacity it was never told is confidently wrong, and
+    # the figure is a property of the cell soldered to the board, so it belongs
+    # in board.yaml. Emitted only when declared — a backend guards on the macro
+    # and does nothing without it, which is what keeps every other board's
+    # behaviour unchanged.
+    if bat.get("design_capacity_mah") is not None:
+        cap = int(bat["design_capacity_mah"])
+        if not 1 <= cap <= 32767:
+            raise SystemExit(
+                f"ERROR: battery.design_capacity_mah={cap} out of range; the "
+                "gauge field is a signed 16-bit mAh value (1..32767)")
+        lines.append(f"#define DUNEOS_BATTERY_DESIGN_CAPACITY_MAH  {cap}")
+    # The current below which the gauge calls the charge finished. Must sit
+    # above the charger's cutoff — see _check_taper_agrees_with_charger.
+    if bat.get("taper_current_ma") is not None:
+        taper = int(bat["taper_current_ma"])
+        if not 1 <= taper <= 1000:
+            raise SystemExit(
+                f"ERROR: battery.taper_current_ma={taper} out of range; the "
+                "gauge field accepts 1..1000 mA")
+        lines.append(f"#define DUNEOS_BATTERY_TAPER_CURRENT_MA     {taper}")
     lines.append("")
+
+
+def _charger_block(board: dict, lines: list[str]) -> None:
+    """Emit charger defines for libcharger + the chip backend.
+
+    A charger left on its power-on defaults fills whatever cell is attached
+    with whatever current the silicon guessed, and stops at whatever taper the
+    silicon guessed. On the t-embed those defaults were a 3000 mAh assumption
+    and a 256 mA cutoff against a 1300 mAh cell. All three numbers below are
+    properties of the board, so they live in board.yaml.
+    """
+    chg = board.get("charger")
+    if not isinstance(chg, dict):
+        return
+    ctype = chg.get("type")
+    if not ctype:
+        return
+
+    lines.append(f"/* ----- charger ({ctype}) ----- */")
+    lines.append(f'#define DUNEOS_CHARGER_DRIVER        "{ctype}"')
+    lines.append(f'#define DUNEOS_CHARGER_I2C_DEV       "/dev/i2c-'
+                 f'{int(chg.get("i2c_id", 0))}"')
+    lines.append(f"#define DUNEOS_CHARGER_ADDR          "
+                 f"{hex(int(chg.get('addr', 0x6B)))}")
+
+    for key, macro, lo, hi, unit in (
+        ("charge_voltage_mv",      "DUNEOS_CHARGER_VOLTAGE_MV",      3840, 4608, "mV"),
+        ("charge_current_ma",      "DUNEOS_CHARGER_CURRENT_MA",        64, 8128, "mA"),
+        ("termination_current_ma", "DUNEOS_CHARGER_TERM_CURRENT_MA",   64, 1024, "mA"),
+    ):
+        if chg.get(key) is None:
+            continue
+        v = int(chg[key])
+        if not lo <= v <= hi:
+            raise SystemExit(
+                f"ERROR: charger.{key}={v} {unit} is outside the chip's "
+                f"range {lo}..{hi} {unit}")
+        lines.append(f"#define {macro:<28} {v}")
+    lines.append("")
+
+
+def _check_taper_agrees_with_charger(board: dict) -> None:
+    """The gauge and the charger must agree on what "finished" means.
+
+    The gauge declares charge termination only after seeing the current fall
+    below its own taper threshold *while still charging* (SLUUBD4A 4.4.1: two
+    40 s windows under Taper Current, with capacity still accumulating). If
+    the charger cuts off ABOVE that threshold, the current jumps from the
+    cutoff straight to zero, the crossing never happens, the gauge's FC flag
+    never sets, and RemainingCapacity is never synced to FullChargeCapacity —
+    so the indicator stops short of 100% forever on a battery the charger
+    considers full. Measured on the t-embed: charger 256 mA, gauge 100 mA,
+    stuck at 96%.
+
+    Two numbers in two different chips, consistent only by agreement. So the
+    agreement is checked here rather than left to whoever reads both
+    datasheets next.
+    """
+    bat = board.get("battery") or {}
+    chg = board.get("charger") or {}
+    taper = bat.get("taper_current_ma")
+    term  = chg.get("termination_current_ma")
+
+    # The two absences are not symmetric. A board that declares neither is not
+    # making a claim. A board that declares a charger cutoff and no gauge taper
+    # leaves the gauge on its ROM default — 100 mA for the bq27220 — which is
+    # below most useful cutoffs, and that is precisely the configuration that
+    # produced the 96% ceiling. boardgen cannot know every gauge's default, so
+    # it refuses the asymmetry rather than guess: once a charger states when it
+    # stops, the gauge must state when it believes the charge is over.
+    # Only when there is a USERSPACE GAUGE to disagree with. A board with no
+    # battery section has nothing to keep consistent, and so does one whose
+    # battery is kernel-served ADC (type: adc_simple) — that path emits no
+    # taper register at all, so demanding one would force a number boardgen
+    # then silently drops. Both over-reaches are caught by this guard's tests.
+    gauge_type = bat.get("type")
+    has_userspace_gauge = gauge_type and gauge_type not in KERNEL_SERVED_BATTERY
+    if has_userspace_gauge and term is not None and taper is None:
+        raise SystemExit(
+            f"ERROR: charger.termination_current_ma={term} is declared but "
+            "battery.taper_current_ma is not.\n"
+            "  The gauge would keep its ROM default taper, and if that sits "
+            "below the charger's cutoff\n"
+            "  the current never crosses it while charging: the gauge never "
+            "detects termination and\n"
+            "  the reported charge stops short of 100%. Declare both, with "
+            "the taper above the cutoff.")
+    if taper is None or term is None:
+        return
+    if int(taper) <= int(term):
+        raise SystemExit(
+            f"ERROR: battery.taper_current_ma={taper} must be GREATER than "
+            f"charger.termination_current_ma={term}.\n"
+            f"  The charger stops at {term} mA, so the current never falls "
+            f"below {taper} mA while charging;\n"
+            f"  the gauge therefore never detects charge termination and the "
+            f"reported charge stops short of 100%.")
 
 
 def _storage_block(board: dict, lines: list[str]) -> None:
@@ -212,6 +331,7 @@ CAPABILITY_TO_BLOCKS = {
     "display": (_display_block,),
     "input":   (_input_block,),
     "battery": (_battery_block,),
+    "charger": (_charger_block,),
 }
 
 
@@ -233,6 +353,7 @@ def generate(board_cfg: dict, board_name: str, capabilities: list[str]) -> str:
         "",
     ]
     # Always-on blocks: paths/identity that any app may legitimately need.
+    _check_taper_agrees_with_charger(b)
     _storage_block(b, lines)
     _input_dev_block(b, lines)
     _i2c_block(b, lines)
@@ -245,9 +366,17 @@ def generate(board_cfg: dict, board_name: str, capabilities: list[str]) -> str:
         # Legacy: app declares no capabilities → emit everything.
         wanted = {fn for fns in CAPABILITY_TO_BLOCKS.values() for fn in fns}
 
-    for fn in (_display_block, _input_block, _battery_block):
-        if fn in wanted:
-            fn(b, lines)
+    # Driven by CAPABILITY_TO_BLOCKS, not by a second hand-written list.
+    # There used to be a literal tuple here, and it was already one entry
+    # behind the map: adding "charger" to the map emitted nothing, silently,
+    # because the loop still named three functions. A capability registered in
+    # one place and forgotten in the other is the same half-finished pair this
+    # repo keeps finding. Dict order is insertion order, so the emitted
+    # sequence stays stable and reviewable.
+    for fns in CAPABILITY_TO_BLOCKS.values():
+        for fn in fns:
+            if fn in wanted:
+                fn(b, lines)
 
     return "\n".join(lines)
 

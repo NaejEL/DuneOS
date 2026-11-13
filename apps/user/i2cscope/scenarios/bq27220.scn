@@ -1,9 +1,11 @@
 # BQ27220 fuel gauge — LilyGO T-Embed (gauge at 0x55)
-# Registers follow DuneOS sdk/sensor/libbq27220.c; current (0x0C) is the
-# standard BQ27xxx Current() command. Adjust to your silicon's datasheet.
+# Addresses are TI SLUUBD4A table 2-1, the datasheet — NOT copied from
+# sdk/sensor/libbq27220.c, which is what this file used to say and which is how
+# it came to repeat that file's three wrong registers back as confirmation.
+# tools/dbt/tests/test_bq27220_registers.py now checks both against the table.
 name BQ27220
 addr 0x55
-word  0x04 mV Voltage
-word  0x1C %  Charge
+word  0x08 mV Voltage
+word  0x2C %  Charge
 sword 0x0C mA Current
-hex   0x06 -  Flags
+hex   0x0A -  Flags
