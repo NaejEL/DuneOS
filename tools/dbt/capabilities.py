@@ -122,6 +122,19 @@ CAPABILITY_MAP: dict[str, CapabilitySpec] = {
         "kernel_served": {"adc_simple"},
         "description": "Battery monitor — userspace backend for I2C/SPI gas gauges",
     },
+    "charger": {
+        "board_key": ["charger", "type"],
+        # libcharger.c forwards charger_open/_read/_close through
+        # `duneos_charger_ops`, defined by the chip backend (libbq25896.c, …).
+        # Same shape as `battery` above, and deliberately a separate
+        # capability: the gauge measures the cell, the charger decides when to
+        # stop filling it, and an app that wants one rarely wants both.
+        "sources": [
+            "{sdk}/sensor/libcharger.c",
+            "{sdk}/sensor/lib{driver}.c",
+        ],
+        "description": "Battery charger — userspace backend for I2C chargers",
+    },
     # Future capabilities (planned, not yet wired):
     #
     #   "input": {

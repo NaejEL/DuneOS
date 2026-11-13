@@ -127,6 +127,16 @@ static int bq27220_op_read(battery_handle_t *h, battery_info_t *out)
 
 #define BQ_DM_FULL_CHARGE_CAPACITY 0x929D   /* I2, mAh — adjacent to the next */
 #define BQ_DM_DESIGN_CAPACITY      0x929F   /* I2, mAh, ROM default 3000      */
+#define BQ_DM_TAPER_CURRENT        0x9201   /* I2, mA,  ROM default 100       */
+
+/* Not written, but relied upon. CEDV Gauging Configuration (0x929B, H2) has a
+ * ROM default of 0x102A, whose low-byte bit 1 is [CSYNC]: "Sync
+ * RemainingCapacity() with FullChargeCapacity() at valid charge termination".
+ * That is what turns a detected termination into exactly 100% rather than
+ * whatever RM/FCC happens to work out to. It is left alone deliberately —
+ * read-modify-writing a configuration word nothing has asked us to change
+ * would add risk for no measured benefit. If a board ever reports 99% at a
+ * termination the charger confirms, this bit is the first place to look. */
 
 /* The Control() keys need room to breathe; back-to-back writes are accepted on
  * the bus and change nothing. Paid only when a reprogram is actually due. */
@@ -220,6 +230,41 @@ static int select_block(int bus, uint16_t dm, uint8_t *sum, uint8_t *len)
  *    1  reprogrammed
  *  <0   -errno, gauge left out of CONFIG UPDATE mode
  */
+/* Write one 16-bit data-memory field, assuming CONFIG UPDATE is already
+ * entered. `n` is 2 for a single field, 4 for two adjacent ones.
+ *
+ * Block data is big-endian here, unlike every standard command on this part.
+ */
+static int write_dm_field(int bus, uint16_t dm, const uint8_t *val, size_t n)
+{
+    uint8_t sum = 0, len = 0, old[4] = { 0, 0, 0, 0 };
+    int rc;
+
+    if (n > sizeof(old)) return -EINVAL;
+    if ((rc = select_block(bus, dm, &sum, &len)) < 0) return rc;
+    if ((rc = read_bytes(bus, BQ_REG_MACDATA, old, n)) < 0) return rc;
+    if ((rc = write_bytes(bus, BQ_REG_MACDATA, val, n)) < 0) return rc;
+    usleep(50 * 1000);
+
+    /* Checksum is the complement of the block's byte sum; the replacement form
+     * avoids reading all 32 bytes (SLUUBD4A 6.1 step 11). */
+    unsigned t = 255u - sum;
+    for (size_t i = 0; i < n; i++) t -= old[i];
+    t &= 0xFF;
+    for (size_t i = 0; i < n; i++) t += val[i];
+    uint8_t new_sum = (uint8_t)(255u - (t & 0xFF));
+
+    /* Sum and length in ONE transaction: "not executed until MACDataSum() and
+     * MACDataLen() are written together as a word" (SLUUBD4A 2.31), which the
+     * worked example in 6.1 contradicts by showing two separate byte writes.
+     * The chip sides with 2.31. This write is the commit. */
+    uint8_t commit[2] = { new_sum, len };
+    if ((rc = write_bytes(bus, BQ_REG_MACDATASUM, commit, 2)) < 0) return rc;
+    usleep(200 * 1000);
+    return 0;
+}
+
+
 static int bq27220_ensure_design_capacity(int bus, uint16_t want_mah)
 {
     uint16_t have = 0;
@@ -262,36 +307,34 @@ static int bq27220_ensure_design_capacity(int bus, uint16_t want_mah)
     }
     if (!entered) return exit_cfg(bus, -EIO);
 
-    /* One block covers both fields: Full Charge Capacity at 0x929D and Design
-     * Capacity at 0x929F are adjacent. Learned Full Charge Capacity is meant
-     * to start equal to Design Capacity (SLUUBD4A 4.9), and leaving it at 3000
-     * beside a 1300 design is how RemainingCapacity ends up reporting more
-     * charge than the cell can hold. Both get the same value. */
-    uint8_t sum = 0, len = 0, old[4] = { 0, 0, 0, 0 };
-    if ((rc = select_block(bus, BQ_DM_FULL_CHARGE_CAPACITY, &sum, &len)) < 0)
-        return exit_cfg(bus, rc);
-    if ((rc = read_bytes(bus, BQ_REG_MACDATA, old, 4)) < 0) return exit_cfg(bus, rc);
-
-    /* Block data is big-endian, unlike every standard command on this part. */
-    uint8_t neu[4] = { (uint8_t)(want_mah >> 8), (uint8_t)(want_mah & 0xFF),
+    /* One block covers both capacity fields: Full Charge Capacity at 0x929D
+     * and Design Capacity at 0x929F are adjacent. Learned Full Charge Capacity
+     * is meant to start equal to Design Capacity (SLUUBD4A 4.9), and leaving
+     * it at 3000 beside a 1300 design is how RemainingCapacity ends up
+     * reporting more charge than the cell can physically hold. */
+    uint8_t cap[4] = { (uint8_t)(want_mah >> 8), (uint8_t)(want_mah & 0xFF),
                        (uint8_t)(want_mah >> 8), (uint8_t)(want_mah & 0xFF) };
-    if ((rc = write_bytes(bus, BQ_REG_MACDATA, neu, 4)) < 0) return exit_cfg(bus, rc);
-    usleep(50 * 1000);
-
-    /* Checksum is the complement of the block's byte sum; the replacement form
-     * avoids reading all 32 bytes (SLUUBD4A 6.1 step 11). */
-    unsigned t = (255u - sum - old[0] - old[1] - old[2] - old[3]) & 0xFF;
-    uint8_t new_sum =
-        (uint8_t)(255u - ((t + neu[0] + neu[1] + neu[2] + neu[3]) & 0xFF));
-
-    /* Sum and length in ONE transaction: "not executed until MACDataSum() and
-     * MACDataLen() are written together as a word" (SLUUBD4A 2.31), which the
-     * worked example in 6.1 contradicts by showing two separate byte writes.
-     * The chip sides with 2.31. This write is the commit. */
-    uint8_t commit[2] = { new_sum, len };
-    if ((rc = write_bytes(bus, BQ_REG_MACDATASUM, commit, 2)) < 0)
+    if ((rc = write_dm_field(bus, BQ_DM_FULL_CHARGE_CAPACITY, cap, 4)) < 0)
         return exit_cfg(bus, rc);
-    usleep(200 * 1000);
+
+#ifdef DUNEOS_BATTERY_TAPER_CURRENT_MA
+    /* And the threshold that decides whether the gauge ever notices the charge
+     * finishing. It lives in a different block, so it needs its own select —
+     * but the same CONFIG UPDATE session, because entering that mode suspends
+     * gauging and doing it twice doubles the suspension for nothing.
+     *
+     * Both fields are therefore written together, which is also why the
+     * trigger above only reads Design Capacity: the two are written in one
+     * session and reset by the same event (gauge power loss), so a correct
+     * Design Capacity implies a correct taper. If that invariant is ever
+     * broken, the trigger has to grow a second read. */
+    {
+        unsigned taper = DUNEOS_BATTERY_TAPER_CURRENT_MA;
+        uint8_t tp[2] = { (uint8_t)(taper >> 8), (uint8_t)(taper & 0xFF) };
+        if ((rc = write_dm_field(bus, BQ_DM_TAPER_CURRENT, tp, 2)) < 0)
+            return exit_cfg(bus, rc);
+    }
+#endif
 
     exit_cfg(bus, 0);
     usleep(1000 * 1000);   /* let the re-init settle before anyone reads */

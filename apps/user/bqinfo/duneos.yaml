@@ -5,3 +5,4 @@ required_abi_version: 1
 permissions: 40
 capabilities:
   - battery
+  - charger

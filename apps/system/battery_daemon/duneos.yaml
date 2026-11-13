@@ -5,5 +5,6 @@ required_abi_version: 1
 permissions: 232
 capabilities:
   - battery
+  - charger
 sources:
   - $SDK/log/dlog.c

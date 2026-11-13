@@ -33,6 +33,7 @@
 
 #include "duneos/board.h"
 #include "duneos/i2c_ioctl.h"
+#include "duneos/charger.h"
 
 extern void duneos_exit(int code);
 
@@ -125,104 +126,67 @@ static void decode_status(uint16_t f)
     out("\r\n");
 }
 
-#ifdef DUNEOS_BATTERY_CHARGER_ADDR
+#ifdef DUNEOS_CHARGER_DRIVER
 /*
- * The charger, read alongside the gauge.
+ * The charger, through the driver rather than the bus.
  *
- * A gauge that sits at 96% is not necessarily a gauge problem: if the charger
- * never takes the cell to its target, or has terminated early, or was never
- * enabled, the gauge is reporting the truth about a battery that is genuinely
- * not full. Those three states are three register fields away, so they belong
- * in the same dump as the gauge rather than in a second tool nobody runs.
+ * A gauge sitting at 96% is not necessarily a gauge problem: if the charger
+ * stops short of its target, or terminated early, or was never enabled, the
+ * gauge is honestly reporting a battery that is genuinely not full. Those
+ * states belong in the same dump as the gauge, because the answer is in the
+ * relationship between the two chips, not in either one.
  *
- * Reads only. The ADC-backed readings (REG0E battery voltage, REG12 charge
- * current) need a conversion started first, which is a write, so they are left
- * out — the gauge already measures both.
- *
- * Fields per the BQ25896 datasheet (SLUSCA8).
+ * This reads libcharger, not registers. The first version of it poked the bus
+ * directly and decoded REG03 bit 5 as CHG_CONFIG — bit 5 is OTG_CONFIG — so it
+ * reported a charger "DISABLED" while it was charging normally. A diagnostic
+ * that confidently states the opposite of the truth is worse than one that
+ * prints nothing, and the fix is not a more careful copy of the decode: it is
+ * one decode, in the driver, used by everyone.
  */
-static void dump_charger(int bus)
+static void dump_charger(void)
 {
-    uint8_t reg[0x15];
-
-    out("\r\n  charger 0x");
-    outf("%02X:\r\n", (unsigned)DUNEOS_BATTERY_CHARGER_ADDR);
-
-    for (unsigned r = 0; r < sizeof(reg); r++) {
-        uint8_t a = (uint8_t)r, v = 0;
-        struct i2c_msg m[2] = {
-            { .addr = DUNEOS_BATTERY_CHARGER_ADDR, .flags = 0,
-              .len = 1, .buf = &a },
-            { .addr = DUNEOS_BATTERY_CHARGER_ADDR, .flags = I2C_M_RD,
-              .len = 1, .buf = &v },
-        };
-        struct i2c_rdwr_ioctl_data x = { .msgs = m, .nmsgs = 2 };
-        if (ioctl(bus, I2C_RDWR, &x) < 0) {
-            outf("    REG%02X  read failed (errno %d)\r\n", r, errno);
-            reg[r] = 0;
-            continue;
-        }
-        reg[r] = v;
+    charger_handle_t *h = charger_open();
+    if (!h) {
+        out("\r\n  charger: not responding\r\n");
+        return;
     }
 
-    out("    raw:");
-    for (unsigned r = 0; r < sizeof(reg); r++) {
-        if (r % 8 == 0) out("\r\n     ");
-        outf(" %02X", reg[r]);
+    charger_info_t ci;
+    int rc = charger_read(h, &ci);
+    if (rc < 0) {
+        outf("\r\n  charger: read failed (%d)\r\n", rc);
+        charger_close(h);
+        return;
     }
-    out("\r\n");
 
-    /* REG06[7:2] VREG: charge voltage limit, 3.840 V + 16 mV per step. This is
-     * the number that decides how full "full" is. */
-    unsigned vreg_mv = 3840 + ((reg[0x06] >> 2) & 0x3F) * 16;
-    outf("    REG06 VREG        = %u mV  (target charge voltage)\r\n", vreg_mv);
+    outf("\r\n  charger (%s):\r\n", DUNEOS_CHARGER_DRIVER);
+    outf("    state          = %s\r\n", charger_state_name(ci.state));
+    outf("    input power    = %s\r\n", ci.input_power_good ? "good" : "absent");
+    outf("    charge         = %s%s\r\n",
+         ci.charge_enabled ? "enabled" : "disabled",
+         ci.otg_enabled ? ", OTG on" : "");
+    outf("    target         = %u mV (recharges below %u mV)\r\n",
+         (unsigned)ci.target_mv, (unsigned)ci.recharge_mv);
+    outf("    charge current = %u mA\r\n", (unsigned)ci.charge_current_ma);
+    outf("    terminates at  = %u mA\r\n", (unsigned)ci.term_current_ma);
 
-    /* REG03[4] CHG_CONFIG, [5] OTG_CONFIG. Bit 4, not bit 5 — the first
-     * version of this read bit 5 and reported a charger that was "DISABLED"
-     * while it was charging normally, which is a worse failure for a
-     * diagnostic tool than printing nothing at all. */
-    outf("    REG03 charge      = %s, OTG %s\r\n",
-         (reg[0x03] & (1u << 4)) ? "ENABLED" : "DISABLED",
-         (reg[0x03] & (1u << 5)) ? "on" : "off");
-
-    /* REG07[7] EN_TERM: stop when the taper current is reached. */
-    outf("    REG07 termination = %s\r\n",
-         (reg[0x07] & (1u << 7)) ? "enabled" : "disabled");
-
-    /* REG05[3:0] ITERM: termination current, 64 mA + 64 mA per step. */
-    outf("    REG05 ITERM       = %u mA\r\n",
-         64u + (reg[0x05] & 0x0F) * 64u);
-
-    /* REG04[6:0] ICHG: fast charge current, 64 mA per step. */
-    outf("    REG04 ICHG        = %u mA\r\n",
-         (unsigned)(reg[0x04] & 0x7F) * 64u);
-
-    /* REG0B[4:3] CHRG_STAT, [2] PG_STAT */
-    static const char *const chg[4] = {
-        "not charging", "pre-charge", "fast charging", "termination done"
-    };
-    outf("    REG0B status      = %s, input power %s\r\n",
-         chg[(reg[0x0B] >> 3) & 0x3],
-         (reg[0x0B] & (1u << 2)) ? "good" : "absent");
-
-    /* REG06[0] VRECHG: how far it must fall before recharging restarts. */
-    unsigned vrechg = (reg[0x06] & 1u) ? 200u : 100u;
-    outf("    REG06 VRECHG      = %u mV below VREG (restarts at %u mV)\r\n",
-         vrechg, vreg_mv - vrechg);
-
-    /* The question this tool was extended to answer. ITERM is a current, the
-     * cell's capacity is in board.yaml, so the ratio can be stated instead of
-     * left to the reader: a taper threshold near C/10 lets the constant-voltage
-     * phase finish, while C/5 ends it early and leaves the cell short of VREG —
-     * which a working gauge then reports honestly as less than 100%. */
+#ifdef DUNEOS_BATTERY_TAPER_CURRENT_MA
+    /* The relationship that decides whether 100% is reachable at all. Stated
+     * rather than left for a reader to work out from two datasheets. */
+    unsigned taper = DUNEOS_BATTERY_TAPER_CURRENT_MA;
+    outf("    gauge taper    = %u mA  -> %s\r\n", taper,
+         (taper > ci.term_current_ma)
+             ? "the gauge can see the charge finish"
+             : "TOO LOW: the gauge will never see termination");
+#endif
 #ifdef DUNEOS_BATTERY_DESIGN_CAPACITY_MAH
-    {
-        unsigned iterm = 64u + (reg[0x05] & 0x0F) * 64u;
-        unsigned cap   = DUNEOS_BATTERY_DESIGN_CAPACITY_MAH;
-        outf("    => terminates at C/%u of a %u mAh pack\r\n",
-             (cap + iterm / 2) / iterm, cap);
+    if (ci.term_current_ma) {
+        unsigned cap = DUNEOS_BATTERY_DESIGN_CAPACITY_MAH;
+        outf("    => stops at C/%u of a %u mAh pack\r\n",
+             (cap + ci.term_current_ma / 2) / ci.term_current_ma, cap);
     }
 #endif
+    charger_close(h);
 }
 #endif
 
@@ -265,8 +229,8 @@ void app_main(void)
     if (have_status) decode_status(status);
     if (have_opstat) decode_opstatus(opstat);
 
-#ifdef DUNEOS_BATTERY_CHARGER_ADDR
-    dump_charger(bus);
+#ifdef DUNEOS_CHARGER_DRIVER
+    dump_charger();
 #endif
 
     close(bus);
