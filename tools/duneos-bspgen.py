@@ -248,12 +248,18 @@ def validate(board: dict, yaml_path: Path) -> None:
         if ke not in ("psram", "flash"):
             die(f"'{yaml_path}' psram_kernel_exec must be 'flash' or 'psram', "
                 f"got '{board['psram_kernel_exec']}'. 'flash' runs the kernel "
-                f"from the flash cache (faster; only valid when flash is not OPI); "
-                f"'psram' copies code+rodata into PSRAM (the OPI default).")
-        if ke == "flash" and board.get("psram_type", "opi").lower() != "opi":
-            die(f"'{yaml_path}' sets psram_kernel_exec: flash but psram_type is not "
-                f"'opi' — the FETCH_INSTRUCTIONS/RODATA copy only exists on OPI PSRAM, "
-                f"so the key has nothing to turn off here. Remove it.")
+                f"from the flash cache (faster; meaningful only on OPI PSRAM, "
+                f"where it turns off the code+rodata copy that 'psram', the OPI "
+                f"default, keeps).")
+        if ke == "flash":
+            if board.get("psram_size_mb", 0) <= 0:
+                die(f"'{yaml_path}' sets psram_kernel_exec: flash but the board has "
+                    f"no PSRAM — the FETCH_INSTRUCTIONS/RODATA copy only exists on OPI "
+                    f"PSRAM, so the key has nothing to turn off here. Remove it.")
+            if board.get("psram_type", "opi").lower() != "opi":
+                die(f"'{yaml_path}' sets psram_kernel_exec: flash but psram_type is not "
+                    f"'opi' — the FETCH_INSTRUCTIONS/RODATA copy only exists on OPI PSRAM, "
+                    f"so the key has nothing to turn off here. Remove it.")
 
 
 # ---------------------------------------------------------------------------

@@ -45596,7 +45596,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "RODATA",
    "src": "tools/duneos-bspgen.py"
   },
@@ -45656,7 +45656,7 @@
    "src": "tools/duneos-bspgen.py"
   },
   {
-   "count": 177,
+   "count": 179,
    "dst": "board",
    "src": "tools/duneos-bspgen.py"
   },
