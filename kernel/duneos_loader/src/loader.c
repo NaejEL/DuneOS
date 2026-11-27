@@ -283,6 +283,10 @@ static void elf_log_reject(const duneos_elf_image_t *img, duneos_elf_reject_t wh
     case DUNEOS_ELF_REJ_NO_SECTIONS:
         klog_e(TAG, "no section headers");
         break;
+    case DUNEOS_ELF_REJ_SHENTSIZE:
+        klog_e(TAG, "e_shentsize=%u — expected %u",
+               hdr->e_shentsize, (unsigned)sizeof(elf32_shdr_t));
+        break;
     case DUNEOS_ELF_REJ_SHSTRNDX:
         klog_e(TAG, "e_shstrndx=%u out of range (e_shnum=%u)",
                hdr->e_shstrndx, hdr->e_shnum);

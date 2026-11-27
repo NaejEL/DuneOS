@@ -49,8 +49,9 @@ static void test_validate_direct(void)
     hdr.e_ident[EI_DATA]  = ELFDATA2LSB;
     hdr.e_type    = ET_REL;
     hdr.e_machine = EM_XTENSA;
-    hdr.e_shoff   = 52;
-    hdr.e_shnum   = 5;
+    hdr.e_shoff     = 52;
+    hdr.e_shnum     = 5;
+    hdr.e_shentsize = sizeof(elf32_shdr_t);
 
     why = DUNEOS_ELF_REJ_MAGIC;
     CHECK_INT(duneos_elf_validate(&hdr, EM_XTENSA, &why), 0);
@@ -67,6 +68,20 @@ static void test_validate_direct(void)
     hdr.e_shnum = 0;
     CHECK_INT(duneos_elf_validate(&hdr, EM_XTENSA, &why), -EINVAL);
     CHECK_INT(why, DUNEOS_ELF_REJ_NO_SECTIONS);
+    hdr.e_shnum = 5;
+
+    /* DUP-01/Q4: the section header table is read as a typed array, so a
+     * stride other than sizeof(elf32_shdr_t) means the entries are not where
+     * that read looks for them. The SDK side checked this and the kernel side
+     * did not; a dedup must not drop a check either side had. */
+    hdr.e_shentsize = sizeof(elf32_shdr_t) - 8;
+    CHECK_INT(duneos_elf_validate(&hdr, EM_XTENSA, &why), -EINVAL);
+    CHECK_INT(why, DUNEOS_ELF_REJ_SHENTSIZE);
+    hdr.e_shentsize = sizeof(elf32_shdr_t) + 8;
+    CHECK_INT(duneos_elf_validate(&hdr, EM_XTENSA, &why), -EINVAL);
+    CHECK_INT(why, DUNEOS_ELF_REJ_SHENTSIZE);
+    hdr.e_shentsize = sizeof(elf32_shdr_t);
+    CHECK_INT(duneos_elf_validate(&hdr, EM_XTENSA, &why), 0);
 }
 
 /*

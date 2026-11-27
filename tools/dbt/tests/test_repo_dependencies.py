@@ -281,9 +281,24 @@ def test_contributing_names_the_commands_that_exist(index, blob):
 
 def test_the_pre_pr_gate_list_lives_in_exactly_one_file(index, blob):
     """Two copies of the list is two sources of truth, and the second one rots.
-    Other files link to CONTRIBUTING.md instead of restating it."""
+    Other files link to CONTRIBUTING.md instead of restating it.
+
+    specs/ is out of this assertion's reach, and not as a convenience: a spec's
+    acceptance criteria are REQUIRED to name the gate each one is verified by,
+    command and all, so a spec that touches four subsystems names four gates
+    without ever claiming to be the list. It is a record of one change, frozen
+    the day it lands — nobody reads a delivered spec to learn today's gates,
+    which is the rot this test exists to prevent. Every other authored document
+    (CONTRIBUTING.md excepted) stays in scope. This is not an allowlist: the
+    exclusion is one tree with a reason, not a list of file names.
+
+    The hole it leaves, named so nobody has to rediscover it: a rotting copy of
+    the gate list placed under specs/ is no longer caught here.
+    """
     markdown = sorted(path for path in index
-                      if path.endswith(".md") and not path.startswith(GENERATED_TREE))
+                      if path.endswith(".md")
+                      and not path.startswith(GENERATED_TREE)
+                      and not path.startswith("specs/"))
     restating = [path for path in markdown
                  if path != "CONTRIBUTING.md"
                  and sum(command in blob(path) for command in PRE_PR_COMMANDS) >= 3]

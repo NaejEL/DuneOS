@@ -7,11 +7,18 @@ CFLAGS  += -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L
 ROOT    := ../..
 
 TESTS   := test_re test_i2c_decode test_known_yaml test_elf_validate \
-           test_elf_scan test_manifest_depth test_ld2450 \
+           test_elf_scan test_appmeta test_manifest_depth test_ld2450 \
            test_input_intent test_ui_vkbd
 
-ELF_INC := -I$(ROOT)/kernel/duneos_loader/include
-ELF_SRC := $(ROOT)/kernel/duneos_loader/src/elf_parse.c
+# The shared pure ELF32 reader (ADR 043): one source, one include dir, for the
+# kernel-side suites and the SDK-side one alike.
+ELF_INC := -I$(ROOT)/lib/elf/include
+ELF_SRC := $(ROOT)/lib/elf/elf_parse.c
+ELF_HDR := $(ROOT)/lib/elf/include/duneos/elf_parse.h \
+           $(ROOT)/lib/elf/include/duneos/elf.h
+LIMITS_HDR := $(ROOT)/lib/elf/include/duneos/loader_limits.h
+LOADER_INC := -I$(ROOT)/kernel/duneos_loader/include
+APPMETA_SRC := $(ROOT)/sdk/app/libappmeta.c
 CJSON_INC := -I$(ROOT)/third_party/cjson
 CJSON_SRC := $(ROOT)/third_party/cjson/cJSON.c
 
@@ -31,9 +38,8 @@ HOSTUNITS := elf_parse.o
 
 all: $(TESTS) $(HOSTUNITS)
 
-elf_parse.o: $(ROOT)/kernel/duneos_loader/src/elf_parse.c \
-             $(ROOT)/kernel/duneos_loader/include/duneos/elf_parse.h
-	$(CC) $(CFLAGS) -I$(ROOT)/kernel/duneos_loader/include -c $< -o $@
+elf_parse.o: $(ELF_SRC) $(ELF_HDR)
+	$(CC) $(CFLAGS) $(ELF_INC) -c $< -o $@
 
 test_re: test_re.c $(ROOT)/sdk/re/re.c tassert.h
 	$(CC) $(CFLAGS) -I$(ROOT)/sdk/re/include test_re.c $(ROOT)/sdk/re/re.c -o $@
@@ -71,12 +77,21 @@ test_ui_vkbd: test_ui_vkbd.c $(ROOT)/sdk/ui/ui_vkbd.c \
 	    test_ui_vkbd.c $(ROOT)/sdk/ui/ui_vkbd.c -o $@
 
 test_elf_validate: test_elf_validate.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
-                   $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h
+                   $(ELF_HDR) $(LIMITS_HDR)
 	$(CC) $(CFLAGS) $(ELF_INC) test_elf_validate.c elf_corpus.c $(ELF_SRC) -o $@
 
 test_elf_scan: test_elf_scan.c elf_corpus.c elf_corpus.h $(ELF_SRC) tassert.h \
-               $(ROOT)/kernel/duneos_loader/include/duneos/loader_limits.h
+               $(ELF_HDR) $(LIMITS_HDR)
 	$(CC) $(CFLAGS) $(ELF_INC) test_elf_scan.c elf_corpus.c $(ELF_SRC) -o $@
+
+# DUP-01: the SDK-side consumer of the shared reader, compiled from the SHIPPED
+# sdk/app/libappmeta.c and the SHIPPED lib/elf/elf_parse.c — no copy of either.
+# -Wall -Wextra -Werror is the gate that keeps libappmeta free of anything an
+# app cannot link.
+test_appmeta: test_appmeta.c elf_corpus.c elf_corpus.h $(APPMETA_SRC) $(ELF_SRC) tassert.h \
+              $(ROOT)/sdk/app/include/duneos/appmeta.h $(ELF_HDR) $(LIMITS_HDR)
+	$(CC) $(CFLAGS) $(ELF_INC) -I$(ROOT)/sdk/app/include \
+	    test_appmeta.c elf_corpus.c $(APPMETA_SRC) $(ELF_SRC) -o $@
 
 # LEG-41: cJSON is linked in at its STOCK nesting limit on purpose — the test
 # asserts that what the pre-parse bound rejects is what cJSON would have
@@ -85,7 +100,7 @@ test_manifest_depth: test_manifest_depth.c \
                      $(ROOT)/kernel/duneos_loader/src/manifest_depth.c \
                      $(ROOT)/kernel/duneos_loader/include/duneos/manifest_depth.h \
                      $(CJSON_SRC) tassert.h
-	$(CC) $(CFLAGS) $(ELF_INC) $(CJSON_INC) test_manifest_depth.c \
+	$(CC) $(CFLAGS) $(LOADER_INC) $(CJSON_INC) test_manifest_depth.c \
 	    $(ROOT)/kernel/duneos_loader/src/manifest_depth.c $(CJSON_SRC) -o $@
 
 test: all
@@ -99,7 +114,7 @@ test: all
 # unit suite must stay runnable on a machine with no clang.
 fuzz: fuzz_elf_validate
 
-fuzz_elf_validate: fuzz_elf_validate.c $(ELF_SRC) $(ROOT)/kernel/duneos_loader/include/duneos/elf_parse.h
+fuzz_elf_validate: fuzz_elf_validate.c $(ELF_SRC) $(ELF_HDR)
 	@command -v $(FUZZ_CC) >/dev/null 2>&1 || { \
 		echo "ERROR: '$(FUZZ_CC)' not found — the fuzz target needs a libFuzzer-capable compiler."; \
 		echo "       Install clang (Debian/Ubuntu: apt install clang; Arch: pacman -S clang),"; \
@@ -125,8 +140,8 @@ fuzz-run: fuzz_elf_validate test_elf_validate
 
 clean:
 	rm -f $(TESTS) $(HOSTUNITS) known_yaml_test_*.tmp fuzz_elf_validate \
-	      elf_scan_*/* \
+	      elf_scan_*/* appmeta_*/* \
 	      .fuzzprobe .fuzzprobe.c fuzz_ran.marker
-	rm -rf $(FUZZ_CORPUS) $(FUZZ_ARTIFACTS) elf_scan_*
+	rm -rf $(FUZZ_CORPUS) $(FUZZ_ARTIFACTS) elf_scan_* appmeta_*
 
 .PHONY: all test clean fuzz fuzz-run

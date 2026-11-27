@@ -27,9 +27,13 @@ typedef struct {
 
 /*
  * Read the embedded manifest of the .dap at dap_path into *out.
- * Returns 0 on success, -1 if the file can't be opened, isn't a valid ELF,
- * or has no ".duneos_manifest" section. On -1 *out is left zeroed.
+ * Returns 0 on success, -1 if the file can't be opened, is not an ELF32 LE
+ * ET_REL image the shared lib/elf reader accepts, has no ".duneos_manifest"
+ * section, or carries one outside 2..4096 bytes (the loader's own bound — the
+ * manifest is rejected, never truncated). On -1 *out is left zeroed.
  *
- * Not reentrant: uses shared static scratch buffers. Call serially.
+ * Reentrant, and it allocates: the section header table, the section name
+ * table and the manifest payload are transient mallocs, so a caller with a
+ * per-app heap must budget for them (ADR 025).
  */
 int appmeta_read(const char *dap_path, appmeta_t *out);

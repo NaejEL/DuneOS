@@ -1,65 +1,55 @@
 /*
  * libappmeta — see <duneos/appmeta.h>.
  *
- * Minimal ELF32 reader: parse the section header table, find
- * ".duneos_manifest", read its JSON payload, and pull out the handful of
- * fields the launcher needs. The JSON is the compact form emitted by
- * tools/dbt/builder.py (no whitespace), so the field extraction is a small
- * scoped string scan rather than a full parser.
+ * The ELF32 read is the shared lib/elf unit (ADR 043), the same one the kernel
+ * loader uses: there is no second reader to harden, fuzz or forget. What stays
+ * here is the field extraction, because the manifest JSON is the compact form
+ * emitted by tools/dbt/builder.py (no whitespace) and a scoped string scan is
+ * what an app can afford where the kernel spends cJSON.
  */
 
 #include "duneos/appmeta.h"
 
+#include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-/* ELF32 little-endian field offsets (ESP32 is LE, ELF data is LE). */
-#define EH_SIZE        52
-#define EH_SHOFF       32
-#define EH_SHENTSIZE   46
-#define EH_SHNUM       48
-#define EH_SHSTRNDX    50
-#define SH_SIZE        40
-#define SH_NAME         0
-#define SH_OFFSET      16
-#define SH_SIZE_FIELD  20
+#include "duneos/elf_parse.h"
+#include "duneos/loader_limits.h"
 
-#define JSON_MAX   2048
-#define SHSTR_MAX  16384  /* cap on the transient shstrtab malloc; larger → slow path */
+#define MANIFEST_SECTION ".duneos_manifest"
 
-static uint16_t rd16(const unsigned char *p) { return (uint16_t)(p[0] | (p[1] << 8)); }
-static uint32_t rd32(const unsigned char *p)
+/* The loader's own bound (extract_manifest() in loader.c). Rejecting outside
+ * it rather than truncating is the point: a truncated manifest loses every
+ * field past the cut and the launcher shows the defaults instead. */
+#define MANIFEST_MIN 2u
+#define MANIFEST_MAX 4096u
+
+static int fd_read_at(void *ctx, long offset, void *buf, size_t len)
 {
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
-}
+    int fd = *(const int *)ctx;
 
-static int read_at(int fd, long off, void *buf, unsigned len)
-{
-    if (lseek(fd, off, SEEK_SET) != off) return -1;
-    unsigned got = 0;
-    unsigned char *p = buf;
+    if (lseek(fd, offset, SEEK_SET) != offset) return -EIO;
+
+    size_t         got = 0;
+    unsigned char *p   = buf;
     while (got < len) {
-        int n = read(fd, p + got, len - got);
-        if (n <= 0) return -1;
-        got += (unsigned)n;
+        ssize_t n = read(fd, p + got, len - got);
+        if (n <= 0) return -EIO;
+        got += (size_t)n;
     }
     return 0;
 }
 
-/* Read a NUL-terminated section name from the string table. Tolerates a short
- * read near EOF; the table stores names NUL-terminated so strcmp stops cleanly
- * even if we read into the following entry. */
-static void read_name(int fd, long off, char *out, int outsz)
+/* duneos_elf_io_t.size bounds every section extent, so it must describe
+ * exactly the bytes fd_read_at() can serve. */
+static size_t fd_size_of(int fd)
 {
-    out[0] = '\0';
-    if (outsz <= 0 || lseek(fd, off, SEEK_SET) != off) return;
-    int n = read(fd, out, outsz - 1);
-    if (n < 0) n = 0;
-    out[n] = '\0';
+    off_t end = lseek(fd, 0, SEEK_END);
+    return end < 0 ? 0u : (size_t)end;
 }
 
 /* Copy the string value of "key":"<value>" into out (NUL-terminated). */
@@ -121,83 +111,48 @@ int appmeta_read(const char *dap_path, appmeta_t *out)
     int fd = open(dap_path, O_RDONLY);
     if (fd < 0) return -1;
 
-    unsigned char eh[EH_SIZE];
-    if (read_at(fd, 0, eh, EH_SIZE) != 0) { close(fd); return -1; }
-    if (eh[0] != 0x7f || eh[1] != 'E' || eh[2] != 'L' || eh[3] != 'F') {
-        close(fd); return -1;
-    }
+    const duneos_elf_io_t io = { .read = fd_read_at, .ctx = &fd,
+                                 .size = fd_size_of(fd) };
+    duneos_elf_image_t  img;
+    duneos_elf_reject_t why = DUNEOS_ELF_REJ_NONE;
 
-    uint32_t shoff     = rd32(eh + EH_SHOFF);
-    uint16_t shentsize = rd16(eh + EH_SHENTSIZE);
-    uint16_t shnum     = rd16(eh + EH_SHNUM);
-    uint16_t shstrndx  = rd16(eh + EH_SHSTRNDX);
-    if (shentsize < SH_SIZE || shnum == 0 || shstrndx >= shnum) { close(fd); return -1; }
-
-    /* Section header string table. */
-    unsigned char sh[SH_SIZE];
-    if (read_at(fd, (long)(shoff + (uint32_t)shstrndx * shentsize), sh, SH_SIZE) != 0) {
-        close(fd); return -1;
+    /* expect_machine 0 (Q6): the SDK has no CONFIG_IDF_TARGET_*, and a foreign
+     * ISA is reported by the loader at launch rather than hidden from the grid
+     * at scan time. Class, data and ET_REL are enforced. */
+    if (duneos_elf_image_open(&io, 0, DUNEOS_LOADER_MAX_SECTIONS,
+                              &img, &why) != 0) {
+        close(fd);
+        return -1;
     }
-    uint32_t shstr_off  = rd32(sh + SH_OFFSET);
-    uint32_t shstr_size = rd32(sh + SH_SIZE_FIELD);
 
     uint32_t man_off = 0, man_size = 0;
-
-    /* Fast path: read the whole name table once + section headers in batches,
-     * comparing names in memory (apps carry ~300 sections; two-reads-per-section
-     * makes a directory scan crawl over FAT). The shstrtab buffer is malloc'd
-     * transiently — kept off the launcher's permanent BSS so it doesn't eat
-     * into the DRAM a spawned app needs. Falls back to per-name reads if the
-     * malloc fails or the table is unusual. */
-    if (shentsize == SH_SIZE && shstr_size > 0 && shstr_size <= SHSTR_MAX) {
-        char *shstr = malloc(shstr_size);
-        if (shstr) {
-            if (read_at(fd, (long)shstr_off, shstr, shstr_size) == 0) {
-                shstr[shstr_size - 1] = '\0';
-                unsigned char batch[SH_SIZE * 16];
-                for (uint16_t i = 0; i < shnum && man_size == 0; ) {
-                    int nb = shnum - i;
-                    if (nb > 16) nb = 16;
-                    if (read_at(fd, (long)(shoff + (uint32_t)i * SH_SIZE),
-                                batch, (unsigned)nb * SH_SIZE) != 0) break;
-                    for (int j = 0; j < nb; j++) {
-                        const unsigned char *e = batch + (size_t)j * SH_SIZE;
-                        uint32_t name_off = rd32(e + SH_NAME);
-                        if (name_off < shstr_size &&
-                            strcmp(shstr + name_off, ".duneos_manifest") == 0) {
-                            man_off  = rd32(e + SH_OFFSET);
-                            man_size = rd32(e + SH_SIZE_FIELD);
-                            break;
-                        }
-                    }
-                    i += nb;
-                }
-            }
-            free(shstr);
+    for (uint16_t i = 0; i < img.hdr.e_shnum; i++) {
+        const char *name = duneos_elf_section_name(&img, &img.shdrs[i]);
+        if (name && strcmp(name, MANIFEST_SECTION) == 0) {
+            man_off  = img.shdrs[i].sh_offset;
+            man_size = img.shdrs[i].sh_size;
+            break;
         }
     }
-    if (man_size == 0) {
-        /* Fallback: read each section name individually. */
-        for (uint16_t i = 0; i < shnum; i++) {
-            if (read_at(fd, (long)(shoff + (uint32_t)i * shentsize), sh, SH_SIZE) != 0) {
-                close(fd); return -1;
-            }
-            char nm[24];
-            read_name(fd, (long)(shstr_off + rd32(sh + SH_NAME)), nm, sizeof(nm));
-            if (strcmp(nm, ".duneos_manifest") == 0) {
-                man_off  = rd32(sh + SH_OFFSET);
-                man_size = rd32(sh + SH_SIZE_FIELD);
-                break;
-            }
-        }
-    }
-    if (man_size == 0) { close(fd); return -1; }
-    if (man_size > JSON_MAX) man_size = JSON_MAX;
 
-    char *json = malloc(man_size);
+    /* Released before the manifest allocation rather than after it: the
+     * launcher's per-app pool is 8 KiB (ADR 025) and the two buffers need not
+     * be live at the same time. */
+    duneos_elf_image_close(&img);
+
+    if (man_size < MANIFEST_MIN || man_size > MANIFEST_MAX) {
+        close(fd);
+        return -1;
+    }
+
+    char *json = malloc((size_t)man_size + 1u);
     if (!json) { close(fd); return -1; }
-    if (read_at(fd, (long)man_off, json, man_size) != 0) { free(json); close(fd); return -1; }
-    json[man_size - 1] = '\0';
+    if (fd_read_at(&fd, (long)man_off, json, man_size) != 0) {
+        free(json);
+        close(fd);
+        return -1;
+    }
+    json[man_size] = '\0';
     close(fd);
 
     json_str(json, "name", out->name, sizeof(out->name));

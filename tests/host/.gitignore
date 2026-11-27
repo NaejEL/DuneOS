@@ -20,3 +20,5 @@ test_ld2450
 # branch built them.
 test_input_intent
 test_ui_vkbd
+test_appmeta
+appmeta_*/

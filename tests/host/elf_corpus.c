@@ -195,6 +195,15 @@ static void mut_shdr_table_truncated(elf_corpus_image_t *img)
     img->size = OFF_SHDRS + 2 * sizeof(elf32_shdr_t) + 12;
 }
 
+/* The one check the SDK side had and the kernel side did not, until DUP-01
+ * made them the same unit: a section header stride that is not
+ * sizeof(elf32_shdr_t) puts every entry somewhere else than the typed array
+ * read reaches. */
+static void mut_bad_shentsize(elf_corpus_image_t *img)
+{
+    hdr_of(img)->e_shentsize = sizeof(elf32_shdr_t) - 8;
+}
+
 static void mut_shstrndx_ge_shnum(elf_corpus_image_t *img)
 {
     hdr_of(img)->e_shstrndx = N_SECTIONS + 7;
@@ -405,6 +414,10 @@ const elf_corpus_case_t elf_corpus[] = {
     { "shdr_table_truncated", "file ends inside the section header table",
       mut_shdr_table_truncated, elf_corpus_probe_open,
       -EIO, DUNEOS_ELF_REJ_SHDR_READ, ELF_CORPUS_WHY_EXACT, NULL, NULL },
+
+    { "bad_shentsize", "e_shentsize is not sizeof(elf32_shdr_t)",
+      mut_bad_shentsize, elf_corpus_probe_open,
+      -EINVAL, DUNEOS_ELF_REJ_SHENTSIZE, ELF_CORPUS_WHY_EXACT, NULL, NULL },
 
     { "shstrndx_ge_shnum", "e_shstrndx indexes past the section header table",
       mut_shstrndx_ge_shnum, elf_corpus_probe_open,

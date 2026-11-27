@@ -1081,7 +1081,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "appmeta_read",
    "src": "ROADMAP.md"
   },
@@ -1136,7 +1136,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 14,
+   "count": 16,
    "dst": "check",
    "src": "ROADMAP.md"
   },
@@ -1211,7 +1211,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 1,
+   "count": 4,
    "dst": "dedup",
    "src": "ROADMAP.md"
   },
@@ -1576,7 +1576,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 11,
+   "count": 20,
    "dst": "open",
    "src": "ROADMAP.md"
   },
@@ -1601,7 +1601,7 @@
    "src": "ROADMAP.md"
   },
   {
-   "count": 21,
+   "count": 22,
    "dst": "read",
    "src": "ROADMAP.md"
   },
@@ -1613,6 +1613,11 @@
   {
    "count": 1,
    "dst": "recovery_pin_held",
+   "src": "ROADMAP.md"
+  },
+  {
+   "count": 1,
+   "dst": "rename",
    "src": "ROADMAP.md"
   },
   {
@@ -14467,6 +14472,91 @@
   },
   {
    "count": 1,
+   "dst": "Consequences",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "Context",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "Decision",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "ET_REL",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "SDK_INCLUDE",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "board",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "candidate",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 3,
+   "dst": "check",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 2,
+   "dst": "consume",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "dedup",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_loader_name_is_app",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "has_dap_ext",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 2,
+   "dst": "move",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 2,
+   "dst": "read",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
+   "dst": "rename",
+   "src": "docs/adr/043-shared-pure-units.md"
+  },
+  {
+   "count": 1,
    "dst": "Alternatives",
    "src": "docs/adr/README.md"
   },
@@ -14487,6 +14577,11 @@
   },
   {
    "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
    "dst": "DUNEOS_MAX_RUNNING_APPS",
    "src": "docs/adr/README.md"
   },
@@ -14498,6 +14593,11 @@
   {
    "count": 3,
    "dst": "DuneOS",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "ET_REL",
    "src": "docs/adr/README.md"
   },
   {
@@ -14536,7 +14636,7 @@
    "src": "docs/adr/README.md"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "check",
    "src": "docs/adr/README.md"
   },
@@ -14548,6 +14648,16 @@
   {
    "count": 1,
    "dst": "compose",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 1,
+   "dst": "consume",
+   "src": "docs/adr/README.md"
+  },
+  {
+   "count": 2,
+   "dst": "dedup",
    "src": "docs/adr/README.md"
   },
   {
@@ -14651,7 +14761,7 @@
    "src": "docs/adr/README.md"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "read",
    "src": "docs/adr/README.md"
   },
@@ -23481,7 +23591,7 @@
    "src": "kernel/duneos_kernel/src/vfs_tmp.c"
   },
   {
-   "count": 3,
+   "count": 5,
    "dst": "DUNEOS_ROOT",
    "src": "kernel/duneos_loader/CMakeLists.txt"
   },
@@ -23509,546 +23619,6 @@
    "count": 1,
    "dst": "write",
    "src": "kernel/duneos_loader/Kconfig"
-  },
-  {
-   "count": 2,
-   "dst": "DuneOS",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "EI_CLASS",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "EI_DATA",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELF32_R_SYM",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELF32_R_TYPE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 2,
-   "dst": "ELF32_ST_BIND",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 2,
-   "dst": "ELF32_ST_TYPE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELFCLASS32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELFDATA2LSB",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELF_MAGIC",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELF_MAGIC_SIZE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "EM_RISCV",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "EM_XTENSA",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 5,
-   "dst": "ET_REL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_32_PCREL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_ADD16",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_ADD32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_ADD8",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_ALIGN",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_BRANCH",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_CALL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_CALL_PLT",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_HI20",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_JAL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_LO12_I",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_LO12_S",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_NONE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_PCREL_HI20",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_PCREL_LO12_I",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_PCREL_LO12_S",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_RELAX",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_RVC_BRANCH",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_RVC_JUMP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SET16",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SET32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SET6",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SET8",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SUB16",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SUB32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SUB6",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_RISCV_SUB8",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_32_PCREL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_ASM_EXPAND",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_DIFF16",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_DIFF32",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_DIFF8",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_NONE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT0_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT10_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT11_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT12_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT13_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT14_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT1_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT2_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT3_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT4_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT5_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT6_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT7_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT8_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "R_XTENSA_SLOT9_OP",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 3,
-   "dst": "SHF_ALLOC",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHF_EXECINSTR",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHF_WRITE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 2,
-   "dst": "SHN_ABS",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHN_COMMON",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 2,
-   "dst": "SHN_UNDEF",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_NOBITS",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_NULL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_PROGBITS",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_REL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_RELA",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_STRTAB",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_SYMTAB",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STB_GLOBAL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STB_LOCAL",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STB_WEAK",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STT_FUNC",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STT_NOTYPE",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STT_OBJECT",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 1,
-   "dst": "STT_SECTION",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 2,
-   "dst": "upper",
-   "src": "kernel/duneos_loader/include/duneos/elf.h"
-  },
-  {
-   "count": 3,
-   "dst": "DuneOS",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "EI_CLASS",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "EI_DATA",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELFCLASS32",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "ELFDATA2LSB",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "ET_REL",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHF_ALLOC",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHF_EXECINSTR",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_NOBITS",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_NULL",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 2,
-   "dst": "SHT_STRTAB",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 2,
-   "dst": "SHT_SYMTAB",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 5,
-   "dst": "check",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "duneos_elf_classify_section",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 2,
-   "dst": "duneos_elf_image_close",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "emit",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "enforce",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "fail",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "free",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "open",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 12,
-   "dst": "read",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "reset",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
-  },
-  {
-   "count": 1,
-   "dst": "validate",
-   "src": "kernel/duneos_loader/include/duneos/elf_parse.h"
   },
   {
    "count": 3,
@@ -24182,46 +23752,6 @@
   },
   {
    "count": 1,
-   "dst": "DUNEOS_LOADER_MACHINE_RISCV",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "DUNEOS_LOADER_MACHINE_XTENSA",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "DUNEOS_LOADER_MAX_SECTIONS",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "EM_RISCV",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "EM_XTENSA",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "candidate",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "duneos_loader_name_is_app",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
-   "dst": "duneos_loader_scan",
-   "src": "kernel/duneos_loader/include/duneos/loader_limits.h"
-  },
-  {
-   "count": 1,
    "dst": "DUNEOS_MANIFEST_MAX_DEPTH",
    "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
   },
@@ -24254,136 +23784,6 @@
    "count": 3,
    "dst": "scan",
    "src": "kernel/duneos_loader/include/duneos/manifest_depth.h"
-  },
-  {
-   "count": 1,
-   "dst": "EI_CLASS",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "EI_DATA",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "ELFCLASS32",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "ELFDATA2LSB",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "ELF_MAGIC",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "ELF_MAGIC_SIZE",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "ET_REL",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "SHF_ALLOC",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 4,
-   "dst": "SHT_NOBITS",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "SHT_NULL",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "SHT_REL",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "SHT_RELA",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "SHT_STRTAB",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 3,
-   "dst": "SHT_SYMTAB",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "check",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "check_section_table",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "duneos_elf_classify_section",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "duneos_elf_image_close",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 6,
-   "dst": "fail",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "free",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 3,
-   "dst": "malloc",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "open",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 5,
-   "dst": "read",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "sh_link_is_section_index",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 2,
-   "dst": "sh_link_required_type",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
-  },
-  {
-   "count": 1,
-   "dst": "step",
-   "src": "kernel/duneos_loader/src/elf_parse.c"
   },
   {
    "count": 1,
@@ -24866,7 +24266,7 @@
    "src": "kernel/duneos_loader/src/loader.c"
   },
   {
-   "count": 51,
+   "count": 52,
    "dst": "klog_e",
    "src": "kernel/duneos_loader/src/loader.c"
   },
@@ -25019,6 +24419,716 @@
    "count": 10,
    "dst": "write",
    "src": "kernel/duneos_loader/src/loader.c"
+  },
+  {
+   "count": 1,
+   "dst": "EI_CLASS",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "EI_DATA",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "ELFCLASS32",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELFDATA2LSB",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_MAGIC",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_MAGIC_SIZE",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "ET_REL",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_ALLOC",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 4,
+   "dst": "SHT_NOBITS",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "SHT_NULL",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "SHT_REL",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "SHT_RELA",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_STRTAB",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 3,
+   "dst": "SHT_SYMTAB",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "check",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "check_section_table",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_elf_classify_section",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_elf_image_close",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 6,
+   "dst": "fail",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "free",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 3,
+   "dst": "malloc",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "open",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 6,
+   "dst": "read",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "sh_link_is_section_index",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "sh_link_required_type",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 1,
+   "dst": "step",
+   "src": "lib/elf/elf_parse.c"
+  },
+  {
+   "count": 2,
+   "dst": "DuneOS",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "EI_CLASS",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "EI_DATA",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELF32_R_SYM",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELF32_R_TYPE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 2,
+   "dst": "ELF32_ST_BIND",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 2,
+   "dst": "ELF32_ST_TYPE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELFCLASS32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELFDATA2LSB",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_MAGIC",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_MAGIC_SIZE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "EM_RISCV",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "EM_XTENSA",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 5,
+   "dst": "ET_REL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_32_PCREL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_ADD16",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_ADD32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_ADD8",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_ALIGN",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_BRANCH",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_CALL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_CALL_PLT",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_HI20",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_JAL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_LO12_I",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_LO12_S",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_NONE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_PCREL_HI20",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_PCREL_LO12_I",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_PCREL_LO12_S",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_RELAX",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_RVC_BRANCH",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_RVC_JUMP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SET16",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SET32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SET6",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SET8",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SUB16",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SUB32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SUB6",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_RISCV_SUB8",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_32_PCREL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_ASM_EXPAND",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_DIFF16",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_DIFF32",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_DIFF8",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_NONE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT0_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT10_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT11_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT12_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT13_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT14_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT1_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT2_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT3_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT4_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT5_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT6_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT7_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT8_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "R_XTENSA_SLOT9_OP",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 3,
+   "dst": "SHF_ALLOC",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_EXECINSTR",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_WRITE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 2,
+   "dst": "SHN_ABS",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHN_COMMON",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 2,
+   "dst": "SHN_UNDEF",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_NOBITS",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_NULL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_PROGBITS",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_REL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_RELA",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_STRTAB",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_SYMTAB",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STB_GLOBAL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STB_LOCAL",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STB_WEAK",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STT_FUNC",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STT_NOTYPE",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STT_OBJECT",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 1,
+   "dst": "STT_SECTION",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 2,
+   "dst": "upper",
+   "src": "lib/elf/include/duneos/elf.h"
+  },
+  {
+   "count": 3,
+   "dst": "DuneOS",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "EI_CLASS",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "EI_DATA",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELFCLASS32",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "ELFDATA2LSB",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "ET_REL",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_ALLOC",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_EXECINSTR",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_NOBITS",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_NULL",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 2,
+   "dst": "SHT_STRTAB",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 2,
+   "dst": "SHT_SYMTAB",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 5,
+   "dst": "check",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_elf_classify_section",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 2,
+   "dst": "duneos_elf_image_close",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "emit",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "enforce",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "fail",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "open",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 12,
+   "dst": "read",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "reset",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "validate",
+   "src": "lib/elf/include/duneos/elf_parse.h"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_LOADER_MACHINE_RISCV",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_LOADER_MACHINE_XTENSA",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_LOADER_MAX_SECTIONS",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "EM_RISCV",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "EM_XTENSA",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "candidate",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_loader_name_is_app",
+   "src": "lib/elf/include/duneos/loader_limits.h"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_loader_scan",
+   "src": "lib/elf/include/duneos/loader_limits.h"
   },
   {
    "count": 1,
@@ -25716,7 +25826,7 @@
    "src": "sdk/app/include/duneos/appmeta.h"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "ET_REL",
    "src": "sdk/app/include/duneos/appmeta.h"
   },
@@ -25736,58 +25846,28 @@
    "src": "sdk/app/include/duneos/appmeta.h"
   },
   {
-   "count": 2,
-   "dst": "EH_SHENTSIZE",
+   "count": 1,
+   "dst": "DUNEOS_LOADER_MAX_SECTIONS",
+   "src": "sdk/app/libappmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "ET_REL",
    "src": "sdk/app/libappmeta.c"
   },
   {
    "count": 2,
-   "dst": "EH_SHNUM",
+   "dst": "MANIFEST_MAX",
    "src": "sdk/app/libappmeta.c"
   },
   {
    "count": 2,
-   "dst": "EH_SHOFF",
+   "dst": "MANIFEST_MIN",
    "src": "sdk/app/libappmeta.c"
   },
   {
    "count": 2,
-   "dst": "EH_SHSTRNDX",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 3,
-   "dst": "EH_SIZE",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 3,
-   "dst": "JSON_MAX",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 2,
-   "dst": "SHSTR_MAX",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 3,
-   "dst": "SH_NAME",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 4,
-   "dst": "SH_OFFSET",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 10,
-   "dst": "SH_SIZE",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 4,
-   "dst": "SH_SIZE_FIELD",
+   "dst": "MANIFEST_SECTION",
    "src": "sdk/app/libappmeta.c"
   },
   {
@@ -25796,8 +25876,13 @@
    "src": "sdk/app/libappmeta.c"
   },
   {
-   "count": 9,
+   "count": 5,
    "dst": "close",
+   "src": "sdk/app/libappmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_elf_image_close",
    "src": "sdk/app/libappmeta.c"
   },
   {
@@ -25806,7 +25891,17 @@
    "src": "sdk/app/libappmeta.c"
   },
   {
-   "count": 3,
+   "count": 4,
+   "dst": "fd_read_at",
+   "src": "sdk/app/libappmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "fd_size_of",
+   "src": "sdk/app/libappmeta.c"
+  },
+  {
+   "count": 2,
    "dst": "free",
    "src": "sdk/app/libappmeta.c"
   },
@@ -25826,12 +25921,17 @@
    "src": "sdk/app/libappmeta.c"
   },
   {
+   "count": 1,
+   "dst": "launch",
+   "src": "sdk/app/libappmeta.c"
+  },
+  {
    "count": 2,
    "dst": "lseek",
    "src": "sdk/app/libappmeta.c"
   },
   {
-   "count": 5,
+   "count": 1,
    "dst": "malloc",
    "src": "sdk/app/libappmeta.c"
   },
@@ -25841,23 +25941,8 @@
    "src": "sdk/app/libappmeta.c"
   },
   {
-   "count": 10,
-   "dst": "rd32",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 7,
+   "count": 3,
    "dst": "read",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 7,
-   "dst": "read_at",
-   "src": "sdk/app/libappmeta.c"
-  },
-  {
-   "count": 2,
-   "dst": "read_name",
    "src": "sdk/app/libappmeta.c"
   },
   {
@@ -30171,6 +30256,221 @@
    "src": "sdkconfig.defaults"
   },
   {
+   "count": 2,
+   "dst": "Context",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_ABI_VERSION",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 2,
+   "dst": "DUNEOS_LOADER_MAX_SECTIONS",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "EI_CLASS",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "EI_DATA",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "ELFCLASS32",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "ELFDATA2LSB",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_CORPUS_EXPECTED_CASES",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_CORPUS_EXPECTED_XFAILS",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 5,
+   "dst": "ET_REL",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "Risks",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "SDK_DIR",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 2,
+   "dst": "SDK_INCLUDE",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_STRTAB",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_SYMTAB",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 11,
+   "dst": "appmeta_read",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "blob",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 8,
+   "dst": "board",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "candidate",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "cflags",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 7,
+   "dst": "check",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "close",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 3,
+   "dst": "commit",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "consume",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 3,
+   "dst": "dedup",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "duneos_loader_name_is_app",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "free",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "fstat",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "has_dap_ext",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "json_bool",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "json_caps_display",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "json_str",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 2,
+   "dst": "launch",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 3,
+   "dst": "malloc",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 3,
+   "dst": "move",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 4,
+   "dst": "read",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 3,
+   "dst": "rename",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 5,
+   "dst": "scan",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "settled",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "show",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
+   "count": 1,
+   "dst": "walk",
+   "src": "specs/SPEC-dup-01-elf-parse-dedup.md"
+  },
+  {
    "count": 3,
    "dst": "ALT_NEXT",
    "src": "specs/SPEC-input-portability.md"
@@ -30478,11 +30778,6 @@
   {
    "count": 4,
    "dst": "read",
-   "src": "specs/SPEC-leg-01-harden-elf-validation.md"
-  },
-  {
-   "count": 1,
-   "dst": "read_at",
    "src": "specs/SPEC-leg-01-harden-elf-validation.md"
   },
   {
@@ -32966,12 +33261,12 @@
    "src": "tests/host/Makefile"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "free",
    "src": "tests/host/Makefile"
   },
   {
-   "count": 1,
+   "count": 2,
    "dst": "gate",
    "src": "tests/host/Makefile"
   },
@@ -33121,7 +33416,7 @@
    "src": "tests/host/elf_corpus.c"
   },
   {
-   "count": 3,
+   "count": 4,
    "dst": "check",
    "src": "tests/host/elf_corpus.c"
   },
@@ -33146,7 +33441,7 @@
    "src": "tests/host/elf_corpus.c"
   },
   {
-   "count": 12,
+   "count": 13,
    "dst": "hdr_of",
    "src": "tests/host/elf_corpus.c"
   },
@@ -33173,6 +33468,11 @@
   {
    "count": 2,
    "dst": "mut_bad_magic",
+   "src": "tests/host/elf_corpus.c"
+  },
+  {
+   "count": 2,
+   "dst": "mut_bad_shentsize",
    "src": "tests/host/elf_corpus.c"
   },
   {
@@ -33276,7 +33576,7 @@
    "src": "tests/host/elf_corpus.c"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "read",
    "src": "tests/host/elf_corpus.c"
   },
@@ -33471,6 +33771,281 @@
    "src": "tests/host/tassert.h"
   },
   {
+   "count": 7,
+   "dst": "CHECK",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 24,
+   "dst": "CHECK_INT",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 11,
+   "dst": "CHECK_STR",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "DUNEOS_LOADER_MAX_SECTIONS",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "EI_CLASS",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "EI_DATA",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELFCLASS32",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELFDATA2LSB",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_MAGIC",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "ELF_MAGIC_SIZE",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "EM_XTENSA",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "ET_REL",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "IMG_MAX",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_ALLOC",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "SHF_EXECINSTR",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "SHN_UNDEF",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "SHT_PROGBITS",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "SHT_STRTAB",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 9,
+   "dst": "appmeta_read",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 8,
+   "dst": "build_image",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "closedir",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "dirent",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "elf_corpus_build",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 11,
+   "dst": "hdr_of",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_bad_shentsize",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_manifest_offset_past_eof",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_sh_extent_wraps",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_sh_name_past_shstrtab",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_sh_offset_past_eof",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_sh_size_past_eof",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_shnum_max_u16",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_shnum_over_max",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_shstrndx_ge_shnum",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "m_shstrtab_size_huge",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "missing",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "opendir",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 5,
+   "dst": "read",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 8,
+   "dst": "read_image",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 11,
+   "dst": "read_json",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "read_mutated",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 3,
+   "dst": "rm_dir",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "rmdir",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 3,
+   "dst": "scan",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 11,
+   "dst": "shdr_of",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 3,
+   "dst": "stderr",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "t_report",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_corpus_images_are_rejected",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_json_field_scan",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_manifest_size_bound",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_missing_file",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_named_malformations_are_rejected",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "test_wellformed_is_accepted",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 1,
+   "dst": "unlink",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 2,
+   "dst": "write_file",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
+   "count": 3,
+   "dst": "write_fixture",
+   "src": "tests/host/test_appmeta.c"
+  },
+  {
    "count": 12,
    "dst": "CHECK",
    "src": "tests/host/test_elf_scan.c"
@@ -33656,7 +34231,7 @@
    "src": "tests/host/test_elf_validate.c"
   },
   {
-   "count": 15,
+   "count": 20,
    "dst": "CHECK_INT",
    "src": "tests/host/test_elf_validate.c"
   },
@@ -33706,7 +34281,7 @@
    "src": "tests/host/test_elf_validate.c"
   },
   {
-   "count": 5,
+   "count": 8,
    "dst": "EM_XTENSA",
    "src": "tests/host/test_elf_validate.c"
   },
@@ -33736,7 +34311,7 @@
    "src": "tests/host/test_elf_validate.c"
   },
   {
-   "count": 5,
+   "count": 6,
    "dst": "check",
    "src": "tests/host/test_elf_validate.c"
   },
@@ -33748,6 +34323,11 @@
   {
    "count": 1,
    "dst": "commit",
+   "src": "tests/host/test_elf_validate.c"
+  },
+  {
+   "count": 1,
+   "dst": "dedup",
    "src": "tests/host/test_elf_validate.c"
   },
   {
@@ -33771,7 +34351,7 @@
    "src": "tests/host/test_elf_validate.c"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "read",
    "src": "tests/host/test_elf_validate.c"
   },
@@ -35126,7 +35706,7 @@
    "src": "tools/dbt/builder.py"
   },
   {
-   "count": 2,
+   "count": 4,
    "dst": "DUNEOS_ROOT",
    "src": "tools/dbt/builder.py"
   },
@@ -35168,6 +35748,11 @@
   {
    "count": 2,
    "dst": "_board",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 3,
+   "dst": "_resolve_under",
    "src": "tools/dbt/builder.py"
   },
   {
@@ -35236,13 +35821,18 @@
    "src": "tools/dbt/builder.py"
   },
   {
-   "count": 2,
+   "count": 3,
    "dst": "missing",
    "src": "tools/dbt/builder.py"
   },
   {
    "count": 2,
    "dst": "mkdir",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 1,
+   "dst": "open",
    "src": "tools/dbt/builder.py"
   },
   {
@@ -35261,12 +35851,27 @@
    "src": "tools/dbt/builder.py"
   },
   {
+   "count": 2,
+   "dst": "resolve_source",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 2,
+   "dst": "resolve_sources",
+   "src": "tools/dbt/builder.py"
+  },
+  {
+   "count": 3,
+   "dst": "source_include_dir",
+   "src": "tools/dbt/builder.py"
+  },
+  {
    "count": 5,
    "dst": "stat",
    "src": "tools/dbt/builder.py"
   },
   {
-   "count": 6,
+   "count": 7,
    "dst": "stderr",
    "src": "tools/dbt/builder.py"
   },
@@ -40191,6 +40796,136 @@
    "src": "tools/dbt/tests/test_bspgen_unknown_keys.py"
   },
   {
+   "count": 2,
+   "dst": "DUNEOS_ROOT",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 23,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 2,
+   "dst": "SDK_DIR",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 7,
+   "dst": "SHARED_UNIT",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "blob",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "build_single",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 2,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 2,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 9,
+   "dst": "resolve_source",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 5,
+   "dst": "resolve_sources",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 2,
+   "dst": "source_include_dir",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_bare_entry_stays_app_relative",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_prefix_is_only_recognised_at_the_start",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_prefix_naming_its_own_tree_is_not_a_traversal",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_traversing_entry_fails_the_app_build_rather_than_escaping",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_a_traversing_prefix_entry_is_rejected",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_every_declared_prefix_resolves_inside_the_repository",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_include_dirs_are_deduplicated_and_ordered",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_root_prefix_resolves_against_the_repository_root",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_sdk_prefix_is_unchanged",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_source_include_dir_is_none_without_a_sibling_include",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_constants_agree_with_this_checkout",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_launcher_declares_the_shared_unit",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_resolved_shared_unit_exists",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_shared_units_include_dir_lands_on_the_compiler_command",
+   "src": "tools/dbt/tests/test_builder_source_prefix.py"
+  },
+  {
    "count": 6,
    "dst": "CI_YML",
    "src": "tools/dbt/tests/test_ci_matrix.py"
@@ -41741,6 +42476,116 @@
    "src": "tools/dbt/tests/test_manifest_depth_bound.py"
   },
   {
+   "count": 2,
+   "dst": "EXPECTED_CALLERS",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 2,
+   "dst": "HAND_OFFSETS",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 3,
+   "dst": "READER_HEADER",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 4,
+   "dst": "READER_SOURCE",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 2,
+   "dst": "REPO_ROOT",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "Scope",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 3,
+   "dst": "_ident",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "_stage",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 14,
+   "dst": "blob",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "check",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "decode",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "gate",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "join",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 3,
+   "dst": "read",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "resolve",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_hand_written_elf_field_offsets_survive",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_no_live_reference_to_the_old_location",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_reader_has_exactly_two_callers_outside_the_host_suites",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_reader_is_declared_once",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_reader_is_defined_once",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_sdk_reader_goes_through_the_shared_unit",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
+   "count": 1,
+   "dst": "test_the_shared_unit_lives_under_lib_and_is_tracked",
+   "src": "tools/dbt/tests/test_one_elf_reader.py"
+  },
+  {
    "count": 3,
    "dst": "CAPABILITY_MAP",
    "src": "tools/dbt/tests/test_pure_logic.py"
@@ -43096,7 +43941,7 @@
    "src": "tools/dbt/tests/test_repo_dependencies.py"
   },
   {
-   "count": 1,
+   "count": 3,
    "dst": "gate",
    "src": "tools/dbt/tests/test_repo_dependencies.py"
   },
@@ -46011,6 +46856,7 @@
    "docs/adr/040-config-layering.md",
    "docs/adr/041-test-harness-keep-tassert.md",
    "docs/adr/042-input-intents-in-the-sdk.md",
+   "docs/adr/043-shared-pure-units.md",
    "docs/adr/README.md",
    "docs/assets/splash_procedural.dr",
    "docs/audit-ram-2026-06.md",
@@ -46098,14 +46944,14 @@
    "kernel/duneos_kernel/src/vfs_tmp.c",
    "kernel/duneos_loader/CMakeLists.txt",
    "kernel/duneos_loader/Kconfig",
-   "kernel/duneos_loader/include/duneos/elf.h",
-   "kernel/duneos_loader/include/duneos/elf_parse.h",
    "kernel/duneos_loader/include/duneos/loader.h",
-   "kernel/duneos_loader/include/duneos/loader_limits.h",
    "kernel/duneos_loader/include/duneos/manifest_depth.h",
-   "kernel/duneos_loader/src/elf_parse.c",
    "kernel/duneos_loader/src/loader.c",
    "kernel/duneos_loader/src/manifest_depth.c",
+   "lib/elf/elf_parse.c",
+   "lib/elf/include/duneos/elf.h",
+   "lib/elf/include/duneos/elf_parse.h",
+   "lib/elf/include/duneos/loader_limits.h",
    "libdune/src/libdune_fs.c",
    "libdune/src/libdune_mem.c",
    "libdune/src/libdune_ptr.c",
@@ -46177,6 +47023,7 @@
    "sdk/ui/ui_vkbd_draw.c",
    "sdk/ui/ui_wave.c",
    "sdkconfig.defaults",
+   "specs/SPEC-dup-01-elf-parse-dedup.md",
    "specs/SPEC-input-portability.md",
    "specs/SPEC-leg-01-harden-elf-validation.md",
    "specs/SPEC-leg-04-calloc-overflow.md",
@@ -46220,6 +47067,7 @@
    "tests/host/fuzz_elf_validate.c",
    "tests/host/known_yaml_cases.h",
    "tests/host/tassert.h",
+   "tests/host/test_appmeta.c",
    "tests/host/test_elf_scan.c",
    "tests/host/test_elf_validate.c",
    "tests/host/test_i2c_decode.c",
@@ -46268,6 +47116,7 @@
    "tools/dbt/tests/test_bspgen_shared_spi_bus.py",
    "tools/dbt/tests/test_bspgen_uart.py",
    "tools/dbt/tests/test_bspgen_unknown_keys.py",
+   "tools/dbt/tests/test_builder_source_prefix.py",
    "tools/dbt/tests/test_ci_matrix.py",
    "tools/dbt/tests/test_cmake_requires.py",
    "tools/dbt/tests/test_flashimg_kernel_staleness.py",
@@ -46275,6 +47124,7 @@
    "tools/dbt/tests/test_gates_cover.py",
    "tools/dbt/tests/test_input_topology.py",
    "tools/dbt/tests/test_manifest_depth_bound.py",
+   "tools/dbt/tests/test_one_elf_reader.py",
    "tools/dbt/tests/test_pure_logic.py",
    "tools/dbt/tests/test_qemu.py",
    "tools/dbt/tests/test_read_guard.py",
@@ -46531,11 +47381,6 @@
    "Decision",
    "DuneOS",
    "EDGE_COL",
-   "EH_SHENTSIZE",
-   "EH_SHNUM",
-   "EH_SHOFF",
-   "EH_SHSTRNDX",
-   "EH_SIZE",
    "EI_CLASS",
    "EI_DATA",
    "ELF32_R_SYM",
@@ -46571,6 +47416,7 @@
    "EXIT_TIMEOUT",
    "EXIT_UNAVAILABLE",
    "EXPECTED",
+   "EXPECTED_CALLERS",
    "EXPECTED_COMMAND",
    "ErrorModal",
    "FAKE_YAML",
@@ -46637,6 +47483,7 @@
    "GUARD_NAMES",
    "Gate",
    "HAL_I2C_MAX_DEVICES",
+   "HAND_OFFSETS",
    "HEADER",
    "HISTORY_DEPTH",
    "HIST_DEPTH",
@@ -46654,6 +47501,7 @@
    "ICMP_ECHO_REQUEST",
    "ICON_PATH_LEN",
    "ICON_SIZE",
+   "IMG_MAX",
    "INADDR_ANY",
    "INADDR_BROADCAST",
    "INADDR_LOOPBACK",
@@ -46699,7 +47547,6 @@
    "ITERM_OFFSET_MA",
    "ITERM_STEP_MA",
    "InputTopologyError",
-   "JSON_MAX",
    "KERNEL_CMAKE",
    "KERNEL_SERVED_BATTERY",
    "KEYBOARD_MATRIX",
@@ -46761,6 +47608,8 @@
    "MAIN_CMAKE",
    "MANIFESTS",
    "MANIFEST_JSON_FILE",
+   "MANIFEST_MAX",
+   "MANIFEST_MIN",
    "MANIFEST_SECTION",
    "MANIFEST_YAML_FILE",
    "MARKER_ENTERED",
@@ -46872,6 +47721,8 @@
    "RAN_PASSED",
    "RAW80211_GET_IFACE",
    "RAW80211_SET_IFACE",
+   "READER_HEADER",
+   "READER_SOURCE",
    "RECV_TIMEOUT_S",
    "REG_CHG_CFG",
    "REG_ICHG",
@@ -46970,6 +47821,7 @@
    "SECONDARY_CONSOLE_CPUS",
    "SEL_FILE",
    "SHAPES",
+   "SHARED_UNIT",
    "SHELLPIPE_DEV",
    "SHELL_BANNER",
    "SHELL_EOF_ON_ZERO",
@@ -46981,7 +47833,6 @@
    "SHN_ABS",
    "SHN_COMMON",
    "SHN_UNDEF",
-   "SHSTR_MAX",
    "SHT_NOBITS",
    "SHT_NULL",
    "SHT_PROGBITS",
@@ -46993,10 +47844,6 @@
    "SHUT_RDWR",
    "SHUT_WR",
    "SH_MAXVARS",
-   "SH_NAME",
-   "SH_OFFSET",
-   "SH_SIZE",
-   "SH_SIZE_FIELD",
    "SH_VARNAME",
    "SH_VARVAL",
    "SLOT_POOL_BYTES",
@@ -47206,6 +48053,7 @@
    "_hi_sd",
    "_hook_process_cleanup",
    "_i2c_block",
+   "_ident",
    "_idf_cmd",
    "_idf_env",
    "_idf_export",
@@ -47282,6 +48130,7 @@
    "_refuse_deleted_verb",
    "_rel",
    "_requires_entries",
+   "_resolve_under",
    "_rooted",
    "_run",
    "_run_board_pick",
@@ -47422,6 +48271,7 @@
    "build_app_icon",
    "build_gates",
    "build_idf_env",
+   "build_image",
    "build_kernel",
    "build_libdune",
    "build_profile",
@@ -47815,7 +48665,9 @@
    "fb_write",
    "fcntl",
    "fd_alloc",
+   "fd_read_at",
    "fd_readable",
+   "fd_size_of",
    "feed",
    "file_exists",
    "file_read_at",
@@ -48027,6 +48879,16 @@
    "lr_getline",
    "lseek",
    "ltrim",
+   "m_bad_shentsize",
+   "m_manifest_offset_past_eof",
+   "m_sh_extent_wraps",
+   "m_sh_name_past_shstrtab",
+   "m_sh_offset_past_eof",
+   "m_sh_size_past_eof",
+   "m_shnum_max_u16",
+   "m_shnum_over_max",
+   "m_shstrndx_ge_shnum",
+   "m_shstrtab_size_huge",
    "make_result",
    "malloc",
    "match_here",
@@ -48045,6 +48907,7 @@
    "mut_bad_class",
    "mut_bad_data",
    "mut_bad_magic",
+   "mut_bad_shentsize",
    "mut_nobits_offset_past_eof",
    "mut_nobits_size_past_eof",
    "mut_not_et_rel",
@@ -48168,14 +49031,12 @@
    "raw80211_write",
    "raw_write",
    "rc_to_esp",
-   "rd32",
    "re_compile",
    "re_match",
    "re_matchp",
    "re_node",
    "reachable_intents",
    "read",
-   "read_at",
    "read_battery_info",
    "read_blob",
    "read_byte",
@@ -48185,10 +49046,12 @@
    "read_config",
    "read_full",
    "read_guard",
+   "read_image",
+   "read_json",
    "read_line",
    "read_link",
    "read_mask",
-   "read_name",
+   "read_mutated",
    "read_reg16",
    "read_scan",
    "read_state",
@@ -48224,9 +49087,12 @@
    "resolve_base",
    "resolve_path",
    "resolve_profile",
+   "resolve_source",
+   "resolve_sources",
    "restore_sel",
    "ring_append",
    "riscv_split",
+   "rm_dir",
    "rm_tree",
    "rmdir",
    "roadmap_row",
@@ -48327,6 +49193,7 @@
    "sockaddr",
    "sockaddr_in",
    "sockaddr_storage",
+   "source_include_dir",
    "spawn",
    "spi_close_cb",
    "spi_ioctl_cb",
@@ -48367,6 +49234,7 @@
    "t_report",
    "terminate",
    "terminate_child",
+   "test_a_bare_entry_stays_app_relative",
    "test_a_batch_above_the_clamp_is_clamped",
    "test_a_board_carrying_bus_zero_or_no_bus_passes",
    "test_a_board_declaring_logic_passes_validate",
@@ -48445,6 +49313,8 @@
    "test_a_one_byte_buffer_holds_only_the_nul",
    "test_a_password_is_typable_with_four_intents_only",
    "test_a_policy_symbol_turned_off_in_the_build_is_a_conflict",
+   "test_a_prefix_is_only_recognised_at_the_start",
+   "test_a_prefix_naming_its_own_tree_is_not_a_traversal",
    "test_a_press_and_its_release_are_one_intent",
    "test_a_producer_injecting_zero_relies_on_that_stamp",
    "test_a_profile_on_an_unlisted_board_fails_the_expected_membership",
@@ -48478,6 +49348,8 @@
    "test_a_taper_at_or_below_the_cutoff_is_refused",
    "test_a_text_intent_inserts_directly",
    "test_a_transient_git_failure_does_not_narrow_the_signature",
+   "test_a_traversing_entry_fails_the_app_build_rather_than_escaping",
+   "test_a_traversing_prefix_entry_is_rejected",
    "test_a_tui_gate_run_never_touches_the_board_file",
    "test_a_typo_of_the_stack_key_is_refused_and_suggests_the_real_one",
    "test_a_validate_auto_repeat_does_not_latch",
@@ -48553,6 +49425,7 @@
    "test_conflicts_are_reported_in_a_stable_order",
    "test_contest_profile_lists_each_app_once",
    "test_contributing_names_the_commands_that_exist",
+   "test_corpus_images_are_rejected",
    "test_counts_below_the_step_emit_nothing",
    "test_counts_per_step_zero_behaves_as_one",
    "test_dead_payload_is_an_assertion_failure_not_a_timeout",
@@ -48584,6 +49457,7 @@
    "test_every_build_or_flash_entry_point_calls_the_guard",
    "test_every_cell_has_a_label_that_fits",
    "test_every_constraint_is_an_exact_pin",
+   "test_every_declared_prefix_resolves_inside_the_repository",
    "test_every_emitted_driver_symbol_is_declared_in_kconfig",
    "test_every_gate_green_exits_zero",
    "test_every_install_site_passes_the_constraints_file",
@@ -48634,11 +49508,13 @@
    "test_idle_and_noise",
    "test_image_size_comes_from_partitions_csv",
    "test_in_range_values_are_accepted",
+   "test_include_dirs_are_deduplicated_and_ordered",
    "test_incremental_feed_matches_the_same_things_as_one_shot",
    "test_index_is_lf_only",
    "test_init_yaml_safe_is_staged",
    "test_intent_case_is_normalised",
    "test_invalid_value_is_rejected",
+   "test_json_field_scan",
    "test_junit_counts_are_read_from_a_real_report",
    "test_kconfig_symbol_normalises_every_accepted_spelling",
    "test_keyboard_maps_the_vocabulary",
@@ -48655,13 +49531,16 @@
    "test_main_refuses_an_empty_matrix",
    "test_main_refuses_an_orphan_profile",
    "test_main_writes_the_github_output_lines",
+   "test_manifest_size_bound",
    "test_max_out_bounds_the_batch_too",
    "test_menu_bindings_and_dispatch_agree",
    "test_metachars",
    "test_missing_app_marker_is_reported",
+   "test_missing_file",
    "test_missing_file_and_seed_fallback",
    "test_missing_qemu_exits_with_its_own_code",
    "test_n_and_not_set_are_the_same_statement",
+   "test_named_malformations_are_rejected",
    "test_next_and_prev_wrap",
    "test_no_board_or_profile_name_appears_as_a_matrix_value",
    "test_no_board_or_profile_name_appears_in_a_step_body",
@@ -48671,9 +49550,11 @@
    "test_no_component_is_declared_both_unconditionally_and_per_arch",
    "test_no_copy_of_the_parser_survives_under_apps_or_tests",
    "test_no_display_resolves_to_none",
+   "test_no_hand_written_elf_field_offsets_survive",
    "test_no_hardware_board_generates_the_symbol",
    "test_no_key_emits_no_macro",
    "test_no_key_emits_nothing",
+   "test_no_live_reference_to_the_old_location",
    "test_no_other_board_generates_the_symbol",
    "test_no_permission_decodes_to_nothing",
    "test_no_psram_has_no_exec_symbols_regardless",
@@ -48760,6 +49641,7 @@
    "test_reversed_defaults_off",
    "test_reversed_swaps_the_axis_direction",
    "test_root_gitattributes_defers_to_the_generated_index",
+   "test_root_prefix_resolves_against_the_repository_root",
    "test_rotary_maps_to_prev_and_next",
    "test_run_loop_completes_on_a_good_run",
    "test_run_loop_reports_eof_when_qemu_dies_early",
@@ -48768,6 +49650,7 @@
    "test_run_loop_times_out_when_the_system_stays_silent",
    "test_scan_filter_contract",
    "test_scan_skips_malformed",
+   "test_sdk_prefix_is_unchanged",
    "test_sdkconfig_with_i2c_keeps_drv_i2c",
    "test_sdkconfig_without_i2c_omits_drv_i2c",
    "test_second_boot_banner_is_a_reboot",
@@ -48775,6 +49658,7 @@
    "test_settle_window_elapsing_reports_complete",
    "test_signal_and_exit_hooks_are_installed_once",
    "test_single_boot_banner_is_not_a_reboot",
+   "test_source_include_dir_is_none_without_a_sibling_include",
    "test_stage_profile_has_no_default",
    "test_stage_rejects_none_profile",
    "test_submodule_paths_are_out_of_scope",
@@ -48803,6 +49687,7 @@
    "test_the_closed_rows_are_marked_done",
    "test_the_cmake_parse_drops_no_source",
    "test_the_console_patterns_anchor_per_line_not_per_capture",
+   "test_the_constants_agree_with_this_checkout",
    "test_the_declared_psram_size_is_not_a_mismatch",
    "test_the_derivation_does_not_claim_the_watchpoint_is_free",
    "test_the_devkitc_still_copies_into_psram",
@@ -48822,6 +49707,7 @@
    "test_the_key_is_architecture_agnostic",
    "test_the_klog_error_marker_matches_the_console_format_klog_actually_emits",
    "test_the_klog_error_marker_no_longer_waits_for_the_ring_buffer_form",
+   "test_the_launcher_declares_the_shared_unit",
    "test_the_ld2450_suite_compiles_the_shipped_decoder",
    "test_the_loader_failure_pattern_does_not_fire_on_a_successful_run",
    "test_the_loader_failure_pattern_ignores_the_loader_info_lines",
@@ -48846,17 +49732,24 @@
    "test_the_qemu_gate_passes_other_exits_through",
    "test_the_qemu_psram_board_declares_eight_megabytes",
    "test_the_reachability_test_fails_when_a_block_stops_emitting",
+   "test_the_reader_has_exactly_two_callers_outside_the_host_suites",
+   "test_the_reader_is_declared_once",
+   "test_the_reader_is_defined_once",
    "test_the_real_panic_wording_is_still_detected",
    "test_the_real_t_embed_board_is_consistent",
    "test_the_refusal_does_not_raise_into_the_ui_thread",
    "test_the_rejection_names_the_board_and_the_value",
    "test_the_rejection_names_the_file_and_lists_the_valid_keys",
    "test_the_rejection_names_the_value",
+   "test_the_resolved_shared_unit_exists",
    "test_the_ring_stamps_a_missing_timestamp",
    "test_the_roadmap_suite_count_matches_the_makefile",
    "test_the_scan_finds_the_known_entry_points",
    "test_the_scan_reaches_the_core_and_the_guarded_drivers",
+   "test_the_sdk_reader_goes_through_the_shared_unit",
    "test_the_second_axis_moves_by_a_row_and_wraps",
+   "test_the_shared_unit_lives_under_lib_and_is_tracked",
+   "test_the_shared_units_include_dir_lands_on_the_compiler_command",
    "test_the_shift_layer_reaches_upper_case",
    "test_the_smoke_payload_marker_cannot_pass_for_the_calloc_one",
    "test_the_stack_watchpoint_is_project_wide",
@@ -48895,6 +49788,7 @@
    "test_verdict_reports_a_reboot_even_when_the_status_says_eof",
    "test_vfs_served_permissions_require_no_driver",
    "test_wdt",
+   "test_wellformed_is_accepted",
    "test_whitespace_around_a_declaration_does_not_change_the_symbol",
    "test_wifi_follows_the_declaration",
    "test_wifi_is_absent_when_the_key_is_absent",
@@ -49015,6 +49909,7 @@
    "write_dm_field",
    "write_exec_args",
    "write_file",
+   "write_fixture",
    "write_flash_init_yaml",
    "write_net_status",
    "write_profile",
