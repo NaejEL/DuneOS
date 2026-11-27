@@ -33,6 +33,14 @@ int duneos_elf_validate(const elf32_hdr_t   *hdr,
         *why = DUNEOS_ELF_REJ_NO_SECTIONS;
         return -EINVAL;
     }
+    /* The section header table is read as a typed array of elf32_shdr_t, so a
+     * stride the gABI fixes at sizeof(Elf32_Shdr) for ELFCLASS32 is not a
+     * tolerance: any other value means the entries are not where the array
+     * says they are. */
+    if (hdr->e_shentsize != sizeof(elf32_shdr_t)) {
+        *why = DUNEOS_ELF_REJ_SHENTSIZE;
+        return -EINVAL;
+    }
     if (hdr->e_shstrndx >= hdr->e_shnum) {
         *why = DUNEOS_ELF_REJ_SHSTRNDX;
         return -EINVAL;

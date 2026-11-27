@@ -37,6 +37,7 @@ typedef enum {
     DUNEOS_ELF_REJ_SHDR_READ,           /* section header table read failed    */
     DUNEOS_ELF_REJ_SHSTRTAB_READ,       /* section name string table read fail */
     DUNEOS_ELF_REJ_NOMEM,               /* allocation failed                   */
+    DUNEOS_ELF_REJ_SHENTSIZE,           /* e_shentsize != sizeof(elf32_shdr_t) */
     DUNEOS_ELF_REJ_SHSTRNDX,            /* e_shstrndx >= e_shnum               */
     DUNEOS_ELF_REJ_SH_LINK,             /* sh_link   >= e_shnum                */
     DUNEOS_ELF_REJ_SH_NAME,             /* sh_name   >= shstrtab size          */

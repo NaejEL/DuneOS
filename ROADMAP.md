@@ -254,7 +254,7 @@ Isolate the kernel to begin the exit from the Espressif framework. **The scope o
 
 **13** short ADRs closed this phase — the ones listed below, ADR 000 to ADR 012. (The heading used to say "11"; the list under it has always had 13 entries.) Michael Nygard format, 1 page maximum each, status `Accepted · 2026-05-19`. All the choices consumed by phase 24 (debt) and 25-29.
 
-**`docs/adr/` holds 42 ADRs today** (`docs/adr/*.md` minus `README.md`), not 13: ADR 013 to ADR 041 were written after this phase, by the phases and sprints that needed them.
+**`docs/adr/` holds 44 ADRs today** (`docs/adr/*.md` minus `README.md`), not 13: ADR 013 to ADR 043 were written after this phase, by the phases and sprints that needed them.
 
 > **Recorded gap, deliberately not closed here.** ADRs 025-038 describe work that is delivered and that **no phase in this roadmap accounts for** (app concurrency under RAM pressure, file-type associations, ambient system state, offscreen canvas, stack auto-sizing, frugal WiFi, navigation handoff, captured-output streaming, coreutils conventions, shell pipelines and scripting, MicroPython, the regex engine, userspace logging). Redistributing them into the phase structure is a design decision the owner has not taken, so it is not taken here. The gap is the record.
 
@@ -581,24 +581,51 @@ diverged. Full survey the same day.
 
 **Why this sits above the legacy debt.** It is not cosmetic redundancy: each
 pair is a place where a fix reaches only half the repo. The ELF hardening of
-LEG-01/34/41 — two host suites and a fuzzer — protects `elf_parse.c` only;
-`libappmeta.c` reads the same untrusted files from `/sd` with none of those
-bounds and not one test.
+LEG-01/34/41 — two host suites and a fuzzer — protected `elf_parse.c` only,
+while `libappmeta.c` read the same untrusted files from `/sd` with none of
+those bounds and not one test. DUP-01 closed that one by making the two sides
+one compile unit; the other eight pairs still hold.
 
-| # | Pair | Duplicated | Diverged | Exercised | Size |
-| --- | --- | --- | --- | --- | --- |
-| DUP-01 | `kernel/duneos_loader/src/elf_parse.c` ↔ `sdk/app/libappmeta.c` | ELF32 parse + `.duneos_manifest` | yes — SDK side has no bounds, no tests | one only | M |
-| DUP-02 | `kernel/.../display/st7789_hw.c` ↔ `sdk/display/libst7789.c` | ST7789 init + windowing, RGB565 byte-swap | yes — init order, `RAMCTRL` | one board each | M |
-| DUP-03 | `arch/xtensa_esp32/arch.cmake` ↔ `arch/xtensa_esp32s3/arch.cmake` | guarded HAL list + `REQUIRES` | yes — stated in the file itself | one copy never compiled | S |
-| DUP-04 | `tools/duneos-bspgen.py` ↔ `tools/dbt/boardgen.py` | 13 `DUNEOS_*` macros, MADCTL table | not yet | both | M |
-| DUP-05 | `apps/user/wifi/wifi.c` ↔ `apps/system/bin/iw/iw.c` | *writing* `known.yaml` | yes — overflow handling | both | S |
-| DUP-06 | `ambient.h` ↔ `boardgen.py` ↔ `bin/battery.c` | `/tmp/battery` path and blob format | no | all three | XS |
-| DUP-07 | `shell_cmds.c sh_globmatch` ↔ `bin/find/find.c globmatch` | glob matcher | no — identical | both | XS |
-| DUP-08 | `sdk/sensor/libbq27220.c` ↔ `sdk/i2c/smbus.c` | 16-bit SMBus register read | no | one only | XS |
-| DUP-09 | `abi.h` ↔ `tools/dbt/capability_map.py` | permission bitmask (ABI) | no | no cross-check test | XS |
+| # | Pair | Duplicated | Diverged | Exercised | Size | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| DUP-01 | `kernel/duneos_loader/src/elf_parse.c` ↔ `sdk/app/libappmeta.c` | ELF32 parse + `.duneos_manifest` | yes — SDK side had no bounds, no tests | one only | M | **DELIVERED (host, build and QEMU gates), CardPuter pass open** — [specs/SPEC-dup-01-elf-parse-dedup.md](specs/SPEC-dup-01-elf-parse-dedup.md) |
+| DUP-02 | `kernel/.../display/st7789_hw.c` ↔ `sdk/display/libst7789.c` | ST7789 init + windowing, RGB565 byte-swap | yes — init order, `RAMCTRL` | one board each | M | open |
+| DUP-03 | `arch/xtensa_esp32/arch.cmake` ↔ `arch/xtensa_esp32s3/arch.cmake` | guarded HAL list + `REQUIRES` | yes — stated in the file itself | one copy never compiled | S | open |
+| DUP-04 | `tools/duneos-bspgen.py` ↔ `tools/dbt/boardgen.py` | 13 `DUNEOS_*` macros, MADCTL table | not yet | both | M | open |
+| DUP-05 | `apps/user/wifi/wifi.c` ↔ `apps/system/bin/iw/iw.c` | *writing* `known.yaml` | yes — overflow handling | both | S | open |
+| DUP-06 | `ambient.h` ↔ `boardgen.py` ↔ `bin/battery.c` | `/tmp/battery` path and blob format | no | all three | XS | open |
+| DUP-07 | `shell_cmds.c sh_globmatch` ↔ `bin/find/find.c globmatch` | glob matcher | no — identical | both | XS | open |
+| DUP-08 | `sdk/sensor/libbq27220.c` ↔ `sdk/i2c/smbus.c` | 16-bit SMBus register read | no | one only | XS | open |
+| DUP-09 | `abi.h` ↔ `tools/dbt/capability_map.py` | permission bitmask (ABI) | no | no cross-check test | XS | open |
 
 `sdk/net/known_yaml.c` provides `parse`/`read`/`load` but **no writer**, which is
 what forced DUP-05. Adding the writer to the SDK closes that pair.
+
+**DUP-01, delivered 2026-11-14.** The reader moved to a neutral `lib/elf/`
+compiled in place by both sides ([ADR 043](docs/adr/043-shared-pure-units.md));
+`appmeta_read()` now goes through `duneos_elf_image_open()` and the field-offset
+table, `rd16`/`rd32`, `read_name` and the batching fast path are gone. The dedup
+ADDED the one check only the SDK side had (`e_shentsize`), with its own reject
+enumerator and corpus case (24 cases now). `tests/host/test_appmeta` compiles
+the shipped `libappmeta.c` against the shipped `elf_parse.c` and recorded 15
+failures against the pre-change file. `dbt` gained a `$ROOT/` source prefix so
+an app can name a unit under `lib/`.
+
+Criteria 1-15 and 17 are green and were run, independently twice: host suites,
+32 M fuzz runs, 708 pytest, `dbt flash kernel --build-only` with 0 warnings
+(criterion 11; the moved unit's `git diff -M` is rename-pure plus the one added
+`e_shentsize` check, and `objdump` gives byte-identical frames, so the loader's
+documented 96 B / 672 B figures are unchanged by measurement), `buildall` 60/60
+(criterion 12), `dbt qemu` exit 0 with `qemu_smoke` + `qemu_calloc` PASS
+(criterion 15), and criterion 17's sweep over all 60 built `app.elf` plus all 22
+`.dap` — field-for-field identical to the pre-change reader, ASan/UBSan clean.
+Criterion 14's two figures: launcher code delta **+1100 B** (`.literal` +
+`.text` + `.rodata.str1.1`, per object: old `libappmeta.o` 1294 B -> new
+`libappmeta.o` 932 B + `elf_parse.o` 1462 B), inside the +2048 B budget; peak
+transient heap **864 B** (max over the 60 ELFs: `e_shnum` 18, `shstrtab` 143 B,
+manifest 428 B), leaving 7328 B in the 8 KiB pool, so the 2 KiB trigger is not
+reached and `heap_size` is unchanged. **Open: criterion 16 only** — the
+CardPuter launcher-grid before/after on real hardware.
 
 **Not checked** by this survey, so not to be read as clean: USB (`drv_usb.c`,
 `drv_usb_cdc.c`), Ethernet (`drv_eth.c` ↔ `hal_eth.c`/`hal_phy.c`),
@@ -631,7 +658,7 @@ all three the ADR predated the code:
 | A declared pin nothing drove | same, `pwr_enable_pin` under `lora:`/`rfid:` | bspgen kept the keys only so validation passed; no macro emitted, so the peripheral 3V3 rail stayed off and SD + display + radio ran on leakage. |
 | A hardware constant in arch code | `arch/xtensa_esp32s3/hal/hal_encoder.c:28` `DETENT_COUNTS 4` | Imposes 4 counts per detent on every board of that architecture, upstream of and multiplicative with the board-declared divisor, so a board whose detent is 2 counts cannot be expressed at all. |
 
-A 43rd ADR restating the rule would change nothing: the rule was already there
+A further ADR restating the rule would change nothing: the rule was already there
 and already written twice. **A check would.** bspgen owns the `DUNEOS_*` macro
 vocabulary, so a pin number, a frequency, a count or a geometry literal in
 `kernel/` or `arch/` that does not arrive through a generated macro is
@@ -883,7 +910,7 @@ LEG-32 landed with `CONFIG_DUNEOS_DRV_GPIO` absorbed as agreed: emitted for ever
 
 | ID | Finding | Severity | Size | Depends on | Spec | Status |
 |---|---|---|---|---|---|---|
-| LEG-17 | ADR 012 prescribed Greatest, a `dbt test` verb and `docs/testing.md`; the tree grew `tassert.h` and **9 suites** instead. ADR 041 supersedes it clause by clause, `dbt test` ships in `tools/dbt/testing.py`, `docs/testing.md` is written. LEG-39 closes with it: `pytest` is in `_DEPS`, so the venv dbt bootstraps can run the gate | major | M | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
+| LEG-17 | ADR 012 prescribed Greatest, a `dbt test` verb and `docs/testing.md`; the tree grew `tassert.h` and **10 suites** instead. ADR 041 supersedes it clause by clause, `dbt test` ships in `tools/dbt/testing.py`, `docs/testing.md` is written. LEG-39 closes with it: `pytest` is in `_DEPS`, so the venv dbt bootstraps can run the gate | major | M | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-18 | `test_known_yaml.c` compiled a copy of the wifi_daemon parser that had already diverged on the missing-file return the seed fallback branches on. One implementation now, `sdk/net/known_yaml.c`, compiled by the host suite; `iw` and `apps/user/wifi` link it too, which is how the empty-`ssid` bug surfaced — `iw` kept the entry and attached the following `psk:` to it, shifting every later one. **Validated on-board** on an m5stack-cardputer, 2026-09-13: the pre-existing `known.yaml` survived the sysbin flash and read back identical, `iw join` wrote a second entry with each `psk` on its own `ssid` and no shift, and `wifi_daemon` reread the file and reported `connected with SFR-ef60` (WPA2-PSK, channel 6) | major | S | — | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-19 | Untested pure logic. `tests/host/test_ld2450.c` covers both protocol worked examples, absent slots, bad header/tail and resync; `tools/dbt/tests/test_pure_logic.py` covers `validate_manifest`, `decode_perms` and `resolve` with their rejection paths | major | M | LEG-08 | [specs/SPEC-leg-17-18-19-21-tests-that-cover.md](specs/SPEC-leg-17-18-19-21-tests-that-cover.md) | DONE |
 | LEG-20 | `font8x8.h` duplicated byte-for-byte between `apps/user/g_shell` and `sdk/display/include/duneos` | minor | XS | — | [specs/SPEC-leg-20-doc-coherence-batch.md](specs/SPEC-leg-20-doc-coherence-batch.md) | TODO |

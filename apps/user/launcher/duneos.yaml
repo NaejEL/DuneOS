@@ -16,6 +16,8 @@ sources:
   - $SDK/ui/ui_carousel.c
   - $SDK/display/gfx.c
   - $SDK/app/libappmeta.c
+  # The shared ELF32 reader libappmeta reads .duneos_manifest through (ADR 043).
+  - $ROOT/lib/elf/elf_parse.c
   - $SDK/image/libimage.c
   - $SDK/log/dlog.c
 

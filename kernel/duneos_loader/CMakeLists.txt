@@ -1,11 +1,15 @@
 get_filename_component(DUNEOS_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 
+# ADR 043: lib/elf/ is the shared pure ELF32 reader, owned by neither the
+# kernel nor the SDK. It is compiled in place here the way third_party/cjson
+# already is, and referenced by apps as $ROOT/lib/elf/elf_parse.c.
 idf_component_register(
     SRCS "src/loader.c"
-          "src/elf_parse.c"
           "src/manifest_depth.c"
+          "${DUNEOS_ROOT}/lib/elf/elf_parse.c"
           "${DUNEOS_ROOT}/third_party/cjson/cJSON.c"
     INCLUDE_DIRS "include"
+                 "${DUNEOS_ROOT}/lib/elf/include"
     PRIV_INCLUDE_DIRS "src"
                       "${DUNEOS_ROOT}/third_party/cjson"
     REQUIRES duneos_kernel heap

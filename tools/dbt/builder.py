@@ -1,9 +1,11 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-from .constants import APP_BUILD_DIR, APP_ELF_NAME, MANIFEST_SECTION, SDK_INCLUDE, SDK_DIR, LIBDUNE_DIR
+from .constants import (APP_BUILD_DIR, APP_ELF_NAME, DUNEOS_ROOT, MANIFEST_SECTION,
+                        SDK_INCLUDE, SDK_DIR, LIBDUNE_DIR)
 from .manifest import load_manifest, validate_manifest
 
 
@@ -99,6 +101,61 @@ def build_app_icon(app_dir: Path, build_dir: Path) -> None:
     img.convert(png, dr, resize=ICON_SIZE)
 
 
+def source_include_dir(path: Path):
+    """The `include/` sibling of a source file, when it has one.
+
+    sdk/display/gfx.c -> sdk/display/include; lib/elf/elf_parse.c ->
+    lib/elf/include. Returns None otherwise.
+    """
+    inc = Path(path).parent / "include"
+    return inc if inc.is_dir() else None
+
+
+def _resolve_under(base: Path, rest: str, prefix: str) -> Path:
+    """Join `rest` under `base`, refusing anything that leaves `base`.
+
+    A prefix names a tree, so `$ROOT/../x.c` or `$ROOT//etc/x.c` is an
+    authoring error, not a source outside the repository to be compiled in:
+    normalised here rather than left for the compiler to open. Lexical on
+    purpose — the entry need not exist yet, and the caller reports a missing
+    file separately.
+    """
+    path = Path(os.path.normpath(base / rest))
+    if path != base and not path.is_relative_to(base):
+        sys.exit(f"ERROR: source entry '{prefix}{rest}' resolves to {path}, "
+                 f"outside {base}")
+    return path
+
+
+def resolve_source(entry, app_dir: Path) -> Path:
+    """Resolve one duneos.yaml `sources:` entry to a path.
+
+    `$SDK/` is sdk/, `$ROOT/` is the repository root, anything else is
+    app-relative. `$ROOT/` exists for the shared pure units under lib/, which
+    belong to neither the kernel tree nor the SDK tree (ADR 043) and are
+    therefore reachable through no other prefix. Both prefixes are bounded to
+    the tree they name.
+    """
+    entry = str(entry)
+    if entry.startswith("$SDK/"):
+        return _resolve_under(SDK_DIR, entry[len("$SDK/"):], "$SDK/")
+    if entry.startswith("$ROOT/"):
+        return _resolve_under(DUNEOS_ROOT, entry[len("$ROOT/"):], "$ROOT/")
+    return Path(app_dir) / entry
+
+
+def resolve_sources(entries, app_dir: Path):
+    """(paths, include_dirs) for a list of `sources:` entries, in order."""
+    paths, includes = [], []
+    for entry in entries:
+        path = resolve_source(entry, app_dir)
+        paths.append(path)
+        inc = source_include_dir(path)
+        if inc is not None and inc not in includes:
+            includes.append(inc)
+    return paths, includes
+
+
 def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc: dict) -> bool:
     build_dir = app_dir / APP_BUILD_DIR
     build_dir.mkdir(exist_ok=True)
@@ -149,26 +206,23 @@ def build_single(app_dir: Path, plugin, arch: str, cpu: str, board_cfg: dict, tc
         return True
     for p in resolved:
         sources.append(p)
-        sdk_inc = p.parent / "include"
-        if sdk_inc.is_dir():
+        sdk_inc = source_include_dir(p)
+        if sdk_inc is not None:
             extra_includes.add(sdk_inc)
 
-    # Extra sources declared in duneos.yaml — supports $SDK/ prefix
-    extra_sources = manifest.get("sources", [])
-    for entry in extra_sources:
-        entry = str(entry)
-        if entry.startswith("$SDK/"):
-            p = SDK_DIR / entry[len("$SDK/"):]
-        else:
-            p = app_dir / entry
+    # Extra sources declared in duneos.yaml — $SDK/ and $ROOT/ prefixes, each
+    # auto-picking up its include/ sibling.
+    try:
+        extra_paths, extra_incs = resolve_sources(manifest.get("sources", []), app_dir)
+    except SystemExit as e:
+        print(f"  {e}", file=sys.stderr)
+        return False
+    for p in extra_paths:
         if not p.exists():
             print(f"  ERROR: source not found: {p}", file=sys.stderr)
             return False
         sources.append(p)
-        # Auto-add include/<duneos/> sibling of sdk/*/gfx.c → sdk/*/include
-        sdk_inc = p.parent / "include"
-        if sdk_inc.is_dir():
-            extra_includes.add(sdk_inc)
+    extra_includes.update(extra_incs)
 
     if not sources:
         print(f"  ERROR: no .c files in {app_dir}", file=sys.stderr)
